@@ -65,9 +65,9 @@ _CURRENT_DOWNLOADS: Dict[str, Dict[str, Any]] = {}
 
 
 def get_model_dir() -> str:
-    """Returns the absolute path to DeathshotArsenal/Interpolation Models/, creating it if needed."""
+    """Returns the absolute path to DeathshotArsenal/models/Interpolation Models/, creating it if needed."""
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    target_dir = os.path.join(base_dir, "Interpolation Models")
+    target_dir = os.path.join(base_dir, "models", "Interpolation Models")
     try:
         os.makedirs(target_dir, exist_ok=True)
     except Exception as e:
@@ -76,8 +76,16 @@ def get_model_dir() -> str:
 
 
 def get_model_path(ckpt_name: str) -> str:
-    """Returns the full path to a checkpoint in the Interpolation Models folder."""
-    return os.path.join(get_model_dir(), ckpt_name)
+    """Returns the full path to a checkpoint in the models/Interpolation Models folder, with legacy fallback."""
+    primary = os.path.join(get_model_dir(), ckpt_name)
+    if os.path.isfile(primary):
+        return primary
+    # Fallback to legacy root Interpolation Models folder if it exists there
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    legacy = os.path.join(base_dir, "Interpolation Models", ckpt_name)
+    if os.path.isfile(legacy):
+        return legacy
+    return primary
 
 
 def is_model_installed(ckpt_name: str) -> bool:
@@ -96,6 +104,7 @@ def discover_local_copy(ckpt_name: str) -> Optional[str]:
     comfy_root = os.path.dirname(comfy_dir)  # ComfyUI root
 
     candidate_dirs = [
+        os.path.join(base_dir, "Interpolation Models"),  # Legacy location
         os.path.join(comfy_dir, "comfyui-frame-interpolation", "ckpts", "rife"),
         os.path.join(comfy_dir, "ComfyUI-Frame-Interpolation", "ckpts", "rife"),
         os.path.join(comfy_dir, "ComfyUI-VFI", "ckpts", "rife"),

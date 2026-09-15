@@ -16,17 +16,18 @@ cards/*.json
 !cards/.gitkeep
 
 # Large model binaries (auto-downloaded on demand)
+models/**/*.onnx
+models/**/*.pth
+models/**/*.pt
+models/**/*.bin
+models/**/*.safetensors
 models/*.onnx
 models/*.pth
 models/*.pt
 models/*.bin
 models/*.safetensors
-Interpolation Models/*.pth
-Interpolation Models/*.pt
-Interpolation Models/*.bin
-Interpolation Models/*.safetensors
+!models/**/.gitkeep
 !models/.gitkeep
-!Interpolation Models/.gitkeep
 
 # Operating system files
 .DS_Store
