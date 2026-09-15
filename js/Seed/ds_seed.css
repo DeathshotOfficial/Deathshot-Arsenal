@@ -1,0 +1,202 @@
+/* DS Seed uses the existing DeathshotArsenal theme tokens and button language. */
+.ds-seed-root,
+.ds-seed-root[data-ds-node-base="true"],
+[data-ds-seed-host="true"],
+[data-ds-seed-host="true"][data-ds-node-base="true"],
+.dom-widget:has(> .ds-seed-root),
+.dom-widget:has(> [data-ds-seed-host="true"]),
+div:has(> .ds-seed-root),
+div:has(> [data-ds-seed-host="true"]) {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.ds-seed-root {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 81px !important;
+  min-width: 0;
+  min-height: 81px;
+  max-height: 81px;
+  padding: 8px 14px 6px 14px;
+  margin: 0 !important;
+  display: grid;
+  grid-template-rows: 40px 28px;
+  gap: 5px;
+  overflow: hidden;
+  background: transparent !important;
+  color: var(--ds-text);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  user-select: none;
+  pointer-events: none;
+}
+
+.ds-seed-root *,
+.ds-seed-root *::before,
+.ds-seed-root *::after { box-sizing: border-box; }
+
+.ds-seed-root input,
+.ds-seed-root button { pointer-events: auto; }
+
+/* Full-width seed field.  The outer silhouette owns the rounding so the
+   stepper never creates a second square box. */
+.ds-seed-input-wrap {
+  width: 100%;
+  height: 40px;
+  min-width: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: 6px;
+  background: var(--ds-input-bg, var(--ds-panel-2));
+}
+
+.ds-seed-input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ds-text);
+  font: 700 13px/1 var(--ds-font, Inter, system-ui, sans-serif);
+  font-variant-numeric: tabular-nums;
+  user-select: text;
+}
+
+.ds-seed-input:focus {
+  box-shadow: inset 0 0 0 1px var(--ds-accent);
+}
+
+.ds-seed-input::selection {
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
+
+.ds-seed-stepper {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 38px;
+  min-height: 38px;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  border-left: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+}
+
+.ds-seed-step {
+  width: 48px;
+  min-width: 48px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ds-text-muted);
+  display: grid;
+  place-items: center;
+  font: 800 14px/1 var(--ds-font, Inter, system-ui, sans-serif);
+  cursor: pointer;
+}
+
+.ds-seed-step + .ds-seed-step {
+  border-top: 1px solid var(--ds-border);
+}
+
+.ds-seed-step:hover {
+  background: var(--ds-btn-hover);
+  color: var(--ds-text);
+}
+
+.ds-seed-step:active {
+  color: var(--ds-accent);
+}
+
+/* Four controls use the pack's established bordered-control silhouette:
+   panel background, rounded 5px corners, accent border/text when active,
+   and the signature clipped bottom accent bar. */
+.ds-seed-actions {
+  width: 100%;
+  height: 28px;
+  min-width: 0;
+  min-height: 28px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ds-seed-mode-btn,
+.ds-seed-reuse-btn {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 4px;
+  overflow: hidden;
+  border: 1px solid var(--ds-border);
+  border-radius: 5px;
+  outline: 0;
+  background: var(--ds-panel-2);
+  color: var(--ds-text-muted);
+  font: 700 10px/1 var(--ds-font, Inter, system-ui, sans-serif);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: background var(--ds-ui-transition, 120ms ease),
+              border-color var(--ds-ui-transition, 120ms ease),
+              color var(--ds-ui-transition, 120ms ease);
+}
+
+.ds-seed-mode-btn:hover,
+.ds-seed-reuse-btn:hover {
+  background: var(--ds-btn-hover);
+  border-color: var(--ds-border-active, var(--ds-accent));
+  color: var(--ds-text);
+}
+
+.ds-seed-mode-btn.is-active,
+.ds-seed-mode-btn[data-active="true"] {
+  background: var(--ds-panel-2);
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+}
+
+.ds-seed-mode-btn.is-active::after,
+.ds-seed-mode-btn[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.5px;
+  background: var(--ds-accent);
+  border-radius: 0 0 4px 4px;
+}
+
+.ds-seed-mode-btn:focus-visible,
+.ds-seed-reuse-btn:focus-visible,
+.ds-seed-step:focus-visible,
+.ds-seed-input:focus {
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent) 18%, transparent);
+}
+
+@media (max-width: 290px) {
+  .ds-seed-stepper,
+  .ds-seed-step { width: 42px; min-width: 42px; flex-basis: 42px; }
+  .ds-seed-actions { gap: 4px; }
+  .ds-seed-mode-btn,
+  .ds-seed-reuse-btn { padding-inline: 2px; }
+}

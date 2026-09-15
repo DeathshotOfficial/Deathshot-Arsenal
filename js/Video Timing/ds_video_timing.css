@@ -1,0 +1,101 @@
+/* DS Video Timing — compact two-row picker. */
+.ds-video-timing {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px 8px;
+  color: #e8edf7;
+  font-family: inherit;
+  background: transparent;
+  pointer-events: none;
+}
+
+.ds-vt-section { margin-top: 0; }
+.ds-vt-section + .ds-vt-section { margin-top: 7px; }
+
+.ds-vt-label {
+  margin: 0 0 4px 1px;
+  color: #8d99ad;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: .55px;
+  text-transform: uppercase;
+}
+
+.ds-vt-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(86px, 1fr);
+  gap: 5px;
+  width: 100%;
+}
+
+.ds-vt-btn,
+.ds-vt-custom-input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  height: 29px;
+  border: 1px solid #252d3b;
+  border-radius: 6px;
+  background: #171c25;
+  color: #dce3ef;
+  font: 700 10px/1 inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-vt-btn {
+  pointer-events: auto;
+  padding: 0 7px;
+  cursor: pointer;
+  transition: border-color .08s ease, background .08s ease, color .08s ease, box-shadow .08s ease;
+}
+
+.ds-vt-btn:hover { border-color: #4ba3ff; background: #1c2430; }
+.ds-vt-btn:active { transform: translateY(1px); }
+
+.ds-vt-btn.selected {
+  border-color: #39c4ff;
+  background: rgba(27, 139, 184, .18);
+  color: #49d6ff;
+  box-shadow: inset 0 0 0 1px rgba(73, 214, 255, .22);
+}
+
+.ds-vt-custom-input {
+  pointer-events: auto;
+  padding: 0 9px;
+  outline: none;
+  background: #11151d;
+  color: #edf3ff;
+  text-align: center;
+  font-weight: 700;
+}
+
+.ds-vt-custom-input::placeholder {
+  color: #a4afc0;
+  opacity: 1;
+}
+
+.ds-vt-custom-input:hover {
+  border-color: #4ba3ff;
+  background: #151b24;
+}
+
+.ds-vt-custom-input:focus,
+.ds-vt-custom-input.custom-active {
+  border-color: #39c4ff;
+  box-shadow: inset 0 0 0 1px rgba(57, 196, 255, .22);
+  color: #49d6ff;
+}
+
+.ds-vt-custom-input::-webkit-outer-spin-button,
+.ds-vt-custom-input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+/* Do not show the browser's native number spinner. The node uses its own UI. */
+.ds-vt-custom-input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  -webkit-appearance: textfield;
+}

@@ -1,0 +1,815 @@
+/**
+ * DS Video Save - Central Stylesheet
+ * Strict adherence to DeathshotArsenal UI System & Design Tokens
+ */
+
+.ds-vs-root {
+  box-sizing: border-box !important;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 6px 6px 6px;
+  gap: 5px;
+  color: var(--ds-text, #e5e7eb);
+  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
+  font-size: 11px;
+  user-select: none;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Header & Actions (DS Badge + Compact Square Buttons + Node Title)         */
+/* ------------------------------------------------------------------------- */
+.ds-vs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 1px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.ds-vs-header-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.ds-vs-brand {
+  width: 28px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ds-accent, #67e8f9);
+  border-radius: 5px;
+  color: var(--ds-accent, #67e8f9);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.5px;
+  background: var(--ds-panel-2, #161a23);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.ds-vs-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ds-vs-icon-btn {
+  width: 26px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 5px;
+  background: var(--ds-panel-2, #161a23);
+  color: var(--ds-text-muted, #9ca3af);
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+}
+
+.ds-vs-icon-btn:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  background: var(--ds-hover, #1c2130);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-vs-icon-btn:active {
+  transform: translateY(1px);
+}
+
+.ds-vs-icon-btn.is-active,
+.ds-vs-icon-btn.is-expanded {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, transparent);
+}
+
+.ds-vs-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ds-vs-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ds-text, #e5e7eb);
+  white-space: nowrap;
+  margin-left: 2px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Row 1: Inline FPS Socket + Full-Width Frame Rate Box                      */
+/* ------------------------------------------------------------------------- */
+.ds-vs-fps-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 28px;
+  min-height: 28px;
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.ds-vs-fps-box {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+  padding-left: 10px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ds-vs-fps-box:focus-within {
+  border-color: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent, #67e8f9) 20%, transparent);
+}
+
+.ds-vs-fps-box.is-connected {
+  opacity: 0.75;
+  background: var(--ds-panel-2, #161a23);
+}
+
+.ds-vs-fps-box.is-connected .ds-vs-fps-input {
+  cursor: not-allowed;
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-vs-fps-box.is-connected .ds-vs-stepper-controls {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.ds-vs-fps-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ds-vs-fps-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-text-muted, #9ca3af);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.ds-vs-fps-badge {
+  display: none;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ds-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-accent, #67e8f9) 30%, transparent);
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ds-vs-fps-box.is-connected .ds-vs-fps-badge {
+  display: block;
+}
+
+.ds-vs-fps-right {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.ds-vs-fps-input {
+  width: 60px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ds-text, #e5e7eb);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding: 0 6px 0 0;
+  -moz-appearance: textfield;
+}
+
+.ds-vs-fps-input::-webkit-inner-spin-button,
+.ds-vs-fps-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Custom vertical stepper arrows */
+.ds-vs-stepper-controls {
+  display: flex;
+  flex-direction: column;
+  width: 18px;
+  height: 100%;
+  border-left: 1px solid var(--ds-border, #242a36);
+  flex-shrink: 0;
+}
+
+.ds-vs-stepper-btn {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-panel-2, #161a23);
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--ds-text-muted, #9ca3af);
+  cursor: pointer;
+  outline: none;
+  transition: background 0.1s ease, color 0.1s ease;
+  font-size: 7px;
+  line-height: 1;
+}
+
+.ds-vs-stepper-btn:first-child {
+  border-bottom: 1px solid var(--ds-border, #242a36);
+}
+
+.ds-vs-stepper-btn:hover {
+  background: var(--ds-hover, #1c2130);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-vs-stepper-btn:active {
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, var(--ds-panel-2, #161a23));
+}
+
+/* ------------------------------------------------------------------------- */
+/* Collapsible Settings Drawer                                               */
+/* ------------------------------------------------------------------------- */
+.ds-vs-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--ds-panel, #12151c);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 6px;
+  padding: 8px 10px;
+  max-height: 440px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ds-border, #242a36) transparent;
+  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.25s ease, margin 0.25s ease;
+  flex-shrink: 0;
+}
+
+.ds-vs-drawer::-webkit-scrollbar {
+  width: 5px;
+}
+.ds-vs-drawer::-webkit-scrollbar-thumb {
+  background: var(--ds-border, #242a36);
+  border-radius: 4px;
+}
+
+.ds-vs-drawer.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-width: 0;
+  margin: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Drawer Format Selection Bar (Tabs Left, Dropdown Right) */
+.ds-vs-format-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  width: 100%;
+}
+
+.ds-vs-tabs {
+  flex: 1;
+  display: flex;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 5px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.ds-vs-tab {
+  flex: 1;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--ds-text-muted, #9ca3af);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.12s ease;
+}
+
+.ds-vs-tab:hover {
+  color: var(--ds-text, #e5e7eb);
+  background: var(--ds-hover, #1c2130);
+}
+
+.ds-vs-tab.is-active {
+  background: var(--ds-panel-2, #161a23);
+  border-color: var(--ds-border, #343a44);
+  color: var(--ds-accent, #67e8f9);
+  box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9);
+  font-weight: 700;
+}
+
+/* Custom Format Dropdown */
+.ds-vs-select-wrapper {
+  position: relative;
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.ds-vs-select-trigger {
+  width: 100%;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 5px;
+  color: var(--ds-text, #e5e7eb);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.12s ease;
+  box-sizing: border-box;
+}
+
+.ds-vs-select-trigger:hover,
+.ds-vs-select-trigger:focus {
+  border-color: var(--ds-accent, #67e8f9);
+}
+
+.ds-vs-select-trigger svg {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+  color: var(--ds-text-muted, #9ca3af);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Structured Sub-panel Form Layout (Vertical Flow with 2-Column Rows)        */
+/* ------------------------------------------------------------------------- */
+.ds-vs-subpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ds-vs-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.ds-vs-field-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ds-text-muted, #9ca3af);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ds-vs-text-input {
+  width: 100%;
+  height: 28px;
+  box-sizing: border-box;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 5px;
+  color: var(--ds-text, #e5e7eb);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 0 8px;
+  outline: none;
+  transition: border-color 0.12s ease;
+}
+
+.ds-vs-text-input:focus {
+  border-color: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent, #67e8f9) 20%, transparent);
+}
+
+.ds-vs-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  align-items: flex-end;
+}
+
+/* Stepper Input Component */
+.ds-vs-stepper-box {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 5px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.ds-vs-num-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ds-text, #e5e7eb);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0 8px;
+  -moz-appearance: textfield;
+}
+
+.ds-vs-num-input::-webkit-inner-spin-button,
+.ds-vs-num-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Toggle Group with Label & Switch */
+.ds-vs-toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.ds-vs-toggle-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 5px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+
+.ds-vs-toggle-control:hover {
+  border-color: var(--ds-border-active, #3b4252);
+}
+
+.ds-vs-toggle-state-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ds-text, #e5e7eb);
+}
+
+.ds-vs-switch {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--ds-panel-2, #161a23);
+  border: 1px solid var(--ds-border, #242a36);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.ds-vs-switch-thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ds-text-muted, #9ca3af);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease;
+}
+
+.ds-vs-switch.is-checked {
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 22%, var(--ds-panel-2, #161a23));
+  border-color: var(--ds-accent, #67e8f9);
+}
+
+.ds-vs-switch.is-checked .ds-vs-switch-thumb {
+  transform: translateX(12px);
+  background: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ds-accent, #67e8f9) 60%, transparent);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Row 3: Interactive Video Player Preview                                    */
+/* ------------------------------------------------------------------------- */
+.ds-vs-preview-container {
+  flex: 1 1 0;
+  min-height: 100px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ds-vs-player-viewport {
+  flex: 1 1 0;
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #050608;
+  cursor: pointer;
+}
+
+.ds-vs-video,
+.ds-vs-img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.ds-vs-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ds-text-muted, #9ca3af);
+  text-align: center;
+  padding: 16px;
+}
+
+.ds-vs-empty-state svg {
+  width: 32px;
+  height: 32px;
+  fill: currentColor;
+  opacity: 0.4;
+}
+
+.ds-vs-empty-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-text, #e5e7eb);
+}
+
+.ds-vs-empty-hint {
+  font-size: 9px;
+  color: var(--ds-text-muted, #9ca3af);
+}
+
+/* On-Screen Video Controls Bar */
+.ds-vs-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  background: rgba(10, 12, 16, 0.85);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.ds-vs-control-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-text, #e5e7eb);
+  cursor: pointer;
+  border-radius: 4px;
+  outline: none;
+  transition: color 0.12s ease, background 0.12s ease;
+  flex-shrink: 0;
+}
+
+.ds-vs-control-btn:hover {
+  color: var(--ds-accent, #67e8f9);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ds-vs-control-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.ds-vs-time {
+  font-size: 9.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text-muted, #9ca3af);
+  white-space: nowrap;
+}
+
+.ds-vs-time-cur {
+  color: var(--ds-text, #e5e7eb);
+}
+
+.ds-vs-progress-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.ds-vs-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+  transition: height 0.1s ease;
+}
+
+.ds-vs-progress-wrap:hover .ds-vs-progress-track {
+  height: 6px;
+}
+
+.ds-vs-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--ds-accent, #67e8f9);
+  border-radius: 2px;
+}
+
+/* Audio Hover Pill / Volume Indicator */
+.ds-vs-audio-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ds-text-muted, #9ca3af);
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ds-vs-audio-pill.is-unmuted {
+  color: var(--ds-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 15%, transparent);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Fullscreen Modal Viewport Overlay                                         */
+/* ------------------------------------------------------------------------- */
+.ds-vs-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(4, 6, 10, 0.92);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.ds-vs-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  margin-bottom: 12px;
+}
+
+.ds-vs-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ds-text, #e5e7eb);
+}
+
+.ds-vs-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--ds-panel-2, #161a23);
+  border: 1px solid var(--ds-border, #242a36);
+  color: var(--ds-text, #e5e7eb);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-vs-modal-close:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-vs-modal-close svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.ds-vs-modal-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.ds-vs-modal-body video,
+.ds-vs-modal-body img {
+  width: 100%;
+  height: 100%;
+  max-width: 95vw;
+  max-height: calc(100vh - 80px);
+  object-fit: contain;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Toast Messages                                                            */
+/* ------------------------------------------------------------------------- */
+.ds-vs-toast {
+  position: absolute;
+  bottom: 38px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ds-panel-2, #161a23);
+  border: 1px solid var(--ds-border, #242a36);
+  color: var(--ds-text, #e5e7eb);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 50;
+  white-space: nowrap;
+}
+
+.ds-vs-toast.is-warn {
+  border-color: #f59e0b;
+  color: #fbbf24;
+}

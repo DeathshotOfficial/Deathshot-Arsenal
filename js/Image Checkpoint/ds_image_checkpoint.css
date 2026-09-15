@@ -1,0 +1,40 @@
+.ds-ic-root {
+  --ic-bg: var(--ds-panel, #171a20);
+  --ic-bg2: var(--ds-panel-2, #20242b);
+  --ic-surface: var(--ds-bg, #111419);
+  --ic-border: var(--ds-border, #343a45);
+  --ic-text: var(--ds-text, #edf1f7);
+  --ic-muted: var(--ds-text-muted, #9aa3af);
+  --ic-accent: var(--ds-accent, #67e8f9);
+  width:100%; height:100%; min-height:0; box-sizing:border-box;
+  display:grid;
+  grid-template-rows: 30px 36px 26px 40px 34px minmax(180px,1fr);
+  gap:7px; padding:8px;
+  color:var(--ic-text); font-family:var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif);
+  font-size:12px; user-select:none; overflow:hidden;
+}
+.ds-ic-root *{box-sizing:border-box}.ds-ic-root button{font:inherit}
+.ds-ic-header{display:flex;align-items:center;gap:8px;min-width:0}
+.ds-ic-brand{width:26px;height:24px;display:grid;place-items:center;border:1px solid var(--ic-accent);border-radius:6px;color:var(--ic-accent);font-size:8px;font-weight:900;flex:0 0 auto}
+.ds-ic-title{font-size:13px;font-weight:800;white-space:nowrap}.ds-ic-status{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--ic-border);border-radius:999px;color:var(--ic-muted);font-size:8px;font-weight:800;letter-spacing:.25px;white-space:nowrap}.ds-ic-status-dot{width:6px;height:6px;border-radius:50%;background:var(--ic-muted)}
+.ds-ic-status[data-state="paused"]{color:var(--ic-accent);border-color:color-mix(in srgb,var(--ic-accent) 45%,var(--ic-border))}.ds-ic-status[data-state="paused"] .ds-ic-status-dot{background:var(--ic-accent)}
+.ds-ic-status[data-state="busy"]{color:var(--ic-accent)}.ds-ic-status[data-state="busy"] .ds-ic-status-dot{background:var(--ic-accent);animation:dsicpulse 1s infinite}.ds-ic-status[data-state="stopped"] .ds-ic-status-dot{background:var(--ic-muted)}
+@keyframes dsicpulse{50%{opacity:.35}}
+.ds-ic-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--ic-surface);border:1px solid var(--ic-border);border-radius:7px}
+.ds-ic-tab{border:1px solid transparent;border-radius:5px;background:transparent;color:var(--ic-muted);font-size:9px;font-weight:850;cursor:pointer}.ds-ic-tab:hover{color:var(--ic-text);border-color:var(--ic-border)}.ds-ic-tab.active{color:var(--ic-text);background:var(--ic-bg2);border-color:var(--ic-accent);box-shadow:inset 0 -2px 0 var(--ic-accent)}
+.ds-ic-caption{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:0 3px;color:var(--ic-muted);font-size:9px}.ds-ic-helper{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-ic-dims{white-space:nowrap;opacity:.8}
+.ds-ic-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ds-ic-btn,.ds-ic-action{min-width:0;border:1px solid var(--ic-border);border-radius:7px;background:var(--ic-bg2);color:var(--ic-text);font-size:9px;font-weight:850;cursor:pointer;transition:.12s ease}.ds-ic-btn:hover:not(:disabled),.ds-ic-action:hover:not(:disabled){border-color:var(--ic-accent);transform:translateY(-1px)}.ds-ic-btn:active:not(:disabled),.ds-ic-action:active:not(:disabled){transform:translateY(0)}.ds-ic-btn.primary{border-color:color-mix(in srgb,var(--ic-accent) 55%,var(--ic-border))}.ds-ic-btn:disabled,.ds-ic-action:disabled{opacity:.35;cursor:default;transform:none}
+.ds-ic-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.ds-ic-action{background:var(--ic-surface);color:var(--ic-muted);font-size:8px}
+.ds-ic-preview{position:relative;min-width:0;min-height:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--ic-border);border-radius:8px;background:var(--ic-surface)}
+.ds-ic-image{display:block;flex:0 0 auto;width:auto;height:auto;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;object-position:center center}
+.ds-ic-preview > .ds-ic-placeholder{position:absolute;inset:0}
+.ds-ic-placeholder{display:grid;place-items:center;text-align:center;color:var(--ic-muted);font-size:10px;line-height:1.45;padding:16px}.ds-ic-placeholder strong{display:block;color:var(--ic-text);font-size:12px;margin-bottom:4px}.ds-ic-toast{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);padding:6px 9px;border:1px solid var(--ic-border);border-radius:6px;background:var(--ic-bg2);color:var(--ic-text);font-size:8px;font-weight:750;opacity:0;transition:opacity .15s;pointer-events:none}.ds-ic-toast.show{opacity:1}
+
+/* Keep the preview image truly hidden until a real snapshot URL has loaded.
+   The component uses display:block, which otherwise overrides HTML's [hidden]. */
+.ds-ic-image[hidden] {
+  display: none !important;
+}
+.ds-ic-placeholder[hidden] {
+  display: none !important;
+}

@@ -1,0 +1,111 @@
+/* Deathshot Arsenal - DS Version Check Styles */
+.ds-version-check-root {
+  --vc-bg: var(--ds-bg, #0b0d12);
+  --vc-panel: var(--ds-panel, #171a20);
+  --vc-panel2: var(--ds-panel-2, #20242c);
+  --vc-text: var(--ds-text, #e8ebef);
+  --vc-muted: var(--ds-text-muted, #8d96a3);
+  --vc-border: var(--ds-border, #343a45);
+  --vc-accent: var(--ds-accent, #67e8f9);
+
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--vc-bg);
+  border: 1px solid var(--vc-border);
+  border-radius: 10px;
+  color: var(--vc-text);
+  font-family: var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif);
+  user-select: none;
+}
+
+.ds-version-check-root * {
+  box-sizing: border-box;
+}
+
+.ds-vc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--vc-text);
+  padding-bottom: 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--vc-border) 75%, transparent);
+}
+
+.ds-vc-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--vc-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--vc-accent) 60%, transparent);
+  flex-shrink: 0;
+}
+
+.ds-vc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.ds-vc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.ds-vc-label {
+  color: var(--vc-muted);
+  font-weight: 600;
+}
+
+.ds-vc-val {
+  font-family: "Fira Code", Consolas, monospace;
+  font-weight: 700;
+  color: var(--vc-text);
+}
+
+.ds-vc-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.ds-vc-btn {
+  flex: 1;
+  height: 26px;
+  border: 1px solid var(--vc-border);
+  border-radius: 5px;
+  background: var(--vc-panel);
+  color: var(--vc-text);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  pointer-events: auto;
+}
+
+.ds-vc-btn:hover {
+  border-color: var(--vc-accent);
+  color: var(--vc-accent);
+  background: var(--vc-panel2);
+}
+
+.ds-vc-btn.active,
+.ds-vc-btn:active {
+  border-color: var(--vc-accent);
+  background: color-mix(in srgb, var(--vc-accent) 12%, var(--vc-panel));
+  color: var(--vc-accent);
+}

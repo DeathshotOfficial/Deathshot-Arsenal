@@ -1,0 +1,9 @@
+/* DeathshotArsenal/js/Image Compare/ds_image_compare.css */
+
+:root {
+  --ds-compare-accent: var(--ds-accent, #38bdf8);
+  --ds-compare-panel: var(--ds-panel-2, rgba(0, 0, 0, 0.42));
+  --ds-compare-border: var(--ds-border, rgba(255, 255, 255, 0.12));
+  --ds-compare-text: var(--ds-text, #f8fafc);
+  --ds-compare-muted: var(--ds-text-muted, rgba(248, 250, 252, 0.58));
+}

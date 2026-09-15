@@ -1,0 +1,1597 @@
+/* ============================================================
+   DS Notes - Deathshot Arsenal
+   Feature-Rich Documentation, Guides, Changelogs & Workflow Notes
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. IN-NODE CANVAS PREVIEW (Compact Canvas State)
+   ------------------------------------------------------------ */
+
+.ds-notes-root {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  background: transparent;
+  color: var(--ds-text, #f8fafc);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+
+.ds-notes-preview-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ds-notes-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  height: 42px;
+  min-height: 42px;
+  background: var(--ds-panel, rgba(18, 22, 30, 0.9));
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+.ds-notes-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 750;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  color: var(--ds-text, #f8fafc);
+  text-transform: uppercase;
+}
+
+.ds-notes-brand svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ds-accent, #67e8f9);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ds-notes-preview-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  line-height: 26px;
+  padding: 0 14px;
+  background: var(--ds-panel-2, #1d2331);
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 8px;
+  color: var(--ds-text, #ffffff);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.ds-notes-preview-edit-btn:hover {
+  background: var(--ds-btn-hover, #283144);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 10px rgba(103, 232, 249, 0.25);
+}
+
+.ds-notes-preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 10px 10px 10px;
+  box-sizing: border-box;
+  user-select: text;
+  word-break: break-word;
+  transition: background-color 0.2s ease;
+}
+
+.ds-notes-preview-body::-webkit-scrollbar,
+.ds-notes-editor-scroll::-webkit-scrollbar,
+.ds-notes-code-textarea::-webkit-scrollbar,
+.ds-notes-code-pre::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ds-notes-preview-body::-webkit-scrollbar-thumb,
+.ds-notes-editor-scroll::-webkit-scrollbar-thumb,
+.ds-notes-code-textarea::-webkit-scrollbar-thumb,
+.ds-notes-code-pre::-webkit-scrollbar-thumb {
+  background: var(--ds-border, rgba(255, 255, 255, 0.2));
+  border-radius: 999px;
+}
+
+.ds-notes-preview-body::-webkit-scrollbar-thumb:hover,
+.ds-notes-editor-scroll::-webkit-scrollbar-thumb:hover,
+.ds-notes-code-textarea::-webkit-scrollbar-thumb:hover,
+.ds-notes-code-pre::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-accent, #67e8f9);
+}
+
+/* ------------------------------------------------------------
+   2. POPUP WINDOW EDITOR MODAL (Dedicated Large Workspace)
+   ------------------------------------------------------------ */
+
+.ds-notes-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ds-text, #f8fafc);
+  padding: 16px;
+  box-sizing: border-box;
+  animation: dsNotesBackdropFade 0.15s ease-out;
+}
+
+@keyframes dsNotesBackdropFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ds-notes-editor-modal {
+  width: min(1320px, 96vw);
+  height: min(860px, 92vh);
+  background: var(--ds-panel, #121620);
+  border: 1px solid var(--ds-border, #303746);
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dsNotesModalScale 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dsNotesModalScale {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.ds-notes-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  height: 48px;
+  min-height: 48px;
+  background: var(--ds-panel-2, #181d28);
+  border-bottom: 1px solid var(--ds-border, #29303d);
+  box-sizing: border-box;
+}
+
+.ds-notes-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ds-notes-modal-title {
+  font-size: 13.5px;
+  font-weight: 750;
+  color: var(--ds-text, #ffffff);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-notes-modal-title svg {
+  width: 19px;
+  height: 19px;
+  color: var(--ds-accent, #67e8f9);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ds-notes-view-tabs {
+  display: inline-flex;
+  background: rgba(10, 14, 22, 0.7);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  border-radius: 7px;
+  padding: 2px;
+  gap: 3px;
+}
+
+.ds-notes-tab-btn {
+  height: 26px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.ds-notes-tab-btn:hover {
+  color: var(--ds-text, #ffffff);
+  background: var(--ds-panel-2, rgba(30, 38, 52, 0.7));
+}
+
+.ds-notes-tab-btn.is-active {
+  background: var(--ds-panel-2, #202736);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-tab-btn.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--ds-accent, #67e8f9);
+}
+
+/* ------------------------------------------------------------
+   3. UNIFORM BUTTON SYSTEM (Strict 28px Height & 6px Radius)
+   ------------------------------------------------------------ */
+
+.ds-notes-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  line-height: 26px;
+  padding: 0 10px;
+  background: var(--ds-panel-2, #1d2331);
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 6px;
+  color: var(--ds-text-muted, #94a3b8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+  text-decoration: none;
+  overflow: hidden;
+  user-select: none;
+}
+
+.ds-notes-btn:hover {
+  background: var(--ds-btn-hover, #283144);
+  border-color: var(--ds-border-active, #4a5568);
+  color: var(--ds-text, #ffffff);
+}
+
+.ds-notes-btn:active {
+  transform: translateY(1px);
+}
+
+.ds-notes-btn.is-active {
+  background: var(--ds-panel-2, #1d2331);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-btn.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-btn-icon {
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+}
+
+.ds-notes-btn-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ds-notes-btn-save {
+  background: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-on-accent, #0a0c10);
+  font-weight: 750;
+  padding: 0 16px;
+}
+
+.ds-notes-btn-save:hover {
+  background: var(--ds-accent-hover, #7df0ff);
+  border-color: var(--ds-accent-hover, #7df0ff);
+  color: var(--ds-on-accent, #0a0c10);
+  box-shadow: 0 0 12px rgba(103, 232, 249, 0.4);
+}
+
+.ds-notes-btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.ds-notes-btn-danger:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------
+   4. FORMATTING TOOLBAR (Uniform Geometry & Wrap Protection)
+   ------------------------------------------------------------ */
+
+.ds-notes-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  background: var(--ds-panel-2, #171c26);
+  border-bottom: 1px solid var(--ds-border, #29303d);
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  height: 42px;
+  min-height: 42px;
+  scrollbar-width: thin;
+}
+
+.ds-notes-toolbar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.ds-notes-toolbar::-webkit-scrollbar-thumb {
+  background: var(--ds-border, #313a4c);
+  border-radius: 999px;
+}
+
+.ds-notes-tool-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.ds-notes-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--ds-border, #2d3647);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------
+   5. WRITING AREA & CODE VIEW
+   ------------------------------------------------------------ */
+
+.ds-notes-body-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.ds-notes-editor-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 32px 100px 32px;
+  box-sizing: border-box;
+  background: var(--ds-bg, #0b0f17);
+  cursor: text;
+  transition: background-color 0.2s ease;
+}
+
+.ds-notes-contenteditable {
+  min-height: 100%;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ds-text, #f8fafc);
+  word-break: break-word;
+}
+
+.ds-notes-contenteditable[data-empty="true"]::before {
+  content: attr(data-placeholder);
+  color: var(--ds-text-muted, rgba(248, 250, 252, 0.35));
+  pointer-events: none;
+  display: block;
+}
+
+.ds-notes-code-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  resize: none;
+  background: #080b10;
+  color: #a5f3fc;
+  font-family: "JetBrains Mono", Consolas, "Fira Code", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 16px 20px;
+}
+
+/* ------------------------------------------------------------
+   6. BOTTOM ACTION BAR (Cancel / Save)
+   ------------------------------------------------------------ */
+
+.ds-notes-bottombar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  height: 48px;
+  min-height: 48px;
+  background: var(--ds-panel-2, #181d28);
+  border-top: 1px solid var(--ds-border, #29303d);
+  box-sizing: border-box;
+}
+
+.ds-notes-bottom-stats {
+  font-size: 11.5px;
+  color: var(--ds-text-muted, #94a3b8);
+}
+
+/* ------------------------------------------------------------
+   7. DOCUMENT TYPOGRAPHY & ELEMENTS
+   ------------------------------------------------------------ */
+
+.ds-notes-preview-body h1,
+.ds-notes-contenteditable h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 16px 0 10px 0;
+  color: var(--ds-accent, #67e8f9);
+  line-height: 1.3;
+  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  padding-bottom: 6px;
+}
+
+.ds-notes-preview-body h2,
+.ds-notes-contenteditable h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 14px 0 8px 0;
+  color: #bae6fd;
+  line-height: 1.35;
+}
+
+.ds-notes-preview-body h3,
+.ds-notes-contenteditable h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 10px 0 6px 0;
+  color: #e0f2fe;
+}
+
+.ds-notes-preview-body p,
+.ds-notes-contenteditable p {
+  margin: 0 0 10px 0;
+}
+
+.ds-notes-preview-body ul,
+.ds-notes-contenteditable ul {
+  margin: 0 0 12px 20px;
+  padding: 0;
+  list-style-type: disc;
+}
+
+.ds-notes-preview-body ol,
+.ds-notes-contenteditable ol {
+  margin: 0 0 12px 22px;
+  padding: 0;
+  list-style-type: decimal;
+}
+
+.ds-notes-preview-body li,
+.ds-notes-contenteditable li {
+  margin-bottom: 5px;
+}
+
+.ds-notes-preview-body a,
+.ds-notes-contenteditable a {
+  color: var(--ds-accent, #67e8f9);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ds-notes-preview-body a:hover {
+  color: #a5f3fc;
+}
+
+/* ------------------------------------------------------------
+   8. BLOCK DELETE ACTION BUTTON (Hover Delete Affordance)
+   ------------------------------------------------------------ */
+
+.ds-notes-block-delete-btn {
+  opacity: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.ds-notes-callout:hover .ds-notes-block-delete-btn,
+.ds-notes-code-block:hover .ds-notes-block-delete-btn,
+.ds-notes-table-wrap:hover .ds-notes-block-delete-btn,
+.ds-notes-folder-hint:hover .ds-notes-block-delete-btn,
+.ds-notes-youtube-card:hover .ds-notes-block-delete-btn,
+.ds-notes-youtube-embed-wrap:hover .ds-notes-block-delete-btn,
+.ds-notes-discord-card:hover .ds-notes-block-delete-btn {
+  opacity: 1;
+}
+
+.ds-notes-block-delete-btn:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.ds-notes-preview-body .ds-notes-block-delete-btn {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------
+   9. ELEMENT VARIETY: SEPARATORS (DIVIDERS)
+   ------------------------------------------------------------ */
+
+.ds-notes-sep {
+  margin: 18px 0;
+  border: none;
+  display: block;
+}
+
+.ds-notes-sep-solid {
+  height: 1px;
+  background: var(--ds-border, #313a4c);
+}
+
+.ds-notes-sep-dashed {
+  height: 0;
+  border-top: 1.5px dashed var(--ds-border, #4a5568);
+}
+
+.ds-notes-sep-dotted {
+  height: 0;
+  border-top: 2px dotted var(--ds-border, #4a5568);
+}
+
+.ds-notes-sep-glow {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ds-accent, #67e8f9) 50%, transparent);
+}
+
+.ds-notes-sep-double {
+  height: 4px;
+  border-top: 1px solid var(--ds-border, #313a4c);
+  border-bottom: 1px solid var(--ds-border, #313a4c);
+}
+
+.ds-notes-sep-icon-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-sep-icon-wrap::before,
+.ds-notes-sep-icon-wrap::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--ds-border, #313a4c);
+}
+
+.ds-notes-sep-text-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 1px;
+  color: var(--ds-text-muted, #94a3b8);
+  text-transform: uppercase;
+}
+
+.ds-notes-sep-text-wrap::before,
+.ds-notes-sep-text-wrap::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--ds-border, #313a4c);
+}
+
+/* ------------------------------------------------------------
+   10. ELEMENT VARIETY: CALLOUT / ALERT BOXES
+   ------------------------------------------------------------ */
+
+.ds-notes-callout {
+  margin: 14px 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+
+.ds-notes-callout-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+.ds-notes-callout-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.ds-notes-callout-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-notes-callout-title {
+  font-weight: 750;
+  font-size: 12px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ds-notes-callout-body {
+  outline: none;
+  word-break: break-word;
+}
+
+.ds-notes-callout-tip {
+  background: rgba(103, 232, 249, 0.08);
+  border-color: rgba(103, 232, 249, 0.3);
+  color: #e0f2fe;
+}
+.ds-notes-callout-tip .ds-notes-callout-icon,
+.ds-notes-callout-tip .ds-notes-callout-title {
+  color: #38bdf8;
+}
+
+.ds-notes-callout-note {
+  background: rgba(129, 140, 248, 0.08);
+  border-color: rgba(129, 140, 248, 0.3);
+  color: #e0e7ff;
+}
+.ds-notes-callout-note .ds-notes-callout-icon,
+.ds-notes-callout-note .ds-notes-callout-title {
+  color: #818cf8;
+}
+
+.ds-notes-callout-warning {
+  background: rgba(250, 204, 21, 0.08);
+  border-color: rgba(250, 204, 21, 0.3);
+  color: #fef9c3;
+}
+.ds-notes-callout-warning .ds-notes-callout-icon,
+.ds-notes-callout-warning .ds-notes-callout-title {
+  color: #facc15;
+}
+
+.ds-notes-callout-danger {
+  background: rgba(244, 63, 94, 0.08);
+  border-color: rgba(244, 63, 94, 0.3);
+  color: #ffe4e6;
+}
+.ds-notes-callout-danger .ds-notes-callout-icon,
+.ds-notes-callout-danger .ds-notes-callout-title {
+  color: #fb7185;
+}
+
+.ds-notes-callout-success {
+  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: #d1fae5;
+}
+.ds-notes-callout-success .ds-notes-callout-icon,
+.ds-notes-callout-success .ds-notes-callout-title {
+  color: #34d399;
+}
+
+/* ------------------------------------------------------------
+   11. ELEMENT VARIETY: CODE BLOCKS
+   ------------------------------------------------------------ */
+
+.ds-notes-code-block {
+  margin: 14px 0;
+  background: #090c13;
+  border: 1px solid var(--ds-border, #2d3647);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ds-notes-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #141923;
+  border-bottom: 1px solid var(--ds-border, #222938);
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.ds-notes-code-lang {
+  font-weight: 750;
+  text-transform: uppercase;
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-code-pre {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: "JetBrains Mono", Consolas, "Fira Code", monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #e2e8f0;
+  overflow: auto;
+  max-height: 340px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  outline: none;
+}
+
+/* ------------------------------------------------------------
+   12. ELEMENT VARIETY: GRIDS / TABLES
+   ------------------------------------------------------------ */
+
+.ds-notes-table-wrap {
+  margin: 14px 0;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--ds-border, #313a4c);
+  position: relative;
+}
+
+.ds-notes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ds-notes-table th,
+.ds-notes-table td {
+  border: 1px solid var(--ds-border, #313a4c);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.ds-notes-table th {
+  background: var(--ds-panel-2, #181d28);
+  color: var(--ds-text, #ffffff);
+  font-weight: 700;
+}
+
+.ds-notes-table td {
+  background: rgba(15, 19, 28, 0.45);
+}
+
+.ds-notes-table tr:nth-child(even) td {
+  background: rgba(22, 28, 40, 0.45);
+}
+
+/* ------------------------------------------------------------
+   13. ELEMENT VARIETY: BUTTONS
+   ------------------------------------------------------------ */
+
+.ds-notes-doc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none !important;
+  cursor: pointer;
+  margin: 6px 6px 6px 0;
+  transition: all 0.15s ease;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.ds-notes-doc-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.ds-notes-doc-btn-download {
+  background: #0284c7;
+  color: #ffffff !important;
+  border: 1px solid #38bdf8;
+}
+.ds-notes-doc-btn-download:hover {
+  background: #0369a1;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+}
+
+.ds-notes-doc-btn-view {
+  background: #4f46e5;
+  color: #ffffff !important;
+  border: 1px solid #818cf8;
+}
+.ds-notes-doc-btn-view:hover {
+  background: #4338ca;
+  box-shadow: 0 0 10px rgba(129, 140, 248, 0.45);
+}
+
+.ds-notes-doc-btn-read {
+  background: var(--ds-accent, #67e8f9);
+  color: var(--ds-on-accent, #0a0c10) !important;
+  border: 1px solid var(--ds-accent, #67e8f9);
+}
+.ds-notes-doc-btn-read:hover {
+  background: #7df0ff;
+  box-shadow: 0 0 10px rgba(103, 232, 249, 0.45);
+}
+
+.ds-notes-doc-btn-github {
+  background: #24292f;
+  color: #ffffff !important;
+  border: 1px solid #484f58;
+}
+.ds-notes-doc-btn-github:hover {
+  background: #32383f;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.ds-notes-doc-btn-sponsor {
+  background: #db2777;
+  color: #ffffff !important;
+  border: 1px solid #f472b6;
+}
+.ds-notes-doc-btn-sponsor:hover {
+  background: #be185d;
+  box-shadow: 0 0 10px rgba(244, 114, 182, 0.45);
+}
+
+.ds-notes-doc-btn-plain {
+  background: var(--ds-panel-2, #1d2331);
+  color: var(--ds-text, #f8fafc) !important;
+  border: 1px solid var(--ds-border, #313a4c);
+}
+.ds-notes-doc-btn-plain:hover {
+  background: var(--ds-btn-hover, #283144);
+  border-color: #4a5568;
+}
+
+/* ------------------------------------------------------------
+   14. ELEMENT VARIETY: FOLDER HINT
+   ------------------------------------------------------------ */
+
+.ds-notes-folder-hint {
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: #11151f;
+  border: 1px solid var(--ds-border, #2d3647);
+  border-left: 4px solid var(--ds-accent, #67e8f9);
+  border-radius: 8px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 12px;
+  color: #e2e8f0;
+  display: block;
+  position: relative;
+}
+
+.ds-notes-folder-hint-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  color: var(--ds-accent, #67e8f9);
+  margin-bottom: 5px;
+}
+
+.ds-notes-folder-hint-tree {
+  white-space: pre;
+  line-height: 1.5;
+  color: var(--ds-text-muted, #94a3b8);
+}
+
+/* ------------------------------------------------------------
+   15. ELEMENT VARIETY: YOUTUBE (Embed & Card Modes)
+   ------------------------------------------------------------ */
+
+.ds-notes-youtube-embed-wrap {
+  margin: 14px 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--ds-border, #313a4c);
+  background: #000;
+  position: relative;
+}
+
+.ds-notes-youtube-embed-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.ds-notes-youtube-card {
+  margin: 14px 0;
+  background: #131722;
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 10px;
+  overflow: hidden;
+  display: block;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ds-notes-youtube-card:hover {
+  border-color: #ef4444;
+  box-shadow: 0 4px 18px rgba(239, 68, 68, 0.25);
+  transform: translateY(-1px);
+}
+
+.ds-notes-youtube-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: rgba(239, 68, 68, 0.14);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  font-weight: 750;
+  font-size: 12px;
+}
+
+.ds-notes-youtube-header svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.ds-notes-youtube-body {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ds-notes-youtube-play {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.ds-notes-youtube-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-notes-youtube-title {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.ds-notes-youtube-desc {
+  font-size: 11.5px;
+  color: var(--ds-text-muted, #94a3b8);
+  margin-bottom: 3px;
+}
+
+.ds-notes-youtube-url {
+  font-size: 11px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------
+   16. ELEMENT VARIETY: DISCORD
+   ------------------------------------------------------------ */
+
+.ds-notes-discord-card {
+  margin: 14px 0;
+  background: #141726;
+  border: 1px solid rgba(88, 101, 242, 0.35);
+  border-radius: 10px;
+  overflow: hidden;
+  display: block;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ds-notes-discord-card:hover {
+  border-color: #5865f2;
+  box-shadow: 0 4px 18px rgba(88, 101, 242, 0.3);
+  transform: translateY(-1px);
+}
+
+.ds-notes-discord-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: rgba(88, 101, 242, 0.15);
+  border-bottom: 1px solid rgba(88, 101, 242, 0.2);
+  color: #818cf8;
+  font-weight: 750;
+  font-size: 12px;
+}
+
+.ds-notes-discord-top svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.ds-notes-discord-content {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ds-notes-discord-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-notes-discord-name {
+  font-weight: 750;
+  font-size: 13.5px;
+  color: #ffffff;
+  margin-bottom: 3px;
+}
+
+.ds-notes-discord-desc {
+  font-size: 11.5px;
+  color: var(--ds-text-muted, #94a3b8);
+}
+
+.ds-notes-discord-join {
+  background: #5865f2;
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.ds-notes-discord-join:hover {
+  background: #4752c4;
+}
+
+/* ------------------------------------------------------------
+   17. DEATHSHOT CUSTOM CHIP GROUPS (NO NATIVE SELECT!)
+   ------------------------------------------------------------ */
+
+.ds-notes-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.ds-notes-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--ds-panel-2, #181d28);
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 6px;
+  color: var(--ds-text-muted, #94a3b8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.12s ease;
+  overflow: hidden;
+  user-select: none;
+}
+
+.ds-notes-chip-btn:hover {
+  background: var(--ds-btn-hover, #283144);
+  border-color: #4a5568;
+  color: var(--ds-text, #ffffff);
+}
+
+.ds-notes-chip-btn.is-active {
+  background: var(--ds-panel-2, #181d28);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-chip-btn.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--ds-accent, #67e8f9);
+}
+
+/* ------------------------------------------------------------
+   18. SUBMENUS, DIALOGS & OVERLAYS
+   ------------------------------------------------------------ */
+
+.ds-notes-menu-popup {
+  position: fixed;
+  z-index: 1000002;
+  background: var(--ds-panel, #121620);
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 8px;
+  padding: 5px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.65);
+  min-width: 180px;
+  backdrop-filter: blur(10px);
+  user-select: none;
+}
+
+.ds-notes-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ds-text, #f8fafc);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.ds-notes-menu-item:hover {
+  background: var(--ds-panel-2, #1f2737);
+  color: var(--ds-accent, #67e8f9);
+}
+
+/* Modal Inner Dialogs (Link, YouTube, Table, Callout, etc.) */
+.ds-notes-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000003;
+  background: rgba(0, 0, 0, 0.74);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.ds-notes-dialog-card {
+  background: var(--ds-panel, #121620);
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dsNotesModalScale 0.15s ease-out;
+}
+
+.ds-notes-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--ds-panel-2, #181d28);
+  border-bottom: 1px solid var(--ds-border, #29303d);
+  font-weight: 750;
+  font-size: 13px;
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-dialog-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.ds-notes-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--ds-panel-2, #181d28);
+  border-top: 1px solid var(--ds-border, #29303d);
+}
+
+.ds-notes-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ds-notes-form-label {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ds-text-muted, #94a3b8);
+}
+
+.ds-notes-form-input {
+  height: 30px;
+  padding: 0 10px;
+  background: var(--ds-bg, #0b0f17);
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 6px;
+  color: var(--ds-text, #ffffff);
+  font-size: 12.5px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ds-notes-form-input:focus {
+  border-color: var(--ds-accent, #67e8f9);
+}
+
+/* ------------------------------------------------------------
+   19. INTERACTIVE TABLE PICKER MATRIX
+   ------------------------------------------------------------ */
+
+.ds-notes-table-picker-matrix {
+  display: grid;
+  grid-template-columns: repeat(8, 24px);
+  grid-template-rows: repeat(8, 24px);
+  gap: 4px;
+  margin: 6px auto;
+}
+
+.ds-notes-matrix-cell {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  background: #181d28;
+  border: 1px solid #313a4c;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.ds-notes-matrix-cell.is-selected {
+  background: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-accent, #67e8f9);
+}
+
+/* ------------------------------------------------------------
+   20. CENTRAL COLOR PICKER POPUP Z-INDEX FIX
+   ------------------------------------------------------------ */
+
+.ds-ui-color-popup {
+  z-index: 1000005 !important;
+}
+
+/* ------------------------------------------------------------
+   21. ACCIDENTAL CANCEL CONFIRMATION MODAL
+   ------------------------------------------------------------ */
+
+.ds-notes-confirm-modal {
+  max-width: 380px;
+  border-radius: 10px;
+}
+
+.ds-notes-confirm-msg {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ds-text, #f8fafc);
+  margin: 0;
+}
+
+/* ------------------------------------------------------------
+   22. TABBED ZERO-NATIVE DEATHSHOT COLOR POPOVER
+   ------------------------------------------------------------ */
+
+.ds-notes-color-popover {
+  width: 290px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  background: var(--ds-panel, #12151c);
+  border: 1px solid var(--ds-border, #2e3748);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85);
+  z-index: 1000030 !important;
+}
+
+.ds-notes-color-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.ds-notes-color-popover-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ds-text, #ffffff);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ds-notes-color-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(10, 14, 22, 0.6);
+  padding: 3px;
+  border-radius: 7px;
+  border: 1px solid var(--ds-border, #29303d);
+}
+
+.ds-notes-color-tab {
+  flex: 1;
+  height: 26px;
+  line-height: 24px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ds-text-muted, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.ds-notes-color-tab:hover {
+  color: var(--ds-text, #ffffff);
+  background: var(--ds-panel-2, #1d2331);
+}
+
+.ds-notes-color-tab.is-active {
+  background: var(--ds-panel-2, #1d2331);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-color-tab.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ds-accent, #67e8f9);
+}
+
+/* Sat/Val Canvas Box */
+.ds-notes-satval-box {
+  width: 100%;
+  height: 124px;
+  position: relative;
+  border-radius: 6px;
+  cursor: crosshair;
+  overflow: hidden;
+  border: 1px solid var(--ds-border, #313a4c);
+  touch-action: none;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.ds-notes-satval-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ds-notes-satval-pin {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.9), inset 0 0 2px rgba(0, 0, 0, 0.6);
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Hue Slider Strip */
+.ds-notes-hue-strip {
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid var(--ds-border, #313a4c);
+  touch-action: none;
+  background: linear-gradient(
+    to right,
+    #ff0000 0%,
+    #ffff00 17%,
+    #00ff00 33%,
+    #00ffff 50%,
+    #0000ff 67%,
+    #ff00ff 83%,
+    #ff0000 100%
+  );
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.ds-notes-hue-thumb {
+  width: 8px;
+  height: 18px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  position: absolute;
+  top: -3px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* 4x9 Swatches Palette */
+.ds-notes-swatches-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ds-notes-swatch-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.ds-notes-swatch-cell:hover {
+  transform: scale(1.15);
+  border-color: #ffffff;
+  z-index: 1;
+}
+
+/* Color Bottom Row */
+.ds-notes-color-bottom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ds-notes-color-active-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--ds-border, #313a4c);
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.ds-notes-color-hex-input {
+  flex: 1;
+  height: 28px;
+  line-height: 26px;
+  padding: 0 8px;
+  background: var(--ds-panel-2, #181d28);
+  border: 1px solid var(--ds-border, #313a4c);
+  border-radius: 6px;
+  color: var(--ds-text, #ffffff);
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.ds-notes-color-hex-input:focus {
+  outline: none;
+  border-color: var(--ds-accent, #67e8f9);
+}
+
+.ds-notes-color-swatch-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  vertical-align: middle;
+  flex-shrink: 0;
+}

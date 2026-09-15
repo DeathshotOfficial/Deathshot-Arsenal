@@ -1,0 +1,7 @@
+numpy
+psutil
+av
+opencv-python
+imageio-ffmpeg
+onnxruntime
+pynvml

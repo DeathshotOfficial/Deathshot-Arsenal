@@ -1,0 +1,361 @@
+/* ============================================================
+   DS Prompt - DeathshotArsenal
+   Themed DOM prompt editor
+   ============================================================ */
+
+.ds-prompt-root {
+  --ds-bg: var(--comfy-input-bg-color, #17191d);
+  --ds-panel: var(--comfy-menu-bg, #1d1f23);
+  --ds-panel-2: var(--comfy-input-bg-color, #202328);
+  --ds-accent: var(--ds-theme-accent, #67e8f9);
+  --ds-text: var(--comfy-text-color, #e5e7eb);
+  --ds-text-muted: var(--comfy-text-secondary, #9ca3af);
+  --ds-border: var(--comfy-input-border-color, #353940);
+  --ds-radius: 6px;
+  --ds-radius-sm: 4px;
+  --ds-font: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  max-height: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 7px;
+  overflow: hidden;
+  border-radius: var(--ds-radius);
+  background: var(--ds-bg);
+  color: var(--ds-text);
+  font-family: var(--ds-font);
+  font-size: 12px;
+  user-select: none;
+  /* Full-bleed DOM overlay: let clicks on empty background/padding/gaps fall
+     through to the canvas underneath so LiteGraph's native resize-corner and
+     node-drag hit-testing still work (this is the same pattern every other
+     resizable DS DOM-widget node uses). Only the actual interactive controls
+     below opt back in with pointer-events: auto. */
+  pointer-events: none;
+  position: relative;
+}
+
+.ds-prompt-textarea,
+.ds-prompt-preview-text,
+.ds-prompt-trigger-control,
+.ds-prompt-icon-btn,
+.ds-prompt-btn,
+.ds-prompt-resize-handle {
+  pointer-events: auto;
+}
+
+.ds-prompt-root * { box-sizing: border-box; }
+
+/* The DOM widget root is sized by LiteGraph; flex distributes that height
+   through the editor and into the textarea without a second fixed pixel box. */
+.ds-prompt-root .ds-prompt-editor { flex: 1 1 0; min-height: 0; min-width: 0; }
+.ds-prompt-root .ds-prompt-textarea { height: 100%; min-height: 0; max-height: none; flex: 1 1 0; }
+
+.ds-prompt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 24px;
+  min-height: 24px;
+}
+
+.ds-prompt-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  min-width: 0;
+  color: var(--ds-text);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.ds-prompt-title-icon {
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--ds-accent);
+}
+
+.ds-prompt-title-icon svg,
+.ds-prompt-icon-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.ds-prompt-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.ds-prompt-icon-btn {
+  appearance: none;
+  border: 1px solid var(--ds-border, #353940);
+  background: var(--ds-panel-2, #202328);
+  color: var(--ds-text, #e5e7eb);
+  border-radius: var(--ds-ui-control-radius, 5px) !important;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  flex: 0 0 24px;
+  transition: border-color 100ms ease, background 100ms ease, color 100ms ease;
+}
+
+.ds-prompt-icon-btn:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-panel, #1d1f23);
+}
+
+.ds-prompt-icon-btn.active {
+  color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 12%, var(--ds-panel-2, #202328));
+}
+
+.ds-prompt-icon-btn.is-success {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-prompt-icon-btn.is-error {
+  border-color: var(--ds-error, #ef4444);
+  color: var(--ds-error, #ef4444);
+}
+
+.ds-prompt-editor {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  overflow: hidden;
+  background: var(--ds-panel-2);
+}
+
+.ds-prompt-textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 0;
+  display: block;
+  resize: none;
+  border: 0;
+  outline: 0;
+  margin: 0;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--ds-text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.42;
+  user-select: text;
+  overflow: auto;
+}
+
+.ds-prompt-textarea::placeholder { color: var(--ds-text-muted); opacity: .72; }
+.ds-prompt-textarea:focus { box-shadow: inset 0 0 0 1px var(--ds-accent); }
+
+.ds-prompt-preview {
+  display: none;
+  flex: 0 0 44%;
+  min-height: 0;
+  max-height: 55%;
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-bg);
+  flex-direction: column;
+}
+
+.ds-prompt-root.is-expanded .ds-prompt-preview { display: flex; }
+
+.ds-prompt-preview-head {
+  height: 26px;
+  flex: 0 0 26px;
+  display: flex;
+  align-items: center;
+  padding: 0 9px;
+  border-bottom: 1px solid var(--ds-border);
+  color: var(--ds-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .25px;
+  text-transform: uppercase;
+}
+
+.ds-prompt-preview-text {
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 8px 9px;
+  color: var(--ds-text);
+  font-size: 11px;
+  line-height: 1.42;
+  white-space: pre-wrap;
+  overflow: auto;
+  user-select: text;
+}
+
+.ds-prompt-resize-handle {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--ds-text-muted);
+  cursor: nwse-resize;
+  z-index: 5;
+  touch-action: none;
+  transition: color 100ms ease, background 100ms ease;
+}
+
+.ds-prompt-resize-handle svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.ds-prompt-resize-handle:hover,
+.ds-prompt-resize-handle.is-active {
+  color: var(--ds-accent);
+  background: color-mix(in srgb, var(--ds-accent) 14%, transparent);
+}
+
+.ds-prompt-status {
+  min-width: 0;
+  max-width: 80px;
+  color: var(--ds-text-muted);
+  font-size: 9.5px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+.ds-prompt-status.is-visible {
+  opacity: 1;
+}
+
+.ds-prompt-root ::-webkit-scrollbar { width: 6px; height: 6px; }
+.ds-prompt-root ::-webkit-scrollbar-track { background: transparent; }
+.ds-prompt-root ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ds-text-muted) 35%, transparent);
+  border-radius: 3px;
+}
+.ds-prompt-root ::-webkit-scrollbar-thumb:hover { background: var(--ds-accent); }
+
+@media (max-width: 360px) {
+  .ds-prompt-title { font-size: 11px; }
+  .ds-prompt-status { display: none; }
+}
+
+/* Trigger placement control */
+.ds-prompt-trigger-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid var(--ds-border, #353940);
+  border-radius: var(--ds-ui-control-radius, 5px);
+  background: var(--ds-panel-2, #202328);
+  flex: 0 0 auto;
+}
+
+.ds-prompt-trigger-label {
+  padding: 0 6px;
+  color: var(--ds-text-muted, #9ca3af);
+  font-size: 9.5px;
+  font-weight: 700;
+  user-select: none;
+}
+
+.ds-prompt-segment {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ds-text-muted, #9ca3af);
+  cursor: pointer;
+  font: inherit;
+  font-size: 9.5px;
+  font-weight: 600;
+  height: 20px;
+  min-width: 44px;
+  padding: 0 8px;
+  line-height: 18px;
+  box-shadow: none !important;
+  transition: all var(--ds-ui-transition, 120ms ease);
+}
+
+.ds-prompt-segment:hover {
+  color: var(--ds-text, #e5e7eb);
+  background: var(--ds-btn-hover, #1c2130);
+}
+
+.ds-prompt-segment.active {
+  background: var(--ds-panel, var(--ds-panel-2, #21252d));
+  color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-border, #343a44);
+  box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9) !important;
+  font-weight: 700;
+}
+
+.ds-prompt-segment.active:hover {
+  background: var(--ds-panel-3, #2b303a);
+  color: var(--ds-accent, #67e8f9);
+}
+
+@media (max-width: 430px) {
+  .ds-prompt-trigger-label { display: none; }
+  .ds-prompt-segment { padding: 0 5px; }
+}
+
+/* Central DS geometry owns the node-face inset. Keep Prompt-specific rules
+   limited to its layout/content rather than inventing another shell. */
+.ds-prompt-root {
+  gap: var(--ds-ui-gap-sm) !important;
+  padding: var(--ds-ui-shell-inset) !important;
+}
+.ds-prompt-icon-btn {
+  height: 24px !important;
+  width: 24px !important;
+  min-width: 24px !important;
+  border-radius: var(--ds-ui-control-radius, 5px) !important;
+}

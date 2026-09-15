@@ -1,0 +1,565 @@
+/* DS System Monitor — Real-time Dashboard */
+
+.ds-sysdash-root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--ds-bg, #0f0f12);
+    color: var(--ds-text, #e8e8ec);
+    font-family: var(--ds-font, Inter, system-ui, sans-serif);
+    font-size: var(--ds-font-size, 13px);
+    border-radius: 0 0 10px 10px;
+    border: 1px solid var(--ds-border, #242a36);
+    border-top: none;
+    box-shadow: none;
+    box-sizing: border-box;
+    overflow: hidden;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: auto;
+    position: relative;
+    --ds-sysdash-ok: #22c55e;
+    --ds-sysdash-warn: #f59e0b;
+    --ds-sysdash-err: #ef4444;
+    --ds-sysdash-idle: #6b7280;
+    --ds-sysdash-surface: color-mix(in srgb, var(--ds-panel, #1a1a22) 85%, transparent);
+    --ds-sysdash-muted: var(--ds-text-muted, rgba(255, 255, 255, 0.45));
+}
+
+.ds-sysdash-root.glass {
+    backdrop-filter: blur(var(--ds-glass-blur, 12px));
+    -webkit-backdrop-filter: blur(var(--ds-glass-blur, 12px));
+    background: color-mix(in srgb, var(--ds-bg) calc(var(--ds-glass-opacity, 0.92) * 100%), transparent);
+}
+
+/* Status toolbar (title is the native ComfyUI node header) */
+.ds-sysdash-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--ds-panel, var(--ds-sysdash-surface));
+    border-bottom: 1px solid var(--ds-border);
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.ds-sysdash-toolbar-spacer {
+    flex: 1 1 auto;
+    min-width: 8px;
+}
+
+.ds-sysdash-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--ds-sysdash-idle);
+    flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+.ds-sysdash-status-dot.preparing,
+.ds-sysdash-status-dot.executing {
+    background: var(--ds-accent, #67e8f9);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--ds-accent) 60%, transparent);
+    animation: ds-sysdash-pulse 2s ease-in-out infinite;
+}
+
+.ds-sysdash-status-dot.finished { background: var(--ds-sysdash-ok); }
+.ds-sysdash-status-dot.error { background: var(--ds-sysdash-err); }
+
+@keyframes ds-sysdash-pulse {
+    50% { opacity: 0.45; transform: scale(0.92); }
+}
+
+.ds-sysdash-state-label {
+    font-size: 0.82em;
+    font-weight: 600;
+    color: var(--ds-text-muted, var(--ds-sysdash-muted));
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.ds-sysdash-gear {
+    background: transparent;
+    border: none;
+    color: var(--ds-sysdash-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s, background 0.2s;
+}
+
+.ds-sysdash-gear:hover {
+    color: var(--ds-accent);
+    background: color-mix(in srgb, var(--ds-accent) 12%, transparent);
+}
+
+/* Settings */
+.ds-sysdash-settings {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--ds-panel) 95%, #000);
+    border-bottom: 1px solid var(--ds-border);
+    font-size: 0.85em;
+}
+
+.ds-sysdash-settings.open { display: flex; }
+
+.ds-sysdash-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ds-sysdash-setting-row label { color: var(--ds-sysdash-muted); }
+
+.ds-sysdash-setting-row input[type="range"] { flex: 1; max-width: 160px; }
+
+/* Scrollable body — grows only when node is resized taller than content */
+.ds-sysdash-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+}
+
+/* Themed scrollbars — all scrollable areas inside the dashboard */
+.ds-sysdash-root,
+.ds-sysdash-root * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ds-scrollbar, rgba(255, 255, 255, 0.22)) transparent;
+}
+
+.ds-sysdash-root ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.ds-sysdash-root ::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--ds-panel, #1a1a22) 35%, transparent);
+    border-radius: 4px;
+}
+
+.ds-sysdash-root ::-webkit-scrollbar-thumb {
+    background: var(--ds-scrollbar, rgba(255, 255, 255, 0.22));
+    border-radius: 4px;
+    border: 1px solid color-mix(in srgb, var(--ds-border, rgba(255, 255, 255, 0.1)) 60%, transparent);
+}
+
+.ds-sysdash-root ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--ds-accent, #67e8f9) 55%, var(--ds-scrollbar, rgba(255, 255, 255, 0.3)));
+}
+
+.ds-sysdash-root ::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Hide default arrows for clean modern scrollbar (match global design) */
+.ds-sysdash-root ::-webkit-scrollbar-button,
+.ds-sysdash-root ::-webkit-scrollbar-button:single-button {
+    display: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Panels */
+.ds-sysdash-panel {
+    background: var(--ds-sysdash-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.ds-sysdash-panel-title {
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ds-sysdash-muted);
+    margin-bottom: 10px;
+}
+
+/* Progress row */
+.ds-sysdash-progress-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 140px;
+    gap: 16px;
+    align-items: center;
+}
+
+@media (max-width: 600px) {
+    .ds-sysdash-progress-row { grid-template-columns: 1fr; }
+}
+
+.ds-sysdash-ring-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+}
+
+.ds-sysdash-ring-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.ds-sysdash-ring-bg {
+    fill: none;
+    stroke: color-mix(in srgb, var(--ds-border) 80%, transparent);
+    stroke-width: 6;
+}
+
+.ds-sysdash-ring-fill {
+    fill: none;
+    stroke: var(--ds-accent);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--ds-accent) 40%, transparent));
+}
+
+.ds-sysdash-ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.ds-sysdash-ring-pct {
+    font-size: 1.4em;
+    line-height: 1;
+    color: var(--ds-accent);
+}
+
+.ds-sysdash-ring-sub {
+    font-size: 0.65em;
+    color: var(--ds-sysdash-muted);
+    margin-top: 2px;
+}
+
+.ds-sysdash-progress-info { display: flex; flex-direction: column; gap: 6px; }
+
+.ds-sysdash-info-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.88em;
+}
+
+.ds-sysdash-info-line span:first-child { color: var(--ds-sysdash-muted); }
+
+.ds-sysdash-info-line .val {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    text-align: right;
+}
+
+/* Timer block */
+.ds-sysdash-timer-block { text-align: center; }
+
+.ds-sysdash-timer {
+    font-size: 1.6em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--ds-text);
+}
+
+.ds-sysdash-timer-sub {
+    font-size: 0.72em;
+    color: var(--ds-sysdash-muted);
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+/* Node list */
+.ds-sysdash-node-list {
+    max-height: 140px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ds-sysdash-node-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--ds-panel) 50%, transparent);
+    font-size: 0.85em;
+    transition: background 0.25s, opacity 0.25s;
+}
+
+.ds-sysdash-node-item.active {
+    background: color-mix(in srgb, var(--ds-accent) 12%, transparent);
+    border-left: 3px solid var(--ds-accent);
+    padding-left: 5px;
+}
+
+.ds-sysdash-node-item.done {
+    opacity: 0.55;
+}
+
+.ds-sysdash-node-item.done .ds-sysdash-node-status::before {
+    content: "✓ ";
+    color: var(--ds-sysdash-ok);
+}
+
+.ds-sysdash-node-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.ds-sysdash-node-status {
+    font-size: 0.85em;
+    color: var(--ds-sysdash-muted);
+    text-transform: capitalize;
+}
+
+.ds-sysdash-node-time {
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85em;
+    color: var(--ds-sysdash-muted);
+    min-width: 48px;
+    text-align: right;
+}
+
+.ds-sysdash-node-bar {
+    grid-column: 1 / -1;
+    height: 3px;
+    background: color-mix(in srgb, var(--ds-border) 60%, transparent);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.ds-sysdash-node-bar-fill {
+    height: 100%;
+    background: var(--ds-accent);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.ds-sysdash-empty {
+    text-align: center;
+    padding: 16px;
+    color: var(--ds-sysdash-muted);
+    font-style: italic;
+    font-size: 0.88em;
+}
+
+/* Hardware grid */
+.ds-sysdash-hw-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+@media (min-width: 700px) {
+    .ds-sysdash-hw-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.ds-sysdash-hw-card {
+    background: color-mix(in srgb, var(--ds-panel) 60%, transparent);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ds-sysdash-hw-label {
+    font-size: 0.7em;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ds-sysdash-muted);
+}
+
+.ds-sysdash-hw-value {
+    font-size: 1.25em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ds-accent);
+}
+
+.ds-sysdash-hw-detail {
+    font-size: 0.72em;
+    color: var(--ds-sysdash-muted);
+    line-height: 1.4;
+}
+
+.ds-sysdash-hw-bar {
+    height: 4px;
+    background: color-mix(in srgb, var(--ds-border) 60%, transparent);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 2px;
+}
+
+.ds-sysdash-hw-bar-fill {
+    height: 100%;
+    background: var(--ds-accent);
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ds-sysdash-hw-bar-fill.warn { background: var(--ds-sysdash-warn); }
+.ds-sysdash-hw-bar-fill.crit { background: var(--ds-sysdash-err); }
+
+/* Graphs */
+.ds-sysdash-graph-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.ds-sysdash-graph-card {
+    background: color-mix(in srgb, var(--ds-panel) 50%, transparent);
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.ds-sysdash-graph-label {
+    font-size: 0.68em;
+    font-weight: 600;
+    color: var(--ds-sysdash-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.ds-sysdash-graph-canvas {
+    width: 100%;
+    height: 48px;
+    display: block;
+    border-radius: 4px;
+}
+
+/* Generation & stats row */
+.ds-sysdash-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.ds-sysdash-meta-item {
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--ds-panel) 50%, transparent);
+    border-radius: 8px;
+}
+
+.ds-sysdash-meta-label {
+    font-size: 0.68em;
+    color: var(--ds-sysdash-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.ds-sysdash-meta-value {
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.ds-sysdash-meta-value.unavailable {
+    color: var(--ds-sysdash-muted);
+    font-style: italic;
+    font-weight: 400;
+}
+
+.ds-sysdash-eta {
+    font-size: 1.3em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ds-accent);
+}
+
+/* Stats grid */
+.ds-sysdash-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.ds-sysdash-stat {
+    text-align: center;
+    padding: 8px 4px;
+    background: color-mix(in srgb, var(--ds-panel) 40%, transparent);
+    border-radius: 6px;
+}
+
+.ds-sysdash-stat-val {
+    font-size: 1.1em;
+    font-weight: 700;
+    color: var(--ds-accent);
+    font-variant-numeric: tabular-nums;
+}
+
+.ds-sysdash-stat-lbl {
+    font-size: 0.65em;
+    color: var(--ds-sysdash-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+}
+
+/* Resize handle — bottom edge drag zone */
+.ds-sysdash-resize {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 16px;
+    background: linear-gradient(to top, color-mix(in srgb, var(--ds-panel) 70%, transparent), transparent);
+    cursor: ns-resize;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 3px;
+    opacity: 0.45;
+    transition: opacity 0.2s, background 0.2s;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.ds-sysdash-root:hover .ds-sysdash-resize { opacity: 0.85; }
+.ds-sysdash-resize:hover {
+    opacity: 1 !important;
+    background: linear-gradient(to top, color-mix(in srgb, var(--ds-accent) 18%, transparent), transparent);
+}
+
+.ds-sysdash-resize-grip {
+    width: 40px;
+    height: 4px;
+    background: var(--ds-accent, #67e8f9);
+    border-radius: 2px;
+    opacity: 0.7;
+}
+
+.ds-sysdash-resize:hover .ds-sysdash-resize-grip { opacity: 1; }

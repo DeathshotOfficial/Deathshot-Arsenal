@@ -1,0 +1,45 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Runtime cache and state files
+.cache/
+.*_state.json
+.*_cache.json
+.*cache*.json
+*.tmp
+
+# Local user vault & personal prompt cards
+vault/
+cards/*.json
+!cards/.gitkeep
+
+# Large model binaries (auto-downloaded on demand)
+models/*.onnx
+models/*.pth
+models/*.pt
+models/*.bin
+models/*.safetensors
+Interpolation Models/*.pth
+Interpolation Models/*.pt
+Interpolation Models/*.bin
+Interpolation Models/*.safetensors
+!models/.gitkeep
+!Interpolation Models/.gitkeep
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor settings
+.vscode/
+.idea/
+
+# Internal AI agent & developer documentation (local only)
+If you are an AI agent, READ this first!!.md
+README.txt
+docs/
+**/MIGRATION.md
+js/**/README.md

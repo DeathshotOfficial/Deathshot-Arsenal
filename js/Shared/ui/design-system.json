@@ -1,0 +1,29 @@
+{
+  "version": 5,
+  "principles": {
+    "shell_inset_base_px": 6,
+    "shell_inset_bare_px": 6,
+    "default_gap_px": 5,
+    "large_gap_px": 7,
+    "control_height_px": 28,
+    "control_radius_px": 5,
+    "panel_radius_px": 6,
+    "border_px": 1
+  },
+  "shells": {
+    "base": "Native ComfyUI/LiteGraph node shell; DOM face gets the same 6px inset.",
+    "bare": "Chromeless/baseless node; DOM face gets the same 6px inset from its own visual edge."
+  },
+  "controls": {
+    "slider": "Filled track + draggable thumb + synchronized numeric input",
+    "toggle": "Custom switch with accessible role=switch",
+    "color_picker": "Theme-aware trigger swatch + hex popup with native picker + swatches",
+    "segmented_group": "Pill button tabs/group with active indicator (e.g. snap, modes)",
+    "menu": "Theme-aware context/dropdown menu with optional search",
+    "preview_card": "Standard contained image/HUD preview box with title/dimension badges"
+  },
+  "context_menu": {
+    "submenu_indicator": "Muted chevron; no cyan side bar"
+  },
+  "recreate_compatibility": "Resolve string node ids passed to LiteGraph.connect by older/current Manager combinations."
+}

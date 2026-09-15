@@ -1,0 +1,1221 @@
+/* ============================================================
+   DS Prompt Cards - Premium Inline Node UI
+   DeathshotArsenal
+   Scoped, modern, resizable-friendly
+   ============================================================ */
+
+.ds-cards-root {
+  --ds-bg: #0b0d12;
+  --ds-panel: #12151c;
+  --ds-panel-2: #161a23;
+  --ds-accent: #67e8f9;
+  --ds-accent-2: #22d3ee;
+  --ds-text: #e5e7eb;
+  --ds-text-muted: #9ca3af;
+  --ds-border: #242a36;
+  --ds-danger: #f87171;
+  --ds-success: #34d399;
+  --ds-radius: 10px;
+  --ds-radius-sm: 6px;
+  --ds-gap: 10px;
+  --ds-font: Inter, "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+
+  font-family: var(--ds-font);
+  font-size: 14px;
+  color: var(--ds-text);
+  background: var(--ds-bg);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 0%;
+  user-select: none;
+  pointer-events: auto;
+
+  /* Defaults for M / normal - overridden by JS _applySizeConfig for S/M/L live scaling */
+  --preview-h: 210px;
+  --list-preview-w: 175px;
+  --grid-min-col: 205px;
+  --card-gap: 10px;
+}
+
+.ds-cards-root * {
+  box-sizing: border-box;
+}
+
+.ds-cards-root input,
+.ds-cards-root textarea,
+.ds-cards-root button {
+  font-family: inherit;
+}
+
+/* Allow text interaction */
+.ds-cards-root .prompt-text,
+.ds-cards-root .search-input {
+  user-select: text;
+  cursor: text;
+}
+
+/* HEADER / TOOLBAR */
+.ds-cards-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--ds-panel);
+  border-bottom: 1px solid var(--ds-border);
+  flex-shrink: 0;
+  min-height: 36px;
+  flex-wrap: nowrap;
+}
+
+.ds-cards-title {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13.5px;
+  letter-spacing: 0.3px;
+  color: var(--ds-accent);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ds-cards-title .logo {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ds-cards-count {
+  font-size: 10px;
+  color: var(--ds-text-muted);
+  background: var(--ds-panel-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 2px;
+}
+
+/* Segmented control for view */
+.ds-segmented {
+  display: inline-flex;
+  background: var(--ds-panel-2);
+  border: 1px solid var(--ds-border);
+  border-radius: 7px;
+  overflow: hidden;
+  margin-left: 2px;
+}
+
+.ds-segmented button {
+  border: none;
+  background: transparent;
+  color: var(--ds-text-muted);
+  padding: 4px 9px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 80ms ease;
+}
+
+.ds-segmented button.active {
+  background: var(--ds-accent);
+  color: #0b0d12;
+  font-weight: 600;
+}
+
+.ds-segmented button:hover:not(.active) {
+  color: var(--ds-text);
+}
+
+/* Action buttons */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--ds-panel-2);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text);
+  padding: 5px 10px;
+  border-radius: var(--ds-radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  white-space: nowrap;
+}
+
+.ds-btn:hover {
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+  transform: translateY(-0.5px);
+}
+
+.ds-btn.primary {
+  min-height: 34px;
+  padding: 7px 14px;
+  font-size: 12px;
+  gap: 7px;
+  background: var(--ds-accent);
+  color: #0b0d12;
+  border-color: var(--ds-accent);
+  font-weight: 700;
+}
+
+.ds-btn.primary:hover {
+  filter: brightness(1.08);
+  color: #0b0d12;
+}
+
+.ds-btn.danger {
+  color: var(--ds-danger);
+  border-color: #3a2a2a;
+}
+
+.ds-btn.danger:hover {
+  background: #2a1f1f;
+  border-color: var(--ds-danger);
+}
+
+/* Icon buttons */
+.ds-icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ds-text-muted);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  flex-shrink: 0;
+}
+
+.ds-icon-btn:hover {
+  color: var(--ds-text);
+  background: var(--ds-panel-2);
+  border-color: var(--ds-border);
+}
+
+.ds-icon-btn.active,
+.ds-icon-btn.pinned {
+  color: var(--ds-accent);
+}
+
+/* Make pinned star more obvious */
+.ds-icon-btn.pinned svg {
+  filter: drop-shadow(0 0 1px rgba(103, 232, 249, 0.5));
+}
+
+.ds-icon-btn.danger:hover {
+  color: var(--ds-danger);
+  background: #2a1f1f;
+}
+
+.ds-icon-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* Search */
+.ds-search {
+  flex: 1 1 120px;
+  min-width: 70px;
+  max-width: 200px;
+  position: relative;
+  margin-left: auto;
+}
+
+.ds-search input {
+  width: 100%;
+  background: var(--ds-panel-2);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text);
+  padding: 5px 10px 5px 28px;
+  border-radius: 999px;
+  font-size: 11px;
+  outline: none;
+}
+
+.ds-search input:focus {
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.12);
+}
+
+.ds-search .search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Filter pills */
+.ds-filters {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.ds-filter-pill {
+  font-size: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--ds-panel-2);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  transition: all 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: inherit;
+}
+
+.ds-filter-pill.active {
+  background: rgba(103, 232, 249, 0.12);
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+}
+
+
+.ds-filter-pill svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* BODY / SCROLL - PROPER FLEX SCROLL CONTAINER */
+.ds-cards-body {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  background: var(--ds-bg);
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+/* Modern themed scrollbar (consistent with global modern design) */
+.ds-cards-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ds-cards-body::-webkit-scrollbar-thumb {
+  background: var(--ds-scrollbar);
+  border-radius: 3px;
+}
+
+.ds-cards-body::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-accent);
+}
+
+.ds-cards-body::-webkit-scrollbar-track {
+  background: var(--ds-panel-2);
+}
+
+/* Hide default arrows for clean modern scrollbar */
+.ds-cards-body::-webkit-scrollbar-button,
+.ds-cards-body::-webkit-scrollbar-button:single-button {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+.ds-cards-body::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* GRID */
+.ds-cards-grid {
+  display: grid;
+  /* auto-fit + 1fr makes cards use available width efficiently (stretch when few cards instead of leaving empty space) */
+  grid-template-columns: repeat(auto-fit, minmax(var(--grid-min-col), 1fr));
+  gap: var(--card-gap);
+  align-content: start;
+  grid-auto-rows: min-content;
+  min-height: 0;
+}
+
+/* LIST - block-like stacking so rows keep natural size and scroll works */
+.ds-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* Prevent ANY shrinking of cards - this stops the "ui keep shrinking" when adding many */
+.ds-cards-list .ds-card,
+.ds-card {
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  flex-basis: auto !important;
+}
+
+/* CARD */
+.ds-card {
+  background: var(--ds-panel);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.1s ease, box-shadow 0.1s ease, transform 0.1s ease;
+  position: relative;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  min-height: 0;
+  width: 100%;
+}
+
+.ds-card:hover {
+  border-color: #334155;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+/* Prevent list view from overflowing horizontally */
+.ds-cards-list .ds-card {
+  min-width: 0;
+}
+
+.ds-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.985);
+}
+
+.ds-card.drop-target {
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 1px var(--ds-accent) inset;
+}
+
+/* LIST variant */
+.ds-cards-list .ds-card {
+  flex-direction: row;
+  align-items: stretch;
+  min-height: var(--preview-h);
+}
+
+.ds-cards-list .ds-card-preview {
+  width: var(--list-preview-w);
+  height: var(--preview-h);
+  border-radius: 0;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+/* PREVIEW - base (normal) size. Overridden by [data-psize] below */
+.ds-card-preview {
+  width: 100%;
+  height: var(--preview-h);
+  background: var(--ds-panel-2, #161a23);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.ds-card-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.ds-card-preview .preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-text-muted);
+  font-size: 10px;
+  opacity: 0.65;
+  gap: 3px;
+  text-align: center;
+  padding: 4px;
+}
+
+.ds-card-preview .preview-placeholder svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.5;
+}
+
+/* Preview sizing is fixed to the large presentation size. */
+
+.ds-card-preview:hover .preview-overlay {
+  opacity: 1;
+}
+
+.preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.0) 40%, rgba(0,0,0,0.45) 85%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.preview-overlay span {
+  font-size: 9px;
+  color: #fff;
+  margin-bottom: 6px;
+  background: rgba(0,0,0,0.55);
+  padding: 1px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.2px;
+}
+
+/* Expand (large view) button on every card preview - very visible on hover */
+.ds-preview-expand {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: all 0.1s ease;
+  z-index: 3;
+}
+.ds-preview-expand:hover {
+  opacity: 1;
+  background: var(--ds-accent);
+  color: #0b0d12;
+  border-color: var(--ds-accent);
+}
+.ds-preview-expand svg {
+  width: 13px;
+  height: 13px;
+}
+.ds-card-preview:hover .ds-preview-expand {
+  opacity: 0.85;
+}
+
+/* Pin badge on preview */
+.ds-pin-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 16px;
+  height: 16px;
+  background: var(--ds-panel);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  color: var(--ds-accent);
+  z-index: 2;
+}
+
+.ds-pin-badge svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* CARD BODY */
+.ds-card-body {
+  padding: 6px 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+  min-width: 0; /* important for list view flex */
+}
+
+.ds-cards-list .ds-card-body {
+  padding: 6px 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
+}
+
+/* Prompt type tags */
+.ds-card-type,
+.ds-modal-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ds-type-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid var(--ds-border);
+  border-radius: 999px;
+  background: var(--ds-panel-2);
+  color: var(--ds-text-muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.ds-type-tag svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.ds-type-tag:hover {
+  color: var(--ds-text);
+  border-color: var(--ds-accent);
+}
+
+.ds-type-tag.active {
+  color: var(--ds-accent);
+  background: rgba(103, 232, 249, 0.10);
+  border-color: var(--ds-accent);
+}
+
+/* Prompt textarea - larger and easier to read */
+.ds-prompt-text {
+  width: 100%;
+  min-height: 64px;
+  max-height: 180px;
+  background: var(--ds-panel-2);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text);
+  padding: 8px 9px;
+  border-radius: var(--ds-radius-sm);
+  font-size: 14px;
+  line-height: 1.42;
+  resize: vertical;
+  field-sizing: content;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+.ds-cards-list .ds-prompt-text {
+  min-height: 60px;
+  flex: 1; /* grow to use the full height allocated by the preview size in this mode */
+  max-height: none; /* let it use the card's vertical space efficiently; internal scroll if very long */
+  font-size: 14px;
+}
+
+/* No arrows on these small text scrollers */
+.ds-cards-list .ds-prompt-text::-webkit-scrollbar-button,
+.ds-cards-list .ds-prompt-text::-webkit-scrollbar-button:single-button {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+}
+
+.ds-prompt-text:focus {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.1);
+}
+
+/* Card actions footer */
+.ds-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+
+.ds-cards-list .ds-card-actions {
+  padding-top: 0;
+  margin-left: auto;
+  gap: 2px;
+}
+
+/* Empty state */
+.ds-cards-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--ds-text-muted);
+  text-align: center;
+  gap: 8px;
+  min-height: 140px;
+}
+
+.ds-cards-empty svg {
+  width: 36px;
+  height: 36px;
+  opacity: 0.35;
+}
+
+.ds-cards-empty .title {
+  font-size: 12px;
+  color: var(--ds-text);
+  font-weight: 600;
+}
+
+.ds-cards-empty .hint {
+  font-size: 10.5px;
+  opacity: 0.7;
+}
+
+/* === Robustness for ComfyUI DOM widget containers === */
+/* Keep rules scoped. Avoid !important on pointer-events so we don't break canvas scrolling. */
+.ds-cards-root {
+  box-sizing: border-box;
+}
+
+.ds-cards-root * {
+  box-sizing: border-box;
+}
+
+/* Grid/list containers should not prevent scrolling of parent */
+.ds-cards-grid,
+.ds-cards-list {
+  min-height: 0;
+}
+
+/* Ensure icon buttons and interactive parts are clearly clickable */
+.ds-icon-btn,
+.ds-btn,
+.ds-filter-pill,
+.ds-segmented button {
+  pointer-events: auto;
+}
+
+/* Toast inside node */
+.ds-cards-toast {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ds-panel-2);
+  color: var(--ds-text);
+  border: 1px solid var(--ds-accent);
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 160ms ease;
+}
+
+.ds-cards-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Drag handle hint */
+.ds-card[data-draggable="true"] {
+  cursor: grab;
+}
+
+.ds-card:active {
+  cursor: grabbing;
+}
+
+/* Small polish */
+.ds-cards-root .ds-icon-btn:focus-visible,
+.ds-cards-root .ds-btn:focus-visible {
+  outline: 1px solid var(--ds-accent);
+  outline-offset: 1px;
+}
+
+/* When node is narrow, grid becomes friendlier */
+@media (max-width: 220px) {
+  .ds-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Extra breathing on list rows */
+.ds-cards-list .ds-card-preview {
+  border-right: 1px solid var(--ds-border);
+}
+
+/* ============================================================
+   LARGE PREVIEW / EDIT MODAL (biggest QOL for readability)
+   Appended to body so it isn't constrained by node size
+   ============================================================ */
+.ds-pc-modal {
+  --ds-bg: #0b0d12;
+  --ds-panel: #12151c;
+  --ds-panel-2: #161a23;
+  --ds-accent: #67e8f9;
+  --ds-accent-2: #22d3ee;
+  --ds-text: #e5e7eb;
+  --ds-text-muted: #9ca3af;
+  --ds-border: #242a36;
+  --ds-danger: #f87171;
+  --ds-success: #34d399;
+  --ds-radius: 10px;
+  --ds-radius-sm: 6px;
+  --ds-gap: 10px;
+  --ds-font: Inter, "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --ds-scrollbar: #3b4252;
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ds-font);
+}
+
+.ds-pc-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(2px);
+}
+
+.ds-pc-modal-content {
+  position: relative;
+  width: min(820px, 94vw);
+  max-height: 92vh;
+  background: var(--ds-panel, #12151c);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--ds-text);
+}
+
+.ds-pc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--ds-panel-2);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-pc-modal-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ds-accent);
+}
+
+.ds-pc-modal-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.ds-pc-modal-image-wrap {
+  background: var(--ds-panel-2, #161a23);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  max-height: 58vh;
+  overflow: hidden;
+}
+
+.ds-pc-modal-img {
+  max-width: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  display: block;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.ds-pc-modal-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--ds-text-muted);
+  font-size: 13px;
+  padding: 30px;
+  text-align: center;
+}
+.ds-pc-modal-placeholder svg {
+  width: 42px;
+  height: 42px;
+  opacity: 0.4;
+}
+
+.ds-pc-modal-controls {
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-bg);
+}
+
+.ds-pc-modal-body {
+  padding: 12px 14px;
+  flex: 1;
+  min-height: 120px;
+  overflow: auto;
+}
+
+/* Modern no-arrow scrollbar for modal body */
+.ds-pc-modal-body::-webkit-scrollbar { width: 6px; }
+.ds-pc-modal-body::-webkit-scrollbar-track { background: var(--ds-panel-2); }
+.ds-pc-modal-body::-webkit-scrollbar-thumb { background: var(--ds-scrollbar); border-radius: 3px; }
+.ds-pc-modal-body::-webkit-scrollbar-thumb:hover { background: var(--ds-accent); }
+.ds-pc-modal-body::-webkit-scrollbar-button,
+.ds-pc-modal-body::-webkit-scrollbar-button:single-button {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.ds-pc-modal-prompt {
+  width: 100%;
+  min-height: 160px;
+  background: var(--ds-panel-2);
+  border: 1px solid var(--ds-border);
+  color: var(--ds-text);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.ds-pc-modal-prompt:focus {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.15);
+}
+
+.ds-pc-modal-footer {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+}
+
+.ds-pc-hint {
+  font-size: 11px;
+  color: var(--ds-text-muted);
+  opacity: 0.8;
+}
+
+/* ============================================================
+   DS Prompt Cards - UI refinement pass
+   ============================================================ */
+
+.ds-cards-root {
+  --ds-radius: 7px;
+  --ds-radius-sm: 5px;
+  --list-preview-size: 220px;
+}
+
+/* More visible, distinct grid/list switch */
+.ds-segmented {
+  height: 36px;
+  border-radius: 5px;
+  margin-left: 2px;
+  overflow: hidden;
+}
+
+.ds-segmented button {
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  gap: 0;
+  border-radius: 0;
+  color: var(--ds-text-muted);
+  background: var(--ds-panel-2);
+}
+
+.ds-segmented button svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.ds-segmented button.active {
+  background: var(--ds-accent);
+  color: #0b0d12;
+}
+
+.ds-segmented button:hover:not(.active) {
+  background: var(--ds-panel);
+  color: var(--ds-text);
+}
+
+/* Add button: larger click target and truly centered label */
+.ds-btn.primary {
+  width: 76px;
+  min-width: 76px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+  border-radius: 6px;
+  line-height: 1;
+  text-align: center;
+}
+
+.ds-btn.primary span {
+  display: block;
+  width: 100%;
+  line-height: 1;
+  text-align: center;
+}
+
+/* Consistent, less-rounded controls */
+.ds-filter-pill {
+  border-radius: 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+}
+
+.ds-type-tag {
+  border-radius: 6px;
+  min-height: 26px;
+}
+
+.ds-search input {
+  border-radius: 7px;
+}
+
+.ds-cards-count {
+  border-radius: 6px;
+}
+
+.ds-icon-btn {
+  border-radius: 5px;
+}
+
+/* Card corners match the rest of the UI */
+.ds-card {
+  border-radius: 7px;
+}
+
+/* ============================================================
+   LIST VIEW
+   Square image preview + fixed row height.
+   Prompt area scrolls internally instead of expanding the row.
+   ============================================================ */
+
+.ds-cards-list .ds-card {
+  width: 100%;
+  height: var(--list-preview-size);
+  min-height: var(--list-preview-size);
+  max-height: var(--list-preview-size);
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.ds-cards-list .ds-card-preview {
+  width: var(--list-preview-size);
+  min-width: var(--list-preview-size);
+  max-width: var(--list-preview-size);
+  height: var(--list-preview-size);
+  min-height: var(--list-preview-size);
+  max-height: var(--list-preview-size);
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+  border-right: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+  flex: 0 0 var(--list-preview-size);
+}
+
+.ds-cards-list .ds-card-preview img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.ds-cards-list .ds-card-body {
+  height: var(--list-preview-size);
+  min-height: 0;
+  max-height: var(--list-preview-size);
+  padding: 7px 9px;
+  gap: 6px;
+  overflow: hidden;
+  flex: 1 1 auto;
+}
+
+.ds-cards-list .ds-card-type {
+  flex: 0 0 auto;
+  height: 27px;
+}
+
+.ds-cards-list .ds-prompt-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  resize: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 9px;
+}
+
+.ds-cards-list .ds-card-actions {
+  flex: 0 0 28px;
+  height: 28px;
+  min-height: 28px;
+  margin-left: 0;
+  padding: 0;
+  align-items: center;
+}
+
+/* Card type on the card is a single state indicator, not two choices. */
+.ds-card-type .ds-type-tag {
+  cursor: pointer;
+}
+
+/* Modal keeps both choices because it is the explicit editor. */
+.ds-pc-modal .ds-modal-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ============================================================
+   Full-screen modal: always opaque and theme-safe when portaled
+   directly under <body>.
+   ============================================================ */
+
+.ds-pc-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 100vw;
+  min-height: 100vh;
+  background: var(--ds-bg, #0b0d12) !important;
+  color: var(--ds-text, #e5e7eb) !important;
+  isolation: isolate;
+  font-family: var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif);
+}
+
+.ds-pc-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw;
+  height: 100vh;
+  background: var(--ds-modal-backdrop, rgba(0, 0, 0, 0.78)) !important;
+  opacity: 1 !important;
+}
+
+.ds-pc-modal-content {
+  position: relative;
+  z-index: 1;
+  background: var(--ds-panel, #12151c) !important;
+  color: var(--ds-text, #e5e7eb) !important;
+  border-color: var(--ds-border, #242a36) !important;
+  border-radius: 8px;
+}
+
+.ds-pc-modal-header,
+.ds-pc-modal-footer {
+  background: var(--ds-panel-2, #161a23) !important;
+}
+
+.ds-pc-modal-image-wrap,
+.ds-pc-modal-controls {
+  background: var(--ds-bg, #0b0d12) !important;
+}
+
+.ds-pc-modal-prompt {
+  background: var(--ds-panel-2, #161a23) !important;
+  color: var(--ds-text, #e5e7eb) !important;
+  border-color: var(--ds-border, #242a36) !important;
+}
+
+.ds-pc-modal .ds-icon-btn,
+.ds-pc-modal .ds-btn,
+.ds-pc-modal .ds-type-tag {
+  font-family: var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif);
+}
+
+
+/* Final UI alignment: center view-switch icons in each button. */
+.ds-cards-root .ds-segmented {
+  display: inline-flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.ds-cards-root .ds-segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 0 0 36px;
+}
+
+.ds-cards-root .ds-segmented button .ds-icon,
+.ds-cards-root .ds-segmented button svg {
+  display: block;
+  margin: 0;
+}

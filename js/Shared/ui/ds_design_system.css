@@ -1,0 +1,537 @@
+/**
+ * DeathshotArsenal — centralized UI design system
+ *
+ * Rules:
+ *  - One shell inset for every node face: 6px.
+ *  - Native-base and chromeless/baseless nodes use the same visible inset.
+ *  - 5px is the default internal rhythm; 7px is the larger rhythm.
+ *  - Controls use one silhouette: 28px high / 5px radius.
+ *  - Popups/context menus are separate surfaces and never inherit node shell padding.
+ */
+
+/* ------------------------------------------------------------------------- */
+/* Shell / layout                                                            */
+/* ------------------------------------------------------------------------- */
+[data-ds-ui-shell="base"],
+[data-ds-ui-shell="bare"] {
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+[data-ds-ui-shell="base"] > :first-child,
+[data-ds-ui-shell="bare"] > :first-child { margin-top: 0; }
+
+[data-ds-ui-shell="base"] > :last-child,
+[data-ds-ui-shell="bare"] > :last-child { margin-bottom: 0; }
+
+/* No accidental browser margins inside DS faces. */
+[data-ds-ui-shell] label,
+[data-ds-ui-shell] p,
+[data-ds-ui-shell] h1,
+[data-ds-ui-shell] h2,
+[data-ds-ui-shell] h3,
+[data-ds-ui-shell] h4,
+[data-ds-ui-shell] ul,
+[data-ds-ui-shell] ol { margin: 0; }
+
+/* ------------------------------------------------------------------------- */
+/* Shared controls                                                          */
+/* ------------------------------------------------------------------------- */
+.ds-ui-button,
+.ds-ui-input,
+.ds-ui-select,
+.ds-ui-textarea {
+  box-sizing: border-box !important;
+  min-width: 0;
+  height: var(--ds-ui-control-h);
+  border: var(--ds-ui-border) solid var(--ds-border, #242a36);
+  border-radius: var(--ds-ui-control-radius);
+  background: var(--ds-input-bg, #0e1016);
+  color: var(--ds-text, #e5e7eb);
+  font: 500 10px/1 var(--ds-font, Inter, system-ui, sans-serif);
+  outline: none;
+  transition: border-color var(--ds-ui-transition), background var(--ds-ui-transition), color var(--ds-ui-transition), box-shadow var(--ds-ui-transition);
+}
+
+.ds-ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-ui-gap-xs);
+  padding: 0 var(--ds-ui-gap-md);
+  background: var(--ds-btn-bg, var(--ds-panel-2, #161a23));
+  cursor: pointer;
+  user-select: none;
+}
+
+.ds-ui-button:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  background: var(--ds-btn-hover, var(--ds-hover, #1c2130));
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-ui-button[data-active="true"],
+.ds-ui-button.active,
+.ds-ui-button[aria-pressed="true"],
+.ds-ui-button--accent,
+.ds-btn-accent {
+  border-color: var(--ds-accent, #67e8f9) !important;
+  background: var(--ds-accent, #67e8f9) !important;
+  color: var(--ds-on-accent, #0a0c10) !important;
+  text-shadow: var(--ds-on-accent-shadow, none);
+}
+
+.ds-ui-button:active { transform: translateY(1px); }
+.ds-ui-button:focus-visible,
+.ds-ui-input:focus,
+.ds-ui-select:focus,
+.ds-ui-textarea:focus {
+  border-color: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, transparent);
+}
+
+.ds-ui-input,
+.ds-ui-select { padding: 0 var(--ds-ui-gap-md); }
+.ds-ui-textarea { height: auto; min-height: var(--ds-ui-control-h); padding: var(--ds-ui-gap-sm) var(--ds-ui-gap-md); line-height: 1.35; resize: none; }
+.ds-ui-select { appearance: none; cursor: pointer; }
+.ds-ui-icon-button { width: var(--ds-ui-control-h); min-width: var(--ds-ui-control-h); height: var(--ds-ui-control-h); padding: 0; border-radius: var(--ds-ui-control-radius); }
+
+.ds-ui-label { margin: 0; color: var(--ds-text-muted, #9ca3af); font-size: 9px; line-height: 1.15; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.ds-ui-section { margin: 0; padding: var(--ds-ui-panel-pad); border: 1px solid var(--ds-border, #242a36); border-radius: var(--ds-ui-radius); background: var(--ds-panel, #12151c); }
+.ds-ui-row { display: flex; align-items: center; gap: var(--ds-ui-gap-sm); min-width: 0; margin: 0; }
+.ds-ui-stack { display: flex; flex-direction: column; gap: var(--ds-ui-gap-sm); min-width: 0; margin: 0; }
+
+/* ------------------------------------------------------------------------- */
+/* Central filled row slider (universal dual-layer smart contrast)           */
+/* ------------------------------------------------------------------------- */
+.ds-ui-row-text-layer,
+.ds-cp-text-layer,
+.ds-stitch-text-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.ds-ui-row-layer-track,
+.ds-cp-layer-track,
+.ds-stitch-layer-track {
+  color: var(--ds-on-panel, var(--ds-text, #e5e7eb));
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.ds-ui-row-layer-fill,
+.ds-cp-layer-fill,
+.ds-stitch-layer-fill {
+  color: var(--ds-on-accent, #0a0c10) !important;
+  font-weight: 700;
+  text-shadow: var(--ds-on-accent-shadow, 0 1px 0 rgba(255, 255, 255, 0.25)) !important;
+}
+
+.ds-ui-slider { display: flex; flex-direction: column; gap: var(--ds-ui-gap-sm); min-width: 0; margin: 0; }
+.ds-ui-slider-head { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-ui-gap-sm); min-width: 0; }
+.ds-ui-slider-label { min-width: 0; color: var(--ds-text-muted, #9ca3af); font-size: 9px; font-weight: 700; letter-spacing: .03em; }
+.ds-ui-slider-number { width: 58px; min-width: 58px; height: var(--ds-ui-number-h); text-align: center; font-variant-numeric: tabular-nums; }
+.ds-ui-slider-track { position: relative; width: 100%; height: 22px; min-height: 22px; display: flex; align-items: center; }
+.ds-ui-slider-range,
+.ds-ui-native-range {
+  --ds-slider-pct: 0%;
+  appearance: none;
+  width: 100%;
+  height: 22px;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0;
+  background: transparent !important;
+  cursor: pointer;
+}
+.ds-ui-slider-range::-webkit-slider-runnable-track,
+.ds-ui-native-range::-webkit-slider-runnable-track {
+  height: var(--ds-ui-slider-track-h);
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--ds-accent, #67e8f9) 0 var(--ds-slider-pct), var(--ds-border, #242a36) var(--ds-slider-pct) 100%);
+}
+.ds-ui-slider-range::-webkit-slider-thumb,
+.ds-ui-native-range::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--ds-ui-slider-thumb);
+  height: var(--ds-ui-slider-thumb);
+  margin-top: -4px;
+  border: 2px solid var(--ds-panel, #12151c);
+  border-radius: 50%;
+  background: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 0 1px var(--ds-accent, #67e8f9);
+}
+.ds-ui-slider-range::-moz-range-track,
+.ds-ui-native-range::-moz-range-track { height: var(--ds-ui-slider-track-h); border-radius: 999px; background: var(--ds-border, #242a36); }
+.ds-ui-slider-range::-moz-range-progress,
+.ds-ui-native-range::-moz-range-progress { height: var(--ds-ui-slider-track-h); border-radius: 999px; background: var(--ds-accent, #67e8f9); }
+.ds-ui-slider-range::-moz-range-thumb,
+.ds-ui-native-range::-moz-range-thumb { width: 12px; height: 12px; border: 2px solid var(--ds-panel, #12151c); border-radius: 50%; background: var(--ds-accent, #67e8f9); }
+
+/* ------------------------------------------------------------------------- */
+/* Central toggle                                                           */
+/* ------------------------------------------------------------------------- */
+.ds-ui-toggle {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ds-ui-toggle-w);
+  align-items: center;
+  gap: var(--ds-ui-gap-md);
+  padding: 5px 7px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ds-ui-control-radius);
+  background: transparent;
+  color: var(--ds-text, #e5e7eb);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.ds-ui-toggle:hover { background: var(--ds-hover, #1c2130); border-color: var(--ds-border, #242a36); }
+.ds-ui-toggle-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ds-ui-toggle-label { color: var(--ds-text, #e5e7eb); font-size: 9px; font-weight: 700; line-height: 1.15; }
+.ds-ui-toggle-description { color: var(--ds-text-muted, #9ca3af); font-size: 8px; line-height: 1.2; }
+.ds-ui-toggle-track { position: relative; width: var(--ds-ui-toggle-w); height: var(--ds-ui-toggle-h); border: 1px solid var(--ds-border, #353b46); border-radius: 999px; background: var(--ds-panel-2, #161a23); transition: background var(--ds-ui-transition), border-color var(--ds-ui-transition), box-shadow var(--ds-ui-transition); }
+.ds-ui-toggle-thumb { position: absolute; top: 50%; left: 2px; width: var(--ds-ui-toggle-thumb); height: var(--ds-ui-toggle-thumb); transform: translateY(-50%); border-radius: 50%; background: var(--ds-text-muted, #9ca3af); transition: left var(--ds-ui-transition), background var(--ds-ui-transition), box-shadow var(--ds-ui-transition); }
+.ds-ui-toggle.is-on .ds-ui-toggle-track { border-color: var(--ds-accent, #67e8f9); background: color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, var(--ds-panel-2, #161a23)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-accent, #67e8f9) 10%, transparent); }
+.ds-ui-toggle.is-on .ds-ui-toggle-thumb { left: calc(var(--ds-ui-toggle-w) - var(--ds-ui-toggle-thumb) - 3px); background: var(--ds-accent, #67e8f9); box-shadow: 0 0 8px color-mix(in srgb, var(--ds-accent, #67e8f9) 45%, transparent); }
+
+/* Legacy checkbox settings get the same toggle language without replacing
+   purpose-built checkboxes such as thumbnail selectors. */
+input.ds-ui-native-checkbox {
+  appearance: none;
+  width: var(--ds-ui-toggle-w);
+  min-width: var(--ds-ui-toggle-w);
+  height: var(--ds-ui-toggle-h);
+  margin: 0 !important;
+  border: 1px solid var(--ds-border, #353b46);
+  border-radius: 999px;
+  background: var(--ds-panel-2, #161a23);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--ds-ui-transition), border-color var(--ds-ui-transition);
+}
+input.ds-ui-native-checkbox::after { content: ""; position: absolute; top: 50%; left: 2px; width: var(--ds-ui-toggle-thumb); height: var(--ds-ui-toggle-thumb); transform: translateY(-50%); border-radius: 50%; background: var(--ds-text-muted, #9ca3af); transition: left var(--ds-ui-transition), background var(--ds-ui-transition); }
+input.ds-ui-native-checkbox:checked { border-color: var(--ds-accent, #67e8f9); background: color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, var(--ds-panel-2, #161a23)); }
+input.ds-ui-native-checkbox:checked::after { left: calc(var(--ds-ui-toggle-w) - var(--ds-ui-toggle-thumb) - 3px); background: var(--ds-accent, #67e8f9); }
+
+/* Context menus intentionally remain outside the global DS stylesheet.
+   DeathshotArsenal-owned popups are scoped and styled by their own components. */
+
+/* ------------------------------------------------------------------------- */
+/* Native widget hosts                                                       */
+/* ------------------------------------------------------------------------- */
+[data-ds-themed="true"] input,
+[data-ds-themed="true"] select,
+[data-ds-themed="true"] textarea,
+[data-ds-themed="true"] button { box-sizing: border-box; }
+
+[data-ds-node-base="true"] .widget,
+[data-ds-node-base="true"] .custom-widget,
+[data-ds-node-base="true"] .ds-widget-host { margin: 0 !important; padding: 0 !important; box-sizing: border-box !important; }
+
+.litegraph .litegraph-node[data-ds-node-base="true"] { border-radius: var(--ds-ui-radius, 6px); }
+
+/* ------------------------------------------------------------------------- */
+/* Central Color Picker                                                      */
+/* ------------------------------------------------------------------------- */
+.ds-ui-color-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-ui-gap-sm, 5px);
+  min-width: 0;
+}
+.ds-ui-color-picker-label {
+  color: var(--ds-text-muted, #9ca3af);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.ds-ui-color-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--ds-ui-control-h, 28px);
+  padding: 0 8px;
+  border: 1px solid var(--ds-border, #343a44);
+  border-radius: var(--ds-ui-control-radius, 5px);
+  background: var(--ds-input-bg, #0e1016);
+  color: var(--ds-text, #e2e8f0);
+  cursor: pointer;
+  font: 600 10px var(--ds-font, Inter, system-ui, sans-serif);
+  outline: none;
+  transition: border-color var(--ds-ui-transition, 120ms ease);
+}
+.ds-ui-color-trigger:hover {
+  border-color: var(--ds-accent, #67e8f9);
+}
+.ds-ui-color-swatch-box {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+.ds-ui-color-hex-text {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Color Picker Popup */
+.ds-ui-color-popup {
+  position: fixed;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px;
+  background: var(--ds-panel, #12151c) !important;
+  border: 1px solid var(--ds-border, #343a44);
+  border-radius: 6px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65);
+  box-sizing: border-box;
+  color: var(--ds-text, #e2e8f0);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  width: 200px;
+}
+.ds-ui-color-popup-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ds-ui-color-popup-native {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--ds-border, #343a44);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.ds-ui-color-popup-hex-input {
+  flex: 1;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: 1px solid var(--ds-border, #343a44);
+  border-radius: 4px;
+  background: var(--ds-input-bg, #0e1016);
+  color: var(--ds-text, #e2e8f0);
+  font: 700 11px / 1 var(--ds-font, monospace, sans-serif);
+  text-transform: uppercase;
+  outline: none;
+}
+.ds-ui-color-popup-hex-input:focus {
+  border-color: var(--ds-accent, #67e8f9);
+}
+.ds-ui-color-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.ds-ui-color-preset-btn {
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+  outline: none;
+}
+.ds-ui-color-preset-btn:hover {
+  transform: scale(1.12);
+  border-color: #ffffff;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Central Segmented Button Group (Snap, Modes, Tabs)                         */
+/* ------------------------------------------------------------------------- */
+.ds-ui-segmented {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 2px;
+  padding: 2px;
+  box-sizing: border-box;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: var(--ds-ui-control-radius, 5px);
+}
+.ds-ui-segmented-compact {
+  height: 22px;
+  padding: 1px;
+}
+.ds-ui-segmented-btn {
+  flex: 1;
+  min-width: 0;
+  height: calc(var(--ds-ui-control-h, 28px) - 6px);
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ds-text-muted, #9ca3af);
+  font: 600 9.5px var(--ds-font, Inter, system-ui, sans-serif);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all var(--ds-ui-transition, 120ms ease);
+}
+.ds-ui-segmented-compact .ds-ui-segmented-btn {
+  height: 18px;
+  font-size: 8.5px;
+}
+.ds-ui-segmented-btn:hover {
+  color: var(--ds-text, #e2e8f0);
+  background: var(--ds-btn-hover, #1c2130);
+}
+.ds-ui-segmented-btn.is-active,
+.ds-ui-segmented-btn[data-active="true"] {
+  background: var(--ds-panel-2, #21252d);
+  color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-border, #343a44);
+  box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Central Dropdown & Context Menu Template                                   */
+/* ------------------------------------------------------------------------- */
+.ds-ui-menu {
+  position: fixed;
+  z-index: 100000;
+  box-sizing: border-box;
+  color: var(--ds-text, #e5e7eb);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  background: var(--ds-panel, #12151c) !important;
+  border: 1px solid var(--ds-border, #343a44);
+  border-radius: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  padding: 4px;
+  min-width: 140px;
+  max-height: 380px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.ds-ui-menu-search {
+  width: 100%;
+  height: 24px;
+  box-sizing: border-box;
+  border: 1px solid var(--ds-border, #343a44);
+  border-radius: 4px;
+  background: var(--ds-panel-2, #21252d);
+  color: var(--ds-text, #e2e8f0);
+  padding: 0 8px;
+  margin-bottom: 4px;
+  outline: none;
+  font: 600 10px var(--ds-font, Inter, system-ui, sans-serif);
+}
+.ds-ui-menu-search:focus {
+  border-color: var(--ds-accent, #67e8f9);
+}
+.ds-ui-menu-item {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ds-text, #e2e8f0);
+  font: 600 9.5px var(--ds-font, Inter, system-ui, sans-serif);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.1s ease;
+}
+.ds-ui-menu-item:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  background: var(--ds-panel-3, #2b303a);
+  color: #ffffff;
+}
+.ds-ui-menu-item.is-active {
+  background: var(--ds-panel-2, #21252d);
+  border-color: var(--ds-border, #343a44);
+  box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+.ds-ui-menu-item-desc {
+  font-size: 7.5px;
+  color: var(--ds-text-muted, #9ca3af);
+}
+.ds-ui-menu-sep {
+  height: 1px;
+  background: var(--ds-border, #343a44);
+  margin: 3px 0;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Central Preview Card Template (Image / HUD Comparison)                    */
+/* ------------------------------------------------------------------------- */
+.ds-ui-preview-container {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid var(--ds-border, #343a44);
+  border-radius: var(--ds-ui-radius, 6px);
+  background: var(--ds-panel, #12151c);
+}
+.ds-ui-preview-canvas-box {
+  width: 100%;
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--ds-input-bg, #0e1016);
+  border: 1px solid var(--ds-border, #242a36);
+  overflow: hidden;
+  position: relative;
+}
+.ds-ui-preview-canvas-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.ds-ui-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 8.5px;
+  color: var(--ds-text-muted, #9ca3af);
+  font-weight: 600;
+  padding: 0 2px;
+}
+.ds-ui-preview-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--ds-border, #343a44);
+  background: var(--ds-panel-2, #21252d);
+  color: var(--ds-text, #e2e8f0);
+  font-weight: 700;
+}
