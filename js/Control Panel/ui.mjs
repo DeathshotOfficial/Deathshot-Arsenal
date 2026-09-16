@@ -388,14 +388,7 @@ export function createAddButton(onClick) {
 }
 
 export function createGearButton(onClick) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "ds-cp-gear";
-  btn.innerHTML = iconSvg("gear");
-  btn.title = "Control settings";
-  btn.addEventListener("pointerdown", (e) => e.stopPropagation());
-  btn.addEventListener("click", (e) => { e.stopPropagation(); onClick(); });
-  return btn;
+  return null;
 }
 
 export function showToast(root, message) {
@@ -504,12 +497,8 @@ export function syncRowWidgets(node, buildRow, onAdd, onGear) {
   applyAccent(node);
 
   node._dsGearWidget = null;
-  node._dsOnGear = onGear;
-  if (node.graph && !node._dsRemoved) {
-    ensureGearHost(node, onGear);
-  } else {
-    releaseGearNode(node);
-  }
+  node._dsOnGear = null;
+  releaseGearNode(node);
 }
 
 // ------------------------------------------------------------------
@@ -539,10 +528,8 @@ export function fitNode(node) {
 // ------------------------------------------------------------------
 // Title-bar gear tracking
 // ------------------------------------------------------------------
-const gearHosts = new Map();
-let gearLoopStarted = false;
-const TITLE_H = 30;
-
+// Internal gear tracking removed in favor of DS Toolbar Gear
+// ------------------------------------------------------------------
 export function isVueNodes() {
   return !!(
     window.LiteGraph?.vueNodesMode ||
@@ -552,75 +539,7 @@ export function isVueNodes() {
 }
 
 export function ensureGearHost(node, onGear) {
-  if (!node || node._dsRemoved) return null;
-  if (onGear) node._dsOnGear = onGear;
-  if (!node.graph) return null;
-
-  if (node._dsGearHost && node._dsGearHost.isConnected) {
-    return node._dsGearHost;
-  }
-
-  releaseGearNode(node);
-  const gearHost = document.createElement("div");
-  gearHost.className = "ds-cp-gear-host";
-  gearHost.style.display = "none";
-  gearHost.appendChild(createGearButton(node._dsOnGear || onGear));
-  document.body.appendChild(gearHost);
-  node._dsGearHost = gearHost;
-  gearHosts.set(node, gearHost);
-  return gearHost;
-}
-
-function positionGearHost(node, host) {
-  if (!node || !node.graph || node._dsRemoved) {
-    if (host) host.style.display = "none";
-    return;
-  }
-
-  if (isVueNodes()) {
-    const el = document.querySelector(`.lg-node[data-node-id="${node.id}"]`);
-    if (!el) { host.style.display = "none"; return; }
-    const r = el.getBoundingClientRect();
-    const onScreen = !node.flags?.collapsed &&
-      r.right >= -40 && r.left <= innerWidth + 40 && r.bottom >= -40 && r.top <= innerHeight + 40;
-    if (!onScreen) { host.style.display = "none"; return; }
-    const zoomScale = Number(app?.canvas?.ds?.scale) || 1;
-    const size = Math.max(10, Math.min(48, 18 * zoomScale));
-    host.style.display = "block";
-    host.style.left = `${r.right - size - 6}px`;
-    host.style.top = `${r.top + 4}px`;
-    host.style.width = `${size}px`;
-    host.style.height = `${size}px`;
-    return;
-  }
-
-  const canvas = app?.canvas || node.graph?.canvas;
-  const canvasEl = canvas?.canvas;
-  const ds = canvas?.ds;
-  if (!canvasEl || !ds) {
-    host.style.display = "none";
-    return;
-  }
-  const rect = canvasEl.getBoundingClientRect();
-  const scale = Number(ds.scale) || 1;
-  const ox = ds.offset?.[0] || 0;
-  const oy = ds.offset?.[1] || 0;
-  const nx = rect.left + ((node.pos?.[0] || 0) + ox) * scale;
-  const ny = rect.top + ((node.pos?.[1] || 0) - TITLE_H + oy) * scale;
-  const nw = (node.size?.[0] || DEFAULT_W) * scale;
-
-  const onScreen = !node.flags?.collapsed &&
-    nx + nw >= rect.left - 40 && nx <= rect.right + 40 &&
-    ny >= rect.top - 40 && ny <= rect.bottom + 40;
-  if (!onScreen) {
-    host.style.display = "none";
-    return;
-  }
-  host.style.display = "block";
-  host.style.left = `${nx + nw - 26 * scale}px`;
-  host.style.top = `${ny + 4 * scale}px`;
-  host.style.width = `${22 * scale}px`;
-  host.style.height = `${22 * scale}px`;
+  return null;
 }
 
 export function releaseGearNode(node) {
@@ -628,35 +547,12 @@ export function releaseGearNode(node) {
     try { node._dsGearHost.remove(); } catch (_) {}
     node._dsGearHost = null;
   }
-  gearHosts.delete(node);
 }
-
-function startGearLoop() {
-  if (gearLoopStarted) return;
-  gearLoopStarted = true;
-  const tick = () => {
-    for (const [node, host] of gearHosts) {
-      if (!node || node._dsRemoved || !node.graph || !host.isConnected) {
-        try { host.remove(); } catch (_) {}
-        gearHosts.delete(node);
-        continue;
-      }
-      try { positionGearHost(node, host); } catch (_) {}
-    }
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}
-startGearLoop();
 
 // Clean up any stale orphaned gear hosts in document.body from past runs/reloads
 try {
-  document.querySelectorAll(".ds-cp-gear-host").forEach((el) => {
-    let active = false;
-    for (const [node, host] of gearHosts) {
-      if (host === el && node?.graph && !node._dsRemoved) { active = true; break; }
-    }
-    if (!active) el.remove();
+  document.querySelectorAll(".ds-cp-gear-host, .ds-cp-gear").forEach((el) => {
+    try { el.remove(); } catch (_) {}
   });
 } catch (_) {}
 

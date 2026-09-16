@@ -8,40 +8,145 @@ const OPEN_POPUPS = new Map();
 let globalsInstalled = false;
 
 function screenRectForNode(app, node) {
-  const canvas = app?.canvas?.canvas || document.querySelector("canvas");
+  if (!node) return null;
+
+  let left = 0, top = 0, width = 0, height = 0;
+  let canvasFound = false;
+
+  // 1. LiteGraph canvas coordinate conversion (Node pos + size)
+  const canvasEl = app?.canvas?.canvas || document.querySelector("canvas#graph-canvas") || document.querySelector("canvas");
   const ds = app?.canvas?.ds;
-  if (!canvas || !ds) return null;
-  const rect = canvas.getBoundingClientRect();
-  const scale = Number(ds.scale) || 1;
-  const offset = ds.offset || [0, 0];
+  if (canvasEl && ds && Array.isArray(node.pos) && Array.isArray(node.size)) {
+    const cr = canvasEl.getBoundingClientRect();
+    const scale = Number(ds.scale) || 1;
+    const offset = ds.offset || [0, 0];
+    left = cr.left + (Number(node.pos[0] || 0) + Number(offset[0] || 0)) * scale;
+    top = cr.top + (Number(node.pos[1] || 0) + Number(offset[1] || 0)) * scale;
+    width = Number(node.size[0] || 260) * scale;
+    height = Number(node.size[1] || 200) * scale;
+    canvasFound = true;
+  }
+
+  // 2. Measure actual DOM row widgets inside the node if present
+  const firstRow = node._dsRows?.[0]?.root;
+  const addBtn = node._dsAddWidget?.element || node._dsAddWidget?.content;
+  const widgetEl = (firstRow && firstRow.isConnected) ? firstRow : (addBtn && addBtn.isConnected ? addBtn : null);
+
+  if (widgetEl) {
+    const wr = widgetEl.getBoundingClientRect();
+    if (canvasFound) {
+      // Reconcile: widget lives inside the node with ~12px padding and node header (~38px) above
+      left = Math.min(left, wr.left - 12);
+      width = Math.max(width, (wr.right + 12) - left);
+      top = Math.min(top, wr.top - 38);
+      height = Math.max(height, (wr.bottom + 12) - top);
+    } else {
+      left = wr.left - 12;
+      top = wr.top - 38;
+      width = wr.width + 24;
+      height = wr.height + 50;
+    }
+  }
+
+  if (width <= 0 || height <= 0) return null;
+
   return {
-    left: rect.left + (Number(node.pos?.[0] || 0) + Number(offset[0] || 0)) * scale,
-    top: rect.top + (Number(node.pos?.[1] || 0) + Number(offset[1] || 0)) * scale,
-    width: Number(node.size?.[0] || 260) * scale,
-    height: Number(node.size?.[1] || 200) * scale,
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
   };
+}
+
+let followRaf = null;
+
+function ensureFollowLoop(app) {
+  if (followRaf != null) return;
+  const loop = () => {
+    if (OPEN_POPUPS.size === 0 && ACCENT_POPUPS.size === 0) {
+      followRaf = null;
+      return;
+    }
+    for (const item of OPEN_POPUPS.values()) {
+      position(app, item.node, item.popup);
+    }
+    for (const item of ACCENT_POPUPS.values()) {
+      positionAccentPicker(app, item.node, item.popup);
+    }
+    followRaf = requestAnimationFrame(loop);
+  };
+  followRaf = requestAnimationFrame(loop);
+}
+
+function ensureSideRoom(app, node) {
+  const nr = screenRectForNode(app, node);
+  if (!nr) return;
+
+  const popupWidth = 720;
+  const gap = 16;
+  const margin = 16;
+  const needed = popupWidth + gap + margin;
+
+  const spaceRight = window.innerWidth - nr.right;
+  const spaceLeft = nr.left;
+
+  // If there's already enough space on either the right or left, no panning needed
+  if (spaceRight >= needed || spaceLeft >= needed) return;
+
+  // Otherwise, pan the canvas to make room on the right side
+  const ds = app?.canvas?.ds;
+  if (!ds || !ds.offset || !ds.scale) return;
+
+  const shift = (needed - spaceRight) / ds.scale;
+  ds.offset[0] -= shift;
+  try {
+    app?.canvas?.setDirty?.(true, true);
+    app?.canvas?.draw?.(true, true);
+  } catch (_) {}
 }
 
 function position(app, node, popup) {
   const nr = screenRectForNode(app, node);
   if (!nr) return;
-  const margin = 10;
-  const pw = popup.offsetWidth || 300;
-  const ph = popup.offsetHeight || 360;
-  let left = nr.left + nr.width + 12;
-  if (left + pw > innerWidth - margin) left = nr.left - pw - 12;
-  left = Math.max(margin, Math.min(left, innerWidth - pw - margin));
+
+  const margin = 12;
+  const gap = 16;
+  const pw = popup.offsetWidth || 700;
+  const ph = popup.offsetHeight || 300;
+
+  const spaceRight = window.innerWidth - nr.right - margin;
+  const spaceLeft = nr.left - margin;
+
+  let left;
+  if (spaceRight >= pw + gap) {
+    left = nr.right + gap;
+  } else if (spaceLeft >= pw + gap) {
+    left = nr.left - pw - gap;
+  } else if (spaceRight >= spaceLeft) {
+    left = nr.right + gap;
+  } else {
+    left = nr.left - pw - gap;
+  }
+
+  // Vertical placement: align with top of node
   let top = nr.top;
-  if (top + ph > innerHeight - margin) top = innerHeight - ph - margin;
+  if (top + ph > window.innerHeight - margin) {
+    top = window.innerHeight - ph - margin;
+  }
   top = Math.max(margin, top);
-  popup.style.left = `${Math.round(left)}px`;
-  popup.style.top = `${Math.round(top)}px`;
+
+  const newLeft = `${Math.round(left)}px`;
+  const newTop = `${Math.round(top)}px`;
+  if (popup.style.left !== newLeft) popup.style.left = newLeft;
+  if (popup.style.top !== newTop) popup.style.top = newTop;
 }
 
 export function closeSettings(node) {
   const item = OPEN_POPUPS.get(node?.id);
   if (!item) return;
-  item.popup.remove();
+  try { item.popup.remove(); } catch (_) {}
   OPEN_POPUPS.delete(node.id);
 }
 
@@ -54,6 +159,49 @@ function themePopup(popup) {
       if (v) popup.style.setProperty(key, v);
     }
   } catch (_) {}
+}
+
+const EYEDROPPER_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 22 1-1h3l9-9"/><path d="M16.5 4.5 19.5 7.5"/><path d="m14 7 3 3"/><path d="M19 2a2.828 2.828 0 0 1 4 4l-11 11H8v-4L19 2Z"/></svg>`;
+
+function numPill(tag, value, onCommit, title) {
+  const wrap = document.createElement("div");
+  wrap.className = "ds-cp-field-pill";
+  if (title) wrap.title = title;
+
+  const lbl = document.createElement("span");
+  lbl.className = "ds-cp-field-tag";
+  lbl.textContent = tag;
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.className = "ds-cp-field-num";
+  input.value = value;
+  input.addEventListener("pointerdown", (e) => e.stopPropagation());
+  input.addEventListener("change", () => onCommit(Number(input.value)));
+
+  wrap.append(lbl, input);
+  return wrap;
+}
+
+function strPill(tag, value, onCommit, title, isFlex = false, placeholder = "") {
+  const wrap = document.createElement("div");
+  wrap.className = "ds-cp-field-pill" + (isFlex ? " ds-cp-field-flex" : "");
+  if (title) wrap.title = title;
+
+  const lbl = document.createElement("span");
+  lbl.className = "ds-cp-field-tag";
+  lbl.textContent = tag;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "ds-cp-field-str";
+  input.value = value ?? "";
+  if (placeholder) input.placeholder = placeholder;
+  input.addEventListener("pointerdown", (e) => e.stopPropagation());
+  input.addEventListener("change", () => onCommit(input.value));
+
+  wrap.append(lbl, input);
+  return wrap;
 }
 
 function field(labelText, inputEl) {
@@ -169,17 +317,42 @@ const ACCENT_POPUPS = new Map();
 function positionAccentPicker(app, node, popup) {
   const nr = screenRectForNode(app, node);
   if (!nr) return;
-  const pw = popup.offsetWidth || 280;
-  const ph = popup.offsetHeight || 370;
+  const rect = popup.getBoundingClientRect();
+  const pw = Math.max(rect.width, popup.offsetWidth || 0, 290);
+  const ph = Math.max(rect.height, popup.offsetHeight || 0, 360);
+  const margin = 12;
   const gap = 12;
-  let left = nr.left + nr.width + gap;
-  if (left + pw > innerWidth - 10) left = nr.left - pw - gap;
-  left = Math.max(10, Math.min(left, innerWidth - pw - 10));
-  let top = nr.top;
-  if (top + ph > innerHeight - 10) top = innerHeight - ph - 10;
-  top = Math.max(10, top);
-  popup.style.left = `${Math.round(left)}px`;
-  popup.style.top = `${Math.round(top)}px`;
+
+  // If settings popup is open, position next to it; otherwise next to node
+  const settingsItem = OPEN_POPUPS.get(node?.id);
+  const targetRect = (settingsItem?.popup && settingsItem.popup.isConnected)
+    ? settingsItem.popup.getBoundingClientRect()
+    : nr;
+
+  const spaceRight = window.innerWidth - targetRect.right - margin;
+  const spaceLeft = targetRect.left - margin;
+
+  let left;
+  if (spaceRight >= pw + gap) {
+    left = targetRect.right + gap;
+  } else if (spaceLeft >= pw + gap) {
+    left = targetRect.left - pw - gap;
+  } else if (spaceRight >= spaceLeft) {
+    left = targetRect.right + gap;
+  } else {
+    left = targetRect.left - pw - gap;
+  }
+
+  let top = targetRect.top;
+  if (top + ph > window.innerHeight - margin) {
+    top = window.innerHeight - ph - margin;
+  }
+  top = Math.max(margin, top);
+
+  const newLeft = `${Math.round(left)}px`;
+  const newTop = `${Math.round(top)}px`;
+  if (popup.style.left !== newLeft) popup.style.left = newLeft;
+  if (popup.style.top !== newTop) popup.style.top = newTop;
 }
 
 function setPickerSwatchStyle(el, color) {
@@ -232,27 +405,42 @@ export function openAccentPicker(app, node, api) {
 
   const preview = document.createElement("div");
   preview.className = "ds-cp-accent-preview";
+  preview.title = "Current color";
 
   const hex = document.createElement("input");
   hex.type = "text";
   hex.className = "ds-cp-accent-hex";
   hex.spellcheck = false;
   hex.maxLength = 7;
+  hex.title = "Color hex code (#RRGGBB)";
 
-  const tools = document.createElement("div");
-  tools.className = "ds-cp-accent-tools";
-  const copy = document.createElement("button");
-  copy.type = "button";
-  copy.textContent = "Copy";
   const eye = document.createElement("button");
   eye.type = "button";
-  eye.textContent = "Pick";
-  eye.title = "Use the browser eyedropper";
-  tools.append(copy, eye);
+  eye.className = "ds-cp-accent-btn ds-cp-accent-eye";
+  eye.innerHTML = EYEDROPPER_SVG;
+  eye.title = "Pick color from screen";
+  if (!window.EyeDropper) {
+    eye.disabled = true;
+    eye.style.opacity = "0.45";
+    eye.style.cursor = "not-allowed";
+    eye.title = "Screen eyedropper not supported in this browser";
+  }
+
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "ds-cp-accent-btn ds-cp-accent-copy";
+  copy.textContent = "Copy";
+  copy.title = "Copy hex color to clipboard";
+
+  const paste = document.createElement("button");
+  paste.type = "button";
+  paste.className = "ds-cp-accent-btn ds-cp-accent-paste";
+  paste.textContent = "Paste";
+  paste.title = "Paste hex color from clipboard";
 
   const controls = document.createElement("div");
   controls.className = "ds-cp-accent-value-row";
-  controls.append(preview, hex, tools);
+  controls.append(preview, hex, eye, copy, paste);
 
   const presetTitle = document.createElement("div");
   presetTitle.className = "ds-cp-accent-presets-title";
@@ -351,6 +539,14 @@ export function openAccentPicker(app, node, api) {
     try { await navigator.clipboard?.writeText(currentHex()); } catch (_) {}
   });
 
+  paste.addEventListener("pointerdown", (e) => e.stopPropagation());
+  paste.addEventListener("click", async () => {
+    try {
+      const text = await navigator.clipboard?.readText();
+      if (text) applyHex(text.trim());
+    } catch (_) {}
+  });
+
   eye.addEventListener("pointerdown", (e) => e.stopPropagation());
   eye.addEventListener("click", async () => {
     if (!window.EyeDropper) return;
@@ -369,6 +565,7 @@ export function openAccentPicker(app, node, api) {
   themePopup(popup);
   render();
   requestAnimationFrame(() => positionAccentPicker(app, node, popup));
+  ensureFollowLoop(app);
 
   if (!globalsInstalled) {
     globalsInstalled = true;
@@ -388,68 +585,145 @@ export function openAccentPicker(app, node, api) {
 
 function renderControlEditor(container, node, control, index, api) {
   const card = document.createElement("div");
-  card.className = "ds-cp-settings-card";
+  card.className = "ds-cp-settings-card ds-cp-settings-row";
 
-  const head = document.createElement("div");
-  head.className = "ds-cp-settings-card-head";
-  const title = document.createElement("strong");
-  title.textContent = `#${index + 1} · ${control.type}`;
-  head.appendChild(title);
+  // 1. Index indicator
+  const idx = document.createElement("span");
+  idx.className = "ds-cp-row-idx";
+  idx.textContent = `#${index + 1}`;
+  idx.title = `Control #${index + 1}`;
 
-  const actions = document.createElement("div");
-  actions.className = "ds-cp-settings-card-actions";
-  const up = document.createElement("button"); up.type = "button"; up.textContent = "↑"; up.title = "Move up";
-  const down = document.createElement("button"); down.type = "button"; down.textContent = "↓"; down.title = "Move down";
-  const del = document.createElement("button"); del.type = "button"; del.textContent = "✕"; del.title = "Delete control"; del.className = "ds-cp-settings-danger";
-  [up, down, del].forEach((b) => b.addEventListener("pointerdown", (e) => e.stopPropagation()));
-  up.addEventListener("click", () => api.move(index, -1));
-  down.addEventListener("click", () => api.move(index, 1));
-  del.addEventListener("click", () => api.remove(index));
-  actions.append(up, down, del);
-  head.appendChild(actions);
-  card.appendChild(head);
+  // 2. Parameter Name input (content-aware generous space, left-aligned)
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.className = "ds-cp-row-name";
+  nameInput.value = control.name ?? "";
+  nameInput.placeholder = "Parameter name...";
+  nameInput.title = "Parameter name";
+  nameInput.addEventListener("pointerdown", (e) => e.stopPropagation());
+  nameInput.addEventListener("change", () => api.patch(index, { name: nameInput.value, autoName: false }));
 
-  const nameField = textInput(control.name, (v) => api.patch(index, { name: v, autoName: false }));
-  card.appendChild(field("Name", nameField));
-
+  // 3. Type indicator / selector
   const locked = isTypeLocked(control);
+  let typeEl;
   if (locked) {
-    const badge = document.createElement("span");
-    badge.className = "ds-cp-settings-type-lock";
-    badge.textContent = `🔒 ${TYPE_LABELS[control.type] || control.type}`;
-    badge.title = "Driven by the connected input — disconnect to change.";
-    card.appendChild(field("Type", badge));
+    typeEl = document.createElement("span");
+    typeEl.className = "ds-cp-settings-type-lock";
+    typeEl.innerHTML = `<span class="ds-cp-lock-icon">🔒</span> <span class="ds-cp-type-label">${TYPE_LABELS[control.type] || control.type}</span>`;
+    typeEl.title = `Driven by connected input (${control.lastTarget}) — disconnect wire to change.`;
   } else {
-    const select = document.createElement("select");
+    typeEl = document.createElement("select");
+    typeEl.className = "ds-cp-row-type-select";
+    typeEl.title = "Parameter Type";
     for (const t of CONTROL_TYPES) {
       const opt = document.createElement("option");
       opt.value = t;
       opt.textContent = TYPE_LABELS[t] || t;
       if (t === control.type) opt.selected = true;
-      select.appendChild(opt);
+      typeEl.appendChild(opt);
     }
-    select.addEventListener("pointerdown", (e) => e.stopPropagation());
-    select.addEventListener("change", () => api.setType(index, select.value));
-    card.appendChild(field("Type", select));
+    typeEl.addEventListener("pointerdown", (e) => e.stopPropagation());
+    typeEl.addEventListener("change", () => api.setType(index, typeEl.value));
   }
 
-  if (control.type === "float" || control.type === "int") {
-    card.appendChild(field("Min", numberInput(control.min, (v) => api.patch(index, { min: v }))));
-    card.appendChild(field("Max", numberInput(control.max, (v) => api.patch(index, { max: v }))));
-    card.appendChild(field("Step", numberInput(control.step, (v) => api.patch(index, { step: v }))));
-    card.appendChild(field("Default", numberInput(control.default, (v) => api.patch(index, { default: v }))));
+  // 4. Value fields container (compact, distinguishable, center-aligned numbers)
+  const fields = document.createElement("div");
+  fields.className = "ds-cp-row-fields";
+
+  if (control.type === "int" || control.type === "float") {
+    fields.append(
+      numPill("Min", control.min, (v) => api.patch(index, { min: v }), "Minimum value"),
+      numPill("Max", control.max, (v) => api.patch(index, { max: v }), "Maximum value"),
+      numPill("Step", control.step, (v) => api.patch(index, { step: v }), "Step increment"),
+      numPill("Def", control.default, (v) => api.patch(index, { default: v }), "Default value"),
+    );
   } else if (control.type === "toggle") {
-    card.appendChild(field("On label", textInput(control.onLabel, (v) => api.patch(index, { onLabel: v }))));
-    card.appendChild(field("Off label", textInput(control.offLabel, (v) => api.patch(index, { offLabel: v }))));
+    fields.append(
+      strPill("On", control.onLabel || "On", (v) => api.patch(index, { onLabel: v }), "Label when true"),
+      strPill("Off", control.offLabel || "Off", (v) => api.patch(index, { offLabel: v }), "Label when false"),
+    );
+  } else if (control.type === "seed") {
+    const seedGroup = document.createElement("div");
+    seedGroup.className = "ds-cp-seed-modes";
+    for (const m of ["fixed", "random"]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = m;
+      b.className = "ds-cp-seed-btn" + (control.seedMode === m ? " is-active" : "");
+      b.addEventListener("pointerdown", (e) => e.stopPropagation());
+      b.addEventListener("click", () => api.patch(index, { seedMode: m }));
+      seedGroup.appendChild(b);
+    }
+    fields.appendChild(seedGroup);
+  } else if (control.type === "text") {
+    fields.appendChild(
+      strPill("Def", control.value ?? "", (v) => api.patch(index, { value: v }), "Default string value", true, "Default text..."),
+    );
   } else if (control.type === "combo") {
     if (!locked) {
-      const optsField = textInput((control.options || []).join(", "), (v) => {
-        const opts = v.split(",").map((s) => s.trim()).filter(Boolean);
-        const nextValue = opts.includes(control.value) ? control.value : (opts[0] ?? "");
-        api.patch(index, { options: opts, allowedOptions: [], value: nextValue });
-      });
-      card.appendChild(field("Options (comma-separated)", optsField));
+      fields.appendChild(
+        strPill("Opts", (control.options || []).join(", "), (v) => {
+          const opts = v.split(",").map((s) => s.trim()).filter(Boolean);
+          const nextValue = opts.includes(control.value) ? control.value : (opts[0] ?? "");
+          api.patch(index, { options: opts, allowedOptions: [], value: nextValue });
+        }, "Options (comma-separated)", true, "opt1, opt2, opt3..."),
+      );
+    } else {
+      const comboSummary = document.createElement("span");
+      comboSummary.className = "ds-cp-combo-summary";
+      comboSummary.textContent = `${(control.options || []).length} connected options`;
+      comboSummary.title = (control.options || []).join(", ");
+      fields.appendChild(comboSummary);
     }
+  } else if (control.type === "auto") {
+    const hint = document.createElement("span");
+    hint.className = "ds-cp-auto-hint";
+    hint.textContent = "Connect to a node input to configure";
+    fields.appendChild(hint);
+  }
+
+  // 5. Actions (Move up, Move down, Delete)
+  const actions = document.createElement("div");
+  actions.className = "ds-cp-settings-row-actions";
+
+  const up = document.createElement("button");
+  up.type = "button";
+  up.className = "ds-cp-row-action-btn";
+  up.textContent = "↑";
+  up.title = "Move up";
+
+  const down = document.createElement("button");
+  down.type = "button";
+  down.className = "ds-cp-row-action-btn";
+  down.textContent = "↓";
+  down.title = "Move down";
+
+  const del = document.createElement("button");
+  del.type = "button";
+  del.className = "ds-cp-row-action-btn ds-cp-btn-delete";
+  del.textContent = "✕";
+  del.title = "Delete parameter";
+
+  [up, down, del].forEach((b) => b.addEventListener("pointerdown", (e) => e.stopPropagation()));
+  up.addEventListener("click", () => api.move(index, -1));
+  down.addEventListener("click", () => api.move(index, 1));
+  del.addEventListener("click", () => api.remove(index));
+
+  actions.append(up, down, del);
+
+  card.append(idx, nameInput, typeEl, fields, actions);
+
+  if (control.type === "combo" && (control.options || []).length > 0) {
+    const comboContainer = document.createElement("div");
+    comboContainer.className = "ds-cp-settings-card-combo-wrap";
+    comboContainer.appendChild(card);
+
+    const filterDetails = document.createElement("details");
+    filterDetails.className = "ds-cp-combo-details";
+    const summary = document.createElement("summary");
+    summary.textContent = `Allowed options (${control.allowedOptions?.length ? control.allowedOptions.length : control.options.length}/${control.options.length})`;
+    filterDetails.appendChild(summary);
+
     const list = document.createElement("div");
     list.className = "ds-cp-settings-options";
     for (const opt of control.options || []) {
@@ -473,26 +747,16 @@ function renderControlEditor(container, node, control, index, api) {
       row.append(cb, span);
       list.appendChild(row);
     }
-    card.appendChild(field("Options", list));
-  } else if (control.type === "seed") {
-    const modeRow = document.createElement("div");
-    modeRow.className = "ds-cp-settings-toggle-row";
-    for (const m of ["fixed", "random"]) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = m;
-      b.className = control.seedMode === m ? "is-active" : "";
-      b.addEventListener("pointerdown", (e) => e.stopPropagation());
-      b.addEventListener("click", () => api.patch(index, { seedMode: m }));
-      modeRow.appendChild(b);
-    }
-    card.appendChild(field("Mode", modeRow));
+    filterDetails.appendChild(list);
+    comboContainer.appendChild(filterDetails);
+    container.appendChild(comboContainer);
+    return;
   }
 
   container.appendChild(card);
 }
 
-function render(popup, app, node, api) {
+function render(popup, app, node, api, anchorEl) {
   popup.innerHTML = "";
 
   const head = document.createElement("div");
@@ -502,6 +766,7 @@ function render(popup, app, node, api) {
   close.type = "button";
   close.className = "ds-cp-settings-close";
   close.textContent = "×";
+  close.title = "Close (Esc)";
   close.addEventListener("pointerdown", (e) => e.stopPropagation());
   close.addEventListener("click", () => closeSettings(node));
   head.appendChild(close);
@@ -558,6 +823,7 @@ function render(popup, app, node, api) {
 
 export function openSettings(app, node, api) {
   closeSettings(node);
+  ensureSideRoom(app, node);
   const popup = document.createElement("div");
   popup.className = "ds-cp-settings-popup";
   popup.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -567,6 +833,7 @@ export function openSettings(app, node, api) {
 
   node._dsRerenderSettings = () => render(popup, app, node, api);
   render(popup, app, node, api);
+  ensureFollowLoop(app);
 
   if (!globalsInstalled) {
     globalsInstalled = true;

@@ -17,35 +17,12 @@
 }
 
 .ds-cp-row,
-.ds-cp-add,
-.ds-cp-gear,
-.ds-cp-gear-host {
+.ds-cp-add {
   --ds-cp-accent: var(--ds-cp-accent-override, var(--ds-accent, #67e8f9));
   --ds-cp-fill-text: var(--ds-on-accent, #0a0c10);
   --ds-cp-fill-shadow: var(--ds-on-accent-shadow, 0 1px 0 rgba(255, 255, 255, 0.25));
   --ds-cp-track-text: var(--ds-on-panel, var(--ds-text, #e5e7eb));
 }
-
-.ds-cp-gear {
-  position: absolute;
-  top: -26px;
-  right: 6px;
-  z-index: 2;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--ds-text-muted, #8d96a3);
-  cursor: pointer;
-  border-radius: 4px;
-  transition: color 120ms ease, background 120ms ease;
-}
-.ds-cp-gear:hover { color: var(--ds-cp-accent); background: var(--ds-panel-2, #20242c); }
-.ds-cp-gear svg { width: 100%; height: 100%; display: block; }
 
 .ds-cp-rows {
   display: flex;
@@ -350,12 +327,15 @@ button.ds-cp-settings-add:hover,
 .ds-cp-toast.is-visible { opacity: 1; transform: translateY(0); }
 
 /* Settings popup */
+/* Settings popup (Wider & space-efficient) */
 .ds-cp-settings-popup {
   position: fixed;
   z-index: 10000;
-  width: 300px;
-  max-height: 74vh;
+  width: clamp(680px, 52vw, 780px);
+  max-width: calc(100vw - 32px);
+  max-height: 80vh;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--ds-panel, #12151c);
   border: 1px solid var(--ds-border, #242a36);
   border-radius: 8px;
@@ -368,11 +348,12 @@ button.ds-cp-settings-add:hover,
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--ds-border, #242a36);
   position: sticky;
   top: 0;
   background: var(--ds-panel, #12151c);
+  z-index: 5;
 }
 .ds-cp-settings-head strong { font-size: 12px; }
 .ds-cp-settings-head small { color: var(--ds-text-muted, #8d96a3); font-size: 10px; }
@@ -388,7 +369,7 @@ button.ds-cp-settings-add:hover,
 }
 .ds-cp-settings-close:hover { color: var(--ds-text, #e5e7eb); }
 
-.ds-cp-settings-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.ds-cp-settings-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
 
 .ds-cp-settings-label {
   font-size: 9px;
@@ -427,30 +408,278 @@ button.ds-cp-settings-add:hover,
   background: var(--ds-cp-swatch-color, transparent) !important;
 }
 
-.ds-cp-settings-card {
+/* Parameter row (compact single-row editor) */
+.ds-cp-settings-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 5px 8px !important;
+  min-height: 36px !important;
+  box-sizing: border-box !important;
+  background: var(--ds-panel-2, #171a20);
   border: 1px solid var(--ds-border, #242a36);
   border-radius: 6px;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: var(--ds-panel-2, #171a20);
+  transition: border-color 120ms ease;
 }
-.ds-cp-settings-card-head { display: flex; align-items: center; gap: 6px; }
-.ds-cp-settings-card-head strong { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ds-text-muted, #8d96a3); }
-.ds-cp-settings-card-actions { margin-left: auto; display: flex; gap: 4px; }
-.ds-cp-settings-card-actions button {
-  width: 20px; height: 20px;
+.ds-cp-settings-row:hover {
+  border-color: color-mix(in srgb, var(--ds-cp-accent, #67e8f9) 35%, var(--ds-border, #242a36));
+}
+
+.ds-cp-row-idx {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ds-text-muted, #8d96a3);
+  min-width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.ds-cp-row-name {
+  flex: 1 1 110px !important;
+  min-width: 80px !important;
+  max-width: 170px !important;
+  height: 26px !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--ds-border, #242a36) !important;
+  border-radius: 4px !important;
+  background: var(--ds-input-bg, #0e1016) !important;
+  color: var(--ds-text, #e5e7eb) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 0 8px !important;
+  outline: none !important;
+  text-align: left !important;
+}
+.ds-cp-row-name:focus {
+  border-color: var(--ds-accent, #67e8f9) !important;
+}
+
+.ds-cp-settings-type-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 4px;
+  background: var(--ds-panel-2, #20242c);
+  color: var(--ds-text-muted, #8d96a3);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: fit-content;
+  box-sizing: border-box;
+  user-select: none;
+}
+.ds-cp-lock-icon {
+  font-size: 9px;
+  opacity: 0.85;
+}
+.ds-cp-type-label {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.ds-cp-row-type-select,
+[data-ds-themed="true"] .ds-cp-row-type-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  height: 26px !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--ds-border, #242a36) !important;
+  border-radius: 4px !important;
+  background-color: var(--ds-input-bg, #0e1016) !important;
+  color: var(--ds-text, #e5e7eb) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 0 18px 0 6px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  width: 76px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238d96a3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 5px center !important;
+}
+.ds-cp-row-type-select:focus {
+  border-color: var(--ds-accent, #67e8f9) !important;
+}
+
+.ds-cp-row-fields {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Compact labeled field pills */
+.ds-cp-field-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 4px;
+  background: var(--ds-input-bg, #0e1016);
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: border-color 120ms ease;
+  width: 62px;
+  flex-shrink: 0;
+}
+.ds-cp-field-pill.ds-cp-field-flex {
+  width: auto;
+  flex: 1 1 120px;
+  min-width: 80px;
+}
+.ds-cp-field-pill:focus-within {
+  border-color: var(--ds-accent, #67e8f9);
+}
+
+.ds-cp-field-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-text-muted, #8d96a3);
+  padding: 0 4px;
+  background: var(--ds-panel-2, #20242c);
+  border-right: 1px solid var(--ds-border, #242a36);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Numeric input: centered, consistent typography, spin buttons hidden */
+.ds-cp-field-num,
+.ds-cp-settings-field input[type="number"] {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--ds-text, #e5e7eb) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  outline: none !important;
+  padding: 0 2px !important;
+  font-variant-numeric: tabular-nums !important;
+  -moz-appearance: textfield !important;
+}
+.ds-cp-field-num::-webkit-inner-spin-button,
+.ds-cp-field-num::-webkit-outer-spin-button,
+.ds-cp-settings-field input[type="number"]::-webkit-inner-spin-button,
+.ds-cp-settings-field input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+.ds-cp-field-str {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--ds-text, #e5e7eb);
+  font-size: 10px;
+  font-weight: 500;
+  outline: none;
+  padding: 0 6px;
+}
+
+/* Seed mode toggle */
+.ds-cp-seed-modes {
+  display: flex;
+  gap: 3px;
+  width: 120px;
+  flex-shrink: 0;
+}
+.ds-cp-seed-btn {
+  flex: 1;
+  height: 26px;
   border: 1px solid var(--ds-border, #242a36);
   background: var(--ds-input-bg, #0e1016);
   color: var(--ds-text-muted, #8d96a3);
   border-radius: 4px;
   cursor: pointer;
-  font-size: 10px;
-  line-height: 1;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: capitalize;
+  transition: color 120ms ease, border-color 120ms ease;
 }
-.ds-cp-settings-card-actions button:hover { color: var(--ds-accent, #67e8f9); border-color: var(--ds-accent, #67e8f9); }
-.ds-cp-settings-card-actions .ds-cp-settings-danger:hover { color: #f87171; border-color: #f87171; }
+.ds-cp-seed-btn.is-active {
+  color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 10%, var(--ds-input-bg, #0e1016));
+}
+
+.ds-cp-combo-summary {
+  font-size: 9.5px;
+  color: var(--ds-text-muted, #8d96a3);
+  font-style: italic;
+  white-space: nowrap;
+}
+.ds-cp-auto-hint {
+  font-size: 9.5px;
+  color: var(--ds-text-muted, #8d96a3);
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.ds-cp-settings-card-combo-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ds-cp-combo-details {
+  padding-left: 28px;
+  font-size: 9px;
+  color: var(--ds-text-muted, #8d96a3);
+}
+.ds-cp-combo-details summary {
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 4px;
+}
+
+/* Actions at the end of the row */
+.ds-cp-settings-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ds-cp-row-action-btn {
+  width: 22px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ds-border, #242a36);
+  background: var(--ds-input-bg, #0e1016);
+  color: var(--ds-text-muted, #8d96a3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+.ds-cp-row-action-btn:hover {
+  color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-accent, #67e8f9);
+}
+.ds-cp-row-action-btn.ds-cp-btn-delete:hover {
+  color: #f87171 !important;
+  border-color: #f87171 !important;
+  background: rgba(248, 113, 113, 0.1) !important;
+}
 
 .ds-cp-settings-field { display: flex; flex-direction: column; gap: 3px; font-size: 9px; color: var(--ds-text-muted, #8d96a3); }
 .ds-cp-settings-field input[type="text"],
@@ -466,62 +695,6 @@ button.ds-cp-settings-add:hover,
   outline: none;
 }
 .ds-cp-settings-field input:focus { border-color: var(--ds-accent, #67e8f9); }
-
-/* Custom select: removes native browser white double-arrow box */
-.ds-cp-settings-field select,
-[data-ds-themed="true"] .ds-cp-settings-field select {
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-  height: 24px;
-  box-sizing: border-box;
-  border: 1px solid var(--ds-border, #242a36) !important;
-  border-radius: 4px;
-  background-color: var(--ds-input-bg, #0e1016) !important;
-  color: var(--ds-text, #e5e7eb) !important;
-  font-size: 10px;
-  padding: 0 22px 0 8px;
-  outline: none;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238d96a3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important;
-  background-position: right 6px center !important;
-}
-
-.ds-cp-settings-field select:focus,
-[data-ds-themed="true"] .ds-cp-settings-field select:focus {
-  border-color: var(--ds-accent, #67e8f9) !important;
-}
-
-.ds-cp-settings-field select option {
-  background-color: var(--ds-panel, #12151c);
-  color: var(--ds-text, #e5e7eb);
-  padding: 4px;
-}
-
-/* Remove spin buttons from number inputs */
-.ds-cp-settings-field input[type="number"]::-webkit-inner-spin-button,
-.ds-cp-settings-field input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.ds-cp-settings-field input[type="number"] {
-  -moz-appearance: textfield;
-}
-
-.ds-cp-settings-type-lock {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 4px;
-  background: var(--ds-panel-2, #20242c);
-  color: var(--ds-text-muted, #8d96a3);
-  font-size: 10px;
-  width: fit-content;
-}
 
 .ds-cp-settings-options { display: flex; flex-direction: column; gap: 3px; max-height: 120px; overflow-y: auto; }
 .ds-cp-settings-option { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--ds-text, #e5e7eb); cursor: pointer; }
@@ -544,29 +717,7 @@ button.ds-cp-settings-add:hover,
 .ds-cp-root + .litegraph-output-label,
 .ds-cp-output-label-hidden { display: none !important; }
 
-.ds-cp-gear-host {
-  display: none;
-  position: fixed;
-  padding: 0;
-  width: 22px;
-  height: 22px;
-  z-index: 100;
-  pointer-events: none;
-  overflow: hidden;
-}
-.ds-cp-gear-host .ds-cp-gear {
-  position: static;
-  width: 100%;
-  height: 100%;
-  pointer-events: auto;
-}
-.ds-cp-gear-host .ds-cp-gear svg {
-  width: 100%;
-  height: 100%;
-  max-width: 24px;
-  max-height: 24px;
-  display: block;
-}
+
 
 /* ── Nodes 2.0 (Direct Pixaroma Rules) ───────────────────────────────── */
 .lg-node:has(.ds-cp-row) .lg-node-widget > div:first-child {
@@ -596,7 +747,7 @@ button.ds-cp-settings-add:hover,
 .ds-cp-accent-picker {
   position: fixed;
   z-index: 10020;
-  width: 280px;
+  width: 290px;
   background: var(--ds-panel, #12151c);
   border: 1px solid var(--ds-border, #242a36);
   border-radius: 8px;
@@ -605,6 +756,7 @@ button.ds-cp-settings-add:hover,
   color: var(--ds-text, #e5e7eb);
   overflow: hidden;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .ds-cp-accent-head {
@@ -684,48 +836,78 @@ button.ds-cp-settings-add:hover,
 .ds-cp-accent-value-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .ds-cp-accent-preview {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 4px;
   border: 1px solid var(--ds-border, #242a36);
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 .ds-cp-accent-hex {
-  flex: 1;
-  height: 24px;
-  box-sizing: border-box;
-  background: var(--ds-input-bg, #0e1016);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 4px;
-  color: var(--ds-text, #e5e7eb);
-  font-family: monospace;
-  font-size: 11px;
-  padding: 0 6px;
-  outline: none;
+  width: 72px !important;
+  min-width: 66px !important;
+  max-width: 76px !important;
+  height: 26px !important;
+  box-sizing: border-box !important;
+  background: var(--ds-input-bg, #0e1016) !important;
+  border: 1px solid var(--ds-border, #242a36) !important;
+  border-radius: 4px !important;
+  color: var(--ds-text, #e5e7eb) !important;
+  font-family: monospace !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  padding: 0 4px !important;
+  outline: none !important;
+  flex-shrink: 0 !important;
 }
 .ds-cp-accent-hex:focus {
-  border-color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-accent, #67e8f9) !important;
 }
-.ds-cp-accent-tools {
-  display: flex;
-  gap: 4px;
-}
-.ds-cp-accent-tools button {
-  height: 24px;
-  padding: 0 8px;
+
+.ds-cp-accent-btn {
+  height: 26px;
+  box-sizing: border-box;
   background: var(--ds-panel-2, #171a20);
   border: 1px solid var(--ds-border, #242a36);
   border-radius: 4px;
   color: var(--ds-text-muted, #8d96a3);
   font-size: 10px;
+  font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.ds-cp-accent-tools button:hover {
+.ds-cp-accent-btn:hover {
   color: #fff;
   border-color: var(--ds-accent, #67e8f9);
+}
+
+.ds-cp-accent-eye {
+  width: 26px;
+  padding: 0;
+}
+.ds-cp-accent-eye svg {
+  display: block;
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+}
+
+.ds-cp-accent-copy,
+.ds-cp-accent-paste {
+  padding: 0 8px;
+  flex: 1 1 0;
+  min-width: 44px;
 }
 
 .ds-cp-accent-presets-title {

@@ -29,22 +29,50 @@ import {
   DEFAULT_W,
   showToast,
   releaseGearNode,
-  ensureGearHost,
   isVueNodes,
 } from "./ui.mjs";
 import {
   openSettings,
   closeSettings,
+  isSettingsOpen,
   openAccentPicker,
   CUSTOM_ACCENT_PRESETS,
   PRESET_NAMES,
 } from "./settings.mjs";
 
-const cssHref = "/extensions/DeathshotArsenal/Control Panel/ds_control_panel.css";
-if (!document.querySelector(`link[href="${cssHref}"]`)) {
+function registerGearMenu() {
+  if (window.DSGearMenu?.register) {
+    window.DSGearMenu.register("DS_ControlPanel", {
+      tooltip: "DS Control Panel Settings",
+      onClick: (node, canvas, event) => {
+        const anchor = event?.currentTarget || event?.target;
+        const api = node._dsSettingsApi?.();
+        if (!api) return;
+        if (isSettingsOpen(node)) {
+          closeSettings(node);
+        } else {
+          openSettings(app, node, api, anchor);
+        }
+      },
+    });
+    return true;
+  }
+  return false;
+}
+
+if (!registerGearMenu()) {
+  setTimeout(registerGearMenu, 250);
+  setTimeout(registerGearMenu, 1000);
+}
+
+const cssBase = "/extensions/DeathshotArsenal/Control Panel/ds_control_panel.css";
+const existingCssLink = document.querySelector('link[href*="ds_control_panel.css"]');
+if (existingCssLink) {
+  existingCssLink.href = `${cssBase}?v=${Date.now()}`;
+} else {
   const link = document.createElement("link");
   link.rel = "stylesheet";
-  link.href = cssHref;
+  link.href = `${cssBase}?v=${Date.now()}`;
   document.head.appendChild(link);
 }
 
@@ -61,6 +89,7 @@ app.registerExtension({
   name: "DeathshotArsenal.ControlPanel",
 
   async setup() {
+    registerGearMenu();
     const original = app.graphToPrompt?.bind(app);
     if (!original || app._dsControlPanelPromptHooked) return;
     app._dsControlPanelPromptHooked = true;
@@ -219,7 +248,6 @@ app.registerExtension({
           return createControlRow(this._dsControls[index], this._dsRowApi(index));
         },
         () => this._dsAddControl(),
-        () => openSettings(app, this, this._dsSettingsApi()),
       );
       scheduleAlign(this);
     };
@@ -453,15 +481,11 @@ app.registerExtension({
       releaseGearNode(this);
       if (this._dsRowWidgets) for (const w of this._dsRowWidgets) { try { w.onRemove?.(); } catch (_) {} }
       if (this._dsAddWidget) { try { this._dsAddWidget.onRemove?.(); } catch (_) {} }
-      if (this._dsGearWidget) { try { this._dsGearWidget.onRemove?.(); } catch (_) {} }
       if (originalRemoved) originalRemoved.apply(this, arguments);
     };
 
     nodeType.prototype.onAdded = function (graph) {
       if (originalAdded) originalAdded.apply(this, arguments);
-      if (this._dsOnGear) {
-        ensureGearHost(this, this._dsOnGear);
-      }
       scheduleAlign(this);
     };
   },
