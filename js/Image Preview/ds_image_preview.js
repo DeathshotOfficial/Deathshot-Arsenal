@@ -6,7 +6,7 @@ const EXT = "DeathshotArsenal.DSImagePreview";
 const MODE_PROP = "ds_image_preview_mode";
 const DEFAULT_SIZE = [620, 650];
 const MIN_SIZE = [440, 430];
-const CSS_ID = "ds-image-preview-css-v1";
+const CSS_ID = "ds-image-preview-css-v2";
 
 function log(...args) { console.log("[DS Image Preview]", ...args); }
 function error(...args) { console.error("[DS Image Preview]", ...args); }
@@ -20,7 +20,7 @@ function loadCss() {
     const link = document.createElement("link");
     link.id = CSS_ID;
     link.rel = "stylesheet";
-    link.href = "/extensions/DeathshotArsenal/Image Preview/ds_image_preview.css?v=1";
+    link.href = "/extensions/DeathshotArsenal/Image Preview/ds_image_preview.css?v=2";
     link.onload = resolve;
     link.onerror = resolve;
     document.head.appendChild(link);
@@ -37,6 +37,7 @@ function state(node) {
     count: 0,
     busy: false,
     toastTimer: null,
+    saveConfirmTimer: null,
   });
 }
 
@@ -114,8 +115,59 @@ function setImage(node, info) {
     ph.querySelector("strong").textContent = "READY";
     ph.querySelector("span").textContent = s.mode === "save" ? "Image saved and ready to inspect." : "Run the workflow to preview the image here.";
   }
-  if (s.mode === "save" && info.saved?.length) toast(node, `Saved ${info.saved.length} PNG${info.saved.length === 1 ? "" : "s"}`);
+  if (s.mode === "save" && info.saved?.length) {
+    showSaveConfirmation(node, {
+      ok: true,
+      filename: info.saved[0],
+      path: info.saved_paths?.[0] || "",
+    });
+  }
   node.setDirtyCanvas?.(true, true);
+}
+
+function showSaveConfirmation(node, { ok, filename, path, error: errMsg }) {
+  const root = node._dsImagePreviewRoot; if (!root) return;
+  const container = root.querySelector(".ds-ip-actions"); if (!container) return;
+  const s = state(node);
+  if (s.saveConfirmTimer) {
+    clearTimeout(s.saveConfirmTimer);
+    s.saveConfirmTimer = null;
+  }
+  const old = container.querySelector(".ds-save-confirm");
+  if (old) old.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = `ds-save-confirm ${ok ? "ds-save-confirm-success" : "ds-save-confirm-error"}`;
+  try { window.DSGlobalTheme?.applyToElement?.(overlay); } catch (_) {}
+
+  const safeFile = filename ? String(filename) : (ok ? "image.png" : "file");
+  const safePath = path ? String(path) : "";
+  const safeErr = errMsg ? String(errMsg) : "Could not save file";
+
+  if (ok) {
+    overlay.title = safePath ? `${safeFile} → ${safePath}` : safeFile;
+    overlay.innerHTML = `
+      <span class="ds-save-confirm-icon">✓</span>
+      <span class="ds-save-confirm-title">Saved</span>
+      <span class="ds-save-confirm-sep">·</span>
+      <span class="ds-save-confirm-name" title="${safeFile}">${safeFile}</span>
+      ${safePath ? `<span class="ds-save-confirm-sep">·</span><span class="ds-save-confirm-path" title="${safePath}">${safePath}</span>` : ""}
+    `;
+  } else {
+    overlay.title = safeErr;
+    overlay.innerHTML = `
+      <span class="ds-save-confirm-icon">✕</span>
+      <span class="ds-save-confirm-title">Save failed</span>
+      <span class="ds-save-confirm-sep">·</span>
+      <span class="ds-save-confirm-name" title="${safeErr}">${safeErr}</span>
+    `;
+  }
+
+  container.appendChild(overlay);
+  s.saveConfirmTimer = setTimeout(() => {
+    overlay.remove();
+    s.saveConfirmTimer = null;
+  }, 2000);
 }
 
 async function copyImage(node) {
@@ -144,6 +196,12 @@ function openImage(node) {
 async function saveImage(node) {
   const s = state(node);
   if (!s.file) return toast(node, "No image yet");
+  const root = node._dsImagePreviewRoot;
+  const saveBtn = root?.querySelector(".ds-ip-save");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "SAVING…";
+  }
   try {
     const r = await api.fetchApi("/ds/image_preview/save", {
       method: "POST",
@@ -152,11 +210,16 @@ async function saveImage(node) {
     });
     const d = await r.json();
     if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`);
-    toast(node, "Saved PNG to output");
+    showSaveConfirmation(node, { ok: true, filename: d.filename, path: d.path });
     log("manual save", d.path);
   } catch (e) {
     error("save failed", e);
-    toast(node, "Save failed");
+    showSaveConfirmation(node, { ok: false, error: e.message || "Save failed", filename: s.file });
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = !s.file;
+      saveBtn.textContent = "SAVE OUTPUT";
+    }
   }
 }
 
@@ -269,6 +332,12 @@ app.registerExtension({
       if (size[0] < MIN_SIZE[0]) size[0] = MIN_SIZE[0];
       if (size[1] < MIN_SIZE[1]) size[1] = MIN_SIZE[1];
       return oldResize?.apply(this, arguments);
+    };
+    const oldRemoved = nodeType.prototype.onRemoved;
+    nodeType.prototype.onRemoved = function () {
+      clearTimeout(this._dsImagePreviewState?.toastTimer);
+      clearTimeout(this._dsImagePreviewState?.saveConfirmTimer);
+      return oldRemoved?.apply(this, arguments);
     };
   },
 });

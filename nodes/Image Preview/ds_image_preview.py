@@ -93,24 +93,31 @@ async def _manual_save(request):
         data = {}
     name = os.path.basename(str(data.get("file", "")))
     if not name or not name.startswith(TEMP_PREFIX):
-        return web.json_response({"ok": False, "error": "invalid preview file"}, status=400)
+        return web.json_response({"ok": False, "error": "invalid preview file", "filename": name}, status=400)
     source = os.path.join(_temp_dir(), name)
     if not os.path.isfile(source):
-        return web.json_response({"ok": False, "error": "preview expired"}, status=404)
+        return web.json_response({"ok": False, "error": "preview expired", "filename": name}, status=404)
 
     node_id = _safe_id(data.get("node_id", "node"))
     stamp = time.strftime("%Y%m%d_%H%M%S")
     millis = int(time.time() * 1000) % 1000
-    out = os.path.join(_output_dir(), f"DS_ImagePreview_{stamp}_{millis:03d}_{node_id}_manual_{uuid.uuid4().hex[:10]}.png")
-    # Copying the already-lossless PNG preserves the exact preview pixels.
-    with open(source, "rb") as src, open(out, "wb") as dst:
-        while True:
-            chunk = src.read(1024 * 1024)
-            if not chunk:
-                break
-            dst.write(chunk)
-    _log(f"manual save node={node_id} path={out}")
-    return web.json_response({"ok": True, "filename": os.path.basename(out), "path": out})
+    out_name = f"DS_ImagePreview_{stamp}_{millis:03d}_{node_id}_manual_{uuid.uuid4().hex[:10]}.png"
+    try:
+        out_dir = _output_dir()
+        os.makedirs(out_dir, exist_ok=True)
+        out = os.path.join(out_dir, out_name)
+        # Copying the already-lossless PNG preserves the exact preview pixels.
+        with open(source, "rb") as src, open(out, "wb") as dst:
+            while True:
+                chunk = src.read(1024 * 1024)
+                if not chunk:
+                    break
+                dst.write(chunk)
+        _log(f"manual save node={node_id} path={out}")
+        return web.json_response({"ok": True, "filename": os.path.basename(out), "path": out})
+    except Exception as exc:
+        _log(f"save error: {exc}")
+        return web.json_response({"ok": False, "error": str(exc), "filename": out_name}, status=500)
 
 
 try:
@@ -165,6 +172,7 @@ class DS_ImagePreview:
                     "count": int(image.shape[0]),
                     "mode": mode,
                     "saved": [os.path.basename(p) for p in saved],
+                    "saved_paths": saved,
                 }]
             },
             "result": (image,),

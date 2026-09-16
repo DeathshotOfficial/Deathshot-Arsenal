@@ -79,18 +79,22 @@ async def _save(request):
     requested = str(data.get("filename", "DS_ImageCheckpoint")).strip()
     source = _snapshot_path(node_id)
     if not os.path.isfile(source):
-        return web.json_response({"ok": False, "error": "preview not available"}, status=404)
+        return web.json_response({"ok": False, "error": "preview not available", "filename": requested}, status=404)
 
-    output_dir = folder_paths.get_output_directory()
-    os.makedirs(output_dir, exist_ok=True)
-    safe = os.path.basename(requested) or "DS_ImageCheckpoint"
-    safe = os.path.splitext(safe)[0]
-    safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in safe).strip() or "DS_ImageCheckpoint"
-    stamp = time.strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(output_dir, f"{safe}_{stamp}_{uuid.uuid4().hex[:6]}.png")
-    shutil.copy2(source, path)
-    _log(f"saved node={node_id} path={path}")
-    return web.json_response({"ok": True, "filename": os.path.basename(path), "path": path})
+    try:
+        output_dir = folder_paths.get_output_directory()
+        os.makedirs(output_dir, exist_ok=True)
+        safe = os.path.basename(requested) or "DS_ImageCheckpoint"
+        safe = os.path.splitext(safe)[0]
+        safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in safe).strip() or "DS_ImageCheckpoint"
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(output_dir, f"{safe}_{stamp}_{uuid.uuid4().hex[:6]}.png")
+        shutil.copy2(source, path)
+        _log(f"saved node={node_id} path={path}")
+        return web.json_response({"ok": True, "filename": os.path.basename(path), "path": path})
+    except Exception as exc:
+        _log(f"save error: {exc}")
+        return web.json_response({"ok": False, "error": str(exc), "filename": requested}, status=500)
 
 
 try:
@@ -107,6 +111,12 @@ class DS_ImageCheckpoint:
     FUNCTION = "run"
     OUTPUT_NODE = True
     DESCRIPTION = "IMAGE checkpoint: pause, inspect, regenerate, or pass through a workflow."
+
+    @classmethod
+    def IS_CHANGED(cls, image=None, PauseState="", unique_id=None):
+        path = _snapshot_path(unique_id)
+        mtime = os.path.getmtime(path) if os.path.isfile(path) else 0
+        return f"{mtime}_{PauseState}"
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -147,7 +157,19 @@ class DS_ImageCheckpoint:
                 ) from exc
             height, width = output.shape[1], output.shape[2]
             _log(f"CONTINUE node={node_id} using snapshot {width}x{height}; upstream pruned")
-            return {"ui": {"ds_image_checkpoint": [{"filename": os.path.basename(path), "subfolder": "", "type": "temp"}]}, "result": (output,)}
+            return {
+                "ui": {
+                    "ds_image_checkpoint": [{
+                        "filename": os.path.basename(path),
+                        "subfolder": "",
+                        "type": "temp",
+                        "width": width,
+                        "height": height,
+                        "mode": "continue",
+                    }]
+                },
+                "result": (output,),
+            }
 
         if image is None:
             raise RuntimeError("DS Image Checkpoint: no IMAGE is connected to the input.")

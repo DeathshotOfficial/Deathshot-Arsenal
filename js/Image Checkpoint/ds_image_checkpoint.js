@@ -6,8 +6,9 @@ const EXT = "DeathshotArsenal.DSImageCheckpoint";
 const STATE_PROP = "ds_image_checkpoint_mode";
 const DEFAULT_SIZE = [620, 620];
 const MIN_SIZE = [460, 430];
-const CSS_ID = "ds-image-checkpoint-css-v4";
+const CSS_ID = "ds-image-checkpoint-css-v5";
 const HIDDEN_INPUT = "PauseState";
+const STOP_ICON = '<span class="ds-stop-square"></span>';
 
 function log(...a) { console.log("[DS Image Checkpoint]", ...a); }
 function error(...a) { console.error("[DS Image Checkpoint]", ...a); }
@@ -20,7 +21,7 @@ function loadCss() {
     if (document.getElementById(CSS_ID)) return resolve();
     const link = document.createElement("link");
     link.id = CSS_ID; link.rel = "stylesheet";
-    link.href = "/extensions/DeathshotArsenal/Image Checkpoint/ds_image_checkpoint.css?v=4";
+    link.href = "/extensions/DeathshotArsenal/Image Checkpoint/ds_image_checkpoint.css?v=5";
     link.onload = resolve; link.onerror = resolve;
     document.head.appendChild(link);
   });
@@ -31,7 +32,7 @@ function stateOf(node) {
   return node._dsICState || (node._dsICState = {
     mode: node.properties?.[STATE_PROP] === "pass" ? "pass" : "pause",
     status: "ready", previewUrl: "", width: 0, height: 0,
-    hasSnapshot: false, busy: false, flashTimer: null,
+    hasSnapshot: false, busy: false, flashTimer: null, saveConfirmTimer: null,
   });
 }
 function rootOf(node) { return node._dsICRoot; }
@@ -46,8 +47,7 @@ function setStatus(node, status, text) {
   const root = rootOf(node); if (!root) return;
   const el = root.querySelector(".ds-ic-status");
   if (el) { el.dataset.state = status; const t = el.querySelector(".ds-ic-status-text"); if (t) t.textContent = text; }
-  const cont = root.querySelector(".ds-ic-continue");
-  if (cont) cont.disabled = !(status === "paused" && s.hasSnapshot);
+  renderButtons(node);
 }
 function toast(node, text) {
   const el = rootOf(node)?.querySelector(".ds-ic-toast"); if (!el) return;
@@ -72,9 +72,36 @@ function renderButtons(node) {
   const s = stateOf(node), root = rootOf(node); if (!root) return;
   const cont = root.querySelector(".ds-ic-continue"), regen = root.querySelector(".ds-ic-regenerate");
   const has = s.hasSnapshot;
-  if (regen) regen.disabled = s.mode !== "pause" || s.busy;
-  if (cont) cont.disabled = s.mode !== "pause" || !has || s.status !== "paused" || s.busy;
-  ["copy", "open", "save"].forEach(k => { const b = root.querySelector(`.ds-ic-${k}`); if (b) b.disabled = !has; });
+  const isPause = s.mode === "pause";
+
+  if (regen) {
+    if (s.busy && node._dsICActiveMode === "pause") {
+      regen.disabled = false;
+      regen.classList.add("is-stopping");
+      regen.innerHTML = `${STOP_ICON} &nbsp; STOP`;
+    } else {
+      regen.classList.remove("is-stopping");
+      regen.disabled = !isPause || s.busy;
+      regen.innerHTML = "↻ &nbsp; REGENERATE";
+    }
+  }
+
+  if (cont) {
+    if (s.busy && node._dsICActiveMode === "continue") {
+      cont.disabled = false;
+      cont.classList.add("is-stopping");
+      cont.innerHTML = `${STOP_ICON} &nbsp; STOP`;
+    } else {
+      cont.classList.remove("is-stopping");
+      cont.disabled = !isPause || !has || s.busy;
+      cont.innerHTML = "▶ &nbsp; CONTINUE";
+    }
+  }
+
+  ["copy", "open", "save"].forEach(k => {
+    const b = root.querySelector(`.ds-ic-${k}`);
+    if (b) b.disabled = !has;
+  });
 }
 function setPreview(node, width, height) {
   const s = stateOf(node); s.width = Number(width) || 0; s.height = Number(height) || 0;
@@ -82,9 +109,67 @@ function setPreview(node, width, height) {
   const root = rootOf(node); if (!root) return;
   const img = root.querySelector(".ds-ic-image"), ph = root.querySelector(".ds-ic-placeholder"), dims = root.querySelector(".ds-ic-dims");
   if (dims) dims.textContent = s.width && s.height ? `${s.width} × ${s.height}` : "";
-  img.onload = () => { img.hidden = false; ph.hidden = true; s.hasSnapshot = true; renderButtons(node); node.setDirtyCanvas?.(true, true); };
-  img.onerror = () => { img.hidden = true; ph.hidden = false; ph.innerHTML = `<strong>PREVIEW EXPIRED</strong><span>Run again in Pause mode to capture a new image.</span>`; s.hasSnapshot = false; renderButtons(node); };
+  img.onload = () => {
+    img.hidden = false;
+    ph.hidden = true;
+    s.hasSnapshot = true;
+    if (s.mode === "pause" && !s.busy) setStatus(node, "paused", "PAUSED · READY");
+    else renderButtons(node);
+    node.setDirtyCanvas?.(true, true);
+  };
+  img.onerror = () => {
+    img.hidden = true;
+    ph.hidden = false;
+    ph.innerHTML = `<strong>PREVIEW EXPIRED</strong><span>Run again in Pause mode to capture a new image.</span>`;
+    s.hasSnapshot = false;
+    renderButtons(node);
+  };
   img.src = s.previewUrl;
+}
+
+function showSaveConfirmation(node, { ok, filename, path, error: errMsg }) {
+  const root = rootOf(node); if (!root) return;
+  const container = root.querySelector(".ds-ic-actions"); if (!container) return;
+  const s = stateOf(node);
+  if (s.saveConfirmTimer) {
+    clearTimeout(s.saveConfirmTimer);
+    s.saveConfirmTimer = null;
+  }
+  const old = container.querySelector(".ds-save-confirm");
+  if (old) old.remove();
+
+  const overlay = document.createElement("div");
+  overlay.className = `ds-save-confirm ${ok ? "ds-save-confirm-success" : "ds-save-confirm-error"}`;
+  try { window.DSGlobalTheme?.applyToElement?.(overlay); } catch (_) {}
+
+  const safeFile = filename ? String(filename) : (ok ? "image.png" : "file");
+  const safePath = path ? String(path) : "";
+  const safeErr = errMsg ? String(errMsg) : "Could not save file";
+
+  if (ok) {
+    overlay.title = safePath ? `${safeFile} → ${safePath}` : safeFile;
+    overlay.innerHTML = `
+      <span class="ds-save-confirm-icon">✓</span>
+      <span class="ds-save-confirm-title">Saved</span>
+      <span class="ds-save-confirm-sep">·</span>
+      <span class="ds-save-confirm-name" title="${safeFile}">${safeFile}</span>
+      ${safePath ? `<span class="ds-save-confirm-sep">·</span><span class="ds-save-confirm-path" title="${safePath}">${safePath}</span>` : ""}
+    `;
+  } else {
+    overlay.title = safeErr;
+    overlay.innerHTML = `
+      <span class="ds-save-confirm-icon">✕</span>
+      <span class="ds-save-confirm-title">Save failed</span>
+      <span class="ds-save-confirm-sep">·</span>
+      <span class="ds-save-confirm-name" title="${safeErr}">${safeErr}</span>
+    `;
+  }
+
+  container.appendChild(overlay);
+  s.saveConfirmTimer = setTimeout(() => {
+    overlay.remove();
+    s.saveConfirmTimer = null;
+  }, 2000);
 }
 
 function isLink(v) {
@@ -129,17 +214,18 @@ function collectGates(out) {
 }
 function applyGateMode(out, id, entry, mode, isOutput) {
   entry.inputs ??= {};
+  const nonce = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   if (mode === "pause") {
     const downstream = collectDownstream(buildConsumers(out), id);
     for (const d of downstream) delete out[d];
-    entry.inputs[HIDDEN_INPUT] = JSON.stringify({ mode: "pause" });
+    entry.inputs[HIDDEN_INPUT] = JSON.stringify({ mode: "pause", nonce });
     return;
   }
   if (mode === "pass") { entry.inputs[HIDDEN_INPUT] = JSON.stringify({ mode: "pass" }); return; }
 
   const gateSrc = isLink(entry.inputs.image) ? [String(entry.inputs.image[0]), Number(entry.inputs.image[1])] : null;
   delete entry.inputs.image;
-  entry.inputs[HIDDEN_INPUT] = JSON.stringify({ mode: "continue" });
+  entry.inputs[HIDDEN_INPUT] = JSON.stringify({ mode: "continue", nonce });
   const consumers = buildConsumers(out), downstream = collectDownstream(consumers, id);
   if (gateSrc) for (const dId of downstream) for (const k in (out[dId]?.inputs || {})) {
     const v = out[dId].inputs[k];
@@ -155,21 +241,84 @@ function applyGateMode(out, id, entry, mode, isOutput) {
 async function queueWithMode(node, mode) {
   const all = app.graph?._nodes || app.graph?.nodes || [];
   for (const n of all) if (n !== node) n._dsICSubmitMode = null;
-  node._dsICSubmitMode = mode; const s = stateOf(node); s.busy = true;
-  setStatus(node, "busy", mode === "continue" ? "CONTINUING…" : "REGENERATING…"); renderButtons(node);
+  node._dsICSubmitMode = mode;
+  node._dsICActiveMode = mode;
+  const s = stateOf(node);
+  s.busy = true;
+  setStatus(node, "busy", mode === "continue" ? "CONTINUING…" : "REGENERATING…");
   log("queue", mode, "node", node.id);
-  try { await app.queuePrompt(0, 1); } catch (e) { error("queue failed", e); toast(node, `Queue failed: ${e.message}`); }
-  finally { node._dsICSubmitMode = null; s.busy = false; renderButtons(node); }
+  try {
+    await app.queuePrompt(0, 1);
+  } catch (e) {
+    error("queue failed", e);
+    toast(node, `Queue failed: ${e.message}`);
+    s.busy = false;
+    node._dsICActiveMode = null;
+    node._dsICSubmitMode = null;
+    setStatus(node, s.hasSnapshot ? "paused" : "ready", s.hasSnapshot ? "PAUSED · READY" : "READY");
+  } finally {
+    node._dsICSubmitMode = null;
+  }
 }
-async function continueExecution(node) { const s = stateOf(node); if (s.mode !== "pause" || !s.hasSnapshot || s.status !== "paused") return; await queueWithMode(node, "continue"); }
-async function regenerate(node) { if (stateOf(node).mode !== "pause") return; await queueWithMode(node, "pause"); }
+async function abortExecution(node, actionName) {
+  log("aborting", actionName, "node", node?.id);
+  try {
+    if (typeof api.interrupt === "function") {
+      await api.interrupt();
+    } else {
+      await api.fetchApi("/interrupt", { method: "POST" });
+    }
+  } catch (e) {
+    error("interrupt failed", e);
+  }
+}
+async function continueExecution(node) {
+  const s = stateOf(node);
+  if (s.mode !== "pause" || !s.hasSnapshot || s.busy) return;
+  await queueWithMode(node, "continue");
+}
+async function regenerate(node) {
+  const s = stateOf(node);
+  if (s.mode !== "pause" || s.busy) return;
+  await queueWithMode(node, "pause");
+}
 async function copyPreview(node) {
   const s = stateOf(node); if (!s.hasSnapshot) return toast(node, "No image yet");
   try { const r = await fetch(s.previewUrl, {cache:"no-store"}); if (!r.ok) throw new Error(); const blob = await r.blob(); if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") throw new Error("Clipboard not supported"); await navigator.clipboard.write([new ClipboardItem({"image/png": blob.type === "image/png" ? blob : new Blob([blob], {type:"image/png"})})]); toast(node, "Copied to clipboard"); }
   catch (e) { error("copy failed", e); toast(node, "Copy failed"); }
 }
 function openPreview(node) { const s = stateOf(node); if (!s.hasSnapshot) return toast(node, "No image yet"); const w = window.open(s.previewUrl, "_blank", "noopener,noreferrer"); if (!w) toast(node, "Popup blocked"); }
-async function savePreview(node) { const s = stateOf(node); if (!s.hasSnapshot) return toast(node, "No image yet"); try { const r = await api.fetchApi("/ds/image_checkpoint/save", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({node_id:String(node.id), filename:`DS_ImageCheckpoint_${node.id}`})}); const d=await r.json(); if(!r.ok||!d.ok) throw new Error(d.error||`HTTP ${r.status}`); toast(node,"Saved to output"); log("saved",d.path); } catch(e){ error("save failed",e); toast(node,"Save failed"); } }
+async function savePreview(node) {
+  const s = stateOf(node);
+  if (!s.hasSnapshot) return toast(node, "No image yet");
+  const root = rootOf(node);
+  const saveBtn = root?.querySelector(".ds-ic-save");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "SAVING…";
+  }
+  try {
+    const r = await api.fetchApi("/ds/image_checkpoint/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ node_id: String(node.id), filename: `DS_ImageCheckpoint_${node.id}` }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      throw new Error(d.error || `HTTP ${r.status}`);
+    }
+    showSaveConfirmation(node, { ok: true, filename: d.filename, path: d.path });
+    log("saved", d.path);
+  } catch (e) {
+    error("save failed", e);
+    showSaveConfirmation(node, { ok: false, error: e.message || "Save failed", filename: `DS_ImageCheckpoint_${node.id}` });
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = !s.hasSnapshot;
+      saveBtn.textContent = "SAVE OUTPUT";
+    }
+  }
+}
 
 function buildUI(node) {
   const root = document.createElement("div"); root.className = "ds-ic-root"; root.dataset.dsThemed = "true";
@@ -182,8 +331,30 @@ function buildUI(node) {
     <div class="ds-ic-preview"><img class="ds-ic-image" alt="Checkpoint preview" hidden draggable="false"><div class="ds-ic-placeholder"><strong>PAUSED &amp; READY</strong><span>Run the workflow to inspect the image here.</span></div><div class="ds-ic-toast"></div></div>
   `;
   root.querySelectorAll(".ds-ic-tab").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();setModeUI(node,b.dataset.mode,true);}));
-  root.querySelector(".ds-ic-continue").addEventListener("click",e=>{e.stopPropagation();continueExecution(node);});
-  root.querySelector(".ds-ic-regenerate").addEventListener("click",e=>{e.stopPropagation();regenerate(node);});
+  root.querySelector(".ds-ic-continue").addEventListener("click", e => {
+    e.stopPropagation();
+    const s = stateOf(node);
+    if (s.busy && node._dsICActiveMode === "continue") {
+      const btn = root.querySelector(".ds-ic-continue");
+      if (btn) btn.innerHTML = `${STOP_ICON} &nbsp; STOPPING…`;
+      toast(node, "Aborting continuation…");
+      abortExecution(node, "continue");
+      return;
+    }
+    continueExecution(node);
+  });
+  root.querySelector(".ds-ic-regenerate").addEventListener("click", e => {
+    e.stopPropagation();
+    const s = stateOf(node);
+    if (s.busy && node._dsICActiveMode === "pause") {
+      const btn = root.querySelector(".ds-ic-regenerate");
+      if (btn) btn.innerHTML = `${STOP_ICON} &nbsp; STOPPING…`;
+      toast(node, "Aborting generation…");
+      abortExecution(node, "regenerate");
+      return;
+    }
+    regenerate(node);
+  });
   root.querySelector(".ds-ic-copy").addEventListener("click",e=>{e.stopPropagation();copyPreview(node);});
   root.querySelector(".ds-ic-open").addEventListener("click",e=>{e.stopPropagation();openPreview(node);});
   root.querySelector(".ds-ic-save").addEventListener("click",e=>{e.stopPropagation();savePreview(node);});
@@ -204,17 +375,46 @@ function installNode(node) {
   log("node installed",node.id,"native base retained");
 }
 
+function onExecutionDone() {
+  const all = app.graph?._nodes || app.graph?.nodes || [];
+  for (const n of all) {
+    if (n.type === TYPE || n.comfyClass === TYPE) {
+      const s = stateOf(n);
+      if (s.busy) {
+        s.busy = false;
+        n._dsICActiveMode = null;
+        if (s.mode === "pause" && s.hasSnapshot) {
+          setStatus(n, "paused", "PAUSED · READY");
+        } else {
+          setStatus(n, "ready", s.mode === "pass" ? "PASSED" : "READY");
+        }
+      }
+    }
+  }
+}
+
 app.registerExtension({
   name: EXT,
   async setup(){
     await loadCss();
     api.addEventListener("executed", e=>{
       const d=e.detail, frames=d?.output?.ds_image_checkpoint; if(!frames?.length) return;
-      let node=app.graph?.getNodeById?.(d.node); if(!node) node=(app.graph?._nodes||[]).find(n=>String(n.id)===String(d.node)); if(!node||node.type!==TYPE) return;
-      const f=frames[0]; setPreview(node,f.width||0,f.height||0); if(stateOf(node).mode==="pause" && f.mode==="pause") setStatus(node,"paused","PAUSED · READY"); else setStatus(node,"ready",f.mode==="pass"?"PASSED":"READY");
+      let node=app.graph?.getNodeById?.(d.node); if(!node) node=(app.graph?._nodes||[]).find(n=>String(n.id)===String(d.node)); if(!node||(node.type!==TYPE && node.comfyClass!==TYPE)) return;
+      const f=frames[0]; if(f.width && f.height) setPreview(node,f.width,f.height);
+      const s=stateOf(node);
+      if(s.mode==="pause") setStatus(node,"paused","PAUSED · READY");
+      else setStatus(node,"ready",f.mode==="pass"?"PASSED":"READY");
       log("executed",{node:d.node,mode:f.mode,width:f.width,height:f.height});
     });
-    api.addEventListener("execution_interrupted",()=>{for(const n of app.graph?._nodes||[]) if(n.type===TYPE && stateOf(n).busy) setStatus(n,"stopped","STOPPED"); log("execution interrupted");});
+    api.addEventListener("execution_success", onExecutionDone);
+    api.addEventListener("execution_error", onExecutionDone);
+    api.addEventListener("execution_interrupted", () => {
+      onExecutionDone();
+      log("execution interrupted");
+    });
+    api.addEventListener("executing", ({ detail }) => {
+      if (detail === null) onExecutionDone();
+    });
     log("extension ready");
   },
   async beforeRegisterNodeDef(nodeType,nodeData){
@@ -224,12 +424,22 @@ app.registerExtension({
     const oldCreated=nodeType.prototype.onNodeCreated; nodeType.prototype.onNodeCreated=function(){const r=oldCreated?.apply(this,arguments);installNode(this);return r;};
     const oldConfigure=nodeType.prototype.onConfigure; nodeType.prototype.onConfigure=function(){const r=oldConfigure?.apply(this,arguments); if(!this.properties)this.properties={}; const s=stateOf(this); s.mode=this.properties[STATE_PROP]==="pass"?"pass":"pause"; setModeUI(this,s.mode,false); setStatus(this,"ready","READY"); return r;};
     const oldResize=nodeType.prototype.onResize; nodeType.prototype.onResize=function(size){if(size[0]<MIN_SIZE[0])size[0]=MIN_SIZE[0];if(size[1]<MIN_SIZE[1])size[1]=MIN_SIZE[1];return oldResize?.apply(this,arguments);};
-    const oldRemoved=nodeType.prototype.onRemoved; nodeType.prototype.onRemoved=function(){clearTimeout(this._dsICState?.flashTimer);return oldRemoved?.apply(this,arguments);};
+    const oldRemoved=nodeType.prototype.onRemoved; nodeType.prototype.onRemoved=function(){clearTimeout(this._dsICState?.flashTimer);clearTimeout(this._dsICState?.saveConfirmTimer);return oldRemoved?.apply(this,arguments);};
   }
 });
 
 const originalGraphToPrompt=app.graphToPrompt.bind(app);
-app.graphToPrompt=async function(...args){const result=await originalGraphToPrompt(...args);try{const out=result?.output;if(out)for(const g of collectGates(out)){g.entry.inputs??={};g.entry.inputs[HIDDEN_INPUT]=JSON.stringify({mode:g.mode});}}catch(e){error("prompt mode injection failed; sending unchanged prompt",e);}return result;};
+app.graphToPrompt=async function(...args){
+  const result=await originalGraphToPrompt(...args);
+  try{
+    const out=result?.output;
+    if(out)for(const g of collectGates(out)){
+      g.entry.inputs??={};
+      g.entry.inputs[HIDDEN_INPUT]=JSON.stringify({mode:g.mode, nonce: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`});
+    }
+  }catch(e){error("prompt mode injection failed; sending unchanged prompt",e);}
+  return result;
+};
 
 if(!api._dsImageCheckpointQueueWrappedV3){
   api._dsImageCheckpointQueueWrappedV3=true;
