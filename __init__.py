@@ -112,6 +112,14 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_Label: {e}", flush=True)
     DS_Label = None
 
+# DS Reroute (pass-through routing node with editable label)
+try:
+    _mod = _load_node_pkg("reroute", "Reroute")
+    DS_Reroute = _mod.DS_Reroute
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_Reroute: {e}", flush=True)
+    DS_Reroute = None
+
 # DS Run Timer
 try:
     _mod = _load_node_pkg("run_timer", "Run Timer")
@@ -930,7 +938,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_Notes": DS_Notes} if DS_Notes is not None else {}),
     **({"DS_Gallery": DS_Gallery} if DS_Gallery is not None else {}),
     **({"DS_Interpolation": DS_Interpolation} if DS_Interpolation is not None else {}),
-
+    **({"DS_Reroute": DS_Reroute} if DS_Reroute is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -970,7 +978,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_Notes": "DS Notes"} if DS_Notes is not None else {}),
     **({"DS_Gallery": "DS Gallery"} if DS_Gallery is not None else {}),
     **({"DS_Interpolation": "DS Interpolation"} if DS_Interpolation is not None else {}),
-
+    **({"DS_Reroute": "DS Reroute"} if DS_Reroute is not None else {}),
 }
 
 WEB_DIRECTORY = "js"
