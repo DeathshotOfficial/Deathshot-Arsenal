@@ -93,18 +93,30 @@ if (existingCssLink) {
   document.head.appendChild(link);
 }
 
+function getTimerNode() {
+  const graph = app?.graph || app?.canvas?.graph;
+  if (!graph) return null;
+  const nodes = graph._nodes || graph.nodes || [];
+  const selected = nodes.filter(n => n?.selected && (n.type === TYPE || n.comfyClass === TYPE || n.type === "DS Run Timer"));
+  return selected[0] || nodes.find(n => n?.type === TYPE || n?.comfyClass === TYPE || n?.type === "DS Run Timer") || null;
+}
+
 function registerTimerGearMenu() {
   if (window.DSGearMenu?.register) {
-    window.DSGearMenu.register(TYPE, {
+    const config = {
       tooltip: "Run Timer Settings",
       onClick: (node, canvas, event) => {
-        if (isTimerSettingsOpen(node)) {
-          closeTimerSettings(node);
+        const targetNode = node || getTimerNode();
+        if (!targetNode) return;
+        if (isTimerSettingsOpen(targetNode)) {
+          closeTimerSettings(targetNode);
         } else {
-          openTimerSettings(node);
+          openTimerSettings(targetNode);
         }
       },
-    });
+    };
+    window.DSGearMenu.register(TYPE, config);
+    window.DSGearMenu.register("DS Run Timer", config);
     return true;
   }
   return false;
@@ -487,26 +499,55 @@ let timerFollowRaf = null;
 
 function timerScreenRect(node) {
   if (!node) return null;
+
+  // 1. Try DOM element first (Vue / DOM widget / ComfyUI node container)
+  const domEl = (node._dsTimerRoot && node._dsTimerRoot.isConnected)
+    ? (node._dsTimerRoot.closest?.(".litegraph-vue-node, [data-node-id]") || node._dsTimerRoot)
+    : (node.id != null ? document.querySelector(`[data-node-id="${node.id}"]`) : null);
+
+  if (domEl && domEl.isConnected) {
+    const r = domEl.getBoundingClientRect();
+    if (r && r.width > 0 && r.height > 0) {
+      return {
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height,
+        right: r.right,
+        bottom: r.bottom,
+      };
+    }
+  }
+
+  // 2. Canvas coordinate conversion (supports Float32Array, regular Array, or array-like)
   const canvasEl = app?.canvas?.canvas || document.querySelector("canvas#graph-canvas") || document.querySelector("canvas");
   const ds = app?.canvas?.ds;
-  if (!canvasEl || !ds || !Array.isArray(node.pos) || !Array.isArray(node.size)) return null;
+  const pos = node.pos;
+  const size = node.size;
 
-  const cr = canvasEl.getBoundingClientRect();
-  const scale = Number(ds.scale) || 1;
-  const offset = ds.offset || [0, 0];
-  const left = cr.left + (Number(node.pos[0] || 0) + Number(offset[0] || 0)) * scale;
-  const top = cr.top + (Number(node.pos[1] || 0) + Number(offset[1] || 0)) * scale;
-  const width = Math.max(130, Number(node.size[0] || BASE_W)) * scale;
-  const height = Math.max(34, Number(node.size[1] || BASE_H)) * scale;
+  if (pos && pos[0] != null && pos[1] != null) {
+    const scale = Number(ds?.scale) || 1;
+    const offset = ds?.offset || [0, 0];
+    const cr = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0 };
+    const posX = Number(pos[0]) || 0;
+    const posY = Number(pos[1]) || 0;
+    const width = Math.max(130, Number(size?.[0]) || BASE_W) * scale;
+    const height = Math.max(34, Number(size?.[1]) || BASE_H) * scale;
 
-  return {
-    left,
-    top,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height,
-  };
+    const left = cr.left + (posX + Number(offset[0] || 0)) * scale;
+    const top = cr.top + (posY + Number(offset[1] || 0)) * scale;
+
+    return {
+      left,
+      top,
+      width,
+      height,
+      right: left + width,
+      bottom: top + height,
+    };
+  }
+
+  return null;
 }
 
 function isTimerSettingsOpen(node) {
@@ -540,7 +581,7 @@ function ensureSideRoom(app, node) {
   if (!nr) return;
 
   const popupWidth = 360;
-  const gap = 16;
+  const gap = 14;
   const margin = 16;
   const needed = popupWidth + gap + margin;
 
@@ -571,19 +612,11 @@ function positionTimerSettings(node, popup) {
   // Strictly and unconditionally place on the RIGHT of the node
   let left = nr.right + gap;
 
-  // If extending past the right screen boundary, pan canvas to make room rather than flipping to left!
+  // If extending past the right screen boundary, clamp to the right viewport margin
+  // so it remains on-screen, but NEVER flip to the left of the node
   if (left + pw > window.innerWidth - margin) {
-    const overflow = (left + pw) - (window.innerWidth - margin);
-    const ds = app?.canvas?.ds;
-    if (ds && ds.offset && ds.scale && overflow > 0) {
-      ds.offset[0] -= (overflow + 16) / ds.scale;
-      try {
-        app?.canvas?.setDirty?.(true, true);
-        app?.canvas?.draw?.(true, true);
-      } catch (_) {}
-      const updatedNr = timerScreenRect(node);
-      if (updatedNr) left = updatedNr.right + gap;
-    } else {
+    left = Math.max(nr.right + gap, window.innerWidth - pw - margin);
+    if (left + pw > window.innerWidth - margin) {
       left = Math.max(margin, window.innerWidth - pw - margin);
     }
   }
@@ -769,7 +802,10 @@ function openTimerSettings(node) {
     popupGlobalsInstalled = true;
     window.addEventListener("pointerdown", e => {
       for (const [id, item] of OPEN_POPUPS) {
-        if (!item.popup.contains(e.target)) closeTimerSettings(item.node);
+        if (!item.popup.contains(e.target)) {
+          if (e.target.closest?.(".ds-actionbar-gear-btn, .ds-rt-gear")) return;
+          closeTimerSettings(item.node);
+        }
       }
     }, true);
     window.addEventListener("keydown", e => {
@@ -818,14 +854,30 @@ function paint(node, ctx) {
 
   // Time text cleanly centered horizontally and vertically
   const timeX = Math.round(w / 2);
-  const centerY = Math.round(h / 2);
+  const centerY = h / 2;
   const fontSize = Math.round(clamp(h * 0.50, 16, 48));
+  const timeText = fmtTime(st.elapsed);
 
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
   ctx.font = `800 ${fontSize}px "Fira Code", Consolas, monospace`;
   ctx.fillStyle = isRunning ? c.accent : c.text;
-  ctx.fillText(fmtTime(st.elapsed), timeX, centerY);
+
+  // Optical vertical centering: digits (0-9) sit on the baseline with 0 descent,
+  // so textBaseline="middle" (which centers the full font ascent+descent em box)
+  // incorrectly pulls the digits upward. We use actual glyph bounding box metrics
+  // to guarantee equal top and bottom margins.
+  const m = ctx.measureText(timeText);
+  let textY;
+  if (m.actualBoundingBoxAscent != null && m.actualBoundingBoxDescent != null) {
+    ctx.textBaseline = "alphabetic";
+    const glyphCenterOffset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+    textY = Math.round(centerY + glyphCenterOffset);
+  } else {
+    ctx.textBaseline = "middle";
+    textY = Math.round(centerY + fontSize * 0.08);
+  }
+
+  ctx.fillText(timeText, timeX, textY);
 
   ctx.restore();
 }

@@ -16,6 +16,7 @@
 .ds-rt-time{
   font-family:"Fira Code",Consolas,monospace;font-size:19px;line-height:1;font-weight:800;
   letter-spacing:-.03em;color:var(--rt-text);white-space:nowrap;flex:1;text-align:center;
+  transform:translateY(1px);
 }
 .ds-run-timer-root[data-state="running"]{border-color:var(--rt-accent);}
 .ds-run-timer-root[data-state="running"] .ds-rt-time{
