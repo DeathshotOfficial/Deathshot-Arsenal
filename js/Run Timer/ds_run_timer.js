@@ -8,31 +8,67 @@ const BASE_W = 175;
 const BASE_H = 42;
 
 const SOUND_OPTIONS = [
-  ["chime", "Chime", "Classic 2-tone"],
-  ["fanfare", "Fanfare", "Victory triad"],
-  ["double", "Double Beep", "Tactical prompt"],
-  ["digital", "8-Bit Arp", "Retro arcade"],
-  ["bell", "Tubular Bell", "Rich brass chime"],
-  ["soft", "Soft Pulse", "Gentle ambient"],
-  ["sonar", "Sonar Ping", "Submarine echo"],
-  ["zen", "Singing Bowl", "Deep meditation"],
-  ["marimba", "Marimba", "Warm wood bounce"],
-  ["crystal", "Glass Ping", "High crystal tap"],
-  ["laser", "Sci-Fi Warp", "Laser sweep"],
-  ["bubble", "Water Drop", "Liquid pop"],
-  ["levelup", "Level Up", "Ascending sparkle"],
-  ["harp", "Harp Gliss", "Celestial sweep"],
-  ["shutter", "Camera Click", "Tactile mechanical"],
-  ["bass_drop", "Sub Bass", "Deep 808 drop"],
-  ["teleport", "Cyber Swell", "Futuristic filter"],
-  ["coin", "Coin Collect", "Arcade gold ping"],
-  ["gong", "Temple Gong", "Low metallic ring"],
-  ["radar", "Radar Blip", "Cockpit avionics"],
-  ["kalimba", "Kalimba", "Thumb piano"],
-  ["positive", "Ding Dong", "Warm two-tone"],
-  ["alarm", "Digital Alarm", "Triple alert"],
-  ["orchestra", "Orchestra Hit", "Major chord hit"],
-  ["none", "None", "Mute / Silent"]
+  // Bells & Chimes
+  ["chime", "Classic Chime", "2-tone bell", "chimes"],
+  ["tubular_bell", "Tubular Bell", "Rich brass chime", "chimes"],
+  ["church_bell", "Church Bell", "Deep cathedral", "chimes"],
+  ["windchime", "Wind Chimes", "Sparkling cascade", "chimes"],
+  ["zen_bowl", "Tibetan Bowl", "Deep meditation", "chimes"],
+  ["desk_bell", "Reception Bell", "High crisp ding", "chimes"],
+  ["crystal_ping", "Crystal Glass", "Pure harmonic tap", "chimes"],
+  ["bicycle_bell", "Bicycle Bell", "Rapid double ding", "chimes"],
+  ["clock_chime", "Clock Tower", "Warm Westminster", "chimes"],
+  ["temple_gong", "Temple Gong", "Low lingering bronze", "chimes"],
+
+  // 8-Bit & Retro Arcade
+  ["digital_arp", "8-Bit Arp", "Fast retro run", "retro"],
+  ["coin_collect", "Coin Collect", "Arcade gold ping", "retro"],
+  ["level_up", "Level Up", "Ascending sparkle", "retro"],
+  ["power_up", "Power Up", "8-bit power surge", "retro"],
+  ["retro_jump", "Arcade Jump", "Classic platformer", "retro"],
+  ["game_over", "Retro Blip", "8-bit status pulse", "retro"],
+  ["laser_blaster", "Laser Blaster", "Space arcade shot", "retro"],
+  ["high_score", "High Score", "Victory fanfare 8-bit", "retro"],
+  ["warp_pipe", "Warp Pipe", "Descending blip sweep", "retro"],
+  ["secret_reveal", "Secret Chime", "Mystery solved chirp", "retro"],
+
+  // Tactical & Sci-Fi
+  ["double_beep", "Double Beep", "Tactical prompt", "scifi"],
+  ["triple_beep", "Digital Alarm", "Triple urgency pulse", "scifi"],
+  ["radar_blip", "Radar Ping", "Cockpit avionics", "scifi"],
+  ["sonar_echo", "Submarine Sonar", "Deep ocean ping", "scifi"],
+  ["scifi_warp", "Sci-Fi Warp", "Laser frequency sweep", "scifi"],
+  ["cyber_swell", "Cyber Swell", "Futuristic filter port", "scifi"],
+  ["airlock_chime", "Airlock Chime", "Spaceship hatch tone", "scifi"],
+  ["sub_bass_drop", "Sub Bass Drop", "Cinematic 808 drop", "scifi"],
+  ["teleport_beam", "Teleport Beam", "Energy beam sweep", "scifi"],
+  ["morse_alert", "Telemetry Morse", "High-tech data blips", "scifi"],
+
+  // Organic & Acoustic
+  ["marimba_bounce", "Marimba", "Warm wooden chord", "acoustic"],
+  ["kalimba_pluck", "Kalimba", "Thumb piano resonance", "acoustic"],
+  ["harp_gliss", "Harp Gliss", "Celestial sweep", "acoustic"],
+  ["celesta_ping", "Celesta", "Enchanted fairy bell", "acoustic"],
+  ["xylophone_hit", "Xylophone", "Bright percussion hit", "acoustic"],
+  ["music_box", "Music Box", "Nostalgic mechanical", "acoustic"],
+  ["water_droplet", "Water Droplet", "Organic liquid pop", "acoustic"],
+  ["bubble_pop", "Bubble Pop", "Double bubbly burst", "acoustic"],
+  ["bamboo_click", "Bamboo Click", "Woodblock tap", "acoustic"],
+  ["guitar_harmonic", "Guitar Chime", "Acoustic open chord", "acoustic"],
+
+  // Modern UI & Alerts
+  ["victory_fanfare", "Victory Fanfare", "Triumphant major triad", "modern"],
+  ["ding_dong", "Smart Doorbell", "Modern two-tone chime", "modern"],
+  ["camera_shutter", "Camera Click", "Tactile snapshot", "modern"],
+  ["cork_pop", "Bottle Pop", "Champagne celebratory", "modern"],
+  ["magic_sparkle", "Magic Sparkle", "Enchanted shimmer", "modern"],
+  ["app_ping", "Notification Ping", "Clean smartphone tap", "modern"],
+  ["cash_register", "Cash Register", "Ka-ching metallic", "modern"],
+  ["soft_ambient", "Soft Ambient", "Warm gentle swell", "modern"],
+  ["orchestral_hit", "Orchestra Hit", "Dramatic chord strike", "modern"],
+  ["positive_prompt", "Success Tone", "Confirmed checkmark", "modern"],
+
+  ["none", "None (Mute)", "Silent completion", "all"]
 ];
 
 const log = (...a) => { console.info("[DS Run Timer]", ...a); terminalLog("log", a.map(String).join(" ")); };
@@ -177,19 +213,32 @@ function sweep(ctx, startFreq, endFreq, duration, when, gain, type = "sawtooth")
   osc.stop(when + duration + 0.02);
 }
 
-function noiseSnap(ctx, when, gain, duration = 0.05) {
+function chord(ctx, freqs, duration, when, gain, type = "sine") {
+  const perGain = gain / Math.max(1, Math.sqrt(freqs.length));
+  for (const f of freqs) {
+    tone(ctx, f, duration, when, perGain, type);
+  }
+}
+
+function arp(ctx, freqs, step, when, gain, type = "square") {
+  freqs.forEach((f, i) => {
+    tone(ctx, f, step * 1.6, when + i * step, gain, type);
+  });
+}
+
+function noiseSnap(ctx, when, gain, duration = 0.05, freq = 800) {
   try {
     const bufferSize = Math.floor(ctx.sampleRate * duration);
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
     }
     const src = ctx.createBufferSource();
     src.buffer = buffer;
     const filter = ctx.createBiquadFilter();
     filter.type = "highpass";
-    filter.frequency.setValueAtTime(800, when);
+    filter.frequency.setValueAtTime(freq, when);
     const g = ctx.createGain();
     g.gain.setValueAtTime(gain, when);
     g.gain.exponentialRampToValueAtTime(0.0001, when + duration);
@@ -207,112 +256,193 @@ function playSoundById(soundId, volume = 0.65) {
 
   try {
     switch (soundId) {
+      // 1-10: Bells & Chimes
       case "chime":
         tone(ctx, 880, .20, now, g, "sine");
         tone(ctx, 1320, .35, now + .14, g * .85, "sine");
         break;
-      case "fanfare":
-        tone(ctx, 523.25, .10, now, g * .8, "triangle");
-        tone(ctx, 659.25, .10, now + .09, g * .8, "triangle");
-        tone(ctx, 783.99, .10, now + .18, g * .9, "triangle");
-        tone(ctx, 1046.5, .32, now + .27, g * 1.0, "sine");
+      case "tubular_bell":
+        chord(ctx, [523.25, 1046.5, 1568, 2637], .9, now, g, "sine");
         break;
-      case "double":
+      case "church_bell":
+        chord(ctx, [261.63, 523.25, 784, 1046], 1.5, now, g, "triangle");
+        break;
+      case "windchime":
+        arp(ctx, [1760, 2093, 2349, 2637, 3136], .05, now, g * .8, "sine");
+        break;
+      case "zen_bowl":
+        chord(ctx, [216, 432, 648, 864], 1.9, now, g, "sine");
+        break;
+      case "desk_bell":
+        tone(ctx, 1568, .7, now, g, "sine");
+        tone(ctx, 3136, .5, now + .01, g * .4, "sine");
+        break;
+      case "crystal_ping":
+        tone(ctx, 2093, .65, now, g * .85, "sine");
+        tone(ctx, 4186, .45, now + .02, g * .4, "sine");
+        break;
+      case "bicycle_bell":
+        tone(ctx, 1046.5, .06, now, g, "sine");
+        tone(ctx, 1318.5, .06, now + .05, g, "sine");
+        tone(ctx, 1046.5, .06, now + .14, g, "sine");
+        tone(ctx, 1318.5, .15, now + .19, g, "sine");
+        break;
+      case "clock_chime":
+        arp(ctx, [659.25, 523.25, 587.33, 392], .18, now, g * .9, "sine");
+        break;
+      case "temple_gong":
+        chord(ctx, [110, 220, 330, 440], 2.2, now, g * 1.1, "sine");
+        break;
+
+      // 11-20: 8-Bit & Retro Arcade
+      case "digital_arp":
+        arp(ctx, [1047, 1319, 1568, 2093], .055, now, g * .85, "square");
+        break;
+      case "coin_collect":
+        tone(ctx, 987.77, .065, now, g * .85, "square");
+        tone(ctx, 1318.51, .32, now + .065, g * .95, "square");
+        break;
+      case "level_up":
+        arp(ctx, [587.33, 740, 880, 1175], .07, now, g * .9, "triangle");
+        tone(ctx, 1760, .30, now + .28, g * .8, "sine");
+        break;
+      case "power_up":
+        sweep(ctx, 220, 880, .18, now, g * .85, "sawtooth");
+        chord(ctx, [523.25, 659.25, 784], .25, now + .16, g * .9, "square");
+        break;
+      case "retro_jump":
+        sweep(ctx, 150, 620, .13, now, g, "square");
+        break;
+      case "game_over":
+        arp(ctx, [880, 784, 659], .12, now, g * .9, "square");
+        break;
+      case "laser_blaster":
+        sweep(ctx, 2400, 160, .14, now, g, "sawtooth");
+        break;
+      case "high_score":
+        arp(ctx, [523.25, 659.25, 784, 1046.5, 1318.5], .08, now, g * .9, "square");
+        break;
+      case "warp_pipe":
+        arp(ctx, [900, 720, 540, 360, 200], .05, now, g * .85, "triangle");
+        break;
+      case "secret_reveal":
+        arp(ctx, [587, 554, 493, 392, 440, 493, 587], .06, now, g * .85, "triangle");
+        break;
+
+      // 21-30: Tactical & Sci-Fi
+      case "double_beep":
         tone(ctx, 740, .09, now, g, "square");
         tone(ctx, 880, .14, now + .13, g, "square");
         break;
-      case "digital":
-        tone(ctx, 1047, .06, now, g * .8, "square");
-        tone(ctx, 1319, .06, now + .06, g * .8, "square");
-        tone(ctx, 1568, .06, now + .12, g * .8, "square");
-        tone(ctx, 2093, .16, now + .18, g * .9, "square");
+      case "triple_beep":
+        tone(ctx, 1000, .065, now, g, "square");
+        tone(ctx, 1000, .065, now + .10, g, "square");
+        tone(ctx, 1000, .12, now + .20, g, "square");
         break;
-      case "bell":
-        tone(ctx, 523, .85, now, g, "sine");
-        tone(ctx, 1047, .65, now + .02, g * .5, "sine");
-        tone(ctx, 1568, .40, now + .03, g * .25, "sine");
+      case "radar_blip":
+        tone(ctx, 1760, .07, now, g, "square");
+        tone(ctx, 1760, .09, now + .11, g, "square");
         break;
-      case "soft":
-        tone(ctx, 440, .30, now, g * .7, "triangle");
-        tone(ctx, 660, .45, now + .18, g * .7, "triangle");
+      case "sonar_echo":
+        tone(ctx, 1200, 1.2, now, g, "sine");
+        tone(ctx, 1206, 1.2, now, g * .4, "sine");
         break;
-      case "sonar":
-        tone(ctx, 1200, 1.1, now, g * .9, "sine");
-        tone(ctx, 1206, 1.1, now, g * .4, "sine");
+      case "scifi_warp":
+        sweep(ctx, 1900, 200, .24, now, g, "sawtooth");
         break;
-      case "zen":
-        tone(ctx, 216, 1.6, now, g * .8, "sine");
-        tone(ctx, 432, 1.4, now, g * .5, "sine");
-        tone(ctx, 648, 1.1, now, g * .3, "sine");
-        break;
-      case "marimba":
-        tone(ctx, 587, .18, now, g * .9, "triangle");
-        tone(ctx, 784, .18, now + .10, g * .9, "triangle");
-        tone(ctx, 988, .28, now + .20, g * .95, "triangle");
-        break;
-      case "crystal":
-        tone(ctx, 2093, .65, now, g * .8, "sine");
-        tone(ctx, 4186, .45, now + .02, g * .35, "sine");
-        break;
-      case "laser":
-        sweep(ctx, 1800, 220, .22, now, g * .9, "sawtooth");
-        break;
-      case "bubble":
-        sweep(ctx, 350, 980, .14, now, g * .9, "sine");
-        break;
-      case "levelup":
-        tone(ctx, 587, .07, now, g * .8, "square");
-        tone(ctx, 740, .07, now + .07, g * .8, "square");
-        tone(ctx, 880, .07, now + .14, g * .85, "square");
-        tone(ctx, 1175, .28, now + .21, g * 1.0, "triangle");
-        break;
-      case "harp":
-        [523, 587, 659, 784, 880, 1046].forEach((f, i) => tone(ctx, f, .35, now + i * .05, g * .7, "sine"));
-        break;
-      case "shutter":
-        noiseSnap(ctx, now, g * .9, .03);
-        noiseSnap(ctx, now + .07, g * .8, .04);
-        tone(ctx, 1200, .03, now, g * .4, "sine");
-        break;
-      case "bass_drop":
-        sweep(ctx, 160, 42, .55, now, g * 1.2, "sine");
-        break;
-      case "teleport":
-        sweep(ctx, 300, 1600, .32, now, g * .7, "sawtooth");
+      case "cyber_swell":
+        sweep(ctx, 300, 1600, .32, now, g * .8, "sawtooth");
         sweep(ctx, 305, 1620, .32, now, g * .5, "sawtooth");
         break;
-      case "coin":
-        tone(ctx, 987.77, .07, now, g * .85, "square");
-        tone(ctx, 1318.51, .32, now + .07, g * .95, "square");
+      case "airlock_chime":
+        chord(ctx, [440, 660, 880], .45, now, g, "sine");
         break;
-      case "gong":
-        tone(ctx, 110, 1.8, now, g * .8, "sine");
-        tone(ctx, 225, 1.5, now, g * .5, "triangle");
-        tone(ctx, 350, 1.1, now, g * .3, "sine");
+      case "sub_bass_drop":
+        sweep(ctx, 165, 38, .60, now, g * 1.3, "sine");
         break;
-      case "radar":
-        tone(ctx, 1760, .08, now, g, "square");
-        tone(ctx, 1760, .08, now + .12, g, "square");
+      case "teleport_beam":
+        sweep(ctx, 250, 2400, .28, now, g * .8, "sawtooth");
         break;
-      case "kalimba":
-        tone(ctx, 659, .28, now, g * .9, "triangle");
-        tone(ctx, 988, .35, now + .08, g * .85, "sine");
+      case "morse_alert":
+        tone(ctx, 1200, .05, now, g, "sine");
+        tone(ctx, 1200, .05, now + .09, g, "sine");
+        tone(ctx, 1200, .14, now + .18, g, "sine");
         break;
-      case "positive":
-        tone(ctx, 784, .25, now, g * .85, "sine");
-        tone(ctx, 659, .55, now + .22, g * .95, "sine");
+
+      // 31-40: Organic & Acoustic
+      case "marimba_bounce":
+        chord(ctx, [587.33, 784, 987.77], .25, now, g, "triangle");
         break;
-      case "alarm":
-        tone(ctx, 1000, .07, now, g, "square");
-        tone(ctx, 1000, .07, now + .11, g, "square");
-        tone(ctx, 1000, .07, now + .22, g, "square");
+      case "kalimba_pluck":
+        tone(ctx, 659.25, .28, now, g, "triangle");
+        tone(ctx, 987.77, .38, now + .08, g * .85, "sine");
         break;
-      case "orchestra":
-        tone(ctx, 261.63, .45, now, g * .7, "sawtooth");
-        tone(ctx, 329.63, .45, now, g * .7, "sawtooth");
-        tone(ctx, 392.00, .45, now, g * .7, "sawtooth");
-        tone(ctx, 523.25, .55, now, g * .85, "sine");
+      case "harp_gliss":
+        arp(ctx, [523.25, 587.33, 659.25, 783.99, 880, 1046.5], .045, now, g * .75, "sine");
         break;
+      case "celesta_ping":
+        chord(ctx, [1046.5, 1318.5, 1568], .45, now, g * .8, "sine");
+        break;
+      case "xylophone_hit":
+        chord(ctx, [880, 1175, 1760], .22, now, g, "triangle");
+        break;
+      case "music_box":
+        arp(ctx, [1318.5, 1568, 2093], .09, now, g * .75, "sine");
+        break;
+      case "water_droplet":
+        sweep(ctx, 350, 980, .13, now, g, "sine");
+        break;
+      case "bubble_pop":
+        sweep(ctx, 420, 850, .08, now, g, "sine");
+        sweep(ctx, 520, 1150, .09, now + .09, g * .85, "sine");
+        break;
+      case "bamboo_click":
+        noiseSnap(ctx, now, g * 1.1, .04, 1100);
+        tone(ctx, 980, .03, now, g * .3, "triangle");
+        break;
+      case "guitar_harmonic":
+        chord(ctx, [329.63, 493.88, 659.25, 987.77], .55, now, g * .85, "sine");
+        break;
+
+      // 41-50: Modern UI & Alerts
+      case "victory_fanfare":
+        chord(ctx, [523.25, 659.25, 784, 1046.5], .45, now, g, "triangle");
+        tone(ctx, 1318.5, .55, now + .08, g * .9, "sine");
+        break;
+      case "ding_dong":
+        tone(ctx, 784, .25, now, g * .9, "sine");
+        tone(ctx, 659.25, .60, now + .22, g * .95, "sine");
+        break;
+      case "camera_shutter":
+        noiseSnap(ctx, now, g, .03, 1200);
+        noiseSnap(ctx, now + .07, g * .9, .04, 1400);
+        break;
+      case "cork_pop":
+        sweep(ctx, 180, 550, .04, now, g * 1.2, "sine");
+        noiseSnap(ctx, now + .02, g * .8, .05, 900);
+        break;
+      case "magic_sparkle":
+        arp(ctx, [1568, 1760, 2093, 2637, 3136], .04, now, g * .7, "sine");
+        break;
+      case "app_ping":
+        tone(ctx, 1400, .12, now, g, "sine");
+        break;
+      case "cash_register":
+        noiseSnap(ctx, now, g * .9, .05, 1800);
+        tone(ctx, 987.77, .08, now + .03, g * .85, "sine");
+        tone(ctx, 1318.5, .35, now + .09, g, "sine");
+        break;
+      case "soft_ambient":
+        chord(ctx, [440, 659.25], .45, now, g * .8, "triangle");
+        break;
+      case "orchestral_hit":
+        chord(ctx, [261.63, 329.63, 392, 523.25], .55, now, g, "sawtooth");
+        break;
+      case "positive_prompt":
+        tone(ctx, 587.33, .10, now, g * .85, "sine");
+        tone(ctx, 880, .28, now + .09, g, "sine");
+        break;
+
       default:
         tone(ctx, 880, .20, now, g, "sine");
         tone(ctx, 1320, .32, now + .13, g * .85, "sine");
@@ -409,19 +539,18 @@ function ensureSideRoom(app, node) {
   const nr = timerScreenRect(node);
   if (!nr) return;
 
-  const popupWidth = 340;
+  const popupWidth = 360;
   const gap = 16;
   const margin = 16;
   const needed = popupWidth + gap + margin;
 
   const spaceRight = window.innerWidth - nr.right;
 
-  // We strictly want the menu on the RIGHT of the node.
-  // If not enough room on the right, pan canvas left so there is plenty of room on the right!
+  // Guarantee room on the RIGHT side of the node
   if (spaceRight < needed) {
     const ds = app?.canvas?.ds;
     if (ds && ds.offset && ds.scale) {
-      const shift = (needed - spaceRight) / ds.scale;
+      const shift = (needed - spaceRight + 24) / ds.scale;
       ds.offset[0] -= shift;
       try {
         app?.canvas?.setDirty?.(true, true);
@@ -436,16 +565,24 @@ function positionTimerSettings(node, popup) {
   if (!nr) return;
   const margin = 12;
   const gap = 14;
-  const pw = popup.offsetWidth || 340;
-  const ph = popup.offsetHeight || 440;
+  const pw = popup.offsetWidth || 360;
+  const ph = popup.offsetHeight || 480;
 
-  // Always position to the RIGHT of the node
+  // Strictly and unconditionally place on the RIGHT of the node
   let left = nr.right + gap;
 
-  // Only if right placement exceeds the viewport width:
+  // If extending past the right screen boundary, pan canvas to make room rather than flipping to left!
   if (left + pw > window.innerWidth - margin) {
-    if (window.innerWidth - nr.right < 80 && (nr.left - pw - gap >= margin)) {
-      left = nr.left - pw - gap;
+    const overflow = (left + pw) - (window.innerWidth - margin);
+    const ds = app?.canvas?.ds;
+    if (ds && ds.offset && ds.scale && overflow > 0) {
+      ds.offset[0] -= (overflow + 16) / ds.scale;
+      try {
+        app?.canvas?.setDirty?.(true, true);
+        app?.canvas?.draw?.(true, true);
+      } catch (_) {}
+      const updatedNr = timerScreenRect(node);
+      if (updatedNr) left = updatedNr.right + gap;
     } else {
       left = Math.max(margin, window.innerWidth - pw - margin);
     }
@@ -529,13 +666,44 @@ function renderTimerSettings(node, popup) {
 
   const sound = document.createElement("section");
   sound.className = "ds-rt-popup-section";
-  sound.innerHTML = `<div class="ds-rt-popup-label">ALERT SOUND (${SOUND_OPTIONS.length} PRESETS)</div>`;
+  sound.innerHTML = `<div class="ds-rt-popup-label-row"><span class="ds-rt-popup-label">ALERT SOUND (${SOUND_OPTIONS.length} PRESETS)</span></div>`;
+
+  const filterRow = document.createElement("div");
+  filterRow.className = "ds-rt-popup-filters";
+  const categories = [
+    ["all", "All (51)"],
+    ["chimes", "Bells"],
+    ["retro", "8-Bit"],
+    ["scifi", "Sci-Fi"],
+    ["acoustic", "Acoustic"],
+    ["modern", "Modern"]
+  ];
+
   const sounds = document.createElement("div");
   sounds.className = "ds-rt-popup-grid";
 
-  for (const [id, label, desc] of SOUND_OPTIONS) {
-    sounds.appendChild(timerSettingButton(label, s.sound === id, () => {
-      // Instant selection without recreating the whole popup DOM
+  categories.forEach(([catId, catLabel]) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `ds-rt-filter-chip${catId === "all" ? " active" : ""}`;
+    chip.textContent = catLabel;
+    chip.addEventListener("pointerdown", e => e.stopPropagation());
+    chip.addEventListener("mousedown", e => e.stopPropagation());
+    chip.addEventListener("click", e => {
+      e.stopPropagation();
+      filterRow.querySelectorAll(".ds-rt-filter-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      sounds.querySelectorAll(".ds-rt-popup-choice").forEach(btn => {
+        const match = catId === "all" || btn.dataset.category === catId || btn.dataset.soundId === "none";
+        btn.style.display = match ? "flex" : "none";
+      });
+    });
+    filterRow.appendChild(chip);
+  });
+  sound.appendChild(filterRow);
+
+  for (const [id, label, desc, cat] of SOUND_OPTIONS) {
+    const btn = timerSettingButton(label, s.sound === id, () => {
       sounds.querySelectorAll(".ds-rt-popup-choice").forEach(el => {
         const isMatch = el.dataset.soundId === id;
         el.classList.toggle("active", isMatch);
@@ -544,10 +712,11 @@ function renderTimerSettings(node, popup) {
       });
       s.sound = id;
       saveState(node);
-      // Instant audible feedback!
       playSoundById(id, s.volume);
       log("sound selected", id);
-    }, desc, id));
+    }, desc, id);
+    btn.dataset.category = cat || "all";
+    sounds.appendChild(btn);
   }
   sound.appendChild(sounds);
   body.appendChild(sound);

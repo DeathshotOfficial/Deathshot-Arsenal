@@ -26,7 +26,7 @@
 /* DS Run Timer — floating settings panel.  The visual language matches the
    pack's settings surfaces without reusing Group Switch markup. */
 .ds-rt-popup{
-  position:fixed;z-index:100000;width:340px;max-height:calc(100vh - 24px);overflow:hidden;
+  position:fixed;z-index:100000;width:360px;max-height:calc(100vh - 24px);overflow:hidden;
   display:flex;flex-direction:column;
   box-sizing:border-box;padding:0;color:var(--ds-text,#e8ebef);
   background:color-mix(in srgb,var(--ds-panel,#171a20) 97%,black);
@@ -47,6 +47,12 @@
 .ds-rt-popup-label{font-size:8px;font-weight:850;letter-spacing:.12em;color:var(--ds-text-muted,#8d96a3);}
 .ds-rt-popup-label-row{display:flex;align-items:center;justify-content:space-between;}
 .ds-rt-popup-label-row b{font-size:10px;color:var(--ds-text,#e8ebef);}
+.ds-rt-popup-filters{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;margin-bottom:2px;}
+.ds-rt-popup-filters::-webkit-scrollbar{height:3px;}
+.ds-rt-popup-filters::-webkit-scrollbar-thumb{background:var(--ds-border,#343a45);border-radius:3px;}
+.ds-rt-filter-chip{flex:0 0 auto;padding:3px 8px;border-radius:12px;border:1px solid var(--ds-border,#343a45);background:var(--ds-bg,#0b0d12);color:var(--ds-text-muted,#8d96a3);font-size:9px;font-weight:700;cursor:pointer;transition:all .12s ease;}
+.ds-rt-filter-chip:hover{border-color:var(--ds-accent,#67e8f9);color:var(--ds-text,#fff);}
+.ds-rt-filter-chip.active{border-color:var(--ds-accent,#67e8f9);background:color-mix(in srgb,var(--ds-accent,#67e8f9) 15%,var(--ds-bg,#0b0d12));color:var(--ds-accent,#67e8f9);}
 .ds-rt-popup-choice{width:100%;display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 9px;border:1px solid var(--ds-border,#343a45);border-radius:7px;background:var(--ds-bg,#0b0d12);color:var(--ds-text-muted,#8d96a3);text-align:left;cursor:pointer;transition:.12s ease;}
 .ds-rt-popup-choice:hover{border-color:var(--ds-accent,#67e8f9);background:var(--ds-panel-2,#20242c);color:var(--ds-text,#fff);}
 .ds-rt-popup-choice.active{border-color:var(--ds-accent,#67e8f9);background:color-mix(in srgb,var(--ds-accent,#67e8f9) 8%,var(--ds-bg,#0b0d12));color:var(--ds-text,#fff);}
