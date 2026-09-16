@@ -8,12 +8,31 @@ const BASE_W = 175;
 const BASE_H = 42;
 
 const SOUND_OPTIONS = [
-  ["chime", "Chime"],
-  ["double", "Double Beep"],
-  ["digital", "Digital"],
-  ["bell", "Bell"],
-  ["soft", "Soft Pulse"],
-  ["none", "None"]
+  ["chime", "Chime", "Classic 2-tone"],
+  ["fanfare", "Fanfare", "Victory triad"],
+  ["double", "Double Beep", "Tactical prompt"],
+  ["digital", "8-Bit Arp", "Retro arcade"],
+  ["bell", "Tubular Bell", "Rich brass chime"],
+  ["soft", "Soft Pulse", "Gentle ambient"],
+  ["sonar", "Sonar Ping", "Submarine echo"],
+  ["zen", "Singing Bowl", "Deep meditation"],
+  ["marimba", "Marimba", "Warm wood bounce"],
+  ["crystal", "Glass Ping", "High crystal tap"],
+  ["laser", "Sci-Fi Warp", "Laser sweep"],
+  ["bubble", "Water Drop", "Liquid pop"],
+  ["levelup", "Level Up", "Ascending sparkle"],
+  ["harp", "Harp Gliss", "Celestial sweep"],
+  ["shutter", "Camera Click", "Tactile mechanical"],
+  ["bass_drop", "Sub Bass", "Deep 808 drop"],
+  ["teleport", "Cyber Swell", "Futuristic filter"],
+  ["coin", "Coin Collect", "Arcade gold ping"],
+  ["gong", "Temple Gong", "Low metallic ring"],
+  ["radar", "Radar Blip", "Cockpit avionics"],
+  ["kalimba", "Kalimba", "Thumb piano"],
+  ["positive", "Ding Dong", "Warm two-tone"],
+  ["alarm", "Digital Alarm", "Triple alert"],
+  ["orchestra", "Orchestra Hit", "Major chord hit"],
+  ["none", "None", "Mute / Silent"]
 ];
 
 const log = (...a) => { console.info("[DS Run Timer]", ...a); terminalLog("log", a.map(String).join(" ")); };
@@ -28,11 +47,36 @@ function terminalLog(event, detail) {
   }).catch(() => {}));
 }
 
-if (!document.querySelector(`link[href="${CSS}"]`)) {
+const existingCssLink = document.querySelector('link[href*="ds_run_timer.css"]');
+if (existingCssLink) {
+  existingCssLink.href = `${CSS}?v=${Date.now()}`;
+} else {
   const link = document.createElement("link");
   link.rel = "stylesheet";
-  link.href = CSS;
+  link.href = `${CSS}?v=${Date.now()}`;
   document.head.appendChild(link);
+}
+
+function registerTimerGearMenu() {
+  if (window.DSGearMenu?.register) {
+    window.DSGearMenu.register(TYPE, {
+      tooltip: "Run Timer Settings",
+      onClick: (node, canvas, event) => {
+        if (isTimerSettingsOpen(node)) {
+          closeTimerSettings(node);
+        } else {
+          openTimerSettings(node);
+        }
+      },
+    });
+    return true;
+  }
+  return false;
+}
+
+if (!registerTimerGearMenu()) {
+  setTimeout(registerTimerGearMenu, 250);
+  setTimeout(registerTimerGearMenu, 1000);
 }
 
 function isVue() { return !!window.LiteGraph?.vueNodesMode; }
@@ -62,7 +106,6 @@ function palette() {
   };
 }
 
-const GEAR = `<svg viewBox="0 0 24 24"><path d="M9.7 2.8h4.6l.7 2.2c.5.2 1 .4 1.4.8l2.2-.6 2.3 4-1.6 1.6c.1.5.1 1 0 1.5l1.6 1.6-2.3 4-2.2-.6c-.4.4-.9.6-1.4.8l-.7 2.2H9.7L9 17.9c-.5-.2-1-.4-1.4-.8l-2.2.6-2.3-4 1.6-1.6c-.1-.5-.1-1 0-1.5L3.1 9.2l2.3-4 2.2.6c.4-.4.9-.6 1.4-.8l.7-2.2Z"/><circle cx="12" cy="12" r="3.1"/></svg>`;
 const PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></svg>`;
 
 function rr(ctx, x, y, w, h, r, fill, stroke, lw = 1) {
@@ -113,40 +156,181 @@ function tone(ctx, freq, duration, when, gain, type = "sine") {
   osc.type = type;
   osc.frequency.setValueAtTime(freq, when);
   g.gain.setValueAtTime(0.0001, when);
-  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), when + 0.012);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), when + 0.008);
   g.gain.exponentialRampToValueAtTime(0.0001, when + duration);
   osc.connect(g).connect(ctx.destination);
   osc.start(when);
   osc.stop(when + duration + 0.02);
 }
 
-function playFinishSound(node) {
-  const s = ensureState(node);
-  if (!s.soundEnabled || s.mute || s.sound === "none") { log("Finish sound suppressed", s.sound, s.mute); return; }
+function sweep(ctx, startFreq, endFreq, duration, when, gain, type = "sawtooth") {
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(startFreq, when);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), when + duration);
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), when + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(when);
+  osc.stop(when + duration + 0.02);
+}
+
+function noiseSnap(ctx, when, gain, duration = 0.05) {
+  try {
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.25));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "highpass";
+    filter.frequency.setValueAtTime(800, when);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gain, when);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+    src.connect(filter).connect(g).connect(ctx.destination);
+    src.start(when);
+  } catch (_) {}
+}
+
+function playSoundById(soundId, volume = 0.65) {
+  if (!soundId || soundId === "none") return;
   const ctx = ensureAudio();
   if (!ctx) return;
   const now = ctx.currentTime + 0.015;
-  const g = clamp(Number(s.volume) || 0, 0, 1) * 0.20;
+  const g = clamp(Number(volume) || 0, 0, 1) * 0.22;
+
   try {
-    if (s.sound === "chime") {
-      tone(ctx, 880, .20, now, g, "sine");
-      tone(ctx, 1320, .32, now + .13, g * .85, "sine");
-    } else if (s.sound === "double") {
-      tone(ctx, 660, .12, now, g, "square");
-      tone(ctx, 880, .16, now + .17, g, "square");
-    } else if (s.sound === "digital") {
-      tone(ctx, 1047, .08, now, g, "square");
-      tone(ctx, 1319, .08, now + .10, g, "square");
-      tone(ctx, 1568, .18, now + .20, g, "square");
-    } else if (s.sound === "bell") {
-      tone(ctx, 523, .75, now, g, "sine");
-      tone(ctx, 1047, .55, now + .02, g * .42, "sine");
-    } else if (s.sound === "soft") {
-      tone(ctx, 740, .28, now, g, "triangle");
-      tone(ctx, 988, .38, now + .20, g * .7, "triangle");
+    switch (soundId) {
+      case "chime":
+        tone(ctx, 880, .20, now, g, "sine");
+        tone(ctx, 1320, .35, now + .14, g * .85, "sine");
+        break;
+      case "fanfare":
+        tone(ctx, 523.25, .10, now, g * .8, "triangle");
+        tone(ctx, 659.25, .10, now + .09, g * .8, "triangle");
+        tone(ctx, 783.99, .10, now + .18, g * .9, "triangle");
+        tone(ctx, 1046.5, .32, now + .27, g * 1.0, "sine");
+        break;
+      case "double":
+        tone(ctx, 740, .09, now, g, "square");
+        tone(ctx, 880, .14, now + .13, g, "square");
+        break;
+      case "digital":
+        tone(ctx, 1047, .06, now, g * .8, "square");
+        tone(ctx, 1319, .06, now + .06, g * .8, "square");
+        tone(ctx, 1568, .06, now + .12, g * .8, "square");
+        tone(ctx, 2093, .16, now + .18, g * .9, "square");
+        break;
+      case "bell":
+        tone(ctx, 523, .85, now, g, "sine");
+        tone(ctx, 1047, .65, now + .02, g * .5, "sine");
+        tone(ctx, 1568, .40, now + .03, g * .25, "sine");
+        break;
+      case "soft":
+        tone(ctx, 440, .30, now, g * .7, "triangle");
+        tone(ctx, 660, .45, now + .18, g * .7, "triangle");
+        break;
+      case "sonar":
+        tone(ctx, 1200, 1.1, now, g * .9, "sine");
+        tone(ctx, 1206, 1.1, now, g * .4, "sine");
+        break;
+      case "zen":
+        tone(ctx, 216, 1.6, now, g * .8, "sine");
+        tone(ctx, 432, 1.4, now, g * .5, "sine");
+        tone(ctx, 648, 1.1, now, g * .3, "sine");
+        break;
+      case "marimba":
+        tone(ctx, 587, .18, now, g * .9, "triangle");
+        tone(ctx, 784, .18, now + .10, g * .9, "triangle");
+        tone(ctx, 988, .28, now + .20, g * .95, "triangle");
+        break;
+      case "crystal":
+        tone(ctx, 2093, .65, now, g * .8, "sine");
+        tone(ctx, 4186, .45, now + .02, g * .35, "sine");
+        break;
+      case "laser":
+        sweep(ctx, 1800, 220, .22, now, g * .9, "sawtooth");
+        break;
+      case "bubble":
+        sweep(ctx, 350, 980, .14, now, g * .9, "sine");
+        break;
+      case "levelup":
+        tone(ctx, 587, .07, now, g * .8, "square");
+        tone(ctx, 740, .07, now + .07, g * .8, "square");
+        tone(ctx, 880, .07, now + .14, g * .85, "square");
+        tone(ctx, 1175, .28, now + .21, g * 1.0, "triangle");
+        break;
+      case "harp":
+        [523, 587, 659, 784, 880, 1046].forEach((f, i) => tone(ctx, f, .35, now + i * .05, g * .7, "sine"));
+        break;
+      case "shutter":
+        noiseSnap(ctx, now, g * .9, .03);
+        noiseSnap(ctx, now + .07, g * .8, .04);
+        tone(ctx, 1200, .03, now, g * .4, "sine");
+        break;
+      case "bass_drop":
+        sweep(ctx, 160, 42, .55, now, g * 1.2, "sine");
+        break;
+      case "teleport":
+        sweep(ctx, 300, 1600, .32, now, g * .7, "sawtooth");
+        sweep(ctx, 305, 1620, .32, now, g * .5, "sawtooth");
+        break;
+      case "coin":
+        tone(ctx, 987.77, .07, now, g * .85, "square");
+        tone(ctx, 1318.51, .32, now + .07, g * .95, "square");
+        break;
+      case "gong":
+        tone(ctx, 110, 1.8, now, g * .8, "sine");
+        tone(ctx, 225, 1.5, now, g * .5, "triangle");
+        tone(ctx, 350, 1.1, now, g * .3, "sine");
+        break;
+      case "radar":
+        tone(ctx, 1760, .08, now, g, "square");
+        tone(ctx, 1760, .08, now + .12, g, "square");
+        break;
+      case "kalimba":
+        tone(ctx, 659, .28, now, g * .9, "triangle");
+        tone(ctx, 988, .35, now + .08, g * .85, "sine");
+        break;
+      case "positive":
+        tone(ctx, 784, .25, now, g * .85, "sine");
+        tone(ctx, 659, .55, now + .22, g * .95, "sine");
+        break;
+      case "alarm":
+        tone(ctx, 1000, .07, now, g, "square");
+        tone(ctx, 1000, .07, now + .11, g, "square");
+        tone(ctx, 1000, .07, now + .22, g, "square");
+        break;
+      case "orchestra":
+        tone(ctx, 261.63, .45, now, g * .7, "sawtooth");
+        tone(ctx, 329.63, .45, now, g * .7, "sawtooth");
+        tone(ctx, 392.00, .45, now, g * .7, "sawtooth");
+        tone(ctx, 523.25, .55, now, g * .85, "sine");
+        break;
+      default:
+        tone(ctx, 880, .20, now, g, "sine");
+        tone(ctx, 1320, .32, now + .13, g * .85, "sine");
+        break;
     }
-    log("Finish sound played", s.sound, `volume=${s.volume}`);
-  } catch (e) { errorLog("Finish sound failed", e); }
+    log("Played sound", soundId, `volume=${volume}`);
+  } catch (e) {
+    errorLog("Play sound failed", soundId, e);
+  }
+}
+
+function playFinishSound(node) {
+  const s = ensureState(node);
+  if (!s.soundEnabled || s.mute || s.sound === "none") {
+    log("Finish sound suppressed", s.sound, s.mute);
+    return;
+  }
+  playSoundById(s.sound, s.volume);
 }
 
 function allTimers() {
@@ -155,15 +339,6 @@ function allTimers() {
 
 function startAll() { allTimers().forEach(n => n.startRun?.()); }
 function stopAll(reason) { allTimers().forEach(n => n.stopRun?.(reason)); }
-
-function buttonHit(node, pos) {
-  if (!pos || !node._dsTimerHit) return null;
-  const [x, y] = pos;
-  for (const b of node._dsTimerHit) {
-    if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b;
-  }
-  return null;
-}
 
 function popupTheme(popup) {
   popup.dataset.dsThemed = "true";
@@ -178,52 +353,131 @@ function popupTheme(popup) {
 
 const OPEN_POPUPS = new Map();
 let popupGlobalsInstalled = false;
+let timerFollowRaf = null;
 
 function timerScreenRect(node) {
-  const canvas = app?.canvas?.canvas || document.querySelector("canvas");
+  if (!node) return null;
+  const canvasEl = app?.canvas?.canvas || document.querySelector("canvas#graph-canvas") || document.querySelector("canvas");
   const ds = app?.canvas?.ds;
-  if (!canvas || !ds) return null;
-  const rect = canvas.getBoundingClientRect();
+  if (!canvasEl || !ds || !Array.isArray(node.pos) || !Array.isArray(node.size)) return null;
+
+  const cr = canvasEl.getBoundingClientRect();
   const scale = Number(ds.scale) || 1;
   const offset = ds.offset || [0, 0];
+  const left = cr.left + (Number(node.pos[0] || 0) + Number(offset[0] || 0)) * scale;
+  const top = cr.top + (Number(node.pos[1] || 0) + Number(offset[1] || 0)) * scale;
+  const width = Math.max(130, Number(node.size[0] || BASE_W)) * scale;
+  const height = Math.max(34, Number(node.size[1] || BASE_H)) * scale;
+
   return {
-    left: rect.left + (Number(node.pos?.[0] || 0) + Number(offset[0] || 0)) * scale,
-    top: rect.top + (Number(node.pos?.[1] || 0) + Number(offset[1] || 0)) * scale,
-    width: Number(node.size?.[0] || BASE_W) * scale,
-    height: Number(node.size?.[1] || BASE_H) * scale,
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
   };
+}
+
+function isTimerSettingsOpen(node) {
+  return OPEN_POPUPS.has(node?.id);
 }
 
 function closeTimerSettings(node) {
   const item = OPEN_POPUPS.get(node?.id);
   if (!item) return;
-  item.popup.remove();
+  try { item.popup.remove(); } catch (_) {}
   OPEN_POPUPS.delete(node.id);
+}
+
+function ensureTimerFollowLoop() {
+  if (timerFollowRaf != null) return;
+  const loop = () => {
+    if (OPEN_POPUPS.size === 0) {
+      timerFollowRaf = null;
+      return;
+    }
+    for (const item of OPEN_POPUPS.values()) {
+      positionTimerSettings(item.node, item.popup);
+    }
+    timerFollowRaf = requestAnimationFrame(loop);
+  };
+  timerFollowRaf = requestAnimationFrame(loop);
+}
+
+function ensureSideRoom(app, node) {
+  const nr = timerScreenRect(node);
+  if (!nr) return;
+
+  const popupWidth = 340;
+  const gap = 16;
+  const margin = 16;
+  const needed = popupWidth + gap + margin;
+
+  const spaceRight = window.innerWidth - nr.right;
+
+  // We strictly want the menu on the RIGHT of the node.
+  // If not enough room on the right, pan canvas left so there is plenty of room on the right!
+  if (spaceRight < needed) {
+    const ds = app?.canvas?.ds;
+    if (ds && ds.offset && ds.scale) {
+      const shift = (needed - spaceRight) / ds.scale;
+      ds.offset[0] -= shift;
+      try {
+        app?.canvas?.setDirty?.(true, true);
+        app?.canvas?.draw?.(true, true);
+      } catch (_) {}
+    }
+  }
 }
 
 function positionTimerSettings(node, popup) {
   const nr = timerScreenRect(node);
   if (!nr) return;
-  const margin = 10;
-  const pw = popup.offsetWidth || 300;
-  const ph = popup.offsetHeight || 360;
-  let left = nr.left + nr.width + 12;
-  if (left + pw > innerWidth - margin) left = nr.left - pw - 12;
-  left = Math.max(margin, Math.min(left, innerWidth - pw - margin));
+  const margin = 12;
+  const gap = 14;
+  const pw = popup.offsetWidth || 340;
+  const ph = popup.offsetHeight || 440;
+
+  // Always position to the RIGHT of the node
+  let left = nr.right + gap;
+
+  // Only if right placement exceeds the viewport width:
+  if (left + pw > window.innerWidth - margin) {
+    if (window.innerWidth - nr.right < 80 && (nr.left - pw - gap >= margin)) {
+      left = nr.left - pw - gap;
+    } else {
+      left = Math.max(margin, window.innerWidth - pw - margin);
+    }
+  }
+
+  // Vertical placement: align top with node top, clamped to viewport
   let top = nr.top;
-  if (top + ph > innerHeight - margin) top = innerHeight - ph - margin;
+  if (top + ph > window.innerHeight - margin) {
+    top = window.innerHeight - ph - margin;
+  }
   top = Math.max(margin, top);
-  popup.style.left = `${Math.round(left)}px`;
-  popup.style.top = `${Math.round(top)}px`;
+
+  const newLeft = `${Math.round(left)}px`;
+  const newTop = `${Math.round(top)}px`;
+  if (popup.style.left !== newLeft) popup.style.left = newLeft;
+  if (popup.style.top !== newTop) popup.style.top = newTop;
 }
 
-function timerSettingButton(label, active, callback, description = "") {
+function timerSettingButton(label, active, callback, description = "", soundId = "") {
   const b = document.createElement("button");
   b.type = "button";
   b.className = `ds-rt-popup-choice${active ? " active" : ""}`;
+  if (soundId) b.dataset.soundId = soundId;
   b.innerHTML = `<span class="ds-rt-popup-mark">${active ? "✓" : ""}</span><span class="ds-rt-popup-choice-copy"><strong>${label}</strong>${description ? `<small>${description}</small>` : ""}</span>`;
   b.addEventListener("pointerdown", e => e.stopPropagation());
-  b.addEventListener("click", e => { e.stopPropagation(); callback(); });
+  b.addEventListener("mousedown", e => e.stopPropagation());
+  b.addEventListener("mouseup", e => e.stopPropagation());
+  b.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    callback(b);
+  });
   return b;
 }
 
@@ -240,7 +494,8 @@ function renderTimerSettings(node, popup) {
   close.textContent = "×";
   close.title = "Close";
   close.addEventListener("pointerdown", e => e.stopPropagation());
-  close.addEventListener("click", () => closeTimerSettings(node));
+  close.addEventListener("mousedown", e => e.stopPropagation());
+  close.addEventListener("click", (e) => { e.stopPropagation(); closeTimerSettings(node); });
   head.appendChild(close);
   popup.appendChild(head);
 
@@ -250,24 +505,49 @@ function renderTimerSettings(node, popup) {
   const playback = document.createElement("section");
   playback.className = "ds-rt-popup-section";
   playback.innerHTML = `<div class="ds-rt-popup-label">FINISH NOTIFICATION</div>`;
-  const enable = timerSettingButton("Play finish sound", !!s.soundEnabled, () => {
-    s.soundEnabled = !s.soundEnabled; saveState(node); renderTimerSettings(node, popup); log("soundEnabled", s.soundEnabled);
+
+  const enable = timerSettingButton("Play finish sound", !!s.soundEnabled, (btn) => {
+    s.soundEnabled = !s.soundEnabled;
+    btn.classList.toggle("active", s.soundEnabled);
+    const m = btn.querySelector(".ds-rt-popup-mark");
+    if (m) m.textContent = s.soundEnabled ? "✓" : "";
+    saveState(node);
+    log("soundEnabled", s.soundEnabled);
   }, "Play when the workflow completes");
-  const mute = timerSettingButton("Mute audio", !!s.mute, () => {
-    s.mute = !s.mute; saveState(node); renderTimerSettings(node, popup); log("mute", s.mute);
+
+  const mute = timerSettingButton("Mute audio", !!s.mute, (btn) => {
+    s.mute = !s.mute;
+    btn.classList.toggle("active", s.mute);
+    const m = btn.querySelector(".ds-rt-popup-mark");
+    if (m) m.textContent = s.mute ? "✓" : "";
+    saveState(node);
+    log("mute", s.mute);
   }, "Temporarily suppress sound");
+
   playback.append(enable, mute);
   body.appendChild(playback);
 
   const sound = document.createElement("section");
   sound.className = "ds-rt-popup-section";
-  sound.innerHTML = `<div class="ds-rt-popup-label">SOUND</div>`;
+  sound.innerHTML = `<div class="ds-rt-popup-label">ALERT SOUND (${SOUND_OPTIONS.length} PRESETS)</div>`;
   const sounds = document.createElement("div");
   sounds.className = "ds-rt-popup-grid";
-  for (const [id, label] of SOUND_OPTIONS) {
+
+  for (const [id, label, desc] of SOUND_OPTIONS) {
     sounds.appendChild(timerSettingButton(label, s.sound === id, () => {
-      s.sound = id; saveState(node); renderTimerSettings(node, popup); log("sound", id);
-    }));
+      // Instant selection without recreating the whole popup DOM
+      sounds.querySelectorAll(".ds-rt-popup-choice").forEach(el => {
+        const isMatch = el.dataset.soundId === id;
+        el.classList.toggle("active", isMatch);
+        const m = el.querySelector(".ds-rt-popup-mark");
+        if (m) m.textContent = isMatch ? "✓" : "";
+      });
+      s.sound = id;
+      saveState(node);
+      // Instant audible feedback!
+      playSoundById(id, s.volume);
+      log("sound selected", id);
+    }, desc, id));
   }
   sound.appendChild(sounds);
   body.appendChild(sound);
@@ -279,6 +559,7 @@ function renderTimerSettings(node, popup) {
   const range = document.createElement("input");
   range.type = "range"; range.min = "0"; range.max = "100"; range.step = "5"; range.value = String(value);
   range.addEventListener("pointerdown", e => e.stopPropagation());
+  range.addEventListener("mousedown", e => e.stopPropagation());
   range.addEventListener("input", e => {
     s.volume = Number(e.target.value) / 100;
     const out = volume.querySelector("b"); if (out) out.textContent = `${e.target.value}%`;
@@ -292,15 +573,21 @@ function renderTimerSettings(node, popup) {
   test.className = "ds-rt-popup-test";
   test.innerHTML = `${PLAY}<span>Test selected sound</span>`;
   test.addEventListener("pointerdown", e => e.stopPropagation());
-  test.addEventListener("click", e => { e.stopPropagation(); playFinishSound(node); });
+  test.addEventListener("mousedown", e => e.stopPropagation());
+  test.addEventListener("click", e => {
+    e.stopPropagation();
+    playSoundById(s.sound, s.volume);
+  });
   body.appendChild(test);
   popup.appendChild(body);
   popupTheme(popup);
+  positionTimerSettings(node, popup);
   requestAnimationFrame(() => positionTimerSettings(node, popup));
 }
 
 function openTimerSettings(node) {
   closeTimerSettings(node);
+  ensureSideRoom(app, node);
   const popup = document.createElement("div");
   popup.className = "ds-rt-popup";
   popup.addEventListener("pointerdown", e => e.stopPropagation());
@@ -308,6 +595,7 @@ function openTimerSettings(node) {
   document.body.appendChild(popup);
   OPEN_POPUPS.set(node.id, { node, popup });
   renderTimerSettings(node, popup);
+  ensureTimerFollowLoop();
   if (!popupGlobalsInstalled) {
     popupGlobalsInstalled = true;
     window.addEventListener("pointerdown", e => {
@@ -337,7 +625,7 @@ function paint(node, ctx) {
   ctx.rect(0, 0, w, h);
   ctx.clip();
 
-  // Background pill / box just covering time and gear with some margin
+  // Background pill / box
   const radius = Math.min(8, Math.round(h * 0.22));
   const borderColor = isRunning ? c.accent : c.border;
   const borderWidth = isRunning ? 1.5 : 1;
@@ -357,74 +645,10 @@ function paint(node, ctx) {
     ctx.restore();
   }
 
-  // Gear button on the right (same line, vertically centered)
-  const padRight = Math.max(8, Math.round(h * 0.20));
-  const gearSize = Math.max(20, Math.min(32, Math.round(h - 14)));
-  const gx = w - padRight - gearSize;
-  const gy = Math.round((h - gearSize) / 2);
+  node._dsTimerHit = null;
 
-  const isHovered = !!node._dsGearHovered;
-  const gearBg = isHovered ? c.panel2 : c.panel;
-  const gearStroke = isHovered ? c.accent : (isRunning ? c.accent : c.border);
-  rr(ctx, gx, gy, gearSize, gearSize, 5, gearBg, gearStroke, 1);
-
-  // Gear Icon SVG path
-  const innerPad = Math.max(3, Math.round(gearSize * 0.16));
-  const innerSize = gearSize - innerPad * 2;
-  ctx.save();
-  ctx.translate(gx + innerPad, gy + innerPad);
-  const scale = innerSize / 24;
-  ctx.scale(scale, scale);
-  ctx.strokeStyle = isHovered ? c.accent : (isRunning ? c.accent : c.muted);
-  ctx.lineWidth = 1.8;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.fillStyle = "none";
-  ctx.beginPath();
-  ctx.moveTo(9.7, 2.8);
-  ctx.lineTo(14.3, 2.8);
-  ctx.lineTo(15, 5);
-  ctx.bezierCurveTo(15.5, 5.2, 16, 5.4, 16.4, 5.8);
-  ctx.lineTo(18.6, 5.2);
-  ctx.lineTo(20.9, 9.2);
-  ctx.lineTo(19.3, 10.8);
-  ctx.bezierCurveTo(19.4, 11.3, 19.4, 11.8, 19.3, 12.3);
-  ctx.lineTo(20.9, 13.9);
-  ctx.lineTo(18.6, 17.9);
-  ctx.lineTo(16.4, 17.3);
-  ctx.bezierCurveTo(16, 17.7, 15.5, 17.9, 15, 18.1);
-  ctx.lineTo(14.3, 20.3);
-  ctx.lineTo(9.7, 20.3);
-  ctx.lineTo(9, 18.1);
-  ctx.bezierCurveTo(8.5, 17.9, 8, 17.7, 7.6, 17.3);
-  ctx.lineTo(5.4, 17.9);
-  ctx.lineTo(3.1, 13.9);
-  ctx.lineTo(4.7, 12.3);
-  ctx.bezierCurveTo(4.6, 11.8, 4.6, 11.3, 4.7, 10.8);
-  ctx.lineTo(3.1, 9.2);
-  ctx.lineTo(5.4, 5.2);
-  ctx.lineTo(7.6, 5.8);
-  ctx.bezierCurveTo(8, 5.4, 8.5, 5.2, 9, 5);
-  ctx.closePath();
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(12, 12, 3.1, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-
-  // Hit target for gear
-  const hitPad = 4;
-  node._dsTimerHit = [{
-    key: "settings",
-    x: gx - hitPad,
-    y: gy - hitPad,
-    w: gearSize + hitPad * 2,
-    h: gearSize + hitPad * 2
-  }];
-
-  // Time text on the same line, vertically centered
-  const padLeft = Math.max(10, Math.round(h * 0.22));
-  const timeX = Math.round((padLeft + gx) / 2);
+  // Time text cleanly centered horizontally and vertically
+  const timeX = Math.round(w / 2);
   const centerY = Math.round(h / 2);
   const fontSize = Math.round(clamp(h * 0.50, 16, 48));
 
@@ -451,10 +675,9 @@ function makeVueFace(node) {
   const root = document.createElement("div");
   root.className = "ds-run-timer-root";
   root.dataset.dsThemed = "true";
-  root.innerHTML = `<div class="ds-rt-time" data-el="time">00:00</div><button class="ds-rt-gear" data-action="settings" title="Timer settings">${GEAR}</button>`;
+  root.innerHTML = `<div class="ds-rt-time" data-el="time">00:00</div>`;
   const els = {
     time: root.querySelector('[data-el="time"]'),
-    gear: root.querySelector(".ds-rt-gear")
   };
   node._dsTimerRoot = root;
   node._dsTimerEls = els;
@@ -466,8 +689,6 @@ function makeVueFace(node) {
   });
   widget.computeLayoutSize = () => ({ minWidth: 130, minHeight: 34 });
   node._dsTimerWidget = widget;
-  els.gear.addEventListener("pointerdown", e => e.stopPropagation());
-  els.gear.addEventListener("click", e => { e.stopPropagation(); openTimerSettings(node); });
   refreshSettingsUI(node);
   window.DSGlobalTheme?.bindNode?.(root, node);
   log("Nodes 2.0 face created", node.id);
@@ -479,6 +700,7 @@ app.registerExtension({
   name: EXT,
   setup() {
     log("Extension setup");
+    registerTimerGearMenu();
     api.addEventListener("execution_start", () => { log("execution_start"); startAll(); });
     api.addEventListener("executing", ({ detail }) => { if (detail === null) { log("executing=null → workflow finished/stopped"); stopAll("finished"); } });
     api.addEventListener("execution_error", ({ detail }) => { log("execution_error"); stopAll("error"); });
@@ -541,22 +763,10 @@ app.registerExtension({
     };
 
     nodeType.prototype.onMouseDown = function(e,pos) {
-      if (!isVue() && pos) {
-        const hit = buttonHit(this,pos);
-        if (hit?.key === "settings") { openTimerSettings(this); return true; }
-      }
       return oldMouseDown ? oldMouseDown.apply(this,arguments) : false;
     };
 
     nodeType.prototype.onMouseMove = function(e,pos) {
-      if (!isVue() && pos) {
-        const hit = buttonHit(this, pos);
-        const wasHovered = !!this._dsGearHovered;
-        this._dsGearHovered = hit?.key === "settings";
-        if (wasHovered !== this._dsGearHovered) {
-          this.setDirtyCanvas?.(true, false);
-        }
-      }
       return oldMouseMove ? oldMouseMove.apply(this,arguments) : false;
     };
     nodeType.prototype.onMouseUp = function(e,pos) {
@@ -585,6 +795,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onRemoved = function() {
+      closeTimerSettings(this);
       this._dsTimer && (this._dsTimer.running = false);
       try { this._dsTimerThemeOff?.(); this._dsTimerWidget?.onRemove?.(); this._dsTimerRoot?.remove(); } catch (_) {}
       return oldRemoved?.apply(this,arguments);
