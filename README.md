@@ -37,6 +37,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **NSFW Detection & Blur**: Integrated Vision Transformer (ViT INT4) and NudeNet detectors with automatic disk caching and smart blur filters.
 
 ### 📝 Prompt Engineering & Utilities
+- **DS AI Prompt Sensei**: Next-generation AI prompt generator and scene director powered by local LLMs. Features multi-modal image-to-prompt vision analysis, dynamic LoRA stacking with per-model/clip strengths, automated aspect ratio detection, customizable video dimensions/durations, and interactive prompt editing. **Note:** [LM Studio](https://lmstudio.ai/) is required for this node to run local LLMs.
 - **DS Prompt & Prompt Cards**: Modular prompt editor with category cards, trigger injection, and effective prompt previews.
 - **DS Prompt Scanner & Show Text**: Live prompt diagnostics and string display widgets.
 - **DS Notes & Label**: Canvas documentation, workflow notes, and visual group labels.
@@ -83,6 +84,9 @@ Install all dependencies in one command:
 ```bash
 pip install -r requirements.txt
 ```
+
+### External Requirements
+- **[LM Studio](https://lmstudio.ai/)**: Required for **DS AI Prompt Sensei**. Download and install [LM Studio](https://lmstudio.ai/), then start the local server (default: `127.0.0.1:1234`) with your desired vision/chat LLM loaded.
 
 ---
 

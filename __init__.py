@@ -400,6 +400,16 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_Interpolation: {e}", flush=True)
     DS_Interpolation = None
 
+# DS AI Prompt Sensei
+try:
+    _mod = _load_node_pkg("ai_prompt_sensei", "AI Prompt Sensei")
+    DS_AIPromptSensei = _mod.DS_AIPromptSensei
+    if hasattr(_mod, "register_prompt_sensei_routes"):
+        _mod.register_prompt_sensei_routes()
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_AIPromptSensei: {e}", flush=True)
+    DS_AIPromptSensei = None
+
 
 
 # --- HELPERS ---
@@ -939,6 +949,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_Gallery": DS_Gallery} if DS_Gallery is not None else {}),
     **({"DS_Interpolation": DS_Interpolation} if DS_Interpolation is not None else {}),
     **({"DS_Reroute": DS_Reroute} if DS_Reroute is not None else {}),
+    **({"DS_AIPromptSensei": DS_AIPromptSensei} if DS_AIPromptSensei is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -979,6 +990,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_Gallery": "DS Gallery"} if DS_Gallery is not None else {}),
     **({"DS_Interpolation": "DS Interpolation"} if DS_Interpolation is not None else {}),
     **({"DS_Reroute": "DS Reroute"} if DS_Reroute is not None else {}),
+    **({"DS_AIPromptSensei": "DS AI Prompt Sensei"} if DS_AIPromptSensei is not None else {}),
 }
 
 WEB_DIRECTORY = "js"
