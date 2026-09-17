@@ -1,7 +1,7 @@
 {
-  "theme": "cyberpunk",
-  "font": "JetBrains Mono",
-  "fontSize": 12,
+  "theme": "ocean",
+  "font": "Inter",
+  "fontSize": 14,
   "downloadedFonts": [],
   "custom": {}
 }

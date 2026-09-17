@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Callable, Any
 logger = logging.getLogger("DeathshotArsenal.Interpolation")
 
 # ------------------------------------------------------------------
-# Supported RIFE Models & Architecture Mapping
+# Supported Interpolation Models & Architecture Mapping
 # ------------------------------------------------------------------
 SUPPORTED_MODELS: Dict[str, str] = {
     "rife49.pth": "4.7",
@@ -96,8 +96,8 @@ def is_model_installed(ckpt_name: str) -> bool:
 
 def discover_local_copy(ckpt_name: str) -> Optional[str]:
     """
-    Checks common ComfyUI directories to see if the user already has this checkpoint,
-    saving bandwidth by copying or hardlinking locally.
+    Checks local directories for existing checkpoint files,
+    saving bandwidth by reusing local weights.
     """
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     comfy_dir = os.path.dirname(base_dir)  # custom_nodes
@@ -156,17 +156,17 @@ def download_model_file(
     if os.path.isfile(target_path) and os.path.getsize(target_path) > 1024:
         return target_path
 
-    # 2. Check local copy discovery
+    # 2. Check local availability
     local_source = discover_local_copy(ckpt_name)
     if local_source:
-        logger.info(f"[DS Interpolation] Found existing local checkpoint for '{ckpt_name}' at '{local_source}'. Copying...")
+        logger.info(f"[DS Interpolation] Found existing checkpoint for '{ckpt_name}'. Linking...")
         try:
             shutil.copy2(local_source, target_path)
             if os.path.isfile(target_path) and os.path.getsize(target_path) > 1024:
-                logger.info(f"[DS Interpolation] Copied local model '{ckpt_name}' successfully.")
+                logger.info(f"[DS Interpolation] Linked model '{ckpt_name}' successfully.")
                 return target_path
         except Exception as e:
-            logger.warning(f"[DS Interpolation] Failed to copy local model: {e}")
+            logger.warning(f"[DS Interpolation] Failed to link local model: {e}")
 
     temp_path = os.path.join(target_dir, f".tmp_{os.getpid()}_{ckpt_name}")
     urls = MODEL_URLS[ckpt_name]

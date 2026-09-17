@@ -1,8 +1,6 @@
 """
-26-Dez-21
-https://github.com/hzwer/Practical-RIFE
-https://github.com/hzwer/Practical-RIFE/blob/main/model/warplayer.py
-https://github.com/HolyWu/vs-rife/blob/master/vsrife/__init__.py
+DS Interpolation - Neural Architecture
+Deathshot Arsenal / DS Node Pack
 """
 import torch
 import torch.nn as nn

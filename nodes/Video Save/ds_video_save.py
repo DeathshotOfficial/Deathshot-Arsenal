@@ -589,11 +589,22 @@ class DS_VideoSave:
 
         if fps is not None:
             try:
-                if isinstance(fps, (list, tuple)) and len(fps) > 0:
+                if isinstance(fps, dict):
+                    found_fps = None
+                    for k in ("loaded_fps", "source_fps", "fps", "frame_rate"):
+                        if k in fps and fps[k] is not None:
+                            try:
+                                found_fps = float(fps[k])
+                                break
+                            except (ValueError, TypeError):
+                                pass
+                    fps = found_fps
+                elif isinstance(fps, (list, tuple)) and len(fps) > 0:
                     fps = fps[0]
                 if hasattr(fps, "item"):
                     fps = fps.item()
-                fps = float(fps)
+                if fps is not None:
+                    fps = float(fps)
             except Exception:
                 fps = None
 

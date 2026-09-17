@@ -12,7 +12,7 @@ const PROP = "ds_interpolation_state";
 
 const DEFAULT_W = 340;
 const MIN_W = 300;
-const EXPANDED_H = 430;
+const EXPANDED_H = 475;
 const COLLAPSED_H = 185;
 
 const MODEL_OPTIONS = [
@@ -23,7 +23,14 @@ const MODEL_OPTIONS = [
   "rife426.pth",
 ];
 
-const SCALE_OPTIONS = ["0.25", "0.5", "1x", "2", "4"];
+const MOTION_SCALE_OPTIONS = [
+  { value: "0.25", label: "0.25x", desc: "Best for very fast action & rapid movement" },
+  { value: "0.5",  label: "0.5x",  desc: "Best for fast motion & camera pans" },
+  { value: "1x",   label: "1x",    desc: "Default balanced (standard motion)" },
+  { value: "2",    label: "2x",    desc: "Best for slow & subtle motion" },
+  { value: "4",    label: "4x",    desc: "Best for micro-motion & slow zoom" },
+];
+const SCALE_OPTIONS = MOTION_SCALE_OPTIONS.map((o) => o.value);
 const DTYPE_OPTIONS = ["float32", "float16", "bfloat16"];
 
 const ICONS = {
@@ -50,13 +57,18 @@ function getDefaultState() {
     ckpt_name: "rife49.pth",
     collapsed: false,
     clear_cache_after_n_frames: 10,
+    mode: "Target FPS",
     multiplier: 2,
+    target_fps: 60,
+    source_fps: 24,
     fast_mode: true,
     ensemble: true,
     scale_factor: "1x",
     dtype: "float32",
     torch_compile: false,
     batch_size: 1,
+    node_size: null,
+    user_resized: false,
   };
 }
 
@@ -67,7 +79,23 @@ function getState(node) {
       const raw = node.properties?.[PROP];
       if (raw) s = typeof raw === "string" ? JSON.parse(raw) : raw;
     } catch (_) {}
-    node._dsInterpState = Object.assign(getDefaultState(), s || {});
+
+    const def = getDefaultState();
+    const merged = Object.assign(def, s || {});
+    if (node.properties) {
+      for (const k of Object.keys(def)) {
+        if (node.properties[k] !== undefined && (s === null || s[k] === undefined)) {
+          merged[k] = node.properties[k];
+        }
+      }
+      if (Array.isArray(node.properties.ds_interp_size)) {
+        merged.node_size = node.properties.ds_interp_size;
+      }
+    }
+    if (Array.isArray(merged.node_size) && merged.node_size[1] > 800) {
+      merged.node_size[1] = EXPANDED_H;
+    }
+    node._dsInterpState = merged;
   }
   return node._dsInterpState;
 }
@@ -75,11 +103,21 @@ function getState(node) {
 function persistState(node) {
   const s = getState(node);
   if (!node.properties) node.properties = {};
+
+  const minH = s.collapsed ? COLLAPSED_H : EXPANDED_H;
+  if (Array.isArray(node.size) && node.size[0] >= MIN_W && node.size[1] >= minH && node.size[1] <= 800) {
+    s.node_size = [node.size[0], node.size[1]];
+    node.properties.ds_interp_size = [node.size[0], node.size[1]];
+  }
+
   node.properties[PROP] = JSON.stringify(s);
 
   // Synchronize internal properties for workflow serialization
   for (const [k, v] of Object.entries(s)) {
     node.properties[k] = v;
+  }
+  if (s.node_size && s.node_size[1] <= 800) {
+    node.properties.ds_interp_size = [s.node_size[0], s.node_size[1]];
   }
 
   // Synchronize hidden LiteGraph widgets for ComfyUI backend execution
@@ -145,7 +183,6 @@ function attachStepper(btnUp, btnDown, getValue, setValue, step = 1, min = 1) {
   window.addEventListener("pointercancel", stopHold);
 }
 
-// Global cached model installed statuses
 let _modelsStatusCache = null;
 async function fetchModelsStatus() {
   try {
@@ -172,12 +209,97 @@ app.registerExtension({
     fetchModelsStatus();
 
     const originalCreated = nodeType.prototype.onNodeCreated;
-    const originalConfigure = nodeType.prototype.onConfigure;
+    const origConfigure = nodeType.prototype.configure;
+    const origOnConfigure = nodeType.prototype.onConfigure;
+    const origSerialize = nodeType.prototype.serialize;
+    const origResize = nodeType.prototype.onResize;
 
     nodeType.prototype.computeSize = function () {
       const s = getState(this);
+      return [MIN_W, s.collapsed ? COLLAPSED_H : EXPANDED_H];
+    };
+
+    nodeType.prototype.onResize = function (size) {
+      const curS = getState(this);
+      const minH = curS.collapsed ? COLLAPSED_H : EXPANDED_H;
+      if (size) {
+        if (size[0] < MIN_W) size[0] = MIN_W;
+        if (size[1] < minH) size[1] = minH;
+        if (size[1] > 800) size[1] = minH;
+        this.size = [size[0], size[1]];
+        curS.node_size = [size[0], size[1]];
+        curS.user_resized = true;
+        if (!curS.collapsed) {
+          this._savedExpandedHeight = size[1];
+        }
+      }
+      const result = origResize ? origResize.apply(this, arguments) : undefined;
+      persistState(this);
+      this.setDirtyCanvas?.(true, true);
+      app.graph?.afterChange?.();
+      return result;
+    };
+
+    nodeType.prototype.serialize = function () {
+      persistState(this);
+      const o = origSerialize ? origSerialize.apply(this, arguments) : {};
+      if (o && Array.isArray(this.size)) {
+        const minH = getState(this).collapsed ? COLLAPSED_H : EXPANDED_H;
+        o.size = [
+          Math.max(Number(this.size[0]) || DEFAULT_W, MIN_W),
+          Math.min(800, Math.max(Number(this.size[1]) || minH, minH)),
+        ];
+      }
+      return o;
+    };
+
+    nodeType.prototype._restoreNodeGeometry = function (info) {
+      this._dsInterpState = null;
+      const s = getState(this);
+
+      const p = info?.properties || this.properties || {};
+      for (const k of Object.keys(s)) {
+        if (p[k] !== undefined) s[k] = p[k];
+      }
+
       const minH = s.collapsed ? COLLAPSED_H : EXPANDED_H;
-      return [MIN_W, minH];
+      this.min_size = [MIN_W, minH];
+
+      if (Array.isArray(this.size) && this.size[1] > 800) {
+        this.size[1] = minH;
+      }
+      if (Array.isArray(s.node_size) && s.node_size[1] > 800) {
+        s.node_size[1] = minH;
+      }
+
+      if (Array.isArray(s.node_size) && s.node_size[0] >= MIN_W && s.node_size[1] >= minH && s.node_size[1] <= 800) {
+        this.size = [s.node_size[0], s.node_size[1]];
+      } else if (Array.isArray(this.size)) {
+        this.size = [
+          Math.max(this.size[0], MIN_W),
+          Math.min(800, Math.max(this.size[1], minH)),
+        ];
+      } else {
+        this.size = [DEFAULT_W, minH];
+      }
+
+      persistState(this);
+      hideWidgets(this);
+      renderUI(this);
+      renderCollapse(this);
+      this.setDirtyCanvas?.(true, true);
+    };
+
+    nodeType.prototype.configure = function (info) {
+      const result = origConfigure ? origConfigure.apply(this, arguments) : undefined;
+      this._restoreNodeGeometry(info);
+      return result;
+    };
+
+    nodeType.prototype.onConfigure = function (info) {
+      const result = origOnConfigure ? origOnConfigure.apply(this, arguments) : undefined;
+      this._restoreNodeGeometry(info);
+      return result;
     };
 
     nodeType.prototype.onNodeCreated = function () {
@@ -193,15 +315,6 @@ app.registerExtension({
       const s = getState(this);
       const minH = s.collapsed ? COLLAPSED_H : EXPANDED_H;
       this.min_size = [MIN_W, minH];
-
-      const origResize = this.onResize;
-      this.onResize = function (size) {
-        if (origResize) origResize.apply(this, arguments);
-        const curS = getState(this);
-        if (!curS.collapsed && size && size[1] >= EXPANDED_H) {
-          this._savedExpandedHeight = size[1];
-        }
-      };
 
       hideWidgets(this);
 
@@ -228,7 +341,7 @@ app.registerExtension({
         this.domWidget.onPointerDown = (pointer) => {
           const target = pointer?.eDown?.target;
           return !!target?.closest?.(
-            "button, input, select, textarea, .ds-interp-collapse-header, .ds-interp-stepper-btn, .ds-interp-toggle-btn, .ds-interp-ckpt-trigger, .ds-interp-select-trigger"
+            "button, input, select, textarea, .ds-interp-collapse-header, .ds-interp-stepper-btn, .ds-interp-toggle-btn, .ds-interp-ckpt-trigger, .ds-interp-select-trigger, .ds-interp-mode-btn"
           );
         };
       }
@@ -239,49 +352,10 @@ app.registerExtension({
         this.setDirtyCanvas?.(true, true);
       });
 
-      renderCollapse(this);
-
-      requestAnimationFrame(() => {
-        const curS = getState(this);
-        const targetH = curS.collapsed ? COLLAPSED_H : (this._savedExpandedHeight || EXPANDED_H);
-        const curW = Math.max(this.size?.[0] || DEFAULT_W, MIN_W);
-        if (typeof this.setSize === "function") {
-          this.setSize([curW, targetH]);
-        } else {
-          this.size = [curW, targetH];
-        }
-        hideWidgets(this);
-        renderCollapse(this);
-        this.setDirtyCanvas?.(true, true);
-      });
-
-      return result;
-    };
-
-    nodeType.prototype.onConfigure = function () {
-      const result = originalConfigure ? originalConfigure.apply(this, arguments) : undefined;
-      const s = getState(this);
-
-      // Restore parameters from saved node properties
-      const p = this.properties || {};
-      for (const k of Object.keys(s)) {
-        if (p[k] !== undefined) s[k] = p[k];
-      }
-
-      persistState(this);
-      hideWidgets(this);
-      renderUI(this);
-
-      // Fix size if below minimum required height or width
-      const minH = s.collapsed ? COLLAPSED_H : EXPANDED_H;
-      if (!this.size || !Array.isArray(this.size) || this.size[1] < minH || this.size[0] < MIN_W) {
-        const curW = Array.isArray(this.size) ? Math.max(this.size[0], MIN_W) : DEFAULT_W;
-        const curH = Array.isArray(this.size) ? Math.max(this.size[1], minH) : minH;
-        if (typeof this.setSize === "function") {
-          this.setSize([curW, curH]);
-        } else if (this.size) {
-          this.size = [curW, curH];
-        }
+      if (Array.isArray(s.node_size) && s.node_size[0] >= MIN_W && s.node_size[1] >= minH && s.node_size[1] <= 800) {
+        this.size = [s.node_size[0], s.node_size[1]];
+      } else if (!Array.isArray(this.size) || this.size[0] < MIN_W || this.size[1] < minH || this.size[1] > 800) {
+        this.size = [DEFAULT_W, minH];
       }
 
       renderCollapse(this);
@@ -291,13 +365,15 @@ app.registerExtension({
 
   nodeCreated(node) {
     if (node?.type === TYPE) {
-      ensureNodeSizing(node);
+      hideWidgets(node);
+      renderUI(node);
     }
   },
 
   loadedGraphNode(node) {
     if (node?.type === TYPE) {
-      ensureNodeSizing(node);
+      hideWidgets(node);
+      renderUI(node);
     }
   },
 
@@ -307,7 +383,11 @@ app.registerExtension({
     setTimeout(() => {
       for (const n of app.graph?._nodes || []) {
         if (n?.type === TYPE) {
-          ensureNodeSizing(n);
+          if (n.size && n.size[1] > 800) {
+            n.size[1] = EXPANDED_H;
+          }
+          hideWidgets(n);
+          renderUI(n);
           n.setDirtyCanvas?.(true, true);
         }
       }
@@ -323,23 +403,6 @@ app.registerExtension({
     });
   },
 });
-
-function ensureNodeSizing(node) {
-  if (!node || node.type !== TYPE) return;
-  node.resizable = true;
-  const s = getState(node);
-  const minH = s.collapsed ? COLLAPSED_H : EXPANDED_H;
-  node.min_size = [MIN_W, minH];
-  if (!Array.isArray(node.size) || node.size[0] < MIN_W || node.size[1] < minH) {
-    const curW = Array.isArray(node.size) ? Math.max(node.size[0], MIN_W) : DEFAULT_W;
-    const curH = Array.isArray(node.size) ? Math.max(node.size[1], minH) : minH;
-    if (typeof node.setSize === "function") {
-      node.setSize([curW, curH]);
-    } else {
-      node.size = [curW, curH];
-    }
-  }
-}
 
 function buildUI(node) {
   const root = document.createElement("div");
@@ -368,8 +431,43 @@ function buildUI(node) {
 
     <!-- Big Box Options Panel -->
     <div class="ds-interp-options-panel" data-options-panel>
+      <!-- Mode Segmented Control: Target FPS vs Multiplier -->
+      <div class="ds-interp-mode-row">
+        <button type="button" class="ds-interp-mode-btn" data-mode="Target FPS">Target FPS</button>
+        <button type="button" class="ds-interp-mode-btn" data-mode="Multiplier">Multiplier</button>
+      </div>
+
+      <!-- Live Duration & Timing Badge -->
+      <div class="ds-interp-timing-badge">
+        <span data-timing-text>24 fps ➔ 60 fps (duration preserved)</span>
+        <strong data-timing-frames>2.5x sync</strong>
+      </div>
+
       <div class="ds-interp-grid">
-        <!-- Row 1: Clear Cache | Multiplier -->
+        <!-- Row 1: Target FPS (or Multiplier) | Source FPS -->
+        <div class="ds-interp-grid-cell">
+          <span class="ds-interp-label" data-label-primary>Target FPS</span>
+          <div class="ds-interp-stepper-box">
+            <input type="number" min="1" max="240" step="1" class="ds-interp-num-input" data-input="primary_rate" />
+            <div class="ds-interp-stepper-actions">
+              <button type="button" class="ds-interp-stepper-btn" data-step-up="primary_rate">${ICONS.stepUp}</button>
+              <button type="button" class="ds-interp-stepper-btn" data-step-down="primary_rate">${ICONS.stepDown}</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ds-interp-grid-cell">
+          <span class="ds-interp-label">Source FPS</span>
+          <div class="ds-interp-stepper-box">
+            <input type="number" min="1" max="240" step="1" class="ds-interp-num-input" data-input="source_fps" />
+            <div class="ds-interp-stepper-actions">
+              <button type="button" class="ds-interp-stepper-btn" data-step-up="source_fps">${ICONS.stepUp}</button>
+              <button type="button" class="ds-interp-stepper-btn" data-step-down="source_fps">${ICONS.stepDown}</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Cache After Frames | Batch Size -->
         <div class="ds-interp-grid-cell">
           <span class="ds-interp-label">Cache After Frames</span>
           <div class="ds-interp-stepper-box">
@@ -382,17 +480,17 @@ function buildUI(node) {
         </div>
 
         <div class="ds-interp-grid-cell">
-          <span class="ds-interp-label">Multiplier</span>
+          <span class="ds-interp-label">Batch Size</span>
           <div class="ds-interp-stepper-box">
-            <input type="number" min="1" step="1" class="ds-interp-num-input" data-input="multiplier" />
+            <input type="number" min="1" max="64" step="1" class="ds-interp-num-input" data-input="batch_size" />
             <div class="ds-interp-stepper-actions">
-              <button type="button" class="ds-interp-stepper-btn" data-step-up="multiplier">${ICONS.stepUp}</button>
-              <button type="button" class="ds-interp-stepper-btn" data-step-down="multiplier">${ICONS.stepDown}</button>
+              <button type="button" class="ds-interp-stepper-btn" data-step-up="batch_size">${ICONS.stepUp}</button>
+              <button type="button" class="ds-interp-stepper-btn" data-step-down="batch_size">${ICONS.stepDown}</button>
             </div>
           </div>
         </div>
 
-        <!-- Row 2: Fast Mode | Ensemble -->
+        <!-- Row 3: Fast Mode | Ensemble -->
         <div class="ds-interp-grid-cell">
           <span class="ds-interp-label">Fast Mode</span>
           <button type="button" class="ds-interp-toggle-btn" data-toggle="fast_mode" role="switch" aria-checked="true">
@@ -409,9 +507,9 @@ function buildUI(node) {
           </button>
         </div>
 
-        <!-- Row 3: Scale Factor | Dtype -->
+        <!-- Row 4: Motion Scale | Dtype -->
         <div class="ds-interp-grid-cell">
-          <span class="ds-interp-label">Scale Factor</span>
+          <span class="ds-interp-label">Motion Scale</span>
           <button type="button" class="ds-interp-select-trigger" data-trigger="scale">
             <span data-label="scale">1x</span>
             ${ICONS.chevron}
@@ -426,24 +524,13 @@ function buildUI(node) {
           </button>
         </div>
 
-        <!-- Row 4: Torch Compile | Batch Size -->
+        <!-- Row 5: Torch Compile -->
         <div class="ds-interp-grid-cell">
           <span class="ds-interp-label">Torch Compile</span>
           <button type="button" class="ds-interp-toggle-btn" data-toggle="torch_compile" role="switch" aria-checked="false">
             <span class="ds-interp-toggle-text" data-toggle-label="torch_compile">OFF</span>
             <span class="ds-interp-toggle-track"><span class="ds-interp-toggle-thumb"></span></span>
           </button>
-        </div>
-
-        <div class="ds-interp-grid-cell">
-          <span class="ds-interp-label">Batch Size</span>
-          <div class="ds-interp-stepper-box">
-            <input type="number" min="1" max="64" step="1" class="ds-interp-num-input" data-input="batch_size" />
-            <div class="ds-interp-stepper-actions">
-              <button type="button" class="ds-interp-stepper-btn" data-step-up="batch_size">${ICONS.stepUp}</button>
-              <button type="button" class="ds-interp-stepper-btn" data-step-down="batch_size">${ICONS.stepDown}</button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -458,8 +545,14 @@ function buildUI(node) {
     labelCkpt: root.querySelector('[data-label="ckpt"]'),
     badgeCkpt: root.querySelector('[data-badge="ckpt"]'),
 
+    modeBtns: root.querySelectorAll("[data-mode]"),
+    timingText: root.querySelector("[data-timing-text]"),
+    timingFrames: root.querySelector("[data-timing-frames]"),
+    labelPrimary: root.querySelector("[data-label-primary]"),
+    inputPrimaryRate: root.querySelector('[data-input="primary_rate"]'),
+    inputSourceFps: root.querySelector('[data-input="source_fps"]'),
+
     inputClearCache: root.querySelector('[data-input="clear_cache"]'),
-    inputMultiplier: root.querySelector('[data-input="multiplier"]'),
 
     toggleFastMode: root.querySelector('[data-toggle="fast_mode"]'),
     toggleFastModeLabel: root.querySelector('[data-toggle-label="fast_mode"]'),
@@ -485,6 +578,24 @@ function buildUI(node) {
   return root;
 }
 
+function updateTimingBadge(node) {
+  const d = node._dom;
+  if (!d || !d.timingText || !d.timingFrames) return;
+  const s = getState(node);
+  const src = Number(s.source_fps) || 24;
+  if (s.mode === "Multiplier") {
+    const mult = Number(s.multiplier) || 2;
+    const outFps = Math.round(src * mult * 100) / 100;
+    d.timingText.textContent = `${src} fps ➔ ${outFps} fps (duration preserved)`;
+    d.timingFrames.textContent = `${mult}x speed sync`;
+  } else {
+    const tgt = Number(s.target_fps) || 60;
+    const mult = (tgt / src).toFixed(2);
+    d.timingText.textContent = `${src} fps ➔ ${tgt} fps (duration preserved)`;
+    d.timingFrames.textContent = `${mult}x speed sync`;
+  }
+}
+
 function wireEvents(node) {
   const d = node._dom;
   const s = getState(node);
@@ -503,7 +614,66 @@ function wireEvents(node) {
     renderCollapse(node, true);
   });
 
+  // Mode buttons (Target FPS vs Multiplier)
+  d.modeBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      s.mode = btn.dataset.mode;
+      persistState(node);
+      renderUI(node);
+    });
+  });
+
   // Numeric Steppers
+  attachStepper(
+    d.root.querySelector('[data-step-up="primary_rate"]'),
+    d.root.querySelector('[data-step-down="primary_rate"]'),
+    () => (s.mode === "Multiplier" ? (s.multiplier || 2) : (s.target_fps || 60)),
+    (val) => {
+      if (s.mode === "Multiplier") {
+        s.multiplier = Math.max(1, Math.min(100, Math.round(val)));
+        d.inputPrimaryRate.value = s.multiplier;
+      } else {
+        s.target_fps = Math.max(1, Math.min(240, Math.round(val)));
+        d.inputPrimaryRate.value = s.target_fps;
+      }
+      persistState(node);
+      updateTimingBadge(node);
+    },
+    1, 1
+  );
+  d.inputPrimaryRate.addEventListener("change", () => {
+    const val = parseInt(d.inputPrimaryRate.value, 10);
+    if (s.mode === "Multiplier") {
+      s.multiplier = Math.max(1, Math.min(100, val || 2));
+      d.inputPrimaryRate.value = s.multiplier;
+    } else {
+      s.target_fps = Math.max(1, Math.min(240, val || 60));
+      d.inputPrimaryRate.value = s.target_fps;
+    }
+    persistState(node);
+    updateTimingBadge(node);
+  });
+
+  attachStepper(
+    d.root.querySelector('[data-step-up="source_fps"]'),
+    d.root.querySelector('[data-step-down="source_fps"]'),
+    () => s.source_fps || 24,
+    (val) => {
+      s.source_fps = Math.max(1, Math.min(240, Math.round(val)));
+      d.inputSourceFps.value = s.source_fps;
+      persistState(node);
+      updateTimingBadge(node);
+    },
+    1, 1
+  );
+  d.inputSourceFps.addEventListener("change", () => {
+    s.source_fps = Math.max(1, Math.min(240, parseFloat(d.inputSourceFps.value) || 24));
+    d.inputSourceFps.value = s.source_fps;
+    persistState(node);
+    updateTimingBadge(node);
+  });
+
   attachStepper(
     d.root.querySelector('[data-step-up="clear_cache"]'),
     d.root.querySelector('[data-step-down="clear_cache"]'),
@@ -518,23 +688,6 @@ function wireEvents(node) {
   d.inputClearCache.addEventListener("change", () => {
     s.clear_cache_after_n_frames = Math.max(1, parseInt(d.inputClearCache.value, 10) || 10);
     d.inputClearCache.value = s.clear_cache_after_n_frames;
-    persistState(node);
-  });
-
-  attachStepper(
-    d.root.querySelector('[data-step-up="multiplier"]'),
-    d.root.querySelector('[data-step-down="multiplier"]'),
-    () => s.multiplier,
-    (val) => {
-      s.multiplier = val;
-      d.inputMultiplier.value = val;
-      persistState(node);
-    },
-    1, 1
-  );
-  d.inputMultiplier.addEventListener("change", () => {
-    s.multiplier = Math.max(1, parseInt(d.inputMultiplier.value, 10) || 2);
-    d.inputMultiplier.value = s.multiplier;
     persistState(node);
   });
 
@@ -577,10 +730,10 @@ function wireEvents(node) {
     renderUI(node);
   });
 
-  // Dropdowns for Scale Factor & Dtype
+  // Dropdowns for Motion Scale & Dtype
   d.triggerScale.addEventListener("click", (e) => {
     e.stopPropagation();
-    openSimpleDropdown(d.triggerScale, SCALE_OPTIONS, s.scale_factor, (val) => {
+    openSimpleDropdown(d.triggerScale, MOTION_SCALE_OPTIONS, s.scale_factor, (val) => {
       s.scale_factor = val;
       persistState(node);
       renderUI(node);
@@ -613,9 +766,18 @@ function renderUI(node) {
     d.badgeCkpt.textContent = "↓ Download";
   }
 
+  // Mode buttons active states
+  const isTargetFps = (s.mode !== "Multiplier");
+  d.modeBtns.forEach((btn) => {
+    btn.classList.toggle("is-active", (btn.dataset.mode === "Target FPS") === isTargetFps);
+  });
+
+  d.labelPrimary.textContent = isTargetFps ? "Target FPS" : "Multiplier";
+  d.inputPrimaryRate.value = isTargetFps ? (s.target_fps || 60) : (s.multiplier || 2);
+  d.inputSourceFps.value = s.source_fps || 24;
+
   // Stepper inputs
   d.inputClearCache.value = s.clear_cache_after_n_frames;
-  d.inputMultiplier.value = s.multiplier;
   d.inputBatchSize.value = s.batch_size;
 
   // Toggles
@@ -632,9 +794,12 @@ function renderUI(node) {
   d.toggleTorchCompileLabel.textContent = s.torch_compile ? "ON" : "OFF";
 
   // Select labels
-  d.labelScale.textContent = s.scale_factor || "1x";
+  const curScale = s.scale_factor || "1x";
+  const foundScale = MOTION_SCALE_OPTIONS.find((o) => o.value === curScale);
+  d.labelScale.textContent = foundScale ? foundScale.label : curScale;
   d.labelDtype.textContent = s.dtype || "float32";
 
+  updateTimingBadge(node);
   renderCollapse(node);
   node.setDirtyCanvas?.(true, true);
 }
@@ -656,29 +821,17 @@ function renderCollapse(node, stateChanged = false) {
         node._savedExpandedHeight = node.size[1];
       }
       const targetH = COLLAPSED_H;
-      if (typeof node.setSize === "function") {
-        node.setSize([Math.max(node.size?.[0] || DEFAULT_W, MIN_W), targetH]);
-      } else if (node.size) {
-        node.size[1] = targetH;
-      }
+      node.size = [Math.max(node.size?.[0] || DEFAULT_W, MIN_W), targetH];
     } else {
-      const targetH = Math.max(node._savedExpandedHeight || EXPANDED_H, EXPANDED_H);
-      if (typeof node.setSize === "function") {
-        node.setSize([Math.max(node.size?.[0] || DEFAULT_W, MIN_W), targetH]);
-      } else if (node.size) {
-        node.size[1] = targetH;
-      }
+      const targetH = Math.min(800, Math.max(node._savedExpandedHeight || s.node_size?.[1] || EXPANDED_H, EXPANDED_H));
+      node.size = [Math.max(node.size?.[0] || DEFAULT_W, MIN_W), targetH];
     }
   } else {
-    // Non-toggle render (e.g. parameter changed, configure, or initial setup):
-    // Only adjust height if it is below the required minimum
     const minH = isCollapsed ? COLLAPSED_H : EXPANDED_H;
-    if (node.size && node.size[1] < minH) {
-      if (typeof node.setSize === "function") {
-        node.setSize([Math.max(node.size[0] || DEFAULT_W, MIN_W), minH]);
-      } else if (node.size) {
-        node.size[1] = minH;
-      }
+    if (node.size) {
+      if (node.size[0] < MIN_W) node.size[0] = MIN_W;
+      if (node.size[1] < minH) node.size[1] = minH;
+      if (node.size[1] > 800) node.size[1] = minH;
     }
   }
 
@@ -707,7 +860,6 @@ function openCkptDropdown(node) {
   const d = node._dom;
   const s = getState(node);
 
-  // If already open, clicking the trigger/arrow toggles it closed
   if (d.triggerCkpt.classList.contains("is-active")) {
     closeAllDropdowns();
     return;
@@ -796,7 +948,6 @@ function openCkptDropdown(node) {
   _activeDropdownClose = close;
   document.body.appendChild(menu);
 
-  // Use capture phase so LiteGraph/ComfyUI canvas event stopPropagation doesn't block outside clicks!
   window.addEventListener("pointerdown", onOutside, true);
   window.addEventListener("mousedown", onOutside, true);
   window.addEventListener("contextmenu", onOutside, true);
@@ -805,7 +956,6 @@ function openCkptDropdown(node) {
 }
 
 function openSimpleDropdown(triggerEl, options, currentValue, onSelect) {
-  // If already open, clicking the trigger/arrow toggles it closed
   if (triggerEl.classList.contains("is-active")) {
     closeAllDropdowns();
     return;
@@ -820,19 +970,30 @@ function openSimpleDropdown(triggerEl, options, currentValue, onSelect) {
   const rect = triggerEl.getBoundingClientRect();
   menu.style.left = `${rect.left}px`;
   menu.style.top = `${rect.bottom + 4}px`;
-  menu.style.minWidth = `${rect.width}px`;
+  menu.style.minWidth = `${Math.max(rect.width, 220)}px`;
 
   options.forEach((opt) => {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "ds-interp-dropdown-item";
-    const isSel = (opt === currentValue);
+
+    const val = typeof opt === "object" && opt !== null ? opt.value : opt;
+    const label = typeof opt === "object" && opt !== null ? opt.label : opt;
+    const desc = typeof opt === "object" && opt !== null ? opt.desc : "";
+
+    const isSel = val === currentValue;
     if (isSel) item.classList.add("is-selected");
 
-    item.innerHTML = `<span>${opt}</span>${isSel ? ICONS.check : ""}`;
+    item.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:2px; text-align:left; padding:2px 0;">
+        <span style="font-weight:600; font-size:11px;">${label}</span>
+        ${desc ? `<span style="font-size:9.5px; opacity:0.65; font-weight:normal; line-height:1.2;">${desc}</span>` : ""}
+      </div>
+      ${isSel ? ICONS.check : ""}
+    `;
     item.addEventListener("click", (e) => {
       e.stopPropagation();
-      onSelect(opt);
+      onSelect(val);
       close();
     });
 

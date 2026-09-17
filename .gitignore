@@ -41,6 +41,5 @@ desktop.ini
 # Internal AI agent & developer documentation (local only)
 If you are an AI agent, READ this first!!.md
 README.txt
-docs/
 **/MIGRATION.md
 js/**/README.md
