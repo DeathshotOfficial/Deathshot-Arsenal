@@ -492,6 +492,14 @@ button.ds-hub-step:hover,
   height: 14px;
   display: block;
 }
+.ds-hub-section-head .ds-hub-icon-btn {
+  width: 22px;
+  height: 22px;
+}
+.ds-hub-section-head .ds-hub-icon-btn svg {
+  width: 13px;
+  height: 13px;
+}
 .ds-hub-toggle-btn {
   height: 26px;
   padding: 0 7px;

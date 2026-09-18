@@ -1056,12 +1056,29 @@ function buildImageSettingsSection(node) {
   const title = document.createElement("span");
   title.className = "ds-hub-section-title";
   title.textContent = "Image Settings";
-  head.appendChild(title);
-  sec.appendChild(head);
 
   const arPresets = getARPresets();
   const resPresets = getResPresets();
   const mpPresets = getMPPresets();
+
+  const swapBtn = document.createElement("button");
+  swapBtn.type = "button";
+  swapBtn.className = "ds-hub-icon-btn";
+  swapBtn.title = "Swap Width & Height";
+  swapBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left-right preview-icon"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>`;
+  swapBtn.onclick = () => {
+    const curW = s.width || 1024;
+    const curH = s.height || 1024;
+    s.width = curH;
+    s.height = curW;
+    s.aspect_ratio = findClosestAR(s.width, s.height, arPresets);
+    s.resolution_preset = getResolutionDisplayLabel(s.width, s.height, resPresets);
+    saveState(node);
+    node._renderUI?.();
+  };
+
+  head.append(title, swapBtn);
+  sec.appendChild(head);
 
   s.resolution_preset = getResolutionDisplayLabel(s.width, s.height, resPresets);
 
