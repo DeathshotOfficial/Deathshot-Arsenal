@@ -546,6 +546,37 @@ function unwatchAlign(node) {
 }
 
 // ---------------------------------------------------------------------------
+// Theme Inheritance Helper for Detached Overlays
+// ---------------------------------------------------------------------------
+function applyNodeThemeToElement(sourceEl, targetEl) {
+  if (!targetEl) return;
+  if (sourceEl) {
+    try {
+      const parentThemed = sourceEl.closest?.(".ds-hub-container") ||
+                           sourceEl.closest?.("[data-ds-themed='true']") ||
+                           sourceEl.closest?.("[data-ds-ui-shell]") ||
+                           sourceEl;
+      if (parentThemed) {
+        const cs = window.getComputedStyle(parentThemed);
+        const vars = [
+          "--ds-accent", "--ds-accent-2", "--ds-accent-rgb",
+          "--ds-bg", "--ds-panel", "--ds-panel-2", "--ds-panel-3",
+          "--ds-border", "--ds-border-active", "--ds-text", "--ds-text-muted",
+          "--ds-input-bg", "--ds-hover", "--ds-active", "--ds-btn-bg",
+          "--ds-btn-hover", "--ds-ui-border", "--ds-font", "--ds-font-family",
+          "--ds-font-size", "--ds-scrollbar", "--ds-scrollbar-thumb",
+          "--ds-error", "--ds-selection", "--ds-on-accent"
+        ];
+        for (const v of vars) {
+          const val = cs.getPropertyValue(v)?.trim();
+          if (val) targetEl.style.setProperty(v, val);
+        }
+      }
+    } catch (_) {}
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Custom Dropdown Builder
 // ---------------------------------------------------------------------------
 function createCustomDropdown({ value, options, placeholder = "Select...", onSelect, renderItem, isCategorized = false }) {
@@ -588,6 +619,7 @@ function createCustomDropdown({ value, options, placeholder = "Select...", onSel
     btn.classList.add("is-open");
     menu = document.createElement("div");
     menu.className = "ds-hub-dropdown-menu";
+    applyNodeThemeToElement(btn, menu);
 
     const searchInput = document.createElement("input");
     searchInput.className = "ds-hub-dropdown-search";
@@ -691,24 +723,43 @@ function createCustomDropdown({ value, options, placeholder = "Select...", onSel
       else renderFlatOpts(q);
     };
 
-    searchInput.addEventListener("input", () => renderAll(searchInput.value));
     menu.append(searchInput, optList);
     document.body.appendChild(menu);
 
-    const rect = btn.getBoundingClientRect();
-    menu.style.width = `${Math.max(rect.width, 240)}px`;
-    let left = rect.left;
-    let top = rect.bottom + 4;
-    if (top + 320 > window.innerHeight - 10) {
-      top = Math.max(10, rect.top - 320 - 4);
-    }
-    if (left + 240 > window.innerWidth - 10) {
-      left = Math.max(10, window.innerWidth - 250);
-    }
-    menu.style.left = `${Math.round(left)}px`;
-    menu.style.top = `${Math.round(top)}px`;
+    const positionMenu = () => {
+      const rect = btn.getBoundingClientRect();
+      const menuW = Math.max(rect.width, 240);
+      menu.style.width = `${menuW}px`;
+
+      const menuH = menu.offsetHeight || menu.scrollHeight || 160;
+      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - 10);
+      const spaceAbove = Math.max(0, rect.top - 10);
+
+      let top = rect.bottom + 4;
+      if (menuH > spaceBelow && spaceAbove > spaceBelow) {
+        top = Math.max(10, rect.top - menuH - 4);
+        menu.style.maxHeight = `${Math.min(320, spaceAbove)}px`;
+      } else {
+        top = rect.bottom + 4;
+        menu.style.maxHeight = `${Math.min(320, Math.max(120, spaceBelow))}px`;
+      }
+
+      let left = rect.left;
+      if (left + menuW > window.innerWidth - 10) {
+        left = Math.max(10, window.innerWidth - menuW - 10);
+      }
+      menu.style.left = `${Math.round(left)}px`;
+      menu.style.top = `${Math.round(top)}px`;
+    };
 
     renderAll();
+    positionMenu();
+
+    searchInput.addEventListener("input", () => {
+      renderAll(searchInput.value);
+      positionMenu();
+    });
+
     setTimeout(() => searchInput.focus(), 20);
 
     outsideHandler = (ev) => {
@@ -757,15 +808,42 @@ function recalculateFromMP(node, targetMP) {
   recalculateFromAR(node, arObj.w, arObj.h);
 }
 
+function getCivitaiApiKey() {
+  try {
+    const raw = localStorage.getItem("DS_LoRaLoader.settings.v1");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.civitaiApiKey) return parsed.civitaiApiKey;
+    }
+  } catch (_) {}
+  return "";
+}
+
+function getCivitaiSiteMode() {
+  try {
+    const raw = localStorage.getItem("DS_LoRaLoader.settings.v1");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.siteMode) return parsed.siteMode;
+    }
+  } catch (_) {}
+  return "Standard";
+}
+
 // ---------------------------------------------------------------------------
-// CivitAI Trigger Words Modal
+// CivitAI Trigger Words Side Popover Panel
 // ---------------------------------------------------------------------------
-async function openCivitAIModal(node, loraRow) {
-  const overlay = document.createElement("div");
-  overlay.className = "ds-hub-modal-overlay";
+let _activeLoraPopover = null;
+
+async function openCivitAIModal(node, loraRow, anchorEl) {
+  if (_activeLoraPopover) {
+    _activeLoraPopover.remove();
+    _activeLoraPopover = null;
+  }
 
   const modal = document.createElement("div");
   modal.className = "ds-hub-modal";
+  applyNodeThemeToElement(node?._domRoot || anchorEl, modal);
 
   const head = document.createElement("div");
   head.className = "ds-hub-modal-head";
@@ -776,32 +854,99 @@ async function openCivitAIModal(node, loraRow) {
   closeBtn.className = "ds-hub-icon-btn";
   closeBtn.innerHTML = "×";
   closeBtn.style.fontSize = "16px";
-  closeBtn.onclick = () => overlay.remove();
+
+  let outsideHandler = null;
+  const closeModal = () => {
+    if (_activeLoraPopover === modal) {
+      _activeLoraPopover = null;
+    }
+    modal.remove();
+    if (outsideHandler) {
+      document.removeEventListener("pointerdown", outsideHandler, true);
+      outsideHandler = null;
+    }
+    node._renderUI?.();
+  };
+
+  closeBtn.onclick = closeModal;
   head.append(title, closeBtn);
 
   const body = document.createElement("div");
   body.className = "ds-hub-modal-body";
 
+  const statusRow = document.createElement("div");
+  statusRow.className = "ds-hub-modal-status-row";
+
   const status = document.createElement("div");
-  status.style.fontSize = "11px";
-  status.style.color = "var(--ds-text-muted)";
-  status.textContent = "Loading CivitAI metadata & trigger words...";
-  body.appendChild(status);
+  status.className = "ds-hub-modal-status-text";
+  status.textContent = "Checking metadata cache...";
+
+  const retrieveBtn = document.createElement("button");
+  retrieveBtn.type = "button";
+  retrieveBtn.className = "ds-hub-btn-civitai";
+  retrieveBtn.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <span>Retrieve from CivitAI</span>
+  `;
+
+  statusRow.append(status, retrieveBtn);
+  body.appendChild(statusRow);
 
   const tagsContainer = document.createElement("div");
   tagsContainer.className = "ds-hub-chips-wrap";
   tagsContainer.style.marginTop = "8px";
 
   let triggers = Array.from(loraRow.selectedTriggers || []);
+  let availableTags = [];
 
-  const renderTags = (availableTags) => {
+  let initialPositionSet = false;
+
+  const positionSideToNode = (force = false) => {
+    if (initialPositionSet && !force) return;
+
+    const pw = 390;
+    modal.style.width = `${pw}px`;
+
+    const nodeEl = node?._domRoot || (anchorEl?.closest ? anchorEl.closest(".ds-hub-container") : null);
+    const nodeRect = (nodeEl && document.body.contains(nodeEl)) ? nodeEl.getBoundingClientRect() : null;
+    const validAnchor = anchorEl && document.body.contains(anchorEl);
+    const rowRect = validAnchor ? anchorEl.getBoundingClientRect() : nodeRect;
+    const ph = modal.offsetHeight || 280;
+
+    let left = 16;
+    if (nodeRect) {
+      if (nodeRect.right + pw + 16 <= window.innerWidth) {
+        left = nodeRect.right + 12;
+      } else if (nodeRect.left - pw - 16 >= 0) {
+        left = nodeRect.left - pw - 12;
+      } else {
+        left = Math.max(12, window.innerWidth - pw - 12);
+      }
+    } else if (rowRect) {
+      left = rowRect.right + pw + 16 <= window.innerWidth ? rowRect.right + 12 : Math.max(12, rowRect.left - pw - 12);
+    }
+
+    let top = (rowRect && rowRect.top > 0) ? rowRect.top - 8 : 80;
+    if (top + ph > window.innerHeight - 12) {
+      top = Math.max(12, window.innerHeight - ph - 12);
+    }
+    top = Math.max(12, top);
+
+    modal.style.left = `${Math.round(left)}px`;
+    modal.style.top = `${Math.round(top)}px`;
+    initialPositionSet = true;
+  };
+
+  const renderTags = (availableTagsList) => {
+    availableTags = availableTagsList || [];
     tagsContainer.textContent = "";
-    if (!availableTags || !availableTags.length) {
+    if (!availableTags.length) {
       const empty = document.createElement("div");
       empty.style.fontSize = "11px";
       empty.style.color = "var(--ds-text-muted)";
-      empty.textContent = "No trigger words found for this LoRA.";
+      empty.textContent = "No trigger words found in cache. Click 'Retrieve from CivitAI' to fetch them online.";
       tagsContainer.appendChild(empty);
+      if (!initialPositionSet) positionSideToNode();
       return;
     }
 
@@ -819,11 +964,11 @@ async function openCivitAIModal(node, loraRow) {
         }
         loraRow.selectedTriggers = triggers;
         saveState(node);
-        node._renderUI?.();
         renderTags(availableTags);
       };
       tagsContainer.appendChild(chip);
     }
+    if (!initialPositionSet) positionSideToNode();
   };
 
   body.appendChild(tagsContainer);
@@ -839,33 +984,88 @@ async function openCivitAIModal(node, loraRow) {
     loraRow.selectedTriggers = triggers;
     saveState(node);
     node._renderUI?.();
-    overlay.remove();
+    closeModal();
   };
   foot.appendChild(doneBtn);
 
   modal.append(head, body, foot);
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  _activeLoraPopover = modal;
+  positionSideToNode();
 
-  try {
-    const res = await fetch("/ds/lora_metadata", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: loraRow.name, forceOnline: false }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      status.textContent = data.ok ? `Source: ${data.source}` : (data.error || "Offline metadata only");
-      const combined = Array.from(new Set([...(data.trainedWords || []), ...triggers]));
-      renderTags(combined);
-    } else {
-      status.textContent = "Metadata lookup unavailable.";
-      renderTags(triggers);
+  outsideHandler = (ev) => {
+    if (!modal.contains(ev.target) && (!anchorEl || !anchorEl.contains(ev.target))) {
+      closeModal();
     }
-  } catch (err) {
-    status.textContent = "Metadata request failed.";
-    renderTags(triggers);
-  }
+  };
+  setTimeout(() => document.addEventListener("pointerdown", outsideHandler, true), 20);
+
+  const fetchMetadata = async (forceOnline = false) => {
+    if (!loraRow.name) {
+      status.textContent = "Select a LoRA model first.";
+      renderTags([]);
+      return;
+    }
+
+    if (forceOnline) {
+      retrieveBtn.disabled = true;
+      retrieveBtn.innerHTML = `
+        <span style="display:inline-block;animation:ds-hub-spin 1s linear infinite;">⏳</span>
+        <span>Retrieving...</span>
+      `;
+      status.textContent = "Querying CivitAI (computing hash)...";
+    } else {
+      status.textContent = "Checking cache...";
+    }
+
+    try {
+      const res = await fetch("/ds/lora_metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: loraRow.name,
+          forceOnline,
+          apiKey: getCivitaiApiKey(),
+          allowNsfw: true,
+          siteMode: getCivitaiSiteMode(),
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok) {
+          status.textContent = `Source: ${data.source || (forceOnline ? "civitai" : "cache")}`;
+          const words = data.trainedWords || [];
+          const combined = Array.from(new Set([...words, ...triggers]));
+          renderTags(combined);
+          if (forceOnline && !words.length) {
+            status.textContent = "Model found on CivitAI, but no trigger words are registered.";
+          }
+        } else {
+          status.textContent = data.error || (forceOnline ? "CivitAI lookup returned no metadata." : "No cache found. Click 'Retrieve from CivitAI' to fetch.");
+          renderTags(triggers);
+        }
+      } else {
+        status.textContent = forceOnline ? "CivitAI lookup request failed." : "Cache unavailable.";
+        renderTags(triggers);
+      }
+    } catch (err) {
+      status.textContent = `Request failed: ${err?.message || err}`;
+      renderTags(triggers);
+    } finally {
+      if (forceOnline) {
+        retrieveBtn.disabled = false;
+        retrieveBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Retrieve from CivitAI</span>
+        `;
+      }
+      positionSideToNode();
+    }
+  };
+
+  retrieveBtn.onclick = () => fetchMetadata(true);
+  fetchMetadata(false);
 }
 
 // ---------------------------------------------------------------------------
@@ -1336,7 +1536,10 @@ function buildLoRASection(node) {
     infoBtn.className = "ds-hub-icon-btn";
     infoBtn.textContent = "i";
     infoBtn.title = "View CivitAI Trigger Words & Metadata";
-    infoBtn.onclick = () => openCivitAIModal(node, row);
+    infoBtn.onclick = (e) => {
+      e.stopPropagation();
+      openCivitAIModal(node, row, infoBtn);
+    };
 
     const toggleBtn = document.createElement("button");
     toggleBtn.type = "button";
@@ -1502,6 +1705,7 @@ function openGearPopover(node, anchorEl) {
 
   const popover = document.createElement("div");
   popover.className = "ds-hub-gear-popover";
+  applyNodeThemeToElement(node?._domRoot || anchorEl, popover);
 
   const head = document.createElement("div");
   head.className = "ds-hub-gear-head";
@@ -1510,9 +1714,21 @@ function openGearPopover(node, anchorEl) {
   closeBtn.type = "button";
   closeBtn.className = "ds-hub-icon-btn";
   closeBtn.innerHTML = "×";
-  closeBtn.onclick = () => {
+  let outsideHandler = null;
+  const closePopover = () => {
+    if (_activeGearPopover === popover) {
+      _activeGearPopover = null;
+    }
     popover.remove();
-    _activeGearPopover = null;
+    if (outsideHandler) {
+      document.removeEventListener("pointerdown", outsideHandler, true);
+      outsideHandler = null;
+    }
+  };
+
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    closePopover();
   };
   head.appendChild(closeBtn);
 
@@ -1936,26 +2152,46 @@ function openGearPopover(node, anchorEl) {
   const pw = 360;
   popover.style.width = `${pw}px`;
   const ph = popover.offsetHeight || 420;
-  if (anchorEl && typeof anchorEl.getBoundingClientRect === "function") {
-    const rect = anchorEl.getBoundingClientRect();
-    let left = rect.right + 10;
-    if (left + pw > window.innerWidth - 10) left = Math.max(10, rect.left - pw - 10);
-    let top = Math.max(10, Math.min(rect.top, window.innerHeight - ph - 10));
-    popover.style.left = `${Math.round(left)}px`;
-    popover.style.top = `${Math.round(top)}px`;
+
+  const nodeEl = node?._domRoot || (anchorEl?.closest ? anchorEl.closest(".ds-hub-container") : null);
+  const nodeRect = (nodeEl && document.body.contains(nodeEl)) ? nodeEl.getBoundingClientRect() : null;
+  const validAnchor = anchorEl && document.body.contains(anchorEl);
+  const anchorRect = validAnchor ? anchorEl.getBoundingClientRect() : nodeRect;
+
+  let left = 16;
+  if (nodeRect) {
+    if (nodeRect.right + pw + 16 <= window.innerWidth) {
+      left = nodeRect.right + 12;
+    } else if (nodeRect.left - pw - 16 >= 0) {
+      left = nodeRect.left - pw - 12;
+    } else {
+      left = Math.max(12, window.innerWidth - pw - 12);
+    }
+  } else if (anchorRect) {
+    if (anchorRect.right + pw + 16 <= window.innerWidth) {
+      left = anchorRect.right + 12;
+    } else {
+      left = Math.max(12, anchorRect.left - pw - 12);
+    }
   } else {
-    popover.style.left = `${Math.max(10, window.innerWidth - pw - 20)}px`;
-    popover.style.top = "60px";
+    left = Math.max(12, window.innerWidth - pw - 20);
   }
 
-  const outsideHandler = (e) => {
+  let top = nodeRect ? nodeRect.top : (anchorRect ? anchorRect.top : 60);
+  if (top + ph > window.innerHeight - 12) {
+    top = Math.max(12, window.innerHeight - ph - 12);
+  }
+  top = Math.max(12, top);
+
+  popover.style.left = `${Math.round(left)}px`;
+  popover.style.top = `${Math.round(top)}px`;
+
+  outsideHandler = (e) => {
     if (!popover.contains(e.target) && (!anchorEl || !anchorEl.contains(e.target))) {
-      popover.remove();
-      _activeGearPopover = null;
-      document.removeEventListener("pointerdown", outsideHandler);
+      closePopover();
     }
   };
-  setTimeout(() => document.addEventListener("pointerdown", outsideHandler), 10);
+  setTimeout(() => document.addEventListener("pointerdown", outsideHandler, true), 20);
 }
 
 // ---------------------------------------------------------------------------
