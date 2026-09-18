@@ -36,6 +36,9 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 ### 🛡️ Smart Moderation & Safety
 - **NSFW Detection & Blur**: Integrated Vision Transformer (ViT INT4) and NudeNet detectors with automatic disk caching and smart blur filters.
 
+### ⚡ Generation & Workflow Hubs
+- **DS Generation Hub**: All-in-one generation cockpit combining checkpoint and diffusion model loading, standalone CLIP/VAE routing, dynamic multi-LoRA stacking with CivitAI triggers, aspect ratio/resolution management, and prompt engineering.
+
 ### 📝 Prompt Engineering & Utilities
 - **DS AI Prompt Sensei**: Next-generation AI prompt generator and scene director powered by local LLMs. Features multi-modal image-to-prompt vision analysis, dynamic LoRA stacking with per-model/clip strengths, automated aspect ratio detection, customizable video dimensions/durations, and interactive prompt editing. **Note:** [LM Studio](https://lmstudio.ai/) is required for this node to run local LLMs.
 - **DS Prompt & Prompt Cards**: Modular prompt editor with category cards, trigger injection, and effective prompt previews.

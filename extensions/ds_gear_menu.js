@@ -87,6 +87,12 @@ class DSGearRegistry {
         onClick: (n, canvas, ev) => (n._toggleResolutionGearPopover || n._openResolutionGearPopover).call(n, ev?.currentTarget || ev?.target),
       };
     }
+    if (typeof node._toggleGenerationHubGearPopover === "function" || typeof node._openGenerationHubGearPopover === "function") {
+      return {
+        tooltip: "DS Generation Hub Settings",
+        onClick: (n, canvas, ev) => (n._toggleGenerationHubGearPopover || n._openGenerationHubGearPopover).call(n, ev?.currentTarget || ev?.target),
+      };
+    }
     return null;
   }
 

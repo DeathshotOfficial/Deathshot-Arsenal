@@ -763,13 +763,13 @@ ${decl}
     [data-ds-themed="true"] select:focus {
       border-color: var(--ds-accent) !important;
     }
-    [data-ds-themed="true"] button {
+    [data-ds-themed="true"] button:not(.ds-hub-step):not([class*="-step"]) {
       background: var(--ds-btn-bg) !important;
       color: var(--ds-text) !important;
       border-color: var(--ds-border) !important;
       font-family: inherit !important;
     }
-    [data-ds-themed="true"] button:hover {
+    [data-ds-themed="true"] button:not(.ds-hub-step):not([class*="-step"]):hover {
       background: var(--ds-btn-hover) !important;
       border-color: var(--ds-accent) !important;
       color: var(--ds-accent) !important;

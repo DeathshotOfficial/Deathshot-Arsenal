@@ -1378,13 +1378,13 @@ class DSThemeManagerDashboard {
       if (isDSNode(node)) {
         node.properties = node.properties || {};
         node.properties.ds_cp_accent = this.dsTokens.accent;
-        node.properties.ds_bg_color = this.dsTokens.surface;
-        node.properties.ds_title_color = this.dsTokens.headerBg;
+        node.properties.ds_bg_color = this.dsTokens.headerBg;
+        node.properties.ds_title_color = this.dsTokens.surface || this.dsTokens.headerBg;
         delete node.properties.node_color;
 
         // Apply LiteGraph canvas base colors
-        node.color = this.dsTokens.headerBg || this.dsTokens.surface;
-        node.bgcolor = this.dsTokens.surface;
+        node.color = this.dsTokens.surface || this.dsTokens.headerBg;
+        node.bgcolor = this.dsTokens.headerBg;
         node.boxcolor = this.dsTokens.border;
         delete node.title_color;
         if (node.constructor) {

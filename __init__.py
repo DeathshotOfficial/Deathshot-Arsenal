@@ -410,6 +410,16 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_AIPromptSensei: {e}", flush=True)
     DS_AIPromptSensei = None
 
+# DS Generation Hub
+try:
+    _mod = _load_node_pkg("generation_hub", "Generation Hub")
+    DS_GenerationHub = _mod.DS_GenerationHub
+    if hasattr(_mod, "register_generation_hub_routes"):
+        _mod.register_generation_hub_routes()
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_GenerationHub: {e}", flush=True)
+    DS_GenerationHub = None
+
 
 
 # --- HELPERS ---
@@ -950,6 +960,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_Interpolation": DS_Interpolation} if DS_Interpolation is not None else {}),
     **({"DS_Reroute": DS_Reroute} if DS_Reroute is not None else {}),
     **({"DS_AIPromptSensei": DS_AIPromptSensei} if DS_AIPromptSensei is not None else {}),
+    **({"DS_GenerationHub": DS_GenerationHub} if DS_GenerationHub is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -991,6 +1002,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_Interpolation": "DS Interpolation"} if DS_Interpolation is not None else {}),
     **({"DS_Reroute": "DS Reroute"} if DS_Reroute is not None else {}),
     **({"DS_AIPromptSensei": "DS AI Prompt Sensei"} if DS_AIPromptSensei is not None else {}),
+    **({"DS_GenerationHub": "DS Generation Hub"} if DS_GenerationHub is not None else {}),
 }
 
 WEB_DIRECTORY = "js"
