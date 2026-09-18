@@ -978,9 +978,7 @@ function buildModelsSection(node) {
       node._renderUI?.();
     },
     renderItem: (opt, optEl) => {
-      const isSuggested = filterSuggestedClips([opt], family).length > 0;
       optEl.textContent = opt;
-      if (isSuggested && opt !== "Auto") optEl.classList.add("is-suggested");
       if (opt === s.clip) optEl.classList.add("is-selected");
     },
   });
@@ -1006,9 +1004,7 @@ function buildModelsSection(node) {
       saveState(node);
     },
     renderItem: (opt, optEl) => {
-      const isSuggested = filterSuggestedVaes([opt], family).length > 0;
       optEl.textContent = opt;
-      if (isSuggested && opt !== "Auto") optEl.classList.add("is-suggested");
       if (opt === s.vae) optEl.classList.add("is-selected");
     },
   });

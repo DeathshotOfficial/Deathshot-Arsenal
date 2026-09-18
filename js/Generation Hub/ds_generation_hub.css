@@ -669,9 +669,6 @@ button.ds-hub-step:hover,
   font-weight: 700;
   background: color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent);
 }
-.ds-hub-dropdown-opt.is-suggested {
-  border-left: 2px solid var(--ds-accent, #67e8f9);
-}
 
 /* CivitAI Info & Trigger Modal */
 .ds-hub-modal-overlay {
