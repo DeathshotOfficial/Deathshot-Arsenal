@@ -19,6 +19,11 @@ class AnyType(str):
     def __eq__(self, __value: object) -> bool:
         return True
 
+    def __hash__(self):
+        # Must define __hash__ alongside __eq__ so dict/set lookups
+        # (e.g. in ComfyUI's type-validation registry) still work correctly.
+        return hash(str(self))
+
 
 ANY = AnyType("*")
 
@@ -33,7 +38,11 @@ class DS_ThePurger:
                 "mode": (["All", "VRAM", "RAM", "Models", "Cache"], {"default": "All"}),
             },
             "optional": {
-                "source": (ANY,),
+                # forceInput ensures ComfyUI always renders this as a connection
+                # slot (never as a convertible text widget). Without it, the
+                # connection is sometimes not serialized into the prompt, causing
+                # the downstream node to receive None instead of the tensor.
+                "source": (ANY, {"forceInput": True}),
             },
         }
 

@@ -371,13 +371,20 @@ function setupNode(node) {
   };
 
   // 5. Ports: horizontally aligned with node edges, no labels
+  // Set color_off/color_on to transparent so the native LiteGraph slot dot
+  // is invisible — our custom onDrawForeground dot handles the visual.
+  // The slot geometry and connection logic remain fully functional.
   if (node.inputs?.[0]) {
     node.inputs[0].label = " ";
     node.inputs[0].pos = [0, BASE_H / 2];
+    node.inputs[0].color_off = "rgba(0,0,0,0)";
+    node.inputs[0].color_on  = "rgba(0,0,0,0)";
   }
   if (node.outputs?.[0]) {
     node.outputs[0].label = " ";
     node.outputs[0].pos = [w, BASE_H / 2];
+    node.outputs[0].color_off = "rgba(0,0,0,0)";
+    node.outputs[0].color_on  = "rgba(0,0,0,0)";
   }
 
   node.getConnectionPos = function (is_input, slot_number, out) {

@@ -106,6 +106,10 @@ function renderButtons(node) {
 function setPreview(node, width, height) {
   const s = stateOf(node); s.width = Number(width) || 0; s.height = Number(height) || 0;
   s.previewUrl = apiUrl(`/ds/image_checkpoint/preview?node=${encodeURIComponent(node.id)}&t=${Date.now()}`);
+  // Persist dimensions so the preview can be restored after workflow switch
+  node.properties ??= {};
+  node.properties.ds_ic_last_width = s.width;
+  node.properties.ds_ic_last_height = s.height;
   const root = rootOf(node); if (!root) return;
   const img = root.querySelector(".ds-ic-image"), ph = root.querySelector(".ds-ic-placeholder"), dims = root.querySelector(".ds-ic-dims");
   if (dims) dims.textContent = s.width && s.height ? `${s.width} × ${s.height}` : "";
@@ -436,7 +440,12 @@ app.registerExtension({
     // IMPORTANT: this node intentionally keeps the native ComfyUI title/base.
     // It has IMAGE input/output, so it is not a baseless display node.
     const oldCreated=nodeType.prototype.onNodeCreated; nodeType.prototype.onNodeCreated=function(){const r=oldCreated?.apply(this,arguments);installNode(this);return r;};
-    const oldConfigure=nodeType.prototype.onConfigure; nodeType.prototype.onConfigure=function(){const r=oldConfigure?.apply(this,arguments); if(!this.properties)this.properties={}; const s=stateOf(this); s.mode=this.properties[STATE_PROP]==="pass"?"pass":"pause"; setModeUI(this,s.mode,false); setStatus(this,"ready","READY"); return r;};
+    const oldConfigure=nodeType.prototype.onConfigure; nodeType.prototype.onConfigure=function(){const r=oldConfigure?.apply(this,arguments); if(!this.properties)this.properties={}; const s=stateOf(this); s.mode=this.properties[STATE_PROP]==="pass"?"pass":"pause"; setModeUI(this,s.mode,false); setStatus(this,"ready","READY");
+      // Restore preview image if we have saved dimensions from before the workflow switch
+      const lw = this.properties.ds_ic_last_width;
+      const lh = this.properties.ds_ic_last_height;
+      if (lw && lh) { setTimeout(() => setPreview(this, lw, lh), 80); }
+      return r;};
     const oldResize=nodeType.prototype.onResize; nodeType.prototype.onResize=function(size){if(size[0]<MIN_SIZE[0])size[0]=MIN_SIZE[0];if(size[1]<MIN_SIZE[1])size[1]=MIN_SIZE[1];return oldResize?.apply(this,arguments);};
     const oldRemoved=nodeType.prototype.onRemoved; nodeType.prototype.onRemoved=function(){clearTimeout(this._dsICState?.flashTimer);clearTimeout(this._dsICState?.saveConfirmTimer);return oldRemoved?.apply(this,arguments);};
   }

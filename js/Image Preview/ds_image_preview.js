@@ -102,6 +102,11 @@ function setImage(node, info) {
   s.width = Number(info.width) || 0;
   s.height = Number(info.height) || 0;
   s.count = Number(info.count) || 1;
+  // Persist so the image can be restored after switching workflows
+  node.properties ??= {};
+  node.properties.ds_ip_last_file = s.file;
+  node.properties.ds_ip_last_width = s.width;
+  node.properties.ds_ip_last_height = s.height;
   const img = root.querySelector(".ds-ip-image");
   const ph = root.querySelector(".ds-ip-placeholder");
   const dims = root.querySelector(".ds-ip-dims");
@@ -325,6 +330,16 @@ app.registerExtension({
       hideModeWidget(this);
       syncModeWidget(this);
       renderMode(this);
+      // Restore last-shown image if we have a saved file reference from before workflow switch
+      const lastFile = this.properties.ds_ip_last_file;
+      if (lastFile) {
+        setTimeout(() => setImage(this, {
+          file: lastFile,
+          width: this.properties.ds_ip_last_width || 0,
+          height: this.properties.ds_ip_last_height || 0,
+          count: 1,
+        }), 80);
+      }
       return result;
     };
     const oldResize = nodeType.prototype.onResize;
