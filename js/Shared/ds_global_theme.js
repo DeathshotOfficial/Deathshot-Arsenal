@@ -598,6 +598,28 @@ function scheduleNodeBaseApply(node) {
   setTimeout(run, 120);
 }
 
+/**
+ * Strip theme-managed canvas color props from a node so ComfyUI never
+ * serializes them into the workflow JSON. Called once per DS node.
+ */
+function patchNodeSerialize(node) {
+  if (node._dsSerializePatched) return;
+  node._dsSerializePatched = true;
+  const origSerialize = node.serialize?.bind(node);
+  if (typeof origSerialize !== "function") return;
+  node.serialize = function (...args) {
+    const data = origSerialize(...args);
+    // Remove theme-managed color props — they are always applied at
+    // runtime from the active theme and must never be baked into JSON.
+    if (data && !hasCustomNodeColors(this)) {
+      delete data.color;
+      delete data.bgcolor;
+      delete data.boxcolor;
+    }
+    return data;
+  };
+}
+
 function wrapDSNodeCreated(nodeType, nodeData) {
   if (!nodeData.name?.startsWith(DS_NODE_PREFIX)) return;
 
@@ -612,6 +634,7 @@ function wrapDSNodeCreated(nodeType, nodeData) {
   nodeType.prototype.onNodeCreated = function (...args) {
     const result = origCreated ? origCreated.apply(this, args) : undefined;
     scheduleNodeBaseApply(this);
+    patchNodeSerialize(this);
     return result;
   };
 
@@ -1160,11 +1183,25 @@ app.registerExtension({
   nodeCreated(node) {
     if (isDSNode(node)) {
       scheduleNodeBaseApply(node);
+      patchNodeSerialize(node);
     }
   },
 
   async afterConfigureGraph() {
     if (!ready) return;
+    // Clear any stale baked-in theme colors from the loaded JSON before
+    // applying the active theme. This fixes the "half-themed" appearance
+    // that occurred when a workflow was saved with mixed theme colors.
+    if (app.graph?._nodes) {
+      for (const node of app.graph._nodes) {
+        if (isDSNode(node) && !hasCustomNodeColors(node)) {
+          delete node.color;
+          delete node.bgcolor;
+          delete node.boxcolor;
+          patchNodeSerialize(node);
+        }
+      }
+    }
     applyNodeBaseToAll(getTheme(config.theme));
   },
 
