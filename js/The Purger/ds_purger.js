@@ -633,13 +633,15 @@ app.registerExtension({
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
-      // ── ERASE any native LiteGraph slot dots ──────────────────────────────
-      // onDrawForeground runs AFTER LiteGraph's slot-dot rendering pass, so
-      // we can overdraw the native dots with the background color before
-      // painting our own styled dots. This works in all LiteGraph versions.
+      // ── ERASE native slot rendering (dot + label text) ────────────────────
+      // LiteGraph draws slot dots AND their text labels ("source", "output_0")
+      // between onDrawBackground and onDrawForeground. The labels sit in the
+      // left/right margin strips (between the capsule edge and the first/last
+      // button). We paint over the FULL margin width with bgSurface to erase
+      // both the dots and the label text before drawing our custom content.
       ctx.fillStyle = colors.bgSurface;
-      ctx.beginPath(); ctx.arc(0,        layout.h / 2, 7, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(layout.w, layout.h / 2, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-8,                  0, MARGIN_LR + 14,     layout.h); // left margin + dot
+      ctx.fillRect(layout.w - MARGIN_LR - 6, 0, MARGIN_LR + 14, layout.h); // right margin + dot
       // ─────────────────────────────────────────────────────────────────────
 
       // Draw visible segmented buttons matching .ds-ui-button / .ds-il-chip
