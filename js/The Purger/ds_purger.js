@@ -372,44 +372,24 @@ function setupNode(node) {
 
   // 5. Ports: horizontally aligned with node edges — fully custom visual.
   //
-  // Strategy: move native slot.pos far off-screen so the native LiteGraph dot
-  // and hover highlight render outside the viewport. Clear slot.name so the
-  // hover tooltip text ("source") never appears. Override getSlotInPosition so
-  // LiteGraph still finds the slot at our custom positions for connection, and
-  // getConnectionPos so cables attach at the right edge points.
-  // onDrawForeground erases & redraws the dots purely in canvas space.
-  const OFF = -99999;
+  // slot.pos stays at the correct edge positions so cables draw correctly.
+  // slot.name is cleared so the hover tooltip text ("source") never appears.
+  // color_off/on are transparent to suppress native dot color.
+  // onDrawForeground handles all custom dot rendering by overpainting.
   if (node.inputs?.[0]) {
     node.inputs[0].name   = "";
     node.inputs[0].label  = "";
-    node.inputs[0].pos    = [OFF, OFF]; // native dot off-screen
+    node.inputs[0].pos    = [0, BASE_H / 2];
     node.inputs[0].color_off = "rgba(0,0,0,0)";
     node.inputs[0].color_on  = "rgba(0,0,0,0)";
   }
   if (node.outputs?.[0]) {
     node.outputs[0].name  = "";
     node.outputs[0].label = "";
-    node.outputs[0].pos   = [OFF, OFF]; // native dot off-screen
+    node.outputs[0].pos   = [w, BASE_H / 2];
     node.outputs[0].color_off = "rgba(0,0,0,0)";
     node.outputs[0].color_on  = "rgba(0,0,0,0)";
   }
-
-  // Override hit detection so connections still work via our visible dot
-  // positions, even though native slot.pos is off-screen.
-  node.getSlotInPosition = function (x, y) {
-    const sw  = this.size?.[0] ?? w;
-    const sh  = this.size?.[1] ?? BASE_H;
-    const cy  = sh / 2;
-    const HIT = 14; // hit-test radius in local node px
-    if (this.inputs?.[0] && Math.abs(y - cy) < HIT && x < HIT) {
-      // Return input slot; use link_pos that canvas uses for hover highlight.
-      return { input: this.inputs[0], slot: 0, link_pos: [0, cy], isInput: true };
-    }
-    if (this.outputs?.[0] && Math.abs(y - cy) < HIT && x > sw - HIT) {
-      return { output: this.outputs[0], slot: 0, link_pos: [sw, cy], isInput: false };
-    }
-    return null;
-  };
 
   node.getConnectionPos = function (is_input, slot_number, out) {
     out = out || new Float32Array(2);
