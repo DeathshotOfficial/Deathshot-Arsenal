@@ -19,7 +19,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Control Panel**: Centralized management interface for Deathshot workflow components.
 - **DS Hardware Monitor**: Real-time tracking of GPU / VRAM usage, CPU, RAM, and temperature via NVML and system sensors.
 - **DS System Monitor**: Compact status bar for live generation stats and hardware metrics.
-- **DS Run Timer**: Accurate execution benchmarking for nodes and workflow stages.
+- **DS Run Timer**: Accurate execution benchmarking and completion audio alerts with multi-stage checkpoint pause/resume coordination. See [DS Run Timer Documentation](docs/DS%20Run%20Timer.md).
 
 ### 🖼️ Image & Media Tools
 - **DS Image Save Advance**: Powerful image export with dynamic filename templating (`{model}`, `{seed}`, `{date}`, `{width}x{height}`), format conversion, and metadata embedding.

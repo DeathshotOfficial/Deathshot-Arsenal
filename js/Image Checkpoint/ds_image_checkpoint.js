@@ -275,11 +275,13 @@ async function abortExecution(node, actionName) {
 async function continueExecution(node) {
   const s = stateOf(node);
   if (s.mode !== "pause" || !s.hasSnapshot || s.busy) return;
+  window._dsCheckpointContinuing = true;
   await queueWithMode(node, "continue");
 }
 async function regenerate(node) {
   const s = stateOf(node);
   if (s.mode !== "pause" || s.busy) return;
+  window._dsCheckpointContinuing = false;
   await queueWithMode(node, "pause");
 }
 async function copyPreview(node) {
@@ -397,12 +399,24 @@ app.registerExtension({
   name: EXT,
   async setup(){
     await loadCss();
+    api.addEventListener("execution_start", () => {
+      const all = app.graph?._nodes || app.graph?.nodes || [];
+      for (const n of all) {
+        if (n && (n.type === TYPE || n.comfyClass === TYPE)) {
+          n._dsICExecutedInRun = false;
+        }
+      }
+    });
     api.addEventListener("executed", e=>{
       const d=e.detail, frames=d?.output?.ds_image_checkpoint; if(!frames?.length) return;
       let node=app.graph?.getNodeById?.(d.node); if(!node) node=(app.graph?._nodes||[]).find(n=>String(n.id)===String(d.node)); if(!node||(node.type!==TYPE && node.comfyClass!==TYPE)) return;
+      node._dsICExecutedInRun = true;
       const f=frames[0]; if(f.width && f.height) setPreview(node,f.width,f.height);
       const s=stateOf(node);
-      if(s.mode==="pause") setStatus(node,"paused","PAUSED · READY");
+      if(s.mode==="pause") {
+        setStatus(node,"paused","PAUSED · READY");
+        window._dsCheckpointActivePause = true;
+      }
       else setStatus(node,"ready",f.mode==="pass"?"PASSED":"READY");
       log("executed",{node:d.node,mode:f.mode,width:f.width,height:f.height});
     });

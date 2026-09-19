@@ -20,7 +20,15 @@
 }
 .ds-run-timer-root[data-state="running"]{border-color:var(--rt-accent);}
 .ds-run-timer-root[data-state="running"] .ds-rt-time{
-  color:var(--rt-accent);text-shadow:0 0 12px color-mix(in srgb,var(--rt-accent) 40%,transparent);
+  color:var(--rt-accent);
+}
+.ds-run-timer-root[data-state="paused"]{border-color:color-mix(in srgb,var(--rt-accent) 45%,var(--rt-border));}
+.ds-run-timer-root[data-state="paused"] .ds-rt-time{
+  color:color-mix(in srgb,var(--rt-accent) 70%,var(--rt-muted));
+}
+.ds-run-timer-root[data-state="finished"]{border-color:var(--rt-border);}
+.ds-run-timer-root[data-state="finished"] .ds-rt-time{
+  color:var(--rt-text);
 }
 
 

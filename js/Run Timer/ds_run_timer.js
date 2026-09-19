@@ -480,7 +480,22 @@ function allTimers() {
 }
 
 function startAll() { allTimers().forEach(n => n.startRun?.()); }
+function resumeAll() { allTimers().forEach(n => n.resumeRun?.()); }
+function pauseAll() { allTimers().forEach(n => n.pauseRun?.()); }
 function stopAll(reason) { allTimers().forEach(n => n.stopRun?.(reason)); }
+
+function checkAnyCheckpointPaused() {
+  const all = app.graph?._nodes || app.graph?.nodes || [];
+  for (const n of all) {
+    if (n && (n.type === "DS_ImageCheckpoint" || n.comfyClass === "DS_ImageCheckpoint")) {
+      const s = n._dsICState;
+      if (s && s.mode === "pause" && s.hasSnapshot && n._dsICExecutedInRun) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 function popupTheme(popup) {
   popup.dataset.dsThemed = "true";
@@ -824,31 +839,18 @@ function paint(node, ctx) {
   const c = palette();
   const st = node._dsTimer || { status: "READY", elapsed: 0, running: false };
   const isRunning = st.status === "RUNNING" || !!st.running;
+  const isPaused = st.status === "PAUSED";
 
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, w, h);
   ctx.clip();
 
-  // Background pill / box
+  // Background pill / box - crisp 1px border, solid dark background, no halo or glow
   const radius = Math.min(8, Math.round(h * 0.22));
-  const borderColor = isRunning ? c.accent : c.border;
+  const borderColor = isRunning ? c.accent : (isPaused ? c.muted : c.border);
   const borderWidth = isRunning ? 1.5 : 1;
   rr(ctx, 0, 0, w, h, radius, c.bg, borderColor, borderWidth);
-
-  // Subtle accent tint if running
-  if (isRunning) {
-    ctx.save();
-    rr(ctx, 0, 0, w, h, radius);
-    ctx.clip();
-    const grad = ctx.createLinearGradient(0, 0, w, 0);
-    grad.addColorStop(0, "transparent");
-    grad.addColorStop(0.5, c.accent + "18");
-    grad.addColorStop(1, "transparent");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-    ctx.restore();
-  }
 
   node._dsTimerHit = null;
 
@@ -860,7 +862,7 @@ function paint(node, ctx) {
 
   ctx.textAlign = "center";
   ctx.font = `800 ${fontSize}px "Fira Code", Consolas, monospace`;
-  ctx.fillStyle = isRunning ? c.accent : c.text;
+  ctx.fillStyle = isRunning ? c.accent : (isPaused ? c.muted : c.text);
 
   // Optical vertical centering: digits (0-9) sit on the baseline with 0 descent,
   // so textBaseline="middle" (which centers the full font ascent+descent em box)
@@ -922,10 +924,43 @@ app.registerExtension({
   setup() {
     log("Extension setup");
     registerTimerGearMenu();
-    api.addEventListener("execution_start", () => { log("execution_start"); startAll(); });
-    api.addEventListener("executing", ({ detail }) => { if (detail === null) { log("executing=null → workflow finished/stopped"); stopAll("finished"); } });
-    api.addEventListener("execution_error", ({ detail }) => { log("execution_error"); stopAll("error"); });
-    api.addEventListener("execution_interrupted", () => { log("execution_interrupted"); stopAll("interrupted"); });
+    api.addEventListener("execution_start", () => {
+      log("execution_start");
+      const isContinuing = !!window._dsCheckpointContinuing;
+      window._dsCheckpointContinuing = false;
+      if (isContinuing) {
+        resumeAll();
+      } else {
+        startAll();
+      }
+    });
+    api.addEventListener("executing", ({ detail }) => {
+      if (detail === null) {
+        log("executing=null → check if workflow paused at checkpoint or finished");
+        const isPausedAtCheckpoint = !!window._dsCheckpointActivePause || checkAnyCheckpointPaused();
+        window._dsCheckpointActivePause = false;
+
+        if (isPausedAtCheckpoint) {
+          log("Workflow paused at checkpoint → pausing timer");
+          pauseAll();
+        } else {
+          log("Workflow finished completely → stopping timer");
+          stopAll("finished");
+        }
+      }
+    });
+    api.addEventListener("execution_error", ({ detail }) => {
+      log("execution_error");
+      window._dsCheckpointActivePause = false;
+      window._dsCheckpointContinuing = false;
+      stopAll("error");
+    });
+    api.addEventListener("execution_interrupted", () => {
+      log("execution_interrupted");
+      window._dsCheckpointActivePause = false;
+      window._dsCheckpointContinuing = false;
+      stopAll("interrupted");
+    });
   },
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData.name !== TYPE) return;
@@ -997,21 +1032,77 @@ app.registerExtension({
     nodeType.prototype.startRun = function() {
       if (this._dsTimer?.running) return;
       this._dsTimer = this._dsTimer || {};
-      this._dsTimer.running = true; this._dsTimer.status = "RUNNING"; this._dsTimer.startTime = performance.now(); this._dsTimer.elapsed = 0;
-      refreshSettingsUI(this); syncTimerDisplay(this); this.setDirtyCanvas?.(true,true);
-      if (!this._dsTimerLoop) this._dsTimerLoop = () => { if (!this._dsTimer?.running) return; this._dsTimer.elapsed = performance.now() - this._dsTimer.startTime; syncTimerDisplay(this); this.setDirtyCanvas?.(true,false); requestAnimationFrame(this._dsTimerLoop); };
+      this._dsTimer.running = true;
+      this._dsTimer.status = "RUNNING";
+      this._dsTimer.startTime = performance.now();
+      this._dsTimer.elapsed = 0;
+      this._dsTimer.accumulatedTime = 0;
+      refreshSettingsUI(this);
+      syncTimerDisplay(this);
+      this.setDirtyCanvas?.(true, true);
+      if (!this._dsTimerLoop) {
+        this._dsTimerLoop = () => {
+          if (!this._dsTimer?.running) return;
+          this._dsTimer.elapsed = performance.now() - this._dsTimer.startTime;
+          syncTimerDisplay(this);
+          this.setDirtyCanvas?.(true, false);
+          requestAnimationFrame(this._dsTimerLoop);
+        };
+      }
       requestAnimationFrame(this._dsTimerLoop);
       log("Timer started", this.id);
     };
 
-    nodeType.prototype.stopRun = function(reason="finished") {
+    nodeType.prototype.resumeRun = function() {
+      if (this._dsTimer?.running) return;
+      this._dsTimer = this._dsTimer || {};
+      const base = this._dsTimer.accumulatedTime || this._dsTimer.elapsed || 0;
+      this._dsTimer.running = true;
+      this._dsTimer.status = "RUNNING";
+      this._dsTimer.accumulatedTime = base;
+      this._dsTimer.startTime = performance.now() - base;
+      refreshSettingsUI(this);
+      syncTimerDisplay(this);
+      this.setDirtyCanvas?.(true, true);
+      if (!this._dsTimerLoop) {
+        this._dsTimerLoop = () => {
+          if (!this._dsTimer?.running) return;
+          this._dsTimer.elapsed = performance.now() - this._dsTimer.startTime;
+          syncTimerDisplay(this);
+          this.setDirtyCanvas?.(true, false);
+          requestAnimationFrame(this._dsTimerLoop);
+        };
+      }
+      requestAnimationFrame(this._dsTimerLoop);
+      log("Timer resumed", this.id, "from", fmtTime(base));
+    };
+
+    nodeType.prototype.pauseRun = function() {
       if (!this._dsTimer?.running) return;
       this._dsTimer.running = false;
       this._dsTimer.elapsed = performance.now() - this._dsTimer.startTime;
+      this._dsTimer.accumulatedTime = this._dsTimer.elapsed;
+      this._dsTimer.status = "PAUSED";
+      syncTimerDisplay(this);
+      this.setDirtyCanvas?.(true, true);
+      log("Timer paused", this.id, fmtTime(this._dsTimer.elapsed));
+    };
+
+    nodeType.prototype.stopRun = function(reason = "finished") {
+      const wasRunning = !!this._dsTimer?.running;
+      const wasPaused = this._dsTimer?.status === "PAUSED";
+      if (!wasRunning && !wasPaused) return;
+
+      if (wasRunning) {
+        this._dsTimer.elapsed = performance.now() - this._dsTimer.startTime;
+      }
+      this._dsTimer.running = false;
       this._dsTimer.lastRun = this._dsTimer.elapsed;
-      this._dsTimer.status = reason === "error" ? "STOPPED" : "FINISHED";
-      syncTimerDisplay(this); this.setDirtyCanvas?.(true,true);
-      if (reason !== "error") playFinishSound(this);
+      this._dsTimer.accumulatedTime = 0;
+      this._dsTimer.status = reason === "error" ? "STOPPED" : (reason === "interrupted" ? "INTERRUPTED" : "FINISHED");
+      syncTimerDisplay(this);
+      this.setDirtyCanvas?.(true, true);
+      if (reason === "finished") playFinishSound(this);
       log("Timer stopped", this.id, reason, fmtTime(this._dsTimer.elapsed));
     };
 
