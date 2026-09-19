@@ -16,6 +16,15 @@ LOG = "[DS Image Preview]"
 TEMP_PREFIX = "ds_image_preview_"
 
 
+class AnyType(str):
+    """Wildcard type — accepts any connection type for the image input."""
+    def __ne__(self, other): return False
+    def __eq__(self, other): return True
+    def __hash__(self): return hash(str(self))
+
+ANY = AnyType("*")
+
+
 def _log(message):
     print(f"{LOG} {message}", flush=True)
 
@@ -139,7 +148,10 @@ class DS_ImagePreview:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "image": ("IMAGE",),
+                # Use wildcard type so nodes with "*" output (e.g. DS The Purger)
+                # pass the frontend connection validator. Python still receives
+                # a real IMAGE tensor at execution time.
+                "image": (ANY,),
                 # Kept as a real serialized ComfyUI widget so the custom UI can
                 # control it while the backend receives the selected mode.
                 "SaveMode": (["preview", "save"], {"default": "preview"}),

@@ -615,6 +615,15 @@ app.registerExtension({
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
+      // ── ERASE any native LiteGraph slot dots ──────────────────────────────
+      // onDrawForeground runs AFTER LiteGraph's slot-dot rendering pass, so
+      // we can overdraw the native dots with the background color before
+      // painting our own styled dots. This works in all LiteGraph versions.
+      ctx.fillStyle = colors.bgSurface;
+      ctx.beginPath(); ctx.arc(0,        layout.h / 2, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(layout.w, layout.h / 2, 7, 0, Math.PI * 2); ctx.fill();
+      // ─────────────────────────────────────────────────────────────────────
+
       // Draw visible segmented buttons matching .ds-ui-button / .ds-il-chip
       for (let i = 0; i < layout.count; i++) {
         const mode = layout.visible[i];
