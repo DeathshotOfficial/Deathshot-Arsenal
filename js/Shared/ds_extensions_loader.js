@@ -18,3 +18,4 @@ async function loadDsExtension(name) {
 
 loadDsExtension("ds_group.js");
 loadDsExtension("ds_gear_menu.js");
+loadDsExtension("ds_reminder_global.js");

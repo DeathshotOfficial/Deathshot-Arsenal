@@ -1,0 +1,393 @@
+/* Deathshot Arsenal — DS Reminder Node Styles */
+
+.ds-reminder-node-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  gap: 6px;
+  box-sizing: border-box;
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  color: var(--ds-text, #f8fafc);
+  background: var(--ds-panel, #12151c);
+  border-radius: 6px;
+  overflow: hidden;
+  user-select: none;
+  position: relative;
+}
+
+/* Custom Webkit Scrollbars (Zero Native Scrollbars) */
+.ds-reminder-node-root *::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.ds-reminder-node-root *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ds-reminder-node-root *::-webkit-scrollbar-thumb {
+  background: var(--ds-border, rgba(255, 255, 255, 0.16));
+  border-radius: 4px;
+}
+.ds-reminder-node-root *::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-accent, #67e8f9);
+}
+
+/* Remove Native Spin Arrows */
+.ds-reminder-node-root input[type=number]::-webkit-inner-spin-button,
+.ds-reminder-node-root input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ds-reminder-node-root input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* Header Sub-bar */
+.ds-reminder-node-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--ds-panel-2, #181d26);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
+  border-radius: 5px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.ds-reminder-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, transparent);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--ds-text, #f8fafc);
+}
+
+.ds-reminder-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 6px var(--ds-accent, #67e8f9);
+  display: inline-block;
+}
+
+.ds-reminder-status-dot.is-alert {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: dsRemPulseDot 1s infinite alternate;
+}
+
+@keyframes dsRemPulseDot {
+  from { transform: scale(1); }
+  to { transform: scale(1.35); }
+}
+
+.ds-reminder-btn-add {
+  height: 26px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 5px;
+  background: var(--ds-panel, #12161e);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.16));
+  color: var(--ds-text, #f8fafc);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.ds-reminder-btn-add:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-btn-hover, #202633);
+}
+
+/* Presets Strip */
+.ds-reminder-presets-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--ds-panel-2, #181d26);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
+  overflow-x: auto;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.ds-reminder-preset-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ds-text-muted, #94a3b8);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.ds-reminder-preset-chip {
+  height: 22px;
+  padding: 0 9px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 5px;
+  background: var(--ds-panel, #12161e);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  color: var(--ds-text-muted, #cbd5e1);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ds-reminder-preset-chip:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-btn-hover, #202633);
+}
+
+.ds-reminder-preset-chip:active {
+  transform: scale(0.97);
+}
+
+/* Reminder list */
+.ds-reminder-node-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 0;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+/* Individual Row (Single row, completely non-overlapping, balanced horizontal layout) */
+.ds-rem-node-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 5px;
+  background: var(--ds-panel-2, #181d26);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
+  box-sizing: border-box;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ds-rem-node-row:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.ds-rem-node-row.is-triggered {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.ds-rem-node-row.is-disabled {
+  opacity: 0.55;
+}
+
+/* Center title & countdown */
+.ds-rem-row-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.ds-rem-row-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ds-text, #f8fafc) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.ds-rem-row-sub {
+  font-size: 9.5px;
+  color: var(--ds-text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.ds-rem-row-status {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ds-rem-row-time {
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--ds-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-accent, #67e8f9) 28%, transparent);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+}
+
+.ds-rem-row-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 2.5px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-rem-row-badge.badge-scheduled {
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 15%, transparent);
+  color: var(--ds-accent, #67e8f9);
+  border: 1px solid color-mix(in srgb, var(--ds-accent, #67e8f9) 30%, transparent);
+}
+
+.ds-rem-row-badge.badge-triggered {
+  background: #ef4444;
+  color: #fff;
+  border: 1px solid #ef4444;
+  animation: dsRemBadgePulse 1s infinite alternate;
+}
+
+.ds-rem-row-badge.badge-completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+}
+
+.ds-rem-row-badge.badge-disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ds-text-muted, #94a3b8);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+}
+
+@keyframes dsRemBadgePulse {
+  from { opacity: 0.8; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.06); }
+}
+
+/* Actions right side */
+.ds-rem-row-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-rem-row-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--ds-panel, #12161e);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  box-sizing: border-box;
+}
+
+.ds-rem-row-btn:hover {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-btn-hover, #202633);
+}
+
+.ds-rem-row-btn.is-delete:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Empty State */
+.ds-reminder-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 12px;
+  text-align: center;
+  color: var(--ds-text-muted, #94a3b8);
+  gap: 4px;
+  font-size: 11px;
+}
+
+/* In-Node Drawer / Config Panel */
+.ds-reminder-inline-drawer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: var(--ds-panel-2, #181d26);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: dsRemSlideUp 0.15s ease-out;
+}
+
+@keyframes dsRemSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.ds-reminder-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  padding-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ds-reminder-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.ds-reminder-drawer-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  padding-top: 8px;
+}
