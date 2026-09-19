@@ -22,6 +22,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Run Timer**: Accurate execution benchmarking and completion audio alerts with multi-stage checkpoint pause/resume coordination. See [DS Run Timer Documentation](docs/DS%20Run%20Timer.md).
 
 ### 🖼️ Image & Media Tools
+- **DS Film Grain**: High-performance photographic film grain processor powered by GLSL shaders with real-time interactive WebGL preview, customizable grain scale, chromatic variation, and luminance-based shadow weighting. See [DS Film Grain Documentation](docs/DS%20Film%20Grain.md).
 - **DS Image Save Advance**: Powerful image export with dynamic filename templating (`{model}`, `{seed}`, `{date}`, `{width}x{height}`), format conversion, and metadata embedding.
 - **DS Quick Save**: One-click rapid asset saving directly from canvas workflows.
 - **DS Image Checkpoint & Compare**: A/B image comparison and multi-stage visual checkpointing.
@@ -45,7 +46,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Prompt & Prompt Cards**: Modular prompt editor with category cards, trigger injection, and effective prompt previews.
 - **DS Prompt Scanner & Show Text**: Live prompt diagnostics and string display widgets.
 - **DS Notes & Label**: Canvas documentation, workflow notes, and visual group labels.
-- **Logic & Flow Control**: `DS Switch`, `DS Any Switch`, `DS Group Switch`, `DS Pipe`, `DS Seed`, and `The Purger`.
+- **Logic & Flow Control**: `DS Switch`, `DS Any Switch`, `DS Group Switch`, `DS Pipe`, and `DS Seed`.
 - **Canvas & Framing**: `DS Outpaint` and `DS Resolution` helpers.
 
 ---

@@ -148,7 +148,7 @@ class DS_ImagePreview:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                # Use wildcard type so nodes with "*" output (e.g. DS The Purger)
+                # Use wildcard type so nodes with "*" output
                 # pass the frontend connection validator. Python still receives
                 # a real IMAGE tensor at execution time.
                 "image": (ANY,),

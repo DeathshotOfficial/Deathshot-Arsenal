@@ -367,13 +367,6 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_VersionCheck: {e}", flush=True)
     DS_VersionCheck = None
 
-# DS The Purger
-try:
-    _mod = _load_node_pkg("the_purger", "The Purger")
-    DS_ThePurger = _mod.DS_ThePurger
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_ThePurger: {e}", flush=True)
-    DS_ThePurger = None
 
 # DS Video Save
 try:
@@ -438,6 +431,14 @@ try:
 except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_Randomizer: {e}", flush=True)
     DS_Randomizer = None
+
+# DS Film Grain
+try:
+    _mod = _load_node_pkg("film_grain", "Film Grain")
+    DS_FilmGrain = _mod.DS_FilmGrain
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_FilmGrain: {e}", flush=True)
+    DS_FilmGrain = None
 
 
 
@@ -971,7 +972,6 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_QuickSave": DS_QuickSave} if DS_QuickSave is not None else {}),
     **({"DS_LoadImagesFromFolder": DS_LoadImagesFromFolder} if DS_LoadImagesFromFolder is not None else {}),
     **({"DS_VersionCheck": DS_VersionCheck} if DS_VersionCheck is not None else {}),
-    **({"DS_ThePurger": DS_ThePurger} if DS_ThePurger is not None else {}),
     **({"DS_VideoSave": DS_VideoSave} if DS_VideoSave is not None else {}),
     **({"DS_Seed": DS_Seed} if DS_Seed is not None else {}),
     **({"DS_Notes": DS_Notes} if DS_Notes is not None else {}),
@@ -982,6 +982,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_GenerationHub": DS_GenerationHub} if DS_GenerationHub is not None else {}),
     **({"DS_Randomizer": DS_Randomizer} if DS_Randomizer is not None else {}),
     **({"DS_Reminder": DS_Reminder} if DS_Reminder is not None else {}),
+    **({"DS_FilmGrain": DS_FilmGrain} if DS_FilmGrain is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1015,7 +1016,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_QuickSave": "DS Quick Save"} if DS_QuickSave is not None else {}),
     **({"DS_LoadImagesFromFolder": "DS Load Images From Folder"} if DS_LoadImagesFromFolder is not None else {}),
     **({"DS_VersionCheck": "DS Version Check"} if DS_VersionCheck is not None else {}),
-    **({"DS_ThePurger": "DS The Purger"} if DS_ThePurger is not None else {}),
     **({"DS_VideoSave": "DS Video Save"} if DS_VideoSave is not None else {}),
     **({"DS_Seed": "DS Seed"} if DS_Seed is not None else {}),
     **({"DS_Notes": "DS Notes"} if DS_Notes is not None else {}),
@@ -1026,6 +1026,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_GenerationHub": "DS Generation Hub"} if DS_GenerationHub is not None else {}),
     **({"DS_Randomizer": "DS Randomizer"} if DS_Randomizer is not None else {}),
     **({"DS_Reminder": "DS Reminder"} if DS_Reminder is not None else {}),
+    **({"DS_FilmGrain": "DS Film Grain"} if DS_FilmGrain is not None else {}),
 }
 
 WEB_DIRECTORY = "js"
