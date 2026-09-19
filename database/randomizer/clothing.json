@@ -1,0 +1,173 @@
+{
+  "group": "clothing",
+  "name": "Clothing",
+  "categories": [
+    {
+      "id": "clothing",
+      "name": "Clothing",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b((still )?(wearing|dressed in|clad in)\\s+([\\w\\s-]+)?(blazer|sweater|jacket|dress|shirt|suit|hoodie|coat|panties|lingerie|bra|underwear|top|pants|trousers|skirt|jeans|swimsuit|bikini))\\b",
+        "\\b(wearing (a |an )?(tailored charcoal blazer|casual oversized knit sweater|black biker leather jacket|flowing silk maxi dress|crisp white button-down shirt|streetwear hoodie|vintage trench coat|summer sundress|denim jacket))\\b",
+        "\\b(dressed in (a |an )?[\\w\\s-]+(blazer|sweater|jacket|dress|shirt|suit|hoodie|coat))\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b((still )?wearing|dressed in|clad in)\\s+([\\w\\s-]+)?(blazer|sweater|jacket|dress|shirt|suit|hoodie|coat|panties|lingerie|bra|underwear|top|pants|trousers|skirt|jeans|swimsuit|bikini)\\b"
+      ],
+      "entries": [
+        {"text": "wearing a tailored charcoal-gray wool blazer over a crisp white t-shirt", "tags": ["smart_casual"]},
+        {"text": "wearing an oversized chunky ribbed-knit cashmere sweater in cream beige", "tags": ["cozy", "knit"]},
+        {"text": "wearing a distressed black leather motorcycle jacket with brushed silver zippers", "tags": ["leather", "edgy"]},
+        {"text": "wearing a flowing emerald-green silk slip dress with delicate straps", "tags": ["elegant", "dress"]},
+        {"text": "wearing a minimalist relaxed-fit linen button-down shirt left slightly unbuttoned", "tags": ["linen", "casual"]},
+        {"text": "wearing a technical cyberpunk streetwear trench coat with utility buckles", "tags": ["techwear", "cyberpunk"]},
+        {"text": "wearing a classic double-breasted camel trench coat with belted waist", "tags": ["trench", "classic"]},
+        {"text": "wearing a relaxed vintage denim trucker jacket over a dark crewneck", "tags": ["denim", "vintage"]}
+      ]
+    },
+    {
+      "id": "outfit_type",
+      "name": "Outfit Type",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b(haute couture ensemble|formal black-tie attire|smart-casual outfit|streetwear aesthetic|athleisure set|minimalist loungewear|bohemian layered ensemble)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(haute couture ensemble|formal black-tie attire|smart-casual outfit|streetwear aesthetic|athleisure set|minimalist loungewear|bohemian layered ensemble)\\b"
+      ],
+      "entries": [
+        {"text": "in a sophisticated haute couture evening ensemble", "tags": ["couture", "formal"]},
+        {"text": "in an effortless smart-casual city outfit", "tags": ["smart_casual"]},
+        {"text": "in a contemporary high-end urban streetwear outfit", "tags": ["streetwear"]},
+        {"text": "in sleek minimalist designer athleisure wear", "tags": ["athleisure"]},
+        {"text": "in an understated quiet-luxury monochrome outfit", "tags": ["luxury", "minimal"]}
+      ]
+    },
+    {
+      "id": "top",
+      "name": "Top",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b((silk camisole|fitted turtleneck top|boxy cropped tee|corset top|ribbed tank top|chambray button-up|oversized pullover|linen blouse)\\b)"
+      ],
+      "cleanup_patterns": [
+        "\\b(silk camisole|fitted turtleneck top|boxy cropped tee|corset top|ribbed tank top|chambray button-up|oversized pullover|linen blouse)\\b"
+      ],
+      "entries": [
+        {"text": "a fitted black turtleneck top accentuating the neck", "tags": ["turtleneck"]},
+        {"text": "a lustrous ivory silk camisole with lace trim", "tags": ["camisole", "silk"]},
+        {"text": "a boxy heavyweight cotton t-shirt with clean drop shoulders", "tags": ["tshirt"]},
+        {"text": "a finely structured boned corset top", "tags": ["corset"]},
+        {"text": "an airy, unbuttoned breezy linen button-up shirt", "tags": ["linen"]}
+      ]
+    },
+    {
+      "id": "bottom",
+      "name": "Bottom",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b((wide-leg pleated trousers|high-waisted tailored pants|straight-leg raw denim jeans|pleated mini skirt|flowing midi skirt|cargo pants with straps|distressed skinny jeans)\\b)"
+      ],
+      "cleanup_patterns": [
+        "\\b(wide-leg pleated trousers|high-waisted tailored pants|straight-leg raw denim jeans|pleated mini skirt|flowing midi skirt|cargo pants with straps)\\b"
+      ],
+      "entries": [
+        {"text": "high-waisted wide-leg tailored trousers falling in clean pleats", "tags": ["trousers"]},
+        {"text": "vintage straight-leg washed blue denim jeans with natural fading", "tags": ["jeans", "denim"]},
+        {"text": "a flowing asymmetrical pleated midi skirt", "tags": ["skirt"]},
+        {"text": "sleek black leather straight-cut pants with a subtle sheen", "tags": ["leather", "pants"]},
+        {"text": "modern utilitarian cargo trousers with discrete zippered pockets", "tags": ["cargo", "utilitarian"]}
+      ]
+    },
+    {
+      "id": "footwear",
+      "name": "Footwear",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b((chunky leather combat boots|minimalist white leather sneakers|pointed-toe stiletto pumps|strappy heel sandals|classic chelsea boots|loafers with horsebit hardware)\\b)"
+      ],
+      "cleanup_patterns": [
+        "\\b(leather combat boots|white leather sneakers|pointed-toe stiletto pumps|strappy heel sandals|classic chelsea boots|loafers)\\b"
+      ],
+      "entries": [
+        {"text": "pointed-toe stiletto pumps with slender heels", "tags": ["heels", "formal"]},
+        {"text": "rugged black leather lace-up combat boots with lug soles", "tags": ["boots", "edgy"]},
+        {"text": "crisp minimalist low-top white leather sneakers", "tags": ["sneakers", "clean"]},
+        {"text": "burnished leather Chelsea boots with elastic side gussets", "tags": ["chelsea", "classic"]},
+        {"text": "polished black leather loafers with subtle gold hardware", "tags": ["loafers", "smart"]}
+      ]
+    },
+    {
+      "id": "clothing_accessories",
+      "name": "Clothing Accessories",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b(wearing a (leather belt with brass buckle|cashmere scarf draped over shoulders|wide-brim fedora hat|knit beanie|crossbody leather bag|silk neck scarf))\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(leather belt with brass buckle|cashmere scarf|wide-brim fedora hat|knit beanie|crossbody leather bag|silk neck scarf)\\b"
+      ],
+      "entries": [
+        {"text": "paired with a slim black leather belt featuring a matte gold buckle", "tags": ["belt"]},
+        {"text": "complemented by an oversized heather-gray cashmere scarf casually wrapped", "tags": ["scarf"]},
+        {"text": "accented with a structured leather crossbody saddle bag", "tags": ["bag"]},
+        {"text": "accessorized with a playful printed silk neck twilly scarf", "tags": ["scarf", "silk"]}
+      ]
+    },
+    {
+      "id": "fabric",
+      "name": "Fabric",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b(heavyweight wool blend|raw mulberry silk|washed breathable linen|supple lambskin leather|ribbed cotton jersey|crushed velvet|structured denim)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(wool blend|mulberry silk|washed linen|lambskin leather|cotton jersey|crushed velvet|structured denim)\\b"
+      ],
+      "entries": [
+        {"text": "crafted from luxurious heavy mulberry silk that drapes fluidly", "tags": ["silk", "luxury"]},
+        {"text": "cut from premium heavyweight Italian wool blend", "tags": ["wool", "structured"]},
+        {"text": "made of soft washed Belgian linen with natural textured wrinkles", "tags": ["linen", "natural"]},
+        {"text": "fashioned from buttery soft lambskin leather with a subtle satin luster", "tags": ["leather", "premium"]},
+        {"text": "tailored in deep plush crushed velvet catching the ambient light", "tags": ["velvet", "rich"]}
+      ]
+    },
+    {
+      "id": "clothing_color",
+      "name": "Color",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b(monochrome jet black|crisp pure white|deep midnight navy|earthy olive green|rich burgundy wine|warm camel tan|charcoal heather gray)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(monochrome jet black|crisp pure white|deep midnight navy|earthy olive green|rich burgundy wine|warm camel tan|charcoal heather gray)\\b"
+      ],
+      "entries": [
+        {"text": "in timeless monochrome jet-black", "tags": ["black", "monochrome"]},
+        {"text": "in pristine crisp optic white", "tags": ["white"]},
+        {"text": "in sophisticated deep midnight navy blue", "tags": ["navy"]},
+        {"text": "in rich opulent burgundy wine red", "tags": ["burgundy", "red"]},
+        {"text": "in muted earthy olive drab green", "tags": ["olive", "earthy"]},
+        {"text": "in warm neutral camel tan and oatmeal tones", "tags": ["camel", "neutral"]}
+      ]
+    },
+    {
+      "id": "style",
+      "name": "Style",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b(minimalist scandinavian style|cyberpunk techwear aesthetic|dark academia style|vintage retro 90s aesthetic|quiet luxury aesthetic|boho chic style|grungy alt style)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(minimalist scandinavian style|cyberpunk techwear|dark academia|vintage retro 90s|quiet luxury|boho chic|grungy alt)\\b"
+      ],
+      "entries": [
+        {"text": "styled with an understated quiet-luxury aesthetic and clean lines", "tags": ["quiet_luxury"]},
+        {"text": "exuding a sharp, modern cyberpunk techwear aesthetic", "tags": ["techwear", "cyberpunk"]},
+        {"text": "curated in a scholarly dark academia aesthetic with vintage textures", "tags": ["dark_academia"]},
+        {"text": "styled with an authentic 1990s vintage grunge sensibility", "tags": ["grunge", "vintage"]},
+        {"text": "styled in clean, timeless Scandinavian minimalism", "tags": ["minimalism"]}
+      ]
+    }
+  ]
+}

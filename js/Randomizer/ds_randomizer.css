@@ -1,0 +1,587 @@
+/* ============================================================
+   DS Randomizer - DeathshotArsenal
+   Themed DOM Prompt Randomizer Stylesheet
+   ============================================================ */
+
+.ds-randomizer-root {
+  --ds-bg: var(--comfy-input-bg-color, #17191d);
+  --ds-panel: var(--comfy-menu-bg, #1d1f23);
+  --ds-panel-2: var(--comfy-input-bg-color, #202328);
+  --ds-accent: var(--ds-theme-accent, #67e8f9);
+  --ds-text: var(--comfy-text-color, #e5e7eb);
+  --ds-text-muted: var(--comfy-text-secondary, #9ca3af);
+  --ds-border: var(--comfy-input-border-color, #353940);
+  --ds-border-active: var(--ds-theme-accent, #67e8f9);
+  --ds-btn-hover: color-mix(in srgb, var(--ds-accent, #67e8f9) 8%, var(--ds-panel-2, #202328));
+  --ds-radius: 6px;
+  --ds-radius-sm: 5px;
+  --ds-font: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  max-height: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px;
+  overflow: hidden;
+  border-radius: var(--ds-radius);
+  background: var(--ds-bg);
+  color: var(--ds-text);
+  font-family: var(--ds-font);
+  font-size: 11px;
+  user-select: none;
+  position: relative;
+}
+
+.ds-randomizer-root * {
+  box-sizing: border-box;
+}
+
+.ds-randomizer-root svg {
+  fill: none !important;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ================= Toolbar / Header ================= */
+.ds-randomizer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 26px;
+  min-height: 26px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-randomizer-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  min-width: 0;
+  color: var(--ds-text);
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ds-randomizer-title-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-accent);
+}
+
+.ds-randomizer-title-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.ds-randomizer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Strict Deathshot Button Contract */
+.ds-rand-btn {
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-sm);
+  font-family: var(--ds-font);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+  white-space: nowrap;
+}
+
+.ds-rand-btn svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.ds-rand-btn:hover {
+  background: var(--ds-btn-hover);
+  border-color: var(--ds-border-active);
+  color: var(--ds-text);
+}
+
+.ds-rand-btn.is-accent {
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+  background: color-mix(in srgb, var(--ds-accent) 12%, var(--ds-panel-2));
+}
+
+.ds-rand-btn.is-accent:hover {
+  background: color-mix(in srgb, var(--ds-accent) 22%, var(--ds-panel-2));
+}
+
+.ds-rand-icon-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.ds-rand-icon-btn svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  fill: none;
+}
+
+.ds-rand-icon-btn:hover {
+  background: var(--ds-btn-hover);
+  border-color: var(--ds-border-active);
+  color: var(--ds-accent);
+}
+
+/* ================= Section Layout ================= */
+.ds-rand-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+
+.ds-rand-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ds-text-muted);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ds-rand-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ds-accent) 15%, var(--ds-panel-2));
+  color: var(--ds-accent);
+  border: 1px solid color-mix(in srgb, var(--ds-accent) 40%, transparent);
+}
+
+/* Textarea styling */
+.ds-rand-textarea-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex: 1 1 0;
+  min-height: 55px;
+}
+
+.ds-rand-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 55px;
+  padding: 6px 8px;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-panel);
+  color: var(--ds-text);
+  border-radius: var(--ds-radius-sm);
+  font-family: var(--ds-font);
+  font-size: 11px;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 120ms ease;
+  user-select: text;
+}
+
+.ds-rand-textarea:focus {
+  border-color: var(--ds-accent);
+}
+
+.ds-rand-textarea::placeholder {
+  color: var(--ds-text-muted);
+  opacity: 0.6;
+}
+
+.ds-rand-textarea.is-preview {
+  background: color-mix(in srgb, var(--ds-panel-2) 90%, black);
+  border-color: color-mix(in srgb, var(--ds-accent) 40%, var(--ds-border));
+  color: color-mix(in srgb, var(--ds-accent) 20%, var(--ds-text));
+}
+
+.ds-rand-textarea.is-wired {
+  background: color-mix(in srgb, var(--ds-panel-2) 90%, black);
+  border-color: color-mix(in srgb, var(--ds-accent) 35%, var(--ds-border));
+  color: var(--ds-text);
+  cursor: default;
+}
+
+/* ================= Category Selector Box ================= */
+.ds-rand-categories-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px;
+  background: var(--ds-panel);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  flex: 0 0 auto;
+}
+
+/* 1. Group Tabs Track */
+.ds-rand-tabs-header {
+  display: flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--ds-panel-2) 65%, transparent);
+  padding: 3px 4px;
+  border-radius: var(--ds-radius-sm);
+  border: 1px solid var(--ds-border);
+}
+
+.ds-rand-group-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  width: 100%;
+}
+.ds-rand-group-tabs::-webkit-scrollbar { display: none; }
+
+.ds-rand-tab {
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ds-text-muted);
+  border-radius: calc(var(--ds-radius-sm) - 1px);
+  font-family: var(--ds-font);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 120ms ease;
+}
+
+.ds-rand-tab:hover {
+  background: var(--ds-btn-hover);
+  color: var(--ds-text);
+  border-color: var(--ds-border);
+}
+
+.ds-rand-tab.is-active {
+  background: var(--ds-panel-2);
+  border-color: var(--ds-border-active);
+  color: var(--ds-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.ds-rand-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--ds-accent);
+}
+
+/* 2. Visual Partition Divider */
+.ds-rand-partition-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--ds-accent) 35%, var(--ds-border)) 20%,
+    color-mix(in srgb, var(--ds-accent) 35%, var(--ds-border)) 80%,
+    transparent 100%
+  );
+  margin: 1px 0;
+}
+
+/* 3. Sub-Options Container */
+.ds-rand-suboptions-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: color-mix(in srgb, var(--ds-bg) 35%, transparent);
+  padding: 6px 7px;
+  border-radius: var(--ds-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--ds-border) 60%, transparent);
+}
+
+.ds-rand-suboptions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.ds-rand-suboptions-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-rand-suboptions-label {
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--ds-text-muted);
+  text-transform: uppercase;
+}
+
+.ds-rand-chips-actions {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.ds-rand-micro-btn {
+  height: 20px;
+  padding: 0 6px;
+  font-size: 9px;
+  font-weight: 600;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+
+.ds-rand-micro-btn svg {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  fill: none !important;
+}
+
+.ds-rand-micro-btn:hover {
+  background: var(--ds-btn-hover);
+  border-color: var(--ds-border-active);
+  color: var(--ds-accent);
+}
+
+.ds-rand-copy-btn {
+  height: 20px;
+  padding: 0 7px;
+  font-size: 9px;
+  font-weight: 600;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;
+  transition: all 120ms ease;
+  white-space: nowrap;
+}
+
+.ds-rand-copy-btn svg {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  fill: none !important;
+}
+
+.ds-rand-copy-btn:hover {
+  background: var(--ds-btn-hover);
+  border-color: var(--ds-border-active);
+  color: var(--ds-accent);
+}
+
+.ds-rand-wired-badge {
+  font-size: 8.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ds-accent) 12%, var(--ds-panel-2));
+  color: var(--ds-accent);
+  border: 1px solid color-mix(in srgb, var(--ds-accent) 35%, transparent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.ds-rand-wired-badge svg {
+  width: 10px;
+  height: 10px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none !important;
+}
+
+/* Category Chips Grid */
+.ds-rand-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 95px;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+/* Strict Deathshot Button & Chip Contract:
+   Inactive: background --ds-panel-2, border 1px solid --ds-border, text --ds-text-muted, font-weight 600.
+   Hover: background --ds-btn-hover, border --ds-border-active, text --ds-text.
+   Active: background --ds-panel-2, border 1px solid --ds-accent, text --ds-accent, and 2px bottom accent bar. */
+.ds-rand-chip {
+  height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-panel-2);
+  color: var(--ds-text-muted);
+  border-radius: var(--ds-radius-sm);
+  font-family: var(--ds-font);
+  font-size: 9.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+  transition: all 120ms ease;
+  user-select: none;
+}
+
+.ds-rand-chip:hover {
+  background: var(--ds-btn-hover);
+  border-color: var(--ds-border-active);
+  color: var(--ds-text);
+}
+
+.ds-rand-chip.is-active {
+  background: var(--ds-panel-2);
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+}
+
+.ds-rand-chip.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--ds-accent);
+}
+
+/* ================= Category Options Row ================= */
+.ds-rand-options-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 5px 7px;
+  background: var(--ds-panel-2);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-sm);
+  font-size: 10px;
+}
+
+.ds-rand-options-label {
+  font-weight: 700;
+  color: var(--ds-accent);
+  margin-right: 2px;
+}
+
+.ds-rand-opt-chip {
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--ds-border);
+  background: var(--ds-panel);
+  color: var(--ds-text-muted);
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 120ms ease;
+}
+
+.ds-rand-opt-chip:hover {
+  border-color: var(--ds-border-active);
+  color: var(--ds-text);
+}
+
+.ds-rand-opt-chip.is-selected {
+  background: var(--ds-panel);
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+}
+
+.ds-rand-opt-chip.is-selected::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--ds-accent);
+}
+
+/* Status notice */
+.ds-rand-status {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--ds-accent);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.ds-rand-status.is-visible {
+  opacity: 1;
+}

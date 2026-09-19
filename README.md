@@ -41,6 +41,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 
 ### 📝 Prompt Engineering & Utilities
 - **DS AI Prompt Sensei**: Next-generation AI prompt generator and scene director powered by local LLMs. Features multi-modal image-to-prompt vision analysis, dynamic LoRA stacking with per-model/clip strengths, automated aspect ratio detection, customizable video dimensions/durations, and interactive prompt editing. **Note:** [LM Studio](https://lmstudio.ai/) is required for this node to run local LLMs.
+- **DS Randomizer**: Intelligent prompt randomization and variation engine. Preserves the user's template prompt while dynamically replacing or contextually inserting variations across 46+ extensible semantic categories with non-repeating shuffle-bag selection. Features tag-based contradiction prevention (e.g. night vs daylight), semantic zone placement (subject traits, clothing, lighting), live upstream prompt mirroring, and multi-stage checkpoint synchronization to prevent upscale prompt redraws. See [DS Randomizer Documentation](docs/DS%20Randomizer.md) for architecture details.
 - **DS Prompt & Prompt Cards**: Modular prompt editor with category cards, trigger injection, and effective prompt previews.
 - **DS Prompt Scanner & Show Text**: Live prompt diagnostics and string display widgets.
 - **DS Notes & Label**: Canvas documentation, workflow notes, and visual group labels.

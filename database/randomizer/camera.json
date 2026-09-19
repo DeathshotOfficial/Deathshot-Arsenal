@@ -1,0 +1,180 @@
+{
+  "group": "camera",
+  "name": "Camera / Photography",
+  "categories": [
+    {
+      "id": "camera_angle",
+      "name": "Camera Angle",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(top-down|top down|overhead|low-angle|high-angle|eye-level|dutch angle|worm's-eye view|bird's-eye view|canted angle)\\s*(shot|angle|view)?\\b",
+        "\\b(low-angle shot|high-angle shot|eye-level angle|dutch angle|worm's-eye view|bird's-eye view|overhead shot|canted angle)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(top-down|top down|overhead|low-angle|high-angle|eye-level|dutch angle|worm's-eye view|bird's-eye view|overhead shot)\\s*(shot|angle|view)?\\b"
+      ],
+      "entries": [
+        {"text": "shot from a dramatic low angle creating an imposing presence", "tags": ["low_angle"]},
+        {"text": "shot at direct eye level for an intimate, personal connection", "tags": ["eye_level"]},
+        {"text": "subtle high-angle perspective looking gently downward", "tags": ["high_angle"]},
+        {"text": "stylized canted dutch angle adding dynamic kinetic tension", "tags": ["dutch_angle"]},
+        {"text": "top-down overhead bird's-eye view angle", "tags": ["overhead"]}
+      ]
+    },
+    {
+      "id": "perspective",
+      "name": "Perspective",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(first-person|over-the-shoulder|third-person|point-of-view|POV)\\s*(perspective|view|shot)?\\b",
+        "\\b(first-person perspective|over-the-shoulder perspective|third-person objective view|point-of-view perspective|wide panoramic perspective|POV shot)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(first-person|over-the-shoulder|point-of-view|panoramic|POV)\\s*(perspective|view|shot)?\\b"
+      ],
+      "entries": [
+        {"text": "intimate direct perspective looking straight into the frame", "tags": ["direct"]},
+        {"text": "over-the-shoulder cinematic perspective", "tags": ["over_shoulder"]},
+        {"text": "candid fly-on-the-wall observational perspective", "tags": ["candid"]},
+        {"text": "immersive first-person POV perspective", "tags": ["pov"]}
+      ]
+    },
+    {
+      "id": "shot_type",
+      "name": "Shot Type",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(extreme close-up shot|tight close-up shot|bust shot|medium shot|medium full shot|cowboy shot|full body shot|wide shot|establishing shot)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(extreme close-up|tight close-up|bust shot|medium shot|medium full shot|cowboy shot|full body shot|wide shot|establishing shot)\\b"
+      ],
+      "entries": [
+        {"text": "tight macro close-up focusing intensely on facial details", "tags": ["close_up"]},
+        {"text": "intimate portrait bust shot from the collarbones up", "tags": ["portrait", "bust"]},
+        {"text": "medium shot framing the subject from waist up", "tags": ["medium"]},
+        {"text": "cowboy shot capturing from mid-thigh upward", "tags": ["cowboy"]},
+        {"text": "full-body shot showcasing complete silhouette and head-to-toe styling", "tags": ["full_body"]},
+        {"text": "cinematic environmental wide shot balancing subject within expansive setting", "tags": ["wide"]}
+      ]
+    },
+    {
+      "id": "framing",
+      "name": "Framing",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(tight framing|centered framing|rule of thirds framing|framed through doorway|foreground framing elements|off-center negative space framing)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(tight framing|centered framing|rule of thirds framing|framed through doorway|negative space framing)\\b"
+      ],
+      "entries": [
+        {"text": "artfully framed using foreground architectural elements to create natural depth", "tags": ["depth"]},
+        {"text": "clean balanced framing positioned precisely along the rule of thirds", "tags": ["thirds"]},
+        {"text": "bold centered symmetrical framing with intentional negative space", "tags": ["symmetrical"]},
+        {"text": "tight cinematic crop with breathing room toward the direction of the gaze", "tags": ["cinematic"]}
+      ]
+    },
+    {
+      "id": "distance",
+      "name": "Distance",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(macro distance|arms-length distance|intimate proximity|medium distance|far distance|long-range distance)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(macro distance|arms-length distance|intimate proximity|medium distance|far distance)\\b"
+      ],
+      "entries": [
+        {"text": "at close intimate proximity revealing skin pores and iris striations", "tags": ["close"]},
+        {"text": "at comfortable conversation distance", "tags": ["medium"]},
+        {"text": "at medium-long distance capturing full environment context", "tags": ["long"]}
+      ]
+    },
+    {
+      "id": "lens_focal",
+      "name": "Lens / Focal Style",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(24mm wide-angle lens|35mm prime lens|50mm f/1\\.2 lens|85mm portrait lens|105mm macro lens|135mm telephoto lens|anamorphic lens flare)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(24mm|35mm|50mm|85mm|105mm|135mm)\\s*(f/[\\d.]+)?\\s*(lens|prime)?\\b",
+        "\\b(anamorphic lens|wide-angle lens|portrait lens|telephoto lens)\\b"
+      ],
+      "entries": [
+        {"text": "captured on an 85mm f/1.4 portrait prime lens with silky smooth falloff", "tags": ["85mm", "portrait"]},
+        {"text": "shot on a 35mm f/1.4 lens providing natural field of view and gentle context", "tags": ["35mm", "documentary"]},
+        {"text": "rendered with vintage anamorphic cine glass featuring subtle oval bokeh and horizontal streaks", "tags": ["anamorphic"]},
+        {"text": "shot on a crisp 50mm f/1.2 lens with razor-sharp subject isolation", "tags": ["50mm"]},
+        {"text": "shot on a 24mm wide-angle cine lens emphasizing environmental depth", "tags": ["24mm", "wide"]}
+      ]
+    },
+    {
+      "id": "camera_position",
+      "name": "Camera Position",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(handheld camera feel|tripod mounted camera|steadicam tracking shot|low-slung camera position|crane shot position)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(handheld camera|tripod mounted|steadicam tracking|low-slung camera)\\b"
+      ],
+      "entries": [
+        {"text": "organic handheld camera feel with subtle lifelike micro-movements", "tags": ["handheld"]},
+        {"text": "steadicam glide position with rock-solid stability", "tags": ["steadicam"]},
+        {"text": "tripod-locked precise studio vantage point", "tags": ["tripod"]}
+      ]
+    },
+    {
+      "id": "composition",
+      "name": "Composition",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(golden ratio composition|leading lines composition|diagonal dynamic composition|symmetrical composition|minimalist negative space composition)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(golden ratio composition|leading lines composition|symmetrical composition|negative space composition)\\b"
+      ],
+      "entries": [
+        {"text": "composed along classical golden spiral proportions", "tags": ["golden_ratio"]},
+        {"text": "dynamic composition driven by dramatic diagonal leading lines", "tags": ["leading_lines"]},
+        {"text": "minimalist composition with abundant harmonious negative space", "tags": ["minimalist"]},
+        {"text": "perfectly balanced central symmetry radiating confidence", "tags": ["symmetry"]}
+      ]
+    },
+    {
+      "id": "image_quality",
+      "name": "Image Quality",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(masterpiece quality|8k ultra-detailed|sharp focus|flawless photorealistic render|hyper-detailed textures|ultra-high resolution photograph)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(masterpiece quality|8k ultra-detailed|sharp focus|flawless photorealistic|hyper-detailed textures)\\b"
+      ],
+      "entries": [
+        {"text": "ultra-sharp high-fidelity 35mm photograph with authentic film grain", "tags": ["photo", "sharp"]},
+        {"text": "crisp Hasselblad medium format capture with extraordinary textural fidelity", "tags": ["medium_format"]},
+        {"text": "impeccably exposed RAW photograph with rich dynamic range and lifelike clarity", "tags": ["raw"]}
+      ]
+    },
+    {
+      "id": "camera_characteristics",
+      "name": "Camera Characteristics",
+      "insertion_zone": "camera",
+      "detection_terms": [
+        "\\b(kodak portra 400 color science|fujifilm pro 400h tones|kodachrome vintage warmth|arri alexa sensor color|leica m11 micro-contrast)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(kodak portra 400|fujifilm pro 400h|kodachrome|arri alexa|leica m11)\\b"
+      ],
+      "entries": [
+        {"text": "Kodak Portra 400 color grading with true-to-life skin tones and soft highlights", "tags": ["portra", "analog"]},
+        {"text": "Fujifilm Superia color science with cool mint undertones and rich blacks", "tags": ["fuji", "film"]},
+        {"text": "Arri Alexa digital cinema sensor characteristics with organic highlight roll-off", "tags": ["cinema", "arri"]},
+        {"text": "Leica monochrome aesthetic with deep rich tonal gradations and micro-contrast", "tags": ["leica", "bw"]}
+      ]
+    }
+  ]
+}

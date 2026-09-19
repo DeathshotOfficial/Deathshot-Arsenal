@@ -1,0 +1,178 @@
+{
+  "group": "environment",
+  "name": "Environment",
+  "categories": [
+    {
+      "id": "location",
+      "name": "Location",
+      "insertion_zone": "environment",
+      "detection_terms": [
+        "\\b((in|at|on) (a |an |the )?(bed|bedroom|living room|apartment|hotel room|couch|sofa|office|studio|cafe|beach|terrace|alleyway|gallery|garden|street|kitchen|bathroom|balcony|rooftop|club))\\b",
+        "\\b(in (a |an |the )?(rooftop terrace|secluded beach|modern minimalist loft|cozy coffee shop|tokyo street|paris cafe|dense pine forest|art gallery|luxury penthouse|sunlit botanical garden|cyberpunk alleyway|scenic mountain overlook))\\b",
+        "\\b(at (a |an |the )?(rooftop|beach|cafe|loft|gallery|overlook|studio|harbor|courtyard))\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(in|at|on)\\s+(a|an|the)\\s+(bed|bedroom|living room|apartment|hotel room|couch|sofa|office|studio|cafe|beach|terrace|alleyway|gallery|garden|street|kitchen|bathroom|balcony|rooftop|club)\\b",
+        "\\b(in|at)\\s+(a|an|the)\\s+(rooftop terrace|secluded beach|modern minimalist loft|cozy coffee shop|tokyo street|paris cafe|dense pine forest|art gallery|luxury penthouse|botanical garden|cyberpunk alleyway)\\b"
+      ],
+      "entries": [
+        {"text": "in a sun-drenched minimalist loft overlooking the city skyline", "tags": ["urban", "indoor", "day"]},
+        {"text": "at a bustling outdoor Parisian cobblestone cafe", "tags": ["urban", "european", "outdoor", "day"]},
+        {"text": "on a windswept sandy coastline with gentle crashing waves", "tags": ["nature", "coastal", "outdoor"]},
+        {"text": "in a quiet contemporary art gallery with polished concrete floors", "tags": ["indoor", "modern"]},
+        {"text": "in a lush sun-dappled botanical greenhouse filled with tropical flora", "tags": ["nature", "indoor", "day"]},
+        {"text": "on an open high-rise rooftop overlooking illuminated skyscrapers", "tags": ["urban", "night", "outdoor"]},
+        {"text": "in a tranquil Japanese bamboo garden surrounded by mossy stone lanterns", "tags": ["nature", "zen", "outdoor"]},
+        {"text": "in a moody rain-slicked neon alleyway in neo-Tokyo", "tags": ["cyberpunk", "urban", "night", "outdoor"]},
+        {"text": "in a warm cozy bookstore cafe lined with dark mahogany bookshelves", "tags": ["indoor", "cozy"]}
+      ]
+    },
+    {
+      "id": "room_environment",
+      "name": "Room / Environment",
+      "insertion_zone": "environment",
+      "detection_terms": [
+        "\\b((master |intimate |serene |cozy |spacious )?(bedroom|living room|bathroom|studio|loft|kitchen|lounge)(\\s+interior|\\s+setting|\\s+atmosphere)?)\\b",
+        "\\b(industrial loft interior|spacious sunlit living room|serene bedroom|luxurious bathroom|commercial kitchen|spacious artist studio|dark moody cocktail lounge)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(master |intimate |serene |cozy |spacious )?(bedroom|living room|bathroom|studio|loft|kitchen|lounge)(\\s+interior|\\s+setting|\\s+atmosphere)?\\b",
+        "\\b(loft interior|living room|serene bedroom|artist studio|cocktail lounge)\\b"
+      ],
+      "entries": [
+        {"text": "inside an airy open-plan loft with exposed brick walls", "tags": ["interior", "indoor", "loft"]},
+        {"text": "inside a luxurious master bedroom with warm linen textures and soft furnishings", "tags": ["interior", "indoor", "bedroom"]},
+        {"text": "inside an atmospheric dimly-lit vintage cocktail lounge", "tags": ["interior", "indoor", "lounge", "night"]},
+        {"text": "in a bright airy artist studio with paint splatters and canvas easels", "tags": ["interior", "indoor", "studio", "day"]},
+        {"text": "in an upscale modern marble bathroom with freestanding soaking tub", "tags": ["interior", "indoor", "luxury"]}
+      ]
+    },
+    {
+      "id": "architecture",
+      "name": "Architecture",
+      "insertion_zone": "environment",
+      "detection_terms": [
+        "\\b(brutalist architecture|bauhaus modernism|traditional japanese wooden architecture|classical gothic columns|futuristic neo-brutalist arches|scandinavian wooden design)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(brutalist architecture|bauhaus modernism|traditional japanese architecture|scandinavian wooden design)\\b"
+      ],
+      "entries": [
+        {"text": "framed by sleek modern Scandinavian architectural lines", "tags": ["modern"]},
+        {"text": "surrounded by monolithic raw concrete brutalist structures", "tags": ["brutalist"]},
+        {"text": "set against classical European limestone facades with ornate iron balconies", "tags": ["classical"]},
+        {"text": "accented by clean Japanese minimalist cedar woodwork and paper sliding screens", "tags": ["traditional"]}
+      ]
+    },
+    {
+      "id": "background",
+      "name": "Background",
+      "insertion_zone": "environment",
+      "detection_terms": [
+        "\\b(blurred bokeh background|soft-focus city lights in background|defocused foliage behind|clean neutral studio backdrop|dramatic skyline in the distance|shallow depth of field blur)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(blurred bokeh background|city lights in background|clean neutral studio backdrop)\\b"
+      ],
+      "entries": [
+        {"text": "with creamy, shallow depth-of-field bokeh blurring the distant city", "tags": ["bokeh"]},
+        {"text": "with softly glowing streetlights creating golden circular bokeh behind", "tags": ["bokeh", "lights"]},
+        {"text": "with lush misty green foliage falling into an artistic soft focus", "tags": ["nature", "defocused"]},
+        {"text": "against a clean, textured seamless dark charcoal studio backdrop", "tags": ["studio", "minimal"]},
+        {"text": "with expansive architectural vistas stretching into the deep background", "tags": ["deep_focus"]}
+      ]
+    },
+    {
+      "id": "weather",
+      "name": "Weather",
+      "insertion_zone": "environment",
+      "detection_terms": [
+        "\\b(clear sunny weather|overcast cloudy skies|gentle rain shower|heavy storm|dense rolling fog|misty morning haze|light snowfall)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(clear sunny weather|overcast cloudy skies|gentle rain|dense fog|misty haze|light snowfall)\\b"
+      ],
+      "entries": [
+        {"text": "under soft overcast skies providing gentle, shadowless diffusion", "tags": ["overcast", "outdoor", "day"]},
+        {"text": "in bright, crystal-clear sunny weather with sharp radiant sunlight", "tags": ["sunny", "outdoor", "day"]},
+        {"text": "with a fine gentle rain mist catching the ambient light", "tags": ["rain", "outdoor"]},
+        {"text": "shrouded in atmospheric morning sea fog and cool damp air", "tags": ["fog", "outdoor"]},
+        {"text": "amid delicate falling snowflakes drifting peacefully through the air", "tags": ["snow", "outdoor"]}
+      ]
+    },
+    {
+      "id": "season",
+      "name": "Season",
+      "insertion_zone": "environment",
+      "detection_terms": [
+        "\\b(crisp autumn|vibrant spring bloom|sun-bleached midsummer|frosty winter morning|golden fall foliage)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(crisp autumn|vibrant spring|midsummer|frosty winter|golden fall)\\b"
+      ],
+      "entries": [
+        {"text": "during a vibrant spring afternoon with fresh blooming blossoms", "tags": ["spring", "day"]},
+        {"text": "in the heat of midsummer with vivid saturated colors", "tags": ["summer", "day"]},
+        {"text": "in late autumn with crisp air and fallen golden amber leaves", "tags": ["autumn"]},
+        {"text": "in the chill of deep winter with subtle frost clinging to surfaces", "tags": ["winter"]}
+      ]
+    },
+    {
+      "id": "time",
+      "name": "Time",
+      "insertion_zone": "lighting",
+      "detection_terms": [
+        "\\b(?:(?:at|in|during|under)\\s+(?:the\\s+)?)?(?:late\\s+)?(golden hour|blue hour|twilight|dusk|dawn|early morning|morning|high noon|midday sun|midday|late night|nighttime|midnight|night)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(?:(?:at|in|during|under)\\s+(?:the\\s+)?)?(?:late\\s+)?(golden hour|blue hour|twilight|dusk|dawn|early morning|morning|high noon|midday sun|midday|late night|nighttime|midnight|night)\\b"
+      ],
+      "entries": [
+        {"text": "during golden hour with long warm shadows", "tags": ["golden_hour", "evening", "day"]},
+        {"text": "at blue hour twilight with cool ambient indigo tones", "tags": ["blue_hour", "dusk", "night"]},
+        {"text": "at the crack of dawn with pale pastel morning light", "tags": ["dawn", "morning", "day"]},
+        {"text": "in late night under the dark velvet midnight sky", "tags": ["night"]},
+        {"text": "at bright midday under high overhead sun", "tags": ["midday", "day"]}
+      ]
+    },
+    {
+      "id": "lighting",
+      "name": "Lighting",
+      "insertion_zone": "lighting",
+      "detection_terms": [
+        "\\b((Dim romantic )?(nightlight|strobe|volumetric|rim|diffused|ambient|sunlight|candlelight|neon|chiaroscuro|flash|warm|soft)\\s+(lighting|illumination|lights?|shadows?))\\b",
+        "\\b((dramatic rim light|cinematic volumetric lighting|soft diffused window light|chiaroscuro lighting|neon rim glow|warm golden sunlight|moody split lighting|creamy beauty dish lighting|harsh direct flash)\\b)"
+      ],
+      "cleanup_patterns": [
+        "\\b(nightlight|strobe|volumetric|rim|diffused|ambient|sunlight|candlelight|neon|chiaroscuro|flash|warm|soft)\\s+(lighting|illumination|lights?|shadows?)\\b",
+        "\\b(dramatic rim light|cinematic volumetric lighting|soft diffused window light|chiaroscuro lighting|neon rim glow|warm golden sunlight)\\b"
+      ],
+      "entries": [
+        {"text": "illuminated by soft natural window light with subtle falloff", "tags": ["soft", "natural", "day", "indoor"]},
+        {"text": "dramatic cinematic rim lighting accentuating edges and silhouette", "tags": ["cinematic", "rim"]},
+        {"text": "warm golden hour sunlight slicing through dust motes with volumetric rays", "tags": ["golden", "volumetric", "day"]},
+        {"text": "high-contrast chiaroscuro lighting with deep sculptural shadows", "tags": ["dramatic", "contrast"]},
+        {"text": "cool cyan and vibrant magenta neon lighting casting colorful dual-tone glows", "tags": ["neon", "cyberpunk", "night"]},
+        {"text": "clean professional studio strobe lighting with octabox diffusion", "tags": ["studio", "clean", "indoor"]},
+        {"text": "dim romantic nightlight illumination with soft warm shadows", "tags": ["night", "indoor", "warm"]}
+      ]
+    },
+    {
+      "id": "atmosphere",
+      "name": "Atmosphere",
+      "insertion_zone": "lighting",
+      "detection_terms": [
+        "\\b(dreamy ethereal atmosphere|moody noir ambiance|serene tranquil vibe|gritty cinematic mood|mysterious hazy feeling|warm nostalgic aura)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(dreamy ethereal atmosphere|moody noir ambiance|serene tranquil vibe|gritty cinematic mood|mysterious hazy feeling)\\b"
+      ],
+      "entries": [
+        {"text": "imbued with an ethereal, dreamy and timeless atmosphere", "tags": ["ethereal"]},
+        {"text": "infused with a moody, introspective cinematic tone", "tags": ["cinematic", "moody"]},
+        {"text": "a calm, tranquil ambiance filled with quiet serenity", "tags": ["peaceful"]},
+        {"text": "a raw, authentic documentary feel with rich environmental texture", "tags": ["documentary", "authentic"]}
+      ]
+    }
+  ]
+}
