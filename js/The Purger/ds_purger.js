@@ -370,22 +370,46 @@ function setupNode(node) {
     return [curW, BASE_H];
   };
 
-  // 5. Ports: horizontally aligned with node edges, no labels
-  // Set color_off/color_on to transparent so the native LiteGraph slot dot
-  // is invisible — our custom onDrawForeground dot handles the visual.
-  // The slot geometry and connection logic remain fully functional.
+  // 5. Ports: horizontally aligned with node edges — fully custom visual.
+  //
+  // Strategy: move native slot.pos far off-screen so the native LiteGraph dot
+  // and hover highlight render outside the viewport. Clear slot.name so the
+  // hover tooltip text ("source") never appears. Override getSlotInPosition so
+  // LiteGraph still finds the slot at our custom positions for connection, and
+  // getConnectionPos so cables attach at the right edge points.
+  // onDrawForeground erases & redraws the dots purely in canvas space.
+  const OFF = -99999;
   if (node.inputs?.[0]) {
-    node.inputs[0].label = " ";
-    node.inputs[0].pos = [0, BASE_H / 2];
+    node.inputs[0].name   = "";
+    node.inputs[0].label  = "";
+    node.inputs[0].pos    = [OFF, OFF]; // native dot off-screen
     node.inputs[0].color_off = "rgba(0,0,0,0)";
     node.inputs[0].color_on  = "rgba(0,0,0,0)";
   }
   if (node.outputs?.[0]) {
-    node.outputs[0].label = " ";
-    node.outputs[0].pos = [w, BASE_H / 2];
+    node.outputs[0].name  = "";
+    node.outputs[0].label = "";
+    node.outputs[0].pos   = [OFF, OFF]; // native dot off-screen
     node.outputs[0].color_off = "rgba(0,0,0,0)";
     node.outputs[0].color_on  = "rgba(0,0,0,0)";
   }
+
+  // Override hit detection so connections still work via our visible dot
+  // positions, even though native slot.pos is off-screen.
+  node.getSlotInPosition = function (x, y) {
+    const sw  = this.size?.[0] ?? w;
+    const sh  = this.size?.[1] ?? BASE_H;
+    const cy  = sh / 2;
+    const HIT = 14; // hit-test radius in local node px
+    if (this.inputs?.[0] && Math.abs(y - cy) < HIT && x < HIT) {
+      // Return input slot; use link_pos that canvas uses for hover highlight.
+      return { input: this.inputs[0], slot: 0, link_pos: [0, cy], isInput: true };
+    }
+    if (this.outputs?.[0] && Math.abs(y - cy) < HIT && x > sw - HIT) {
+      return { output: this.outputs[0], slot: 0, link_pos: [sw, cy], isInput: false };
+    }
+    return null;
+  };
 
   node.getConnectionPos = function (is_input, slot_number, out) {
     out = out || new Float32Array(2);
@@ -475,6 +499,20 @@ app.registerExtension({
 
   setup() {
     registerGearMenu();
+
+    // Listen for purger execution — animate node to confirm purge ran
+    app.api?.addEventListener?.("executed", (e) => {
+      const data = e?.detail;
+      const done = data?.output?.ds_purger_done;
+      if (!done) return;
+      let node = app.graph?.getNodeById?.(data.node);
+      if (!node) node = (app.graph?._nodes || []).find((n) => String(n.id) === String(data.node));
+      if (!node || node.type !== NODE_TYPE) return;
+      node._dsPurgerFlashMode = done[0]?.mode || "All";
+      node._dsPurgerFlashTimer = Date.now();
+      node.setDirtyCanvas?.(true, false);
+      setTimeout(() => { node._dsPurgerFlashTimer = 0; node.setDirtyCanvas?.(true, false); }, 900);
+    });
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData) {
@@ -701,24 +739,44 @@ app.registerExtension({
       // Slot indicators centered on left (input) and right (output) edges
       const inConnected = Boolean(this.inputs?.[0]?.link != null);
       const outConnected = Boolean(this.outputs?.[0]?.links?.length > 0);
+      const isFlashing  = this._dsPurgerFlashTimer && (Date.now() - this._dsPurgerFlashTimer < 900);
+      const dotColor    = isFlashing ? colors.accent : (inConnected ? colors.accent : colors.border);
+      const outDotColor = isFlashing ? colors.accent : (outConnected ? colors.accent : colors.border);
 
       // Input dot (left edge)
-      ctx.fillStyle = inConnected ? colors.accent : colors.border;
+      ctx.fillStyle = dotColor;
       ctx.beginPath();
-      ctx.arc(0, layout.h / 2, 4.5, 0, Math.PI * 2);
+      ctx.arc(0, layout.h / 2, isFlashing ? 5.5 : 4.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = colors.bgSurface;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
       // Output dot (right edge)
-      ctx.fillStyle = outConnected ? colors.accent : colors.border;
+      ctx.fillStyle = outDotColor;
       ctx.beginPath();
-      ctx.arc(layout.w, layout.h / 2, 4.5, 0, Math.PI * 2);
+      ctx.arc(layout.w, layout.h / 2, isFlashing ? 5.5 : 4.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = colors.bgSurface;
       ctx.lineWidth = 1.5;
       ctx.stroke();
+
+      // "PURGED" flash overlay — brief confirmation that the purge executed
+      if (isFlashing) {
+        const progress = (Date.now() - this._dsPurgerFlashTimer) / 900;
+        const alpha = Math.max(0, 1 - progress * 1.4);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        const flashFont = fontName;
+        ctx.font = `700 10px "${flashFont}", system-ui, sans-serif`;
+        ctx.fillStyle = colors.accent;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`✓ PURGED`, Math.round(layout.w / 2), Math.round(layout.h / 2));
+        ctx.restore();
+        // Keep redrawing while animation is active
+        this.setDirtyCanvas?.(true, false);
+      }
 
       ctx.restore();
     };

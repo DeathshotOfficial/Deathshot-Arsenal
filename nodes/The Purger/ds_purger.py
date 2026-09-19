@@ -49,6 +49,7 @@ class DS_ThePurger:
     RETURN_TYPES = (ANY,)
     RETURN_NAMES = ("",)
     FUNCTION = "purge"
+    OUTPUT_NODE = True
     CATEGORY = "☠️ Deathshot Arsenal/💾 Utilities"
     DESCRIPTION = "Zero-overhead inline passthrough utility to execute VRAM, RAM, Model, or Cache garbage collection."
 
@@ -87,8 +88,13 @@ class DS_ThePurger:
             except Exception as e:
                 print(f"[DS The Purger] VRAM empty warning: {e}", flush=True)
 
-        # Direct passthrough with zero mutation
-        return (source,)
+        print(f"[DS The Purger] Purge complete — mode={mode}", flush=True)
+
+        # Notify the frontend so the node can flash its confirmation animation
+        return {
+            "ui": {"ds_purger_done": [{"mode": mode}]},
+            "result": (source,),
+        }
 
 
 NODE_CLASS_MAPPINGS = {"DS_ThePurger": DS_ThePurger}
