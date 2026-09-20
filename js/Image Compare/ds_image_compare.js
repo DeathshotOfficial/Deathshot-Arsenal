@@ -1,5 +1,3 @@
-// DeathshotArsenal/js/Image Compare/ds_image_compare.js
-
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 
@@ -11,9 +9,73 @@ if (!document.querySelector(`link[href*="ds_image_compare.css"]`)) {
     document.head.appendChild(link);
 }
 
-// -----------------------------------------------------------------------------
-// Pure Theme Resolver (Zero hardcoded blue; strictly follows active theme)
-// -----------------------------------------------------------------------------
+const sessionImageCache = new Map();
+const sessionNodeCache = new Map();
+
+function loadImage(imgInfo) {
+    if (!imgInfo?.filename) return Promise.resolve(null);
+    if (sessionImageCache.has(imgInfo.filename)) {
+        return Promise.resolve(sessionImageCache.get(imgInfo.filename));
+    }
+    const img = new Image();
+    const viewUrl = api.apiURL
+        ? api.apiURL(`/view?filename=${encodeURIComponent(imgInfo.filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}&t=${Date.now()}`)
+        : `/view?filename=${encodeURIComponent(imgInfo.filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}&t=${Date.now()}`;
+    img.src = viewUrl;
+    return new Promise((resolve) => {
+        img.onload = () => {
+            sessionImageCache.set(imgInfo.filename, img);
+            resolve(img);
+        };
+        img.onerror = () => resolve(null);
+    });
+}
+
+function loadCompareImages(node, d1, d2) {
+    let immediateUpdate = false;
+    if (d1?.filename && sessionImageCache.has(d1.filename)) {
+        node.imgA = sessionImageCache.get(d1.filename);
+        immediateUpdate = true;
+    }
+    if (d2?.filename && sessionImageCache.has(d2.filename)) {
+        node.imgB = sessionImageCache.get(d2.filename);
+        immediateUpdate = true;
+    }
+    if (immediateUpdate) {
+        node.setDirtyCanvas?.(true, true);
+    }
+
+    return Promise.all([loadImage(d1), loadImage(d2)]).then(([i1, i2]) => {
+        if (i1) node.imgA = i1;
+        if (i2) node.imgB = i2;
+        node.setDirtyCanvas?.(true, true);
+    });
+}
+
+function handleExecution(node, output) {
+    if (output?.images) delete output.images;
+    node.imgs = null;
+
+    const data = output?.compare_images;
+    if (!data) return;
+
+    const [d1, d2] = data;
+    const dimsA = output.dims?.a || null;
+    const dimsB = output.dims?.b || null;
+
+    node.dimsA = dimsA;
+    node.dimsB = dimsB;
+
+    node.properties = node.properties || {};
+    node.properties.ds_cmp_a = d1;
+    node.properties.ds_cmp_b = d2;
+    node.properties.ds_dims_a = dimsA;
+    node.properties.ds_dims_b = dimsB;
+
+    sessionNodeCache.set(String(node.id), { d1, d2, dimsA, dimsB });
+    loadCompareImages(node, d1, d2);
+}
+
 function resolveTheme(node) {
     let isLight = false;
 
@@ -81,20 +143,28 @@ function resolveTheme(node) {
     };
 }
 
-// -----------------------------------------------------------------------------
-// Symmetrical Geometry Coordinates (Exact Equal Top & Bottom Margins: 8px)
-// -----------------------------------------------------------------------------
 function getLayoutMetrics(node) {
     const marginY = 8;
     const hudH = 34;
-    const hudY = marginY;                       // 8px from top of node body (centered with sockets)
-    const contentStartY = hudY + hudH + marginY; // 8 + 34 + 8 = 50px
+    const hudY = marginY;
+    const contentStartY = hudY + hudH + marginY;
 
     return { marginY, hudY, hudH, contentStartY };
 }
 
 app.registerExtension({
     name: "Deathshot.ImageCompare",
+    setup() {
+        api.addEventListener("executed", (e) => {
+            const data = e.detail;
+            const output = data?.output;
+            if (!output?.compare_images) return;
+            let node = app.graph?.getNodeById?.(data.node);
+            if (!node) node = (app.graph?._nodes || []).find((n) => String(n.id) === String(data.node));
+            if (!node || node.type !== "DS_ImageCompare") return;
+            handleExecution(node, output);
+        });
+    },
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name !== "DS_ImageCompare") return;
 
@@ -123,9 +193,6 @@ app.registerExtension({
             return { x: finalX, y: finalY, w: drawW, h: drawH };
         }
 
-        // ---------------------------------------------------------------------
-        // Resolution & Comparison HUD
-        // ---------------------------------------------------------------------
         function drawResolutionHUD(node, ctx) {
             if (node.flags?.collapsed) return;
             const w = Number(node.size?.[0]) || 512;
@@ -247,9 +314,6 @@ app.registerExtension({
             ctx.restore();
         }
 
-        // ---------------------------------------------------------------------
-        // Node Lifecycle & Canvas Widget
-        // ---------------------------------------------------------------------
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
             onNodeCreated?.apply(this, arguments);
@@ -341,6 +405,9 @@ app.registerExtension({
 
                     // Empty state placeholder
                     if (!node.imgA && !node.imgB) {
+                        if (node.properties?.ds_cmp_a || node.properties?.ds_cmp_b) {
+                            loadCompareImages(node, node.properties.ds_cmp_a, node.properties.ds_cmp_b);
+                        }
                         const pad = 8;
                         const emptyH = availableH - pad;
                         if (emptyH > 20) {
@@ -534,41 +601,10 @@ app.registerExtension({
             }
         };
 
-        // ---------------------------------------------------------------------
-        // Fast Non-Hijacking Image Loader
-        // ---------------------------------------------------------------------
         const onExecuted = nodeType.prototype.onExecuted;
         nodeType.prototype.onExecuted = function(output) {
-            if (output?.images) delete output.images;
-            this.imgs = null;
-
-            const data = output?.compare_images;
-            if (!data) return;
-
-            const [d1, d2] = data;
-            if (output.dims) {
-                this.dimsA = output.dims.a;
-                this.dimsB = output.dims.b;
-            }
-
-            const loadImage = (imgInfo) => {
-                if (!imgInfo?.filename) return Promise.resolve(null);
-                const img = new Image();
-                const viewUrl = api.apiURL
-                    ? api.apiURL(`/view?filename=${encodeURIComponent(imgInfo.filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}&t=${Date.now()}`)
-                    : `/view?filename=${encodeURIComponent(imgInfo.filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}&t=${Date.now()}`;
-                img.src = viewUrl;
-                return new Promise((resolve) => {
-                    img.onload = () => resolve(img);
-                    img.onerror = () => resolve(null);
-                });
-            };
-
-            Promise.all([loadImage(d1), loadImage(d2)]).then(([i1, i2]) => {
-                if (i1) this.imgA = i1;
-                if (i2) this.imgB = i2;
-                this.setDirtyCanvas(true, true);
-            });
+            onExecuted?.apply(this, arguments);
+            handleExecution(this, output);
         };
 
         const onConnectionsChange = nodeType.prototype.onConnectionsChange;
@@ -589,12 +625,28 @@ app.registerExtension({
             try {
                 window.DSGlobalTheme?.applyNodeBase?.(this);
             } catch (_) {}
+
+            this.properties = this.properties || {};
+            const saved = sessionNodeCache.get(String(this.id));
+            const d1 = saved?.d1 || this.properties.ds_cmp_a;
+            const d2 = saved?.d2 || this.properties.ds_cmp_b;
+            const dimsA = saved?.dimsA || this.properties.ds_dims_a;
+            const dimsB = saved?.dimsB || this.properties.ds_dims_b;
+
+            if (d1 || d2) {
+                this.dimsA = dimsA || null;
+                this.dimsB = dimsB || null;
+                loadCompareImages(this, d1, d2);
+                setTimeout(() => {
+                    if (!this.imgA && !this.imgB && (d1 || d2)) {
+                        loadCompareImages(this, d1, d2);
+                    }
+                }, 60);
+            }
+
             this.setDirtyCanvas(true, true);
         };
 
-        // ---------------------------------------------------------------------
-        // Continuous Global Drag Tracking & Auto-Snap
-        // ---------------------------------------------------------------------
         nodeType.prototype.onMouseDown = function(e, pos) {
             if (this.drawRect) {
                 const r = this.drawRect;

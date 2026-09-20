@@ -27,7 +27,8 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Film Grain**: High-performance photographic film grain processor powered by GLSL shaders with real-time interactive WebGL preview, customizable grain scale, chromatic variation, and luminance-based shadow weighting. See [DS Film Grain Documentation](docs/DS%20Film%20Grain.md).
 - **DS Image Save Advance**: Powerful image export with dynamic filename templating (`{model}`, `{seed}`, `{date}`, `{width}x{height}`), format conversion, and metadata embedding.
 - **DS Quick Save**: One-click rapid asset saving directly from canvas workflows.
-- **DS Image Checkpoint & Compare**: A/B image comparison and multi-stage visual checkpointing.
+- **DS Image Compare**: Real-time side-by-side and split-slider visual comparison with top-lane resolution HUD, megapixel differential analysis, and persistent multi-tab session state. See [DS Image Compare Documentation](docs/DS%20Image%20Compare.md).
+- **DS Image Checkpoint**: Interactive visual gate and multi-stage checkpointing with pause, pass, continue, and regenerate controls.
 - **DS Load Image & Folder Loader**: High-speed image loader with built-in HUD controls and batch folder ingestion.
 - **DS Gallery**: In-canvas media viewer with real-time thumbnail caching and filtering.
 

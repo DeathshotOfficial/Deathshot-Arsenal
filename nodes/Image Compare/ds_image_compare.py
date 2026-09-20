@@ -1,12 +1,14 @@
-# DeathshotArsenal/nodes/Image Compare/ds_image_compare.py
+"""DS Image Compare - In-canvas visual comparison with split slider and resolution metrics."""
 
-import torch
-import numpy as np
-from PIL import Image
+import logging
 import os
 import random
-import logging
+import numpy as np
+from PIL import Image
+import torch
+
 import folder_paths
+
 
 class DS_ImageCompare:
     @classmethod
@@ -16,7 +18,10 @@ class DS_ImageCompare:
             "optional": {
                 "image_a": ("IMAGE",),
                 "image_b": ("IMAGE",),
-            }
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+            },
         }
 
     RETURN_TYPES = ()
@@ -56,17 +61,20 @@ class DS_ImageCompare:
             logging.error(f"[DeathshotArsenal|ImageCompare] Fast temp save failed: {e}")
             return None
 
-    def generate_preview(self, image_a=None, image_b=None):
-        img_a_info = self._save_temp_image(image_a, "cmp_a_")
-        img_b_info = self._save_temp_image(image_b, "cmp_b_")
+    def generate_preview(self, image_a=None, image_b=None, unique_id=None):
+        safe_id = "".join(c for c in str(unique_id or "") if c.isalnum() or c in "_-")
+        prefix_a = f"cmp_{safe_id}_a_" if safe_id else "cmp_a_"
+        prefix_b = f"cmp_{safe_id}_b_" if safe_id else "cmp_b_"
+        img_a_info = self._save_temp_image(image_a, prefix_a)
+        img_b_info = self._save_temp_image(image_b, prefix_b)
 
         dims_a = None
         if image_a is not None and torch.is_tensor(image_a) and image_a.ndim == 4:
-            dims_a = [int(image_a.shape[2]), int(image_a.shape[1])]  # [W, H]
+            dims_a = [int(image_a.shape[2]), int(image_a.shape[1])]
 
         dims_b = None
         if image_b is not None and torch.is_tensor(image_b) and image_b.ndim == 4:
-            dims_b = [int(image_b.shape[2]), int(image_b.shape[1])]  # [W, H]
+            dims_b = [int(image_b.shape[2]), int(image_b.shape[1])]
 
         # Use "compare_images" instead of "images" to prevent ComfyUI core
         # from attaching its native image gallery previewer on top of the node
@@ -81,4 +89,4 @@ class DS_ImageCompare:
             }
         }
 
-        return {"ui": ui_data}
+        return {"ui": ui_data}
