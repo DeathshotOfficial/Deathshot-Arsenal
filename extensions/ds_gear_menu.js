@@ -93,6 +93,12 @@ class DSGearRegistry {
         onClick: (n, canvas, ev) => (n._toggleGenerationHubGearPopover || n._openGenerationHubGearPopover).call(n, ev?.currentTarget || ev?.target),
       };
     }
+    if (typeof node._togglePurgerGearPopover === "function" || typeof node._openPurgerGearPopover === "function") {
+      return {
+        tooltip: "DS The Purger Settings",
+        onClick: (n, canvas, ev) => (n._togglePurgerGearPopover || n._openPurgerGearPopover).call(n, ev?.currentTarget || ev?.target),
+      };
+    }
     return null;
   }
 

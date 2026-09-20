@@ -440,6 +440,17 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_FilmGrain: {e}", flush=True)
     DS_FilmGrain = None
 
+# DS The Purger
+try:
+    _mod = _load_node_pkg("the_purger", "The Purger")
+    DS_ThePurger = _mod.DS_ThePurger
+    if hasattr(_mod, "register_purger_routes"):
+        _mod.register_purger_routes()
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_ThePurger: {e}", flush=True)
+    DS_ThePurger = None
+
+
 
 
 # --- HELPERS ---
@@ -983,6 +994,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_Randomizer": DS_Randomizer} if DS_Randomizer is not None else {}),
     **({"DS_Reminder": DS_Reminder} if DS_Reminder is not None else {}),
     **({"DS_FilmGrain": DS_FilmGrain} if DS_FilmGrain is not None else {}),
+    **({"DS_ThePurger": DS_ThePurger} if DS_ThePurger is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1027,6 +1039,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_Randomizer": "DS Randomizer"} if DS_Randomizer is not None else {}),
     **({"DS_Reminder": "DS Reminder"} if DS_Reminder is not None else {}),
     **({"DS_FilmGrain": "DS Film Grain"} if DS_FilmGrain is not None else {}),
+    **({"DS_ThePurger": "DS The Purger"} if DS_ThePurger is not None else {}),
 }
 
 WEB_DIRECTORY = "js"

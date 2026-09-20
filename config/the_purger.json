@@ -1,0 +1,16 @@
+{
+  "buttons": [
+    "ALL",
+    "VRAM",
+    "RAM",
+    "MODELS",
+    "CACHE"
+  ],
+  "enabled": {
+    "ALL": true,
+    "VRAM": true,
+    "RAM": true,
+    "MODELS": true,
+    "CACHE": true
+  }
+}

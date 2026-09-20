@@ -20,6 +20,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Hardware Monitor**: Real-time tracking of GPU / VRAM usage, CPU, RAM, and temperature via NVML and system sensors.
 - **DS System Monitor**: Compact status bar for live generation stats and hardware metrics.
 - **DS Run Timer**: Accurate execution benchmarking and completion audio alerts with multi-stage checkpoint pause/resume coordination. See [DS Run Timer Documentation](docs/DS%20Run%20Timer.md).
+- **DS The Purger**: Safe, direct ComfyUI resource cleanup utility and transparent workflow passthrough node. Frees VRAM, RAM, cached models, and memory allocations mid-workflow or queue-to-queue under thread-safe synchronization with live before/after metrics. See [DS The Purger Documentation](docs/DS%20The%20Purger.md).
 
 ### 🖼️ Image & Media Tools
 - **DS Film Grain**: High-performance photographic film grain processor powered by GLSL shaders with real-time interactive WebGL preview, customizable grain scale, chromatic variation, and luminance-based shadow weighting. See [DS Film Grain Documentation](docs/DS%20Film%20Grain.md).

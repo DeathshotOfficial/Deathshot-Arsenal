@@ -1,0 +1,283 @@
+/* ============================================================
+   Deathshot Arsenal — DS The Purger Stylesheet
+   Strict DeathshotArsenal Design System:
+   Theme variables, compact geometry, custom switches,
+   and floating toolbar gear configuration popover.
+   ============================================================ */
+
+/* ------------------------------------------------------------------------- */
+/* Popover Container                                                         */
+/* ------------------------------------------------------------------------- */
+.ds-purger-gear-popover {
+  position: fixed;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  max-height: 85vh;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--ds-panel, #0f1219);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
+  color: var(--ds-text, #f8fafc);
+  font-family: var(--ds-font, "Inter", system-ui, -apple-system, sans-serif);
+  z-index: 99999;
+  box-sizing: border-box;
+  overflow-y: auto;
+  user-select: none;
+}
+
+/* Custom Deathshot Scrollbar */
+.ds-purger-gear-popover::-webkit-scrollbar {
+  width: 4px;
+}
+.ds-purger-gear-popover::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ds-purger-gear-popover::-webkit-scrollbar-thumb {
+  background: var(--ds-border, rgba(255, 255, 255, 0.18));
+  border-radius: 2px;
+}
+.ds-purger-gear-popover::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-accent, #67e8f9);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Popover Header                                                            */
+/* ------------------------------------------------------------------------- */
+.ds-purger-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+}
+
+.ds-purger-popover-head-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ds-purger-brand-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--ds-panel-2, #181c24);
+  border: 1px solid var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+  font-weight: 900;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.ds-purger-popover-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ds-text, #f8fafc);
+  line-height: 1.2;
+}
+
+.ds-purger-popover-desc {
+  font-size: 10px;
+  color: var(--ds-text-muted, rgba(248, 250, 252, 0.55));
+  line-height: 1.2;
+}
+
+.ds-purger-popover-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ds-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.ds-purger-popover-close:hover {
+  background: var(--ds-btn-hover, #222733);
+  border-color: var(--ds-border, rgba(255, 255, 255, 0.14));
+  color: var(--ds-text, #f8fafc);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Popover Action Rows (Strict Alignment & Zero Wasted Space)                */
+/* ------------------------------------------------------------------------- */
+.ds-purger-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.ds-purger-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 9px;
+  border-radius: 5px;
+  background: var(--ds-panel-2, #181c24);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.08));
+  gap: 10px;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.ds-purger-settings-row:hover {
+  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.22));
+}
+
+.ds-purger-settings-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ds-purger-settings-row-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ds-text, #f8fafc);
+  letter-spacing: 0.02em;
+}
+
+.ds-purger-settings-row-desc {
+  display: block;
+  font-size: 10px;
+  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.ds-purger-settings-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Order Buttons */
+.ds-purger-order-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.ds-purger-order-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  background: var(--ds-bg, #0b0d12);
+  color: var(--ds-text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.ds-purger-order-btn:hover:not(:disabled) {
+  background: var(--ds-btn-hover, #222733);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-purger-order-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------------- */
+/* DeathshotArsenal Custom Toggle Switch (Zero Native Controls)              */
+/* ------------------------------------------------------------------------- */
+.ds-purger-switch {
+  position: relative;
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  border-radius: 999px;
+  background: var(--ds-panel-2, #181c24);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.18));
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.ds-purger-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--ds-text-muted, #94a3b8);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease;
+  box-sizing: border-box !important;
+  pointer-events: none;
+}
+
+.ds-purger-switch.is-on,
+.ds-purger-switch.is-checked {
+  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, var(--ds-panel-2, #181c24));
+  border-color: var(--ds-accent, #67e8f9);
+}
+
+.ds-purger-switch.is-on .ds-purger-switch-thumb,
+.ds-purger-switch.is-checked .ds-purger-switch-thumb {
+  transform: translateX(14px);
+  background: var(--ds-accent, #67e8f9);
+  box-shadow: 0 0 6px var(--ds-accent, #67e8f9);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Popover Footer                                                            */
+/* ------------------------------------------------------------------------- */
+.ds-purger-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+}
+
+.ds-purger-footer-btn {
+  height: 25px;
+  padding: 0 10px;
+  border-radius: 5px;
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  background: var(--ds-panel-2, #181c24);
+  color: var(--ds-text-muted, #94a3b8);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.ds-purger-footer-btn:hover {
+  background: var(--ds-btn-hover, #222733);
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-text, #f8fafc);
+}
