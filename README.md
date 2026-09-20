@@ -23,6 +23,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS The Purger**: Safe, direct ComfyUI resource cleanup utility and transparent workflow passthrough node. Frees VRAM, RAM, cached models, and memory allocations mid-workflow or queue-to-queue under thread-safe synchronization with live before/after metrics. See [DS The Purger Documentation](docs/DS%20The%20Purger.md).
 
 ### 🖼️ Image & Media Tools
+- **DS Image Preview**: Real-time high-fidelity image inspection and lossless passthrough node with dual PREVIEW and SAVE execution modes, instant clipboard copy, full-resolution popout window, and on-demand manual disk export. See [DS Image Preview Documentation](docs/DS%20Image%20Preview.md).
 - **DS Film Grain**: High-performance photographic film grain processor powered by GLSL shaders with real-time interactive WebGL preview, customizable grain scale, chromatic variation, and luminance-based shadow weighting. See [DS Film Grain Documentation](docs/DS%20Film%20Grain.md).
 - **DS Image Save Advance**: Powerful image export with dynamic filename templating (`{model}`, `{seed}`, `{date}`, `{width}x{height}`), format conversion, and metadata embedding.
 - **DS Quick Save**: One-click rapid asset saving directly from canvas workflows.

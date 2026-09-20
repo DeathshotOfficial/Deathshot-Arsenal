@@ -110,7 +110,6 @@
   border-color: var(--ip-border);
 }
 
-/* Same active highlighter treatment as DS Image Checkpoint. */
 .ds-ip-mode.active {
   color: var(--ip-text);
   background: var(--ip-bg2);

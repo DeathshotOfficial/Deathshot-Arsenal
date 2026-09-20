@@ -41,29 +41,40 @@ function state(node) {
   });
 }
 
-function modeWidget(node) {
-  return (node.widgets || []).find((w) => w.name === "SaveMode");
-}
-
-function syncModeWidget(node) {
-  const w = modeWidget(node);
-  if (w) w.value = state(node).mode;
-}
-
-function hideModeWidget(node) {
-  const w = modeWidget(node);
-  if (!w) return;
-  // Keep a real serialized widget in the node, but remove its native visual footprint.
-  w.hidden = true;
-  w.computeSize = () => [0, 0];
-  w.serializeValue = () => state(node).mode;
+function cleanupNode(node) {
+  if (Array.isArray(node.inputs)) {
+    for (let i = node.inputs.length - 1; i >= 0; i--) {
+      const inp = node.inputs[i];
+      if (inp.name !== "image") {
+        node.removeInput(i);
+      } else {
+        inp.type = "IMAGE";
+      }
+    }
+  }
+  if (Array.isArray(node.widgets)) {
+    for (let i = node.widgets.length - 1; i >= 0; i--) {
+      if (node.widgets[i].name === "SaveMode") {
+        node.widgets.splice(i, 1);
+      }
+    }
+  }
+  if (Array.isArray(node.outputs)) {
+    for (let i = node.outputs.length - 1; i >= 0; i--) {
+      const out = node.outputs[i];
+      if (out.name !== "image") {
+        node.removeOutput(i);
+      } else {
+        out.type = "IMAGE";
+      }
+    }
+  }
 }
 
 function persist(node) {
   node.properties ??= {};
   node.properties[MODE_PROP] = state(node).mode;
   node.properties.ds_image_preview_version = 2;
-  syncModeWidget(node);
 }
 
 function toast(node, text) {
@@ -89,7 +100,6 @@ function renderMode(node) {
 function setMode(node, mode) {
   state(node).mode = mode === "save" ? "save" : "preview";
   persist(node);
-  syncModeWidget(node);
   renderMode(node);
   node.setDirtyCanvas?.(true, true);
   log("mode", state(node).mode, "node", node.id);
@@ -102,7 +112,6 @@ function setImage(node, info) {
   s.width = Number(info.width) || 0;
   s.height = Number(info.height) || 0;
   s.count = Number(info.count) || 1;
-  // Persist so the image can be restored after switching workflows
   node.properties ??= {};
   node.properties.ds_ip_last_file = s.file;
   node.properties.ds_ip_last_width = s.width;
@@ -272,11 +281,11 @@ function install(node) {
   if (!Array.isArray(node.size) || node.size[0] < MIN_SIZE[0] || node.size[1] < MIN_SIZE[1]) node.size = [...DEFAULT_SIZE];
   state(node).mode = node.properties[MODE_PROP] === "save" ? "save" : "preview";
 
+  cleanupNode(node);
+
   const root = buildUI(node);
   node._dsImagePreviewRoot = root;
   window.DSGlobalTheme?.bindNode?.(root, node);
-
-  hideModeWidget(node);
 
   if (typeof node.addDOMWidget === "function") {
     node._dsImagePreviewWidget = node.addDOMWidget("ds_image_preview_ui", "div", root, {
@@ -287,15 +296,40 @@ function install(node) {
       getHeight: () => Math.max(1, (Number(node.size?.[1]) || DEFAULT_SIZE[1]) - 42),
     });
   }
-  hideModeWidget(node);
+  cleanupNode(node);
   renderMode(node);
   log("node installed", node.id);
+}
+
+function installPromptHook() {
+  if (app._dsImagePreviewGraphToPromptHook) return;
+  app._dsImagePreviewGraphToPromptHook = true;
+  const original = app.graphToPrompt?.bind(app);
+  if (!original) return;
+  app.graphToPrompt = async function (...args) {
+    const result = await original(...args);
+    try {
+      const out = result?.output || {};
+      for (const id in out) {
+        const entry = out[id];
+        if (!entry || entry.class_type !== TYPE || !entry.inputs) continue;
+        let node = app.graph?.getNodeById?.(id);
+        if (!node) node = (app.graph?._nodes || []).find((n) => String(n.id) === String(id));
+        if (!node) continue;
+        entry.inputs.SaveMode = state(node).mode || "preview";
+      }
+    } catch (e) {
+      error("graphToPrompt error", e);
+    }
+    return result;
+  };
 }
 
 app.registerExtension({
   name: EXT,
   async setup() {
     await loadCss();
+    installPromptHook();
     api.addEventListener("executed", (e) => {
       const data = e.detail;
       const frames = data?.output?.ds_image_preview;
@@ -323,14 +357,11 @@ app.registerExtension({
       const result = oldConfigure?.apply(this, arguments);
       if (!this.properties) this.properties = {};
       const s = state(this);
-      const w = modeWidget(this);
-      const loadedMode = w?.value === "save" || this.properties[MODE_PROP] === "save" ? "save" : "preview";
+      const loadedMode = this.properties[MODE_PROP] === "save" ? "save" : "preview";
       s.mode = loadedMode;
       this.properties[MODE_PROP] = loadedMode;
-      hideModeWidget(this);
-      syncModeWidget(this);
+      cleanupNode(this);
       renderMode(this);
-      // Restore last-shown image if we have a saved file reference from before workflow switch
       const lastFile = this.properties.ds_ip_last_file;
       if (lastFile) {
         setTimeout(() => setImage(this, {
