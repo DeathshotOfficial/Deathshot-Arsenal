@@ -66,7 +66,11 @@ try:
             return web.Response(status=403)
         if not os.path.isfile(target) or not target.lower().endswith(".js"):
             return web.Response(status=404)
-        return web.FileResponse(target)
+        resp = web.FileResponse(target)
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
 
 except Exception as e:
     print(f"[DeathshotArsenal] Failed to register frontend extensions route: {e}")

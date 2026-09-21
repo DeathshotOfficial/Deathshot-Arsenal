@@ -9,7 +9,7 @@ const DS_EXTENSION_BASE = "/ds_extensions/DeathshotArsenal/";
 
 async function loadDsExtension(name) {
     try {
-        await import(`${DS_EXTENSION_BASE}${name}`);
+        await import(`${DS_EXTENSION_BASE}${name}?v=1.2.9&t=${Date.now()}`);
         console.log(`[DeathshotArsenal] Loaded frontend extension: ${name}`);
     } catch (error) {
         console.error(`[DeathshotArsenal] Failed to load frontend extension: ${name}`, error);
@@ -19,3 +19,5 @@ async function loadDsExtension(name) {
 loadDsExtension("ds_group.js");
 loadDsExtension("ds_gear_menu.js");
 loadDsExtension("ds_reminder_global.js");
+loadDsExtension("ds_snap.js");
+

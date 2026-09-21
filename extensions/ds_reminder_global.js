@@ -709,7 +709,6 @@ class DSReminderToolbarManager {
 
     if (window.DSGlobalTheme?.subscribe) {
       window.DSGlobalTheme.subscribe(() => {
-        if (this.btn) window.DSGlobalTheme.applyToElement(this.btn);
         if (this.popover) window.DSGlobalTheme.applyToElement(this.popover);
         if (fullscreenOverlay?.el) {
           window.DSGlobalTheme.applyToElement(fullscreenOverlay.el);
@@ -730,8 +729,7 @@ class DSReminderToolbarManager {
     if (this.group && this.btn) return;
 
     const group = document.createElement("div");
-    group.className = "comfyui-button-group ds-reminder-toolbar-group";
-    group.setAttribute("data-ds-themed", "true");
+    group.className = "ds-reminder-toolbar-group";
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -739,10 +737,9 @@ class DSReminderToolbarManager {
     btn.className = "comfyui-button ds-reminder-tb-btn";
     btn.setAttribute("title", "DS Reminder Manager");
     btn.setAttribute("aria-label", "DS Reminder Manager");
-    btn.setAttribute("data-ds-themed", "true");
     btn.innerHTML = `
       <span class="ds-reminder-tb-icon-box">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ds-reminder-bell-svg">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ds-reminder-bell-svg">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
         </svg>
@@ -760,60 +757,23 @@ class DSReminderToolbarManager {
     this.group = group;
     this.btn = btn;
     this.badge = btn.querySelector("#ds-reminder-tb-badge");
-    if (window.DSGlobalTheme?.applyToElement) {
-      window.DSGlobalTheme.applyToElement(btn);
-    }
   }
 
   mountToolbarButton() {
-    if (this.btn?.isConnected && this.group?.isConnected) return;
-
-    this._createToolbarElements();
-
-    // Action bar integration:
-    // app.menu.settingsGroup is the gear-icon group on the floating action bar.
-    // Inserting before it places our button cleanly alongside native and extension tools.
-    const settingsGroupEl = app.menu?.settingsGroup?.element;
-    if (!settingsGroupEl) {
+    const actionDock = app.menu?.settingsGroup?.element?.parentElement || document.querySelector(".comfyui-menu");
+    if (!actionDock) {
       if (this._mountTries == null) this._mountTries = 0;
-      if (++this._mountTries < 40) {
-        setTimeout(() => this.mountToolbarButton(), 250);
-        return;
+      if (++this._mountTries < 80) {
+        setTimeout(() => this.mountToolbarButton(), 150);
       }
-    } else if (settingsGroupEl.parentElement) {
-      settingsGroupEl.before(this.group);
-      this.updateBadge();
       return;
     }
 
-    // Fallback search if settingsGroup was not found or has different DOM
-    const allButtons = Array.from(document.querySelectorAll("button, .p-button, [role='button']"));
-    const managerBtn = allButtons.find((b) => {
-      const txt = (b.textContent || "").trim();
-      return txt.includes("Manager") || b.id === "cm-manager-button" || b.classList.contains("cm-manager-button");
-    });
-    const runBtn = allButtons.find((b) => {
-      const txt = (b.textContent || "").trim();
-      return txt.startsWith("Run") || b.getAttribute("aria-label")?.includes("Queue");
-    });
+    this._createToolbarElements();
 
-    const targetHost =
-      (managerBtn && managerBtn.parentElement) ||
-      (runBtn && runBtn.parentElement) ||
-      document.querySelector(".comfyui-menu .action-bar") ||
-      document.querySelector(".comfyui-action-bar") ||
-      document.querySelector('[data-testid="action-bar"]') ||
-      document.querySelector(".action-bar") ||
-      document.querySelector(".comfy-menu");
-
-    if (targetHost && !this.group.isConnected) {
-      if (managerBtn && managerBtn.parentElement === targetHost) {
-        targetHost.insertBefore(this.group, managerBtn);
-      } else if (runBtn && runBtn.parentElement === targetHost) {
-        targetHost.insertBefore(this.group, runBtn);
-      } else {
-        targetHost.appendChild(this.group);
-      }
+    // Always anchor to the FAR LEFT of the action bar
+    if (actionDock.firstChild !== this.group) {
+      actionDock.prepend(this.group);
     }
 
     this.updateBadge();
@@ -821,15 +781,17 @@ class DSReminderToolbarManager {
 
   initToolbarObserver() {
     const check = () => {
-      if (!this.btn?.isConnected || !this.group?.isConnected) {
-        this.mountToolbarButton();
+      const actionDock = app.menu?.settingsGroup?.element?.parentElement || document.querySelector(".comfyui-menu");
+      if (!actionDock) return;
+      if (actionDock.firstChild !== this.group) {
+        actionDock.prepend(this.group);
       }
     };
     const observer = new MutationObserver(check);
     observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(check, 500);
-    setTimeout(check, 1500);
-    setTimeout(check, 3000);
+    setTimeout(check, 250);
+    setTimeout(check, 700);
+    setTimeout(check, 1800);
   }
 
   updateBadge() {
@@ -1347,12 +1309,25 @@ function injectReminderStyles() {
   style.id = "ds-reminder-global-styles";
   style.textContent = `
     /* Action dock button & Top Action Bar integration */
-    .ds-reminder-toolbar-group {
+    .ds-reminder-toolbar-group,
+    div.ds-reminder-toolbar-group {
       display: inline-flex !important;
       align-items: center !important;
+      justify-content: center !important;
       overflow: visible !important;
+      background: none !important;
+      background-color: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      padding: 0 !important;
       margin: 0 4px 0 2px !important;
-      padding-right: 3px !important;
+      outline: none !important;
+    }
+    .ds-reminder-toolbar-group::before,
+    .ds-reminder-toolbar-group::after {
+      display: none !important;
+      content: none !important;
     }
     .ds-reminder-tb-btn {
       display: inline-flex !important;
@@ -1360,16 +1335,18 @@ function injectReminderStyles() {
       justify-content: center !important;
       position: relative !important;
       overflow: visible !important;
-      height: 28px !important;
-      padding: 0 7px !important;
+      min-width: 40px !important;
+      height: 38px !important;
+      padding: 0 10px !important;
       margin: 0 !important;
-      border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.16)) !important;
-      border-radius: 5px !important;
+      border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.18)) !important;
+      border-radius: 8px !important;
       background: var(--ds-panel-2, #181d26) !important;
-      color: #e2e8f0 !important;
+      color: var(--ds-text, var(--text, #e2e8f0)) !important;
       cursor: pointer !important;
       box-sizing: border-box !important;
       outline: none !important;
+      box-shadow: none !important;
       transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
       vertical-align: middle !important;
       font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
@@ -1377,23 +1354,31 @@ function injectReminderStyles() {
     .ds-reminder-tb-btn:hover {
       border-color: var(--ds-accent) !important;
       color: var(--ds-accent) !important;
-      background: var(--ds-btn-hover, #202633) !important;
+      background: var(--ds-btn-hover, var(--ds-hover, #202633)) !important;
+    }
+    .ds-reminder-tb-btn::before,
+    .ds-reminder-tb-btn::after {
+      display: none !important;
+      content: none !important;
     }
     .ds-reminder-tb-icon-box {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
+      width: 22px !important;
+      height: 22px !important;
       transform-origin: 50% 12% !important;
       transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
       will-change: transform;
     }
     .ds-reminder-bell-svg {
-      stroke: currentColor !important;
+      stroke: var(--ds-text, currentColor) !important;
+      color: var(--ds-text, currentColor) !important;
       display: block !important;
-      width: 16px !important;
-      height: 16px !important;
+      width: 22px !important;
+      height: 22px !important;
       transform-origin: 50% 12% !important;
-      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s ease !important;
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s ease, stroke 0.15s ease !important;
       will-change: transform;
     }
     .ds-reminder-tb-btn:hover .ds-reminder-tb-icon-box {
@@ -1402,6 +1387,7 @@ function injectReminderStyles() {
     }
     .ds-reminder-tb-btn:hover .ds-reminder-bell-svg {
       color: var(--ds-accent) !important;
+      stroke: var(--ds-accent) !important;
     }
     @keyframes dsBellRingHover {
       0% { transform: rotate(18deg) scale(1.1); }
@@ -1425,7 +1411,7 @@ function injectReminderStyles() {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
-      border: 1.5px solid var(--ds-panel, #12161e) !important;
+      border: 1.5px solid var(--ds-panel, var(--ds-panel-2, #12161e)) !important;
       box-sizing: border-box !important;
       z-index: 100 !important;
       pointer-events: none !important;
@@ -1443,7 +1429,10 @@ function injectReminderStyles() {
     .ds-reminder-tb-btn.is-trigger-pulsing {
       border-color: #ef4444 !important;
       color: #ef4444 !important;
-      animation: dsRemBorderPulse 1s infinite alternate;
+    }
+    .ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-bell-svg {
+      color: #ef4444 !important;
+      stroke: #ef4444 !important;
     }
     .ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-tb-icon-box {
       animation: dsBellRingAlert 0.45s ease-in-out infinite !important;
