@@ -1,5 +1,4 @@
-# DeathshotArsenal/ds_image_checkpoint.py
-"""DS Image Checkpoint - IMAGE gate using Pixaroma-style prompt pruning.
+"""DS Image Checkpoint - IMAGE gate using frontend-coordinated prompt pruning.
 
 This is a normal ComfyUI IMAGE -> IMAGE node. The frontend decides whether a
 submitted prompt is paused, passed, or continued; the backend never blocks a

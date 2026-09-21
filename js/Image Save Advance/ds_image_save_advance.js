@@ -208,10 +208,9 @@ function updateSlider(input) {
 // Runtime token resolution
 // -----------------------------------------------------------------------------
 // The Python execution payload is not a reliable place to discover the live
-// frontend widget values. Pixaroma solves this at graphToPrompt time: inspect
+// frontend widget values. We resolve this at graphToPrompt time: inspect
 // the actual graph widgets, resolve dynamic filename references, then inject
-// the resolved state into the queued node. We do the same for the compact
-// {model}/{seed} tokens used by Image Save Advance.
+// the resolved state into the queued node for the compact {model}/{seed} tokens.
 function collectGraphNodes() {
   const root = app.graph?.rootGraph || app.graph;
   const out = [];

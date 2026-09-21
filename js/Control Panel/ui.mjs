@@ -502,7 +502,7 @@ export function syncRowWidgets(node, buildRow, onAdd, onGear) {
 }
 
 // ------------------------------------------------------------------
-// Height calculations & Safe node sizing (Pixaroma pattern)
+// Height calculations & Safe node sizing
 // ------------------------------------------------------------------
 export function bodyHeight(node) {
   const controls = node._dsControls || [];
@@ -557,7 +557,7 @@ try {
 } catch (_) {}
 
 // ------------------------------------------------------------------
-// Output alignment logic (Direct Pixaroma Implementation)
+// Output alignment logic
 // ------------------------------------------------------------------
 export function alignOutputsLegacy(node) {
   const rows = node._dsRowWidgets || [];

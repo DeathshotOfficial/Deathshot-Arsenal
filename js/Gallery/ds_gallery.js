@@ -107,10 +107,6 @@ app.registerExtension({
   ],
 
   getSelectionToolboxCommands(item) {
-    if (window._pixaromaHasGallerySettings) {
-      // If Pixaroma is handling it, let Pixaroma provide the gear button
-      return [];
-    }
     const type = item?.comfyClass || item?.type;
     if (type === TYPE) {
       return ["DeathshotArsenal.DSGallerySettings"];
@@ -1961,7 +1957,7 @@ app.registerExtension({
 });
 
 // ----------------------------------------------------------------------------
-// Gear Menu & Pixaroma Toolbar Registration
+// Gear Menu & Toolbar Registration
 // ----------------------------------------------------------------------------
 function registerGalleryGearMenu() {
   if (!window.DSGearMenu?.register) return;
@@ -1974,24 +1970,7 @@ function registerGalleryGearMenu() {
   });
 }
 
-async function hookPixaromaToolbar() {
-  try {
-    const pix = await import("/extensions/ComfyUI-Pixaroma/shared/node_settings.mjs");
-    if (pix && typeof pix.registerNodeSettings === "function") {
-      pix.registerNodeSettings(TYPE, {
-        title: "Gallery",
-        ownMenuItem: true,
-        open: (node) => {
-          node?._toggleGalleryGearPopover?.(node?._findToolboxAnchor?.());
-        },
-      });
-      window._pixaromaHasGallerySettings = true;
-    }
-  } catch (_) {}
-}
-
 if (typeof window !== "undefined") {
-  hookPixaromaToolbar();
   registerGalleryGearMenu();
   window.addEventListener("DOMContentLoaded", registerGalleryGearMenu, { once: true });
   setTimeout(registerGalleryGearMenu, 200);

@@ -319,7 +319,7 @@ function loadVideoTimingLocal(node) {
 }
 
 function getVideoTimingBodyHeight() {
-  // Fixed: both custom values live inline as ordinary inputs.
+  // Both custom values live inline as ordinary inputs.
   return 112;
 }
 

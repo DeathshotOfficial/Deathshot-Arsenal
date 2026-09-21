@@ -1,7 +1,7 @@
 # DeathshotArsenal/ds_image_loader.py
 """DS Image Loader.
 
-Native-style image loader with Pixaroma-inspired inline resize controls.
+Native-style image loader with inline resize controls.
 The resize state is stored in a hidden STRING input so it survives workflow
 save/load and is included in ComfyUI execution without depending on another
 custom node pack.
@@ -178,7 +178,7 @@ def _resize_frame(img, state, orig_w, orig_h):
             return out, *_clamp_dims(cw, ch)
         f = max(tw / orig_w, th / orig_h)
         if not allow_up and f > 1:
-            # Same fallback as Pixaroma: fit inside target when upscaling is disabled.
+            # Fallback: fit inside target when upscaling is disabled.
             f = min(tw / orig_w, th / orig_h)
         f = min(f, 8.0)
         sw, sh = _round_half_up(orig_w * f), _round_half_up(orig_h * f)
@@ -234,7 +234,7 @@ def _resize_frame(img, state, orig_w, orig_h):
             out = _resize_simple(out, fw, fh, state, fw / max(1, out.width))
         return out, fw, fh
 
-    # Off still honors snap, exactly like Pixaroma.
+    # Off still honors snap.
     w, h = _snap_dims(orig_w, orig_h, snap)
     w, h = _clamp_dims(w, h)
     return _resize_simple(img, w, h, state), w, h

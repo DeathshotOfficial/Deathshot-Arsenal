@@ -13,8 +13,8 @@ const DEFAULT_STATE = {
   crop_anchor: "center", crop_scale: true, snap: 0, resample: "auto", allow_upscale: true,
 };
 // Keep the DS loader intentionally focused: the four practical resize modes
-// are exposed here. The more complex Pixaroma W×H / ratio / padding modes are
-// still understood by the shared resize math for backwards compatibility, but
+// are exposed here. More complex custom W×H / ratio / padding modes are
+// still supported by the shared resize math for backwards compatibility, but
 // are deliberately not exposed in this compact UI.
 const MODES = [
   ["off", "Off", "No resize; Snap can still be applied."],

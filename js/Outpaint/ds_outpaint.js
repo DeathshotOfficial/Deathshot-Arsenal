@@ -9,7 +9,7 @@ const TYPE = "DS_Outpaint";
 const CSS = "/extensions/DeathshotArsenal/Outpaint/outpaint.css";
 const UI_KEY = "ds_outpaint_state";
 
-// Compact geometry (Pixaroma-grade footprint)
+// Compact geometry footprint
 const MIN_W = 280;
 const DEFAULT_W = 320;
 const MIN_EXPANDED_H = 360;

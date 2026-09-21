@@ -1190,8 +1190,7 @@ app.registerExtension({
   async afterConfigureGraph() {
     if (!ready) return;
     // Clear any stale baked-in theme colors from the loaded JSON before
-    // applying the active theme. This fixes the "half-themed" appearance
-    // that occurred when a workflow was saved with mixed theme colors.
+    // applying the active theme to avoid mixed theme colors across workflow nodes.
     if (app.graph?._nodes) {
       for (const node of app.graph._nodes) {
         if (isDSNode(node) && !hasCustomNodeColors(node)) {

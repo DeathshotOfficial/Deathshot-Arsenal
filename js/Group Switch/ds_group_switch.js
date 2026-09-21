@@ -522,7 +522,7 @@ function bindDOMWidget(node) {
   node._dsGsDomRoot = dom;
 
   if (typeof node.addDOMWidget === "function") {
-    // Match the proven Hardware Monitor / Pixaroma-style DOM widget contract:
+    // Match the proven DOM widget geometry contract:
     // let ComfyUI own the widget geometry, while the node width remains the
     // single source of truth for the aspect ratio. Do not use afterResize or
     // write computedHeight on every frame; those can turn the DOM widget into
@@ -991,7 +991,7 @@ app.registerExtension({
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData?.name !== TYPE) return;
 
-    // Pixaroma-style chromeless node: title mode belongs to the NODE TYPE.
+    // Chromeless node: title mode belongs to the NODE TYPE.
     const LG = window.LiteGraph || {};
     nodeType.title_mode = LG.NO_TITLE != null ? LG.NO_TITLE : 1;
 

@@ -719,7 +719,7 @@ button.ds-cp-settings-add:hover,
 
 
 
-/* ── Nodes 2.0 (Direct Pixaroma Rules) ───────────────────────────────── */
+/* ── Nodes 2.0 Layout Rules ─────────────────────────────────────────── */
 .lg-node:has(.ds-cp-row) .lg-node-widget > div:first-child {
   width: 0 !important;
   min-width: 0 !important;

@@ -35,11 +35,11 @@ class FlexibleOptionalInputType(dict):
 
 
 def _is_empty(value):
-    """Match rgthree's useful notion of an empty switch value."""
+    """Determine if a switch input value is effectively empty."""
     if value is None:
         return True
 
-    # rgthree CONTEXT values can exist as a dict while containing no usable
+    # CONTEXT values can exist as a dict while containing no usable
     # model/clip pair. Treat those as empty rather than selecting them.
     if isinstance(value, dict) and "model" in value and "clip" in value:
         return value.get("model") is None and value.get("clip") is None

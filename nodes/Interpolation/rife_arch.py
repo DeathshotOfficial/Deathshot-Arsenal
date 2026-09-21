@@ -55,7 +55,7 @@ def warp(tenInput, tenFlow):
 
     padding_mode = "border"
     if dev.type == "mps":
-        # https://github.com/pytorch/pytorch/issues/125098
+        # MPS grid sampling requires zeros padding
         padding_mode = "zeros"
         g = g.clamp(-1, 1)
     return torch.nn.functional.grid_sample(

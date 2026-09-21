@@ -1,4 +1,4 @@
-/* DS Hardware Monitor — Pixaroma-style chromeless dashboard.
+/* DS Hardware Monitor — chromeless dashboard.
    IMPORTANT: sizing is driven by the node's geometry. Do not use cqb/cqh here:
    those units make intrinsic widget height depend on its own height and can
    create the endless vertical growth loop seen in older revisions. */

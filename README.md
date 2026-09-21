@@ -20,41 +20,45 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Global Reminder**: Floating action dock notification center for ComfyUI with execution alarms, countdown timer presets, browser audio alerts, and persistent queue state tracking. See [DS Reminder Documentation](docs/DS%20Reminder.md).
 
 ### 🎛️ System Diagnostics & Control
-- **DS Control Panel**: Centralized management interface for Deathshot workflow components.
-- **DS Hardware Monitor**: Real-time tracking of GPU / VRAM usage, CPU, RAM, and temperature via NVML and system sensors.
-- **DS System Monitor**: Compact status bar for live generation stats and hardware metrics.
+- **DS Control Panel**: Centralized management interface for Deathshot workflow components. See [DS Control Panel Documentation](docs/DS%20Control%20Panel.md).
+- **DS Hardware Monitor**: Real-time tracking of GPU / VRAM usage, CPU, RAM, and temperature via NVML and system sensors. See [DS Hardware Monitor Documentation](docs/DS%20Hardware%20Monitor.md).
+- **DS System Monitor**: Compact status bar for live generation stats and hardware metrics. See [DS System Monitor Documentation](docs/DS%20System%20Monitor.md).
+- **DS Futuristic HUD**: Sci-fi cyberpunk telemetry heads-up display overlay for the canvas and viewport. See [DS Futuristic HUD Documentation](docs/DS%20Futuristic%20HUD.md).
+- **DS Version Check**: Automatic update tracking and package version notifications. See [DS Version Check Documentation](docs/DS%20Version%20Check.md).
 - **DS Run Timer**: Accurate execution benchmarking and completion audio alerts with multi-stage checkpoint pause/resume coordination. See [DS Run Timer Documentation](docs/DS%20Run%20Timer.md).
 - **DS The Purger**: Safe, direct ComfyUI resource cleanup utility and transparent workflow passthrough node. Frees VRAM, RAM, cached models, and memory allocations mid-workflow or queue-to-queue under thread-safe synchronization with live before/after metrics. See [DS The Purger Documentation](docs/DS%20The%20Purger.md).
 
 ### 🖼️ Image & Media Tools
 - **DS Image Preview**: Real-time high-fidelity image inspection and lossless passthrough node with dual PREVIEW and SAVE execution modes, instant clipboard copy, full-resolution popout window, and on-demand manual disk export. See [DS Image Preview Documentation](docs/DS%20Image%20Preview.md).
 - **DS Film Grain**: High-performance photographic film grain processor powered by GLSL shaders with real-time interactive WebGL preview, customizable grain scale, chromatic variation, and luminance-based shadow weighting. See [DS Film Grain Documentation](docs/DS%20Film%20Grain.md).
-- **DS Image Save Advance**: Powerful image export with dynamic filename templating (`{model}`, `{seed}`, `{date}`, `{width}x{height}`), format conversion, and metadata embedding.
-- **DS Quick Save**: One-click rapid asset saving directly from canvas workflows.
+- **DS Image Save Advance**: Powerful image export with dynamic filename templating (`{model}`, `{seed}`, `{date}`, `{width}x{height}`), format conversion, and metadata embedding. See [DS Image Save Advance Documentation](docs/DS%20Image%20Save%20Advance.md).
+- **DS Quick Save**: One-click rapid asset saving directly from canvas workflows. See [DS Quick Save Documentation](docs/DS%20Quick%20Save.md).
 - **DS Image Compare**: Real-time side-by-side and split-slider visual comparison with top-lane resolution HUD, megapixel differential analysis, and persistent multi-tab session state. See [DS Image Compare Documentation](docs/DS%20Image%20Compare.md).
-- **DS Image Checkpoint**: Interactive visual gate and multi-stage checkpointing with pause, pass, continue, and regenerate controls.
-- **DS Load Image & Folder Loader**: High-speed image loader with built-in HUD controls and batch folder ingestion.
-- **DS Gallery**: In-canvas media viewer with real-time thumbnail caching and filtering.
+- **DS Image Checkpoint**: Interactive visual gate and multi-stage checkpointing with pause, pass, continue, and regenerate controls. See [DS Image Checkpoint Documentation](docs/DS%20Image%20Checkpoint.md).
+- **DS Load Image & Folder Loader**: High-speed image loader with built-in HUD controls and batch folder ingestion. See [DS Load Image](docs/DS%20Load%20Image.md), [DS Image Loader](docs/DS%20Image%20Loader.md), and [DS Load Images From Folder](docs/DS%20Load%20Images%20From%20Folder.md).
+- **DS Outpaint & DS Outpaint Stitch**: Interactive canvas padding extender and original subject restitching suite with real-time DOM preview, top socket-lane resolution HUD, target megapixel scaling, VAE snap multiples, Hermite smoothstep feathering, and statistical color matching. See [DS Outpaint Documentation](docs/DS%20Outpaint.md) and [DS Outpaint Stitch Documentation](docs/DS%20Outpaint%20Stitch.md).
+- **DS Gallery**: In-canvas media viewer with real-time thumbnail caching and filtering. See [DS Gallery Documentation](docs/DS%20Gallery.md).
+- **DS Resolution**: Preset and dynamic aspect ratio and resolution calculator. See [DS Resolution Documentation](docs/DS%20Resolution.md).
 
 ### 🎬 Video & Frame Interpolation
-- **DS Video Save & Load Video**: Fast, reliable video export and reading with PyAV and FFmpeg.
-- **DS Frame Interpolation (RIFE)**: High-quality AI frame interpolation using RIFE 4.9 (auto-downloads models on first run).
-- **DS Video Timing**: Precise FPS, frame count, and duration calculations.
+- **DS Video Save & Load Video**: Fast, reliable video export and reading with PyAV and FFmpeg. See [DS Video Save](docs/DS%20Video%20Save.md) and [DS Load Video](docs/DS%20Load%20Video.md).
+- **DS Frame Interpolation (RIFE)**: High-quality AI frame interpolation using RIFE 4.9 (auto-downloads models on first run). See [DS Interpolation Documentation](docs/DS%20Interpolation.md).
+- **DS Video Timing**: Precise FPS, frame count, and duration calculations. See [DS Video Timing Documentation](docs/DS%20Video%20Timing.md).
 
 ### 🛡️ Smart Moderation & Safety
 - **NSFW Detection & Blur**: Integrated Vision Transformer (ViT INT4) and NudeNet detectors with automatic disk caching and smart blur filters.
 
 ### ⚡ Generation & Workflow Hubs
-- **DS Generation Hub**: All-in-one generation cockpit combining checkpoint and diffusion model loading, standalone CLIP/VAE routing, dynamic multi-LoRA stacking with CivitAI triggers, aspect ratio/resolution management, and prompt engineering.
+- **DS Generation Hub**: All-in-one generation cockpit combining checkpoint and diffusion model loading, standalone CLIP/VAE routing, dynamic multi-LoRA stacking with CivitAI triggers, aspect ratio/resolution management, and prompt engineering. See [DS Generation Hub Documentation](docs/DS%20Generation%20Hub.md).
+- **DS LoRa Loader**: Modular LoRA loader with per-LoRA model and CLIP strength controls, video/audio dual-stream weighting, trigger word selection, and Civitai metadata inspection. See [DS LoRa Loader Documentation](docs/DS%20LoRa%20Loader.md).
 
 ### 📝 Prompt Engineering & Utilities
-- **DS AI Prompt Sensei**: Next-generation AI prompt generator and scene director powered by local LLMs. Features multi-modal image-to-prompt vision analysis, dynamic LoRA stacking with per-model/clip strengths, automated aspect ratio detection, customizable video dimensions/durations, and interactive prompt editing. **Note:** [LM Studio](https://lmstudio.ai/) is required for this node to run local LLMs.
+- **DS AI Prompt Sensei**: Next-generation AI prompt generator and scene director powered by local LLMs. Features multi-modal image-to-prompt vision analysis, dynamic LoRA stacking with per-model/clip strengths, automated aspect ratio detection, customizable video dimensions/durations, and interactive prompt editing. **Note:** [LM Studio](https://lmstudio.ai/) is required for this node to run local LLMs. See [DS AI Prompt Sensei Documentation](docs/DS%20AI%20Prompt%20Sensei.md).
 - **DS Randomizer**: Intelligent prompt randomization and variation engine. Preserves the user's template prompt while dynamically replacing or contextually inserting variations across 46+ extensible semantic categories with non-repeating shuffle-bag selection. Features tag-based contradiction prevention (e.g. night vs daylight), semantic zone placement (subject traits, clothing, lighting), live upstream prompt mirroring, and multi-stage checkpoint synchronization to prevent upscale prompt redraws. See [DS Randomizer Documentation](docs/DS%20Randomizer.md) for architecture details.
-- **DS Prompt & Prompt Cards**: Modular prompt editor with category cards, trigger injection, and effective prompt previews.
-- **DS Prompt Scanner & Show Text**: Live prompt diagnostics and string display widgets.
-- **DS Notes & Label**: Canvas documentation, workflow notes, and visual group labels.
-- **Logic & Flow Control**: `DS Switch`, `DS Any Switch`, `DS Group Switch`, `DS Pipe`, and `DS Seed`.
-- **Canvas & Framing**: `DS Outpaint` and `DS Resolution` helpers.
+- **DS Prompt & Prompt Cards**: Modular prompt editor with category cards, trigger injection, and effective prompt previews. See [DS Prompt](docs/DS%20Prompt.md) and [DS Prompt Cards](docs/DS%20Prompt%20Cards.md).
+- **DS Prompt Scanner & Show Text**: Live prompt diagnostics and string display widgets. See [DS Prompt Scanner](docs/DS%20Prompt%20Scanner.md) and [DS Show Text Documentation](docs/DS%20Show%20Text%20PRD.md).
+- **DS Notes & Label**: Canvas documentation, rich-text workflow notes, and visual group labels. See [DS Notes](docs/DS%20Notes.md) and [DS Label](docs/DS%20Label.md).
+- **Logic & Flow Control**: Intelligent workflow routing and evaluation nodes: [DS Switch](docs/DS%20Switch.md), [DS Any Switch](docs/DS%20Any%20Switch.md), [DS Group Switch](docs/DS%20Group%20Switch.md), [DS Pipe](docs/DS%20Pipe.md), [DS Reroute](docs/DS%20Reroute.md), and [DS Seed](docs/DS%20Seed.md).
 
 ---
 

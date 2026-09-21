@@ -224,7 +224,7 @@ const MIN_WIDGET_H = 200;
 const QS_PROP_DIR = "qs_save_dir";
 const QS_PROP_SUFFIX = "qs_suffix";
 
-// Verbose debug — set false once preview is working
+// Debug logging toggle
 const QS_VERBOSE = false;
 
 function qsLog(label, ...args) {

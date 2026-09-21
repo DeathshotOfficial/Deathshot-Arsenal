@@ -935,8 +935,8 @@ function buildMatchRatioPanel(node, state, writeState, onChange, stateKey, extra
     onChange?.();
   });
 
-  // Photoshop-style modal picker - same one Text Overlay Pixaroma uses
-  // for text and behind colors. Swatches + SV plane + hue strip + hex
+  // Modal color picker with swatches, SV plane, hue strip, and hex input.
+  // Modal backdrop locks the page so clicking the node body or canvas cannot
   // input + Apply / Cancel. Modal backdrop locks the page so clicking
   // the node body / canvas can't dismiss the picker mid-pick. showClear
   // false because there's no meaningful "transparent pad" for crop-to-fill

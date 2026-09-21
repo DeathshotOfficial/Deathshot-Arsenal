@@ -235,9 +235,8 @@ def _model_from_loader(info):
 
 
 def _find_checkpoint(prompt, sampler_id, all_nodes):
-    # Follow ONLY model-carrying inputs from the sampler, matching Pixaroma's
-    # approach. This avoids accidentally selecting a checkpoint that exists only
-    # on a separate CLIP/VAE branch.
+    # Follow ONLY model-carrying inputs from the sampler. This avoids
+    # accidentally selecting a checkpoint that exists only on a separate CLIP/VAE branch.
     if sampler_id and isinstance(prompt, dict):
         queue = [str(sampler_id)]
         seen = set()
@@ -535,8 +534,8 @@ def _save_image(pil, path, fmt, quality, webp_lossless, metadata):
             pil.save(path, "WEBP", quality=quality, lossless=bool(webp_lossless))
     else:
         pnginfo = PngImagePlugin.PngInfo()
-        # Match ComfyUI/Pixaroma convention: the workflow and prompt are stored
-        # as their own metadata chunks, not buried inside a custom JSON blob.
+        # Store workflow and prompt as their own metadata chunks, not buried
+        # inside a custom JSON blob.
         if prompt is not None:
             _add_png_text(pnginfo, "prompt", prompt)
         if isinstance(extra, dict):

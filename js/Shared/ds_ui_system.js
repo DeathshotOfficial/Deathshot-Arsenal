@@ -145,8 +145,8 @@ export function normalizeDSWidgetHost(root, node = null, options = {}) {
   markLegacyControls(root);
 }
 
-// Make the component library discoverable to node authors without forcing
-// every node to import another file.
+// Expose global component library to window without forcing
+// individual imports across nodes.
 if (typeof window !== "undefined") {
   window.DSUI = window.DSUI || {};
   window.DSUI.tokens = DS_UI_TOKENS;
