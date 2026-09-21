@@ -400,8 +400,10 @@ function paintPurgerCanvas(node, ctx) {
   ensureNodeState(node);
 
   const minW = computeRequiredWidth(node);
-  const savedW = Number(node.properties?.custom_width) || (Array.isArray(node.size) ? Number(node.size[0]) : 0);
-  const targetW = savedW > 0 ? savedW : node.size?.[0];
+  const currentW = Array.isArray(node.size) && node.size[0] > 0
+    ? Number(node.size[0])
+    : (Number(node.properties?.custom_width) || minW);
+  const targetW = Math.max(minW, currentW);
   const metrics = computeSnugMetrics(node, targetW);
   const w = metrics.w;
   const h = NODE_H;
@@ -410,6 +412,9 @@ function paintPurgerCanvas(node, ctx) {
   if (!node.size || node.size[0] !== w || node.size[1] !== h) {
     node.size = [w, h];
   }
+  node.properties = node.properties || {};
+  node.properties.custom_width = w;
+  node.min_size = [minW, NODE_H];
 
   const c = palette();
   const st = node._dsPurgerState || { status: "READY" };
@@ -1003,8 +1008,7 @@ app.registerExtension({
 
     nodeType.prototype.computeSize = function () {
       const minW = computeRequiredWidth(this);
-      const savedW = Number(this.properties?.custom_width) || (Array.isArray(this.size) ? Number(this.size[0]) : 0);
-      return [Math.max(minW, savedW > 0 ? savedW : minW), NODE_H];
+      return [minW, NODE_H];
     };
 
     nodeType.prototype.onResize = function (size) {
@@ -1014,6 +1018,7 @@ app.registerExtension({
       size[1] = NODE_H; // Strictly lock height to 32px
       this.properties = this.properties || {};
       this.properties.custom_width = w;
+      this.min_size = [minW, NODE_H];
       const r = oldResize?.apply(this, arguments);
       this.setDirtyCanvas?.(true, false);
       return r;
