@@ -15,6 +15,10 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Theme Manager**: Full visual customization for ComfyUI nodes with dynamic accent tokens, custom dark/light color schemes, and seamless UI styling.
 - **Micro UI Geometry**: Polished buttons, sliders, chip toggles, custom dropdowns, and integrated HUD socket lanes.
 
+### 📐 Canvas Productivity & Alignment Tools
+- **DS Snap**: High-precision magnetic edge and center snapping system directly integrated into the LiteGraph canvas. Features nearest-neighbor visual alignment guides, configurable spacing gap margins, 1-click horizontal/vertical multi-node arrangement (`Row` / `Column`) with first-selected anchor preservation, dimension matching, keyboard nudging with Shift multipliers, and a dedicated 50-level Undo/Redo history stack with header-docked controls and keyboard shortcuts (`Ctrl+Z`, `Ctrl+Shift+Z`, `Ctrl+Y`). See [DS Snap Documentation](docs/DS%20Snap.md).
+- **DS Global Reminder**: Floating action dock notification center for ComfyUI with execution alarms, countdown timer presets, browser audio alerts, and persistent queue state tracking. See [DS Reminder Documentation](docs/DS%20Reminder.md).
+
 ### 🎛️ System Diagnostics & Control
 - **DS Control Panel**: Centralized management interface for Deathshot workflow components.
 - **DS Hardware Monitor**: Real-time tracking of GPU / VRAM usage, CPU, RAM, and temperature via NVML and system sensors.
