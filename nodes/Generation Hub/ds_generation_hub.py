@@ -1,5 +1,6 @@
 # DeathshotArsenal - DS Generation Hub Backend
 import os
+import re
 import json
 import logging
 import folder_paths
@@ -219,7 +220,7 @@ def _apply_loras(model, clip, loras_list):
     return current_model, current_clip
 
 def compose_final_prompt(manual_prompt, loras_list):
-    """Combine manual prompt with selected active LoRA trigger words cleanly."""
+    """Combine manual prompt with selected active LoRA trigger words cleanly at the beginning."""
     text = _clean_str(manual_prompt)
     triggers = []
     if isinstance(loras_list, list):
@@ -236,11 +237,19 @@ def compose_final_prompt(manual_prompt, loras_list):
     trigger_str = ", ".join(triggers)
     if not text:
         return trigger_str
+
     # Avoid duplicate trigger inclusions if already in manual prompt
-    filtered_triggers = [t for t in triggers if t.lower() not in text.lower()]
+    filtered_triggers = []
+    for t in triggers:
+        pattern = r'(?:\b|_)' + re.escape(t.strip()) + r'(?:\b|_)'
+        if not re.search(pattern, text, re.IGNORECASE):
+            filtered_triggers.append(t)
+
     if not filtered_triggers:
         return text
-    return f"{text}, {', '.join(filtered_triggers)}"
+    triggers_prefix = ", ".join(filtered_triggers).strip().rstrip(",")
+    clean_text = text.strip().lstrip(",").strip()
+    return f"{triggers_prefix}, {clean_text}" if clean_text else triggers_prefix
 
 class DS_GenerationHub:
     """

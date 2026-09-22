@@ -202,20 +202,20 @@ function getARPresets() {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-  } catch (_) {}
+  } catch (_) { }
   return JSON.parse(JSON.stringify(DEFAULT_ASPECT_RATIOS));
 }
 
 function saveARPresets(list) {
   try {
     localStorage.setItem(STORAGE_KEYS.AR, JSON.stringify(list));
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function restoreDefaultARPresets() {
   try {
     localStorage.removeItem(STORAGE_KEYS.AR);
-  } catch (_) {}
+  } catch (_) { }
   return JSON.parse(JSON.stringify(DEFAULT_ASPECT_RATIOS));
 }
 
@@ -226,20 +226,20 @@ function getResPresets() {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-  } catch (_) {}
+  } catch (_) { }
   return JSON.parse(JSON.stringify(DEFAULT_CATEGORIZED_RES_PRESETS));
 }
 
 function saveResPresets(list) {
   try {
     localStorage.setItem(STORAGE_KEYS.RES, JSON.stringify(list));
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function restoreDefaultResPresets() {
   try {
     localStorage.removeItem(STORAGE_KEYS.RES);
-  } catch (_) {}
+  } catch (_) { }
   return JSON.parse(JSON.stringify(DEFAULT_CATEGORIZED_RES_PRESETS));
 }
 
@@ -250,20 +250,20 @@ function getMPPresets() {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-  } catch (_) {}
+  } catch (_) { }
   return JSON.parse(JSON.stringify(DEFAULT_MP_PRESETS));
 }
 
 function saveMPPresets(list) {
   try {
     localStorage.setItem(STORAGE_KEYS.MP, JSON.stringify(list));
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function restoreDefaultMPPresets() {
   try {
     localStorage.removeItem(STORAGE_KEYS.MP);
-  } catch (_) {}
+  } catch (_) { }
   return JSON.parse(JSON.stringify(DEFAULT_MP_PRESETS));
 }
 
@@ -342,16 +342,27 @@ function getState(node) {
     let parsed = null;
     const hw = (node.widgets || []).find(w => w.name === "HubState");
     if (hw && hw.value) {
-      try { parsed = JSON.parse(hw.value); } catch (_) {}
+      try { parsed = JSON.parse(hw.value); } catch (_) { }
     }
     if (!parsed && node.properties.hub_state) {
       try {
-        parsed = typeof node.properties.hub_state === "string" 
-          ? JSON.parse(node.properties.hub_state) 
+        parsed = typeof node.properties.hub_state === "string"
+          ? JSON.parse(node.properties.hub_state)
           : node.properties.hub_state;
-      } catch (_) {}
+      } catch (_) { }
     }
     node._hubState = Object.assign(defaultState(), parsed || {});
+    const defaultOrder = ["models", "image_settings", "lora", "prompt"];
+    if (!Array.isArray(node._hubState.section_order) || node._hubState.section_order.length === 0) {
+      node._hubState.section_order = [...defaultOrder];
+    } else {
+      for (const reqSec of defaultOrder) {
+        if (!node._hubState.section_order.includes(reqSec)) {
+          node._hubState.section_order.push(reqSec);
+        }
+      }
+      node._hubState.section_order = node._hubState.section_order.filter(sec => defaultOrder.includes(sec));
+    }
   }
   return node._hubState;
 }
@@ -553,9 +564,9 @@ function applyNodeThemeToElement(sourceEl, targetEl) {
   if (sourceEl) {
     try {
       const parentThemed = sourceEl.closest?.(".ds-hub-container") ||
-                           sourceEl.closest?.("[data-ds-themed='true']") ||
-                           sourceEl.closest?.("[data-ds-ui-shell]") ||
-                           sourceEl;
+        sourceEl.closest?.("[data-ds-themed='true']") ||
+        sourceEl.closest?.("[data-ds-ui-shell]") ||
+        sourceEl;
       if (parentThemed) {
         const cs = window.getComputedStyle(parentThemed);
         const vars = [
@@ -572,7 +583,7 @@ function applyNodeThemeToElement(sourceEl, targetEl) {
           if (val) targetEl.style.setProperty(v, val);
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 }
 
@@ -869,7 +880,7 @@ function getCivitaiApiKey() {
       const parsed = JSON.parse(raw);
       if (parsed.civitaiApiKey) return parsed.civitaiApiKey;
     }
-  } catch (_) {}
+  } catch (_) { }
   return "";
 }
 
@@ -880,7 +891,7 @@ function getCivitaiSiteMode() {
       const parsed = JSON.parse(raw);
       if (parsed.siteMode) return parsed.siteMode;
     }
-  } catch (_) {}
+  } catch (_) { }
   return "Standard";
 }
 
@@ -1511,6 +1522,8 @@ function buildLoRASection(node) {
   const lorasList = document.createElement("div");
   lorasList.className = "ds-hub-loras-list";
 
+  let draggedLoraIdx = null;
+
   (s.loras || []).forEach((row, idx) => {
     const loraRow = document.createElement("div");
     loraRow.className = "ds-hub-lora-row" + (row.enabled ? "" : " is-off");
@@ -1621,24 +1634,49 @@ function buildLoRASection(node) {
     };
 
     loraRow.ondragstart = (e) => {
-      e.dataTransfer.setData("text/plain", String(idx));
-      e.dataTransfer.effectAllowed = "move";
+      draggedLoraIdx = idx;
+      if (e.dataTransfer) {
+        e.dataTransfer.setData("text/plain", String(idx));
+        e.dataTransfer.effectAllowed = "move";
+      }
     };
     loraRow.ondragover = (e) => {
       e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "move";
+      }
       loraRow.classList.add("is-dragover");
     };
-    loraRow.ondragleave = () => loraRow.classList.remove("is-dragover");
+    loraRow.ondragenter = (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "move";
+      }
+    };
+    loraRow.ondragleave = (e) => {
+      if (!loraRow.contains(e.relatedTarget)) {
+        loraRow.classList.remove("is-dragover");
+      }
+    };
     loraRow.ondrop = (e) => {
       e.preventDefault();
       loraRow.classList.remove("is-dragover");
-      const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
+      let fromIdx = draggedLoraIdx;
+      if (fromIdx == null && e.dataTransfer) {
+        const parsed = parseInt(e.dataTransfer.getData("text/plain"), 10);
+        if (Number.isInteger(parsed)) fromIdx = parsed;
+      }
       if (Number.isInteger(fromIdx) && fromIdx !== idx) {
         const [moved] = s.loras.splice(fromIdx, 1);
         s.loras.splice(idx, 0, moved);
         saveState(node);
         node._renderUI?.();
       }
+      draggedLoraIdx = null;
+    };
+    loraRow.ondragend = () => {
+      draggedLoraIdx = null;
+      lorasList.querySelectorAll(".ds-hub-lora-row").forEach(r => r.classList.remove("is-dragover"));
     };
 
     loraRow.append(dragHandle, loraSelect.el, stepperShell, infoBtn, toggleBtn, delBtn);
@@ -1767,6 +1805,8 @@ function openGearPopover(node, anchorEl) {
   const popover = document.createElement("div");
   popover.className = "ds-hub-gear-popover";
   applyNodeThemeToElement(node?._domRoot || anchorEl, popover);
+  popover.addEventListener("pointerdown", (e) => e.stopPropagation());
+  popover.addEventListener("mousedown", (e) => e.stopPropagation());
 
   const head = document.createElement("div");
   head.className = "ds-hub-gear-head";
@@ -1812,27 +1852,56 @@ function openGearPopover(node, anchorEl) {
     prompt: "Prompt",
   };
 
+  let draggedSectionIdx = null;
+
   const renderOrderCards = () => {
     orderList.textContent = "";
     s.section_order.forEach((key, idx) => {
       const card = document.createElement("div");
       card.className = "ds-hub-order-card";
       card.draggable = true;
+      card.dataset.orderIdx = String(idx);
       card.innerHTML = `<span class="ds-hub-drag-handle">☰</span><span>${sectionLabels[key] || key}</span>`;
 
+      // 1. Native HTML5 Drag and Drop
       card.ondragstart = (e) => {
-        e.dataTransfer.setData("text/plain", String(idx));
-        e.dataTransfer.effectAllowed = "move";
+        draggedSectionIdx = idx;
+        if (e.dataTransfer) {
+          e.dataTransfer.setData("text/plain", String(idx));
+          e.dataTransfer.effectAllowed = "move";
+        }
+        card.classList.add("is-dragging");
       };
+
       card.ondragover = (e) => {
         e.preventDefault();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = "move";
+        }
         card.classList.add("is-dragover");
       };
-      card.ondragleave = () => card.classList.remove("is-dragover");
+
+      card.ondragenter = (e) => {
+        e.preventDefault();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = "move";
+        }
+      };
+
+      card.ondragleave = (e) => {
+        if (!card.contains(e.relatedTarget)) {
+          card.classList.remove("is-dragover");
+        }
+      };
+
       card.ondrop = (e) => {
         e.preventDefault();
         card.classList.remove("is-dragover");
-        const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
+        let fromIdx = draggedSectionIdx;
+        if (fromIdx == null && e.dataTransfer) {
+          const parsed = parseInt(e.dataTransfer.getData("text/plain"), 10);
+          if (Number.isInteger(parsed)) fromIdx = parsed;
+        }
         if (Number.isInteger(fromIdx) && fromIdx !== idx) {
           const [moved] = s.section_order.splice(fromIdx, 1);
           s.section_order.splice(idx, 0, moved);
@@ -1840,7 +1909,73 @@ function openGearPopover(node, anchorEl) {
           node._renderUI?.();
           renderOrderCards();
         }
+        draggedSectionIdx = null;
       };
+
+      card.ondragend = () => {
+        draggedSectionIdx = null;
+        card.classList.remove("is-dragging");
+        orderList.querySelectorAll(".ds-hub-order-card").forEach((c) => c.classList.remove("is-dragover"));
+      };
+
+      // 2. Direct Pointer / Mouse Drag Fallback (Ensures rearranging works in all browser environments)
+      let pointerStartY = 0;
+      let isPointerDragging = false;
+
+      const onPointerMove = (moveEv) => {
+        const dy = moveEv.clientY - pointerStartY;
+        if (!isPointerDragging && Math.abs(dy) > 4) {
+          isPointerDragging = true;
+          card.classList.add("is-dragging");
+        }
+        if (isPointerDragging) {
+          const cards = Array.from(orderList.querySelectorAll(".ds-hub-order-card"));
+          for (let i = 0; i < cards.length; i++) {
+            const rect = cards[i].getBoundingClientRect();
+            if (moveEv.clientY >= rect.top && moveEv.clientY <= rect.bottom) {
+              cards[i].classList.add("is-dragover");
+            } else {
+              cards[i].classList.remove("is-dragover");
+            }
+          }
+        }
+      };
+
+      const onPointerUp = (upEv) => {
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("pointercancel", onPointerUp);
+
+        if (isPointerDragging) {
+          card.classList.remove("is-dragging");
+          const cards = Array.from(orderList.querySelectorAll(".ds-hub-order-card"));
+          let targetIdx = -1;
+          for (let i = 0; i < cards.length; i++) {
+            const rect = cards[i].getBoundingClientRect();
+            if (upEv.clientY >= rect.top && upEv.clientY <= rect.bottom) {
+              targetIdx = i;
+              break;
+            }
+          }
+          cards.forEach((c) => c.classList.remove("is-dragover"));
+          if (targetIdx !== -1 && targetIdx !== idx) {
+            const [moved] = s.section_order.splice(idx, 1);
+            s.section_order.splice(targetIdx, 0, moved);
+            saveState(node);
+            node._renderUI?.();
+            renderOrderCards();
+          }
+        }
+      };
+
+      card.addEventListener("pointerdown", (downEv) => {
+        if (downEv.button !== 0) return;
+        pointerStartY = downEv.clientY;
+        isPointerDragging = false;
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+        window.addEventListener("pointercancel", onPointerUp);
+      });
 
       orderList.appendChild(card);
     });
@@ -2342,14 +2477,14 @@ app.registerExtension({
           value: "{}",
           serialize: true,
           computeSize: () => [0, -4],
-          draw: () => {},
+          draw: () => { },
         };
         this.widgets.push(hw);
       }
       hw.type = "hidden";
       hw.hidden = true;
       hw.computeSize = () => [0, -4];
-      hw.draw = () => {};
+      hw.draw = () => { };
 
       const root = buildRoot(this);
       this._domRoot = root;
@@ -2377,7 +2512,7 @@ app.registerExtension({
         hideOnZoom: false,
         margin: 6,
         getValue: () => null,
-        setValue: () => {},
+        setValue: () => { },
       });
       this._hubWidget.computeSize = () => {
         const topY = Number.isFinite(this._hubWidget?.y)
@@ -2416,7 +2551,7 @@ app.registerExtension({
 
       try {
         window.DSGlobalTheme?.applyNodeBase?.(this);
-      } catch (_) {}
+      } catch (_) { }
 
       fetchCatalog().then((catalog) => {
         this._catalog = catalog;
