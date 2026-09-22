@@ -172,8 +172,8 @@ function injectCSS() {
     }
     .ds-fl-btn:hover {
       border-color: var(--ds-accent, #67e8f9);
-      color: var(--ds-text, #fff);
-      background: var(--ds-panel-3, #20252d);
+      color: var(--ds-accent, #67e8f9);
+      background: var(--ds-btn-hover, var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent)));
     }
     .ds-fl-btn:active {
       transform: scale(0.98);
@@ -272,7 +272,7 @@ function injectCSS() {
       transition: all 0.1s ease;
     }
     .ds-fl-step-btn:hover {
-      background: var(--ds-panel-3, #222834);
+      background: var(--ds-btn-hover, var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent)));
       color: var(--ds-accent, #67e8f9);
     }
     .ds-fl-stop-btn {
@@ -334,8 +334,8 @@ function injectCSS() {
     }
     .ds-fl-chip:hover {
       border-color: var(--ds-accent, #67e8f9);
-      color: var(--ds-text, #fff);
-      background: var(--ds-panel-3, #222938);
+      color: var(--ds-accent, #67e8f9);
+      background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent));
     }
     .ds-fl-chip.active {
       gap: 6px;
@@ -518,6 +518,10 @@ function injectCSS() {
       height: 28px;
       cursor: pointer;
       user-select: none;
+      font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
+    }
+    .ds-fl-dropdown.open {
+      z-index: 1000;
     }
     .ds-fl-dropdown-display {
       display: flex;
@@ -526,7 +530,7 @@ function injectCSS() {
       padding: 0 24px 0 8px;
       background: var(--ds-input-bg, #0d1017);
       border: 1px solid var(--ds-border, #242a36);
-      border-radius: 5px;
+      border-radius: var(--ds-radius-sm, 5px);
       color: var(--ds-text, #e5e7eb);
       font: 600 9px inherit;
       white-space: nowrap;
@@ -535,11 +539,13 @@ function injectCSS() {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238d96a3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 7px center;
-      transition: border-color 0.12s ease;
+      transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+      box-sizing: border-box;
     }
     .ds-fl-dropdown-display:hover,
     .ds-fl-dropdown.open .ds-fl-dropdown-display {
       border-color: var(--ds-accent, #67e8f9);
+      color: var(--ds-accent, #67e8f9);
     }
     .ds-fl-dropdown-menu {
       position: absolute;
@@ -551,30 +557,35 @@ function injectCSS() {
       overflow-y: auto;
       background: var(--ds-panel, #151821);
       border: 1px solid var(--ds-border, #303746);
-      border-radius: 5px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      border-radius: var(--ds-radius-sm, 5px);
+      box-shadow: var(--ds-shadow, 0 8px 24px rgba(0,0,0,0.45));
       display: none;
       padding: 3px 0;
+      box-sizing: border-box;
+      scrollbar-width: thin;
+      scrollbar-color: var(--ds-border, #303746) transparent;
     }
     .ds-fl-dropdown.open .ds-fl-dropdown-menu {
       display: block;
     }
     .ds-fl-dropdown-item {
-      padding: 5px 8px;
+      padding: 6px 10px;
       font: 600 9px inherit;
       color: var(--ds-text, #e5e7eb);
       cursor: pointer;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      transition: background 0.08s ease;
+      transition: background 0.08s ease, color 0.08s ease;
     }
     .ds-fl-dropdown-item:hover {
-      background: var(--ds-panel-3, #222938);
+      background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent)) !important;
+      color: var(--ds-accent, #67e8f9) !important;
     }
     .ds-fl-dropdown-item.active {
-      color: var(--ds-accent, #67e8f9);
-      background: color-mix(in srgb, var(--ds-accent, #67e8f9) 12%, var(--ds-panel, #151821));
+      color: var(--ds-accent, #67e8f9) !important;
+      background: var(--ds-active, color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, transparent)) !important;
+      font-weight: 700;
     }
 
     /* Deathshot Arsenal Modal Pill Switch Toggle */
@@ -603,7 +614,7 @@ function injectCSS() {
     }
     .ds-fl-toggle:hover {
       border-color: var(--ds-accent, #67e8f9) !important;
-      background: var(--ds-panel-3, var(--ds-hover, #202634)) !important;
+      background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 12%, transparent)) !important;
     }
     .ds-fl-toggle.is-on {
       border-color: var(--ds-accent, #67e8f9) !important;
@@ -724,8 +735,9 @@ function injectCSS() {
       position: fixed;
       inset: 0;
       z-index: 999999;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.35) !important;
+      backdrop-filter: blur(1.5px) !important;
+      -webkit-backdrop-filter: blur(1.5px) !important;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -776,9 +788,9 @@ function injectCSS() {
       transition: all 0.12s ease;
     }
     .ds-fl-modal-close:hover {
-      background: var(--ds-panel-3, var(--ds-hover, rgba(0,0,0,0.1)));
+      background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent));
       border-color: var(--ds-border, #303746);
-      color: var(--ds-text, #fff);
+      color: var(--ds-accent, #67e8f9);
     }
     .ds-fl-modal-toolbar {
       padding: 12px 20px;

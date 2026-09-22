@@ -91,13 +91,15 @@ export function openGalleryModal({
 
   const backdrop = document.createElement("div");
   backdrop.className = "ds-fl-modal-backdrop ds-fl-gallery-modal";
-  backdrop.dataset.dsThemed = "true";
   backdrop.style.position = "fixed";
   backdrop.style.inset = "0";
   backdrop.style.zIndex = "999999";
   backdrop.style.display = "flex";
   backdrop.style.alignItems = "center";
   backdrop.style.justifyContent = "center";
+  backdrop.style.background = "rgba(0, 0, 0, 0.35)";
+  backdrop.style.backdropFilter = "blur(1.5px)";
+  backdrop.style.webkitBackdropFilter = "blur(1.5px)";
 
   backdrop.innerHTML = `
     <div class="ds-fl-modal" data-ds-themed="true">
@@ -180,7 +182,6 @@ export function openGalleryModal({
   const applyTheme = () => {
     try {
       if (window.DSGlobalTheme) {
-        window.DSGlobalTheme.applyToElement(backdrop);
         if (modal) window.DSGlobalTheme.applyToElement(modal);
         if (gridWrap) window.DSGlobalTheme.applyToElement(gridWrap);
       }
@@ -198,12 +199,14 @@ export function openGalleryModal({
           "--ds-bg",
           "--ds-panel",
           "--ds-panel-2",
-          "--ds-panel-3",
           "--ds-border",
           "--ds-text",
           "--ds-text-muted",
           "--ds-input-bg",
           "--ds-hover",
+          "--ds-active",
+          "--ds-btn-bg",
+          "--ds-btn-hover",
           "--ds-radius",
           "--ds-font",
           "--ds-font-family",
@@ -212,13 +215,16 @@ export function openGalleryModal({
         for (const v of vars) {
           const val = computed.getPropertyValue(v)?.trim();
           if (val) {
-            backdrop.style.setProperty(v, val);
             if (modal) modal.style.setProperty(v, val);
             if (gridWrap) gridWrap.style.setProperty(v, val);
           }
         }
       }
     } catch (_) {}
+
+    backdrop.style.setProperty("background", "rgba(0, 0, 0, 0.35)", "important");
+    backdrop.style.setProperty("backdrop-filter", "blur(1.5px)", "important");
+    backdrop.style.setProperty("-webkit-backdrop-filter", "blur(1.5px)", "important");
   };
 
   applyTheme();

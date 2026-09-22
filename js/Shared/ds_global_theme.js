@@ -767,7 +767,7 @@ ${decl}
     }
 
     /* Fallback overrides for nodes with hardcoded colors */
-    [data-ds-themed="true"] {
+    [data-ds-themed="true"]:not([class*="backdrop"]) {
       background: var(--ds-bg) !important;
       color: var(--ds-text) !important;
       border-color: var(--ds-border) !important;

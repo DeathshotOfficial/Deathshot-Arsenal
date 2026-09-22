@@ -123,8 +123,8 @@
 
 .ds-fl-btn:hover {
   border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-text, #fff);
-  background: var(--ds-panel-3, #20252d);
+  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-btn-hover, var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent)));
 }
 
 .ds-fl-btn:active {
@@ -193,6 +193,90 @@
   padding: 6px 8px;
 }
 
+/* Custom Dropdown Component (Follows Active DS Global Theme) */
+.ds-fl-dropdown {
+  position: relative;
+  height: 28px;
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
+}
+
+.ds-fl-dropdown.open {
+  z-index: 1000;
+}
+
+.ds-fl-dropdown-display {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 24px 0 8px;
+  background: var(--ds-input-bg, #0d1017);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: var(--ds-radius-sm, 5px);
+  color: var(--ds-text, #e5e7eb);
+  font: 600 9px inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238d96a3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  box-sizing: border-box;
+}
+
+.ds-fl-dropdown-display:hover,
+.ds-fl-dropdown.open .ds-fl-dropdown-display {
+  border-color: var(--ds-accent, #67e8f9);
+  color: var(--ds-accent, #67e8f9);
+}
+
+.ds-fl-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 99999;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--ds-panel, #151821);
+  border: 1px solid var(--ds-border, #303746);
+  border-radius: var(--ds-radius-sm, 5px);
+  box-shadow: var(--ds-shadow, 0 8px 24px rgba(0, 0, 0, 0.45));
+  display: none;
+  padding: 3px 0;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ds-border, #303746) transparent;
+}
+
+.ds-fl-dropdown.open .ds-fl-dropdown-menu {
+  display: block;
+}
+
+.ds-fl-dropdown-item {
+  padding: 6px 10px;
+  font: 600 9px inherit;
+  color: var(--ds-text, #e5e7eb);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.08s ease, color 0.08s ease;
+}
+
+.ds-fl-dropdown-item:hover {
+  background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent)) !important;
+  color: var(--ds-accent, #67e8f9) !important;
+}
+
+.ds-fl-dropdown-item.active {
+  color: var(--ds-accent, #67e8f9) !important;
+  background: var(--ds-active, color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, transparent)) !important;
+  font-weight: 700;
+}
+
 /* Stepper Input */
 .ds-fl-stepper {
   display: inline-flex;
@@ -239,7 +323,7 @@
 }
 
 .ds-fl-step-btn:hover {
-  background: var(--ds-panel-3, #222834);
+  background: var(--ds-btn-hover, var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent)));
   color: var(--ds-accent, #67e8f9);
 }
 
@@ -311,11 +395,12 @@
 
 .ds-fl-chip:hover {
   border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-text, #fff);
+  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent));
 }
 
 .ds-fl-chip.active {
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 16%, var(--ds-panel-3, #1c212c));
+  background: var(--ds-active, color-mix(in srgb, var(--ds-accent, #67e8f9) 16%, var(--ds-panel-2, #161a23)));
   border-color: var(--ds-accent, #67e8f9);
   color: var(--ds-accent, #67e8f9);
   box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9);
@@ -508,7 +593,7 @@
 
 .ds-fl-toggle:hover {
   border-color: var(--ds-accent, #67e8f9) !important;
-  background: var(--ds-panel-3, var(--ds-hover, #202634)) !important;
+  background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 12%, transparent)) !important;
 }
 
 .ds-fl-toggle.is-on {
@@ -643,8 +728,9 @@
   position: fixed;
   inset: 0;
   z-index: 999999;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.35) !important;
+  backdrop-filter: blur(1.5px) !important;
+  -webkit-backdrop-filter: blur(1.5px) !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -700,9 +786,9 @@
 }
 
 .ds-fl-modal-close:hover {
-  background: var(--ds-panel-3, var(--ds-hover, rgba(0, 0, 0, 0.1)));
+  background: var(--ds-hover, color-mix(in srgb, var(--ds-accent, #67e8f9) 14%, transparent));
   border-color: var(--ds-border, #303746);
-  color: var(--ds-text, #fff);
+  color: var(--ds-accent, #67e8f9);
 }
 
 /* Modal Toolbar */
