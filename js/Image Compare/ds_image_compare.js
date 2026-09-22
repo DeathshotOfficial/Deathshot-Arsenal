@@ -13,13 +13,16 @@ const sessionImageCache = new Map();
 const sessionNodeCache = new Map();
 const failedImageCache = new Set();
 const inFlightPromises = new Map();
+const activeNodes = new Set();
 
 function loadImage(imgInfo) {
     if (!imgInfo?.filename) return Promise.resolve(null);
     const filename = imgInfo.filename;
 
     if (sessionImageCache.has(filename)) {
-        return Promise.resolve(sessionImageCache.get(filename));
+        const cached = sessionImageCache.get(filename);
+        if (cached && !cached._dsFilename) cached._dsFilename = filename;
+        return Promise.resolve(cached);
     }
     if (failedImageCache.has(filename)) {
         return Promise.resolve(null);
@@ -35,6 +38,7 @@ function loadImage(imgInfo) {
             : `/view?filename=${encodeURIComponent(filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}`;
 
         img.onload = () => {
+            img._dsFilename = filename;
             inFlightPromises.delete(filename);
             sessionImageCache.set(filename, img);
             resolve(img);
@@ -52,30 +56,50 @@ function loadImage(imgInfo) {
 }
 
 function loadCompareImages(node, d1, d2) {
+    const filenameA = d1?.filename || null;
+    const filenameB = d2?.filename || null;
+
+    // Check if node is already displaying these exact filenames
+    const hasA = !filenameA ? !node.imgA : (node.imgA?._dsFilename === filenameA);
+    const hasB = !filenameB ? !node.imgB : (node.imgB?._dsFilename === filenameB);
+    if (hasA && hasB) {
+        return Promise.resolve();
+    }
+
     let immediateUpdate = false;
-    if (d1?.filename && sessionImageCache.has(d1.filename)) {
-        node.imgA = sessionImageCache.get(d1.filename);
+    if (filenameA && sessionImageCache.has(filenameA)) {
+        const cachedA = sessionImageCache.get(filenameA);
+        if (cachedA && !cachedA._dsFilename) cachedA._dsFilename = filenameA;
+        node.imgA = cachedA;
         immediateUpdate = true;
     }
-    if (d2?.filename && sessionImageCache.has(d2.filename)) {
-        node.imgB = sessionImageCache.get(d2.filename);
+    if (filenameB && sessionImageCache.has(filenameB)) {
+        const cachedB = sessionImageCache.get(filenameB);
+        if (cachedB && !cachedB._dsFilename) cachedB._dsFilename = filenameB;
+        node.imgB = cachedB;
         immediateUpdate = true;
     }
     if (immediateUpdate) {
         node.setDirtyCanvas?.(true, true);
     }
 
-    if (node.imgA && node.imgB) {
+    // Check if both are now satisfied from cache
+    const nowHasA = !filenameA ? !node.imgA : (node.imgA?._dsFilename === filenameA);
+    const nowHasB = !filenameB ? !node.imgB : (node.imgB?._dsFilename === filenameB);
+    if (nowHasA && nowHasB) {
         return Promise.resolve();
     }
 
     return Promise.all([loadImage(d1), loadImage(d2)]).then(([i1, i2]) => {
-        if (i1) node.imgA = i1;
-        if (i2) node.imgB = i2;
+        if (filenameA) node.imgA = i1 || null;
+        else node.imgA = null;
+
+        if (filenameB) node.imgB = i2 || null;
+        else node.imgB = null;
 
         // If both failed to load (e.g. expired temp files after server restart),
         // clean up stale properties so the node resets to a clean empty state
-        if (!node.imgA && !node.imgB) {
+        if (!node.imgA && !node.imgB && (filenameA || filenameB)) {
             if (node.properties) {
                 delete node.properties.ds_cmp_a;
                 delete node.properties.ds_cmp_b;
@@ -200,10 +224,54 @@ app.registerExtension({
             const data = e.detail;
             const output = data?.output;
             if (!output?.compare_images) return;
+
+            const [d1, d2] = output.compare_images;
+            const dimsA = output.dims?.a || null;
+            const dimsB = output.dims?.b || null;
+
+            // Always update sessionNodeCache so workflow switches find the latest result
+            sessionNodeCache.set(String(data.node), { d1, d2, dimsA, dimsB });
+
+            if (d1?.filename) failedImageCache.delete(d1.filename);
+            if (d2?.filename) failedImageCache.delete(d2.filename);
+
+            // Preload images into memory immediately
+            loadImage(d1);
+            loadImage(d2);
+
+            let handled = false;
             let node = app.graph?.getNodeById?.(data.node);
             if (!node) node = (app.graph?._nodes || []).find((n) => String(n.id) === String(data.node));
-            if (!node || node.type !== "DS_ImageCompare") return;
-            handleExecution(node, output);
+            if (node && (node.type === "DS_ImageCompare" || node.comfyClass === "DS_ImageCompare")) {
+                handleExecution(node, output);
+                handled = true;
+            }
+
+            // Also dispatch to any tracked DS_ImageCompare nodes in background workflows
+            for (const n of activeNodes) {
+                if (String(n.id) === String(data.node)) {
+                    handleExecution(n, output);
+                    handled = true;
+                }
+            }
+
+            // Fallback: Search all open workflows in workflowManager / extensionManager
+            if (!handled) {
+                const wm = app.workflowManager || app.extensionManager?.workflow;
+                if (wm) {
+                    const wfs = wm.workflows || wm.openWorkflows || [];
+                    const list = Array.isArray(wfs) ? wfs : Object.values(wfs);
+                    for (const wf of list) {
+                        const g = wf.graph || wf._graph;
+                        if (g) {
+                            const n = g.getNodeById?.(data.node) || (g._nodes || []).find((x) => String(x.id) === String(data.node));
+                            if (n && (n.type === "DS_ImageCompare" || n.comfyClass === "DS_ImageCompare")) {
+                                handleExecution(n, output);
+                            }
+                        }
+                    }
+                }
+            }
         });
     },
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -358,6 +426,7 @@ app.registerExtension({
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
             onNodeCreated?.apply(this, arguments);
+            activeNodes.add(this);
 
             this.resizable = true;
             this.setSize([512, 512]);
@@ -654,9 +723,16 @@ app.registerExtension({
             this.setDirtyCanvas(true, true);
         };
 
+        const onRemoved = nodeType.prototype.onRemoved;
+        nodeType.prototype.onRemoved = function() {
+            activeNodes.delete(this);
+            return onRemoved?.apply(this, arguments);
+        };
+
         const onConfigure = nodeType.prototype.onConfigure;
         nodeType.prototype.onConfigure = function () {
             onConfigure?.apply(this, arguments);
+            activeNodes.add(this);
             for (const input of this.inputs || []) {
                 input.label = input.name;
             }
