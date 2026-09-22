@@ -11,24 +11,44 @@ if (!document.querySelector(`link[href*="ds_image_compare.css"]`)) {
 
 const sessionImageCache = new Map();
 const sessionNodeCache = new Map();
+const failedImageCache = new Set();
+const inFlightPromises = new Map();
 
 function loadImage(imgInfo) {
     if (!imgInfo?.filename) return Promise.resolve(null);
-    if (sessionImageCache.has(imgInfo.filename)) {
-        return Promise.resolve(sessionImageCache.get(imgInfo.filename));
+    const filename = imgInfo.filename;
+
+    if (sessionImageCache.has(filename)) {
+        return Promise.resolve(sessionImageCache.get(filename));
     }
-    const img = new Image();
-    const viewUrl = api.apiURL
-        ? api.apiURL(`/view?filename=${encodeURIComponent(imgInfo.filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}&t=${Date.now()}`)
-        : `/view?filename=${encodeURIComponent(imgInfo.filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}&t=${Date.now()}`;
-    img.src = viewUrl;
-    return new Promise((resolve) => {
+    if (failedImageCache.has(filename)) {
+        return Promise.resolve(null);
+    }
+    if (inFlightPromises.has(filename)) {
+        return inFlightPromises.get(filename);
+    }
+
+    const loadPromise = new Promise((resolve) => {
+        const img = new Image();
+        const viewUrl = api.apiURL
+            ? api.apiURL(`/view?filename=${encodeURIComponent(filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}`)
+            : `/view?filename=${encodeURIComponent(filename)}&type=${imgInfo.type || "temp"}&subfolder=${encodeURIComponent(imgInfo.subfolder || "")}`;
+
         img.onload = () => {
-            sessionImageCache.set(imgInfo.filename, img);
+            inFlightPromises.delete(filename);
+            sessionImageCache.set(filename, img);
             resolve(img);
         };
-        img.onerror = () => resolve(null);
+        img.onerror = () => {
+            inFlightPromises.delete(filename);
+            failedImageCache.add(filename);
+            resolve(null);
+        };
+        img.src = viewUrl;
     });
+
+    inFlightPromises.set(filename, loadPromise);
+    return loadPromise;
 }
 
 function loadCompareImages(node, d1, d2) {
@@ -45,9 +65,27 @@ function loadCompareImages(node, d1, d2) {
         node.setDirtyCanvas?.(true, true);
     }
 
+    if (node.imgA && node.imgB) {
+        return Promise.resolve();
+    }
+
     return Promise.all([loadImage(d1), loadImage(d2)]).then(([i1, i2]) => {
         if (i1) node.imgA = i1;
         if (i2) node.imgB = i2;
+
+        // If both failed to load (e.g. expired temp files after server restart),
+        // clean up stale properties so the node resets to a clean empty state
+        if (!node.imgA && !node.imgB) {
+            if (node.properties) {
+                delete node.properties.ds_cmp_a;
+                delete node.properties.ds_cmp_b;
+                delete node.properties.ds_dims_a;
+                delete node.properties.ds_dims_b;
+            }
+            node.dimsA = null;
+            node.dimsB = null;
+        }
+
         node.setDirtyCanvas?.(true, true);
     });
 }
@@ -71,6 +109,9 @@ function handleExecution(node, output) {
     node.properties.ds_cmp_b = d2;
     node.properties.ds_dims_a = dimsA;
     node.properties.ds_dims_b = dimsB;
+
+    if (d1?.filename) failedImageCache.delete(d1.filename);
+    if (d2?.filename) failedImageCache.delete(d2.filename);
 
     sessionNodeCache.set(String(node.id), { d1, d2, dimsA, dimsB });
     loadCompareImages(node, d1, d2);
@@ -405,9 +446,6 @@ app.registerExtension({
 
                     // Empty state placeholder
                     if (!node.imgA && !node.imgB) {
-                        if (node.properties?.ds_cmp_a || node.properties?.ds_cmp_b) {
-                            loadCompareImages(node, node.properties.ds_cmp_a, node.properties.ds_cmp_b);
-                        }
                         const pad = 8;
                         const emptyH = availableH - pad;
                         if (emptyH > 20) {
@@ -637,11 +675,6 @@ app.registerExtension({
                 this.dimsA = dimsA || null;
                 this.dimsB = dimsB || null;
                 loadCompareImages(this, d1, d2);
-                setTimeout(() => {
-                    if (!this.imgA && !this.imgB && (d1 || d2)) {
-                        loadCompareImages(this, d1, d2);
-                    }
-                }, 60);
             }
 
             this.setDirtyCanvas(true, true);
