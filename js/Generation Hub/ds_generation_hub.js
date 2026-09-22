@@ -577,6 +577,53 @@ function applyNodeThemeToElement(sourceEl, targetEl) {
 }
 
 // ---------------------------------------------------------------------------
+// Input Key Isolation Helper (Prevents LiteGraph/ComfyUI canvas shortcut capture)
+// ---------------------------------------------------------------------------
+function isolateInputKeys(el, allowQueueShortcut = false) {
+  if (!el) return;
+  const onKey = (e) => {
+    // Allow Ctrl+Enter or Cmd+Enter to bubble up so users can queue workflows from prompt
+    if (allowQueueShortcut && e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      return;
+    }
+
+    // Stop propagation so LiteGraph and ComfyUI cannot intercept Space (canvas pan),
+    // Delete/Backspace (deleting node), Tab (node search), Arrow keys, etc.
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    // If an ancestor capture-phase listener on window or canvas already called preventDefault on Space:
+    if ((e.key === " " || e.code === "Space") && e.defaultPrevented && (el.tagName === "TEXTAREA" || el.tagName === "INPUT")) {
+      e.preventDefault();
+      const start = el.selectionStart ?? el.value.length;
+      const end = el.selectionEnd ?? start;
+      if (typeof el.setRangeText === "function") {
+        el.setRangeText(" ", start, end, "end");
+      } else {
+        el.value = el.value.slice(0, start) + " " + el.value.slice(end);
+        el.selectionStart = el.selectionEnd = start + 1;
+      }
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+
+  el.addEventListener("keydown", onKey, true);
+  el.addEventListener("keydown", onKey, false);
+  el.addEventListener("keyup", (e) => {
+    if (allowQueueShortcut && e.key === "Enter" && (e.ctrlKey || e.metaKey)) return;
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }, true);
+  el.addEventListener("keyup", (e) => {
+    if (allowQueueShortcut && e.key === "Enter" && (e.ctrlKey || e.metaKey)) return;
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }, false);
+  el.addEventListener("pointerdown", (e) => e.stopPropagation());
+  el.addEventListener("mousedown", (e) => e.stopPropagation());
+}
+
+// ---------------------------------------------------------------------------
 // Custom Dropdown Builder
 // ---------------------------------------------------------------------------
 function createCustomDropdown({ value, options, placeholder = "Select...", onSelect, renderItem, isCategorized = false }) {
@@ -624,6 +671,13 @@ function createCustomDropdown({ value, options, placeholder = "Select...", onSel
     const searchInput = document.createElement("input");
     searchInput.className = "ds-hub-dropdown-search";
     searchInput.placeholder = "Search presets...";
+    isolateInputKeys(searchInput);
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeMenu();
+      }
+    });
 
     const optList = document.createElement("div");
     optList.className = "ds-hub-dropdown-options";
@@ -1351,6 +1405,7 @@ function buildImageSettingsSection(node) {
   mpInput.value = Number(s.mp || 1.0).toFixed(1);
   mpInput.step = "0.1";
   mpInput.title = "Enter custom MP target";
+  isolateInputKeys(mpInput);
   mpInput.onchange = () => {
     const val = parseFloat(mpInput.value);
     if (Number.isFinite(val) && val > 0) {
@@ -1396,6 +1451,7 @@ function buildImageSettingsSection(node) {
   wInput.className = "ds-hub-input-number";
   wInput.value = s.width || 1024;
   wInput.step = "16";
+  isolateInputKeys(wInput);
   wInput.onchange = () => {
     s.width = snapDimension(Number(wInput.value) || 1024, 16);
     s.mp = Math.round((s.width * s.height / 1000000) * 10) / 10;
@@ -1421,6 +1477,7 @@ function buildImageSettingsSection(node) {
   hInput.className = "ds-hub-input-number";
   hInput.value = s.height || 1024;
   hInput.step = "16";
+  isolateInputKeys(hInput);
   hInput.onchange = () => {
     s.height = snapDimension(Number(hInput.value) || 1024, 16);
     s.mp = Math.round((s.width * s.height / 1000000) * 10) / 10;
@@ -1484,6 +1541,7 @@ function buildLoRASection(node) {
     strengthInp.className = "ds-hub-stepper-input";
     const curStr = Number.isFinite(row.strength) ? Number(row.strength) : 1.0;
     strengthInp.value = curStr.toFixed(1);
+    isolateInputKeys(strengthInp);
 
     const updateStrength = (newVal) => {
       const clamped = Math.round(Math.min(10.0, Math.max(-10.0, newVal)) * 10) / 10;
@@ -1680,11 +1738,14 @@ function buildPromptSection(node) {
   ta.className = "ds-hub-prompt-ta";
   ta.placeholder = "Enter your prompt here...";
   ta.value = s.prompt || "";
+  ta.spellcheck = false;
 
   ta.oninput = () => {
     s.prompt = ta.value;
     saveState(node);
   };
+
+  isolateInputKeys(ta, true);
 
   sec.appendChild(ta);
   return sec;
