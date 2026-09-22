@@ -2035,9 +2035,6 @@ app.registerExtension({
         }
       }
     });
-
-    // Hook LiteGraph Canvas prototype context menus
-    hookLiteGraphContextMenu();
   },
 
   // Extension Context Menu Hooks (New ComfyUI Architecture)
@@ -2123,55 +2120,3 @@ app.registerExtension({
     return items;
   }
 });
-
-// ---------------------------------------------------------------------------
-// LiteGraph Canvas Context Menu Fallback Hook
-// ---------------------------------------------------------------------------
-function hookLiteGraphContextMenu() {
-  const LiteGraph = globalThis.LiteGraph;
-  if (!LiteGraph?.LGraphCanvas) return;
-  if (LiteGraph.LGraphCanvas.prototype._dsThemeHooked) return;
-  LiteGraph.LGraphCanvas.prototype._dsThemeHooked = true;
-
-  const origCanvasMenu = LiteGraph.LGraphCanvas.prototype.getCanvasMenuOptions;
-  LiteGraph.LGraphCanvas.prototype.getCanvasMenuOptions = function () {
-    const options = origCanvasMenu ? origCanvasMenu.apply(this, arguments) : [];
-    if (!options.some(o => o?.content === "DS Theme Manager")) {
-      options.push(
-        null,
-        {
-          content: "🎨 DS Theme Manager",
-          callback: () => getDashboard().open(),
-        }
-      );
-
-      const selected = getSelectedNodes();
-      if (selected.length > 0) {
-        options.push({
-          content: "📋 Copy Node Colors",
-          callback: () => {
-            captureNodeColors(selected[0]);
-            getDashboard().showToast("Copied node colors to clipboard", "success");
-          },
-        });
-        if (memoryClipboard) {
-          options.push({
-            content: `📥 Paste Node Colors (${selected.length} nodes)`,
-            callback: () => {
-              pasteNodeColors(selected);
-              getDashboard().showToast(`Pasted colors to ${selected.length} nodes`, "success");
-            },
-          });
-        }
-        options.push({
-          content: `🔄 Reset Node Colors (${selected.length} nodes)`,
-          callback: () => {
-            resetNodeToNative(selected);
-            getDashboard().showToast(`Reset colors for ${selected.length} nodes`, "success");
-          },
-        });
-      }
-    }
-    return options;
-  };
-}

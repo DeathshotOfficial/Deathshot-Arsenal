@@ -1204,51 +1204,7 @@ function openDSLabelModal(node) {
   updatePreview();
 }
 
-// -----------------------------------------------------------------------------
-// Canvas Context Menu Integration ("Add DS Label")
-// -----------------------------------------------------------------------------
-function hookCanvasContextMenu() {
-  const LiteGraph = globalThis.LiteGraph;
-  if (!LiteGraph?.LGraphCanvas) return;
-  if (LiteGraph.LGraphCanvas.prototype._dsLabelHooked) return;
-  LiteGraph.LGraphCanvas.prototype._dsLabelHooked = true;
 
-  const origGetCanvasMenuOptions = LiteGraph.LGraphCanvas.prototype.getCanvasMenuOptions;
-  LiteGraph.LGraphCanvas.prototype.getCanvasMenuOptions = function () {
-    const options = origGetCanvasMenuOptions ? origGetCanvasMenuOptions.apply(this, arguments) : [];
-
-    if (!options.some((o) => o?.content === "Add DS Label")) {
-      const labelOption = {
-        content: "Add DS Label",
-        callback: (value, opt, mouseEvent, prevMenu, gCanvas) => {
-          const canvas = gCanvas || this || app?.canvas;
-          const graph = canvas?.graph || app?.graph;
-          let node = LiteGraph.createNode(NODE_TYPE);
-          if (!node) {
-            const Ctor = registerDSLabelNodeType();
-            if (Ctor) node = new Ctor();
-          }
-          if (node && graph) {
-            let pos = [200, 200];
-            if (mouseEvent && canvas?.convertEventToCanvasOffset) {
-              pos = canvas.convertEventToCanvasOffset(mouseEvent);
-            } else if (mouseEvent && mouseEvent.canvasX != null) {
-              pos = [mouseEvent.canvasX, mouseEvent.canvasY];
-            } else if (canvas?.last_mouse_position) {
-              pos = [...canvas.last_mouse_position];
-            }
-            node.pos = pos;
-            graph.add(node);
-            canvas.selectNode?.(node, false);
-            dirty(graph);
-          }
-        },
-      };
-      options.unshift(labelOption);
-    }
-    return options;
-  };
-}
 
 // -----------------------------------------------------------------------------
 // Stylesheet Injection for Modal & Non-Native Controls
@@ -2003,7 +1959,6 @@ app.registerExtension({
 
   async setup() {
     registerDSLabelNodeType();
-    hookCanvasContextMenu();
     injectLabelStyles();
 
     // Connect with DSGearMenu registry
