@@ -375,6 +375,8 @@ function saveState(node) {
   if (hw) {
     hw.value = JSON.stringify(s);
   }
+  const graph = node.graph || app?.graph;
+  try { graph?.afterChange?.(); } catch {}
   app.graph?.setDirtyCanvas?.(true, true);
 }
 
@@ -1143,11 +1145,10 @@ function buildRoot(node) {
 
   node._anchorEls = {};
 
-  const s = getState(node);
-
   node._renderUI = () => {
     root.textContent = "";
     node._anchorEls = {};
+    const s = getState(node);
 
     for (const secKey of s.section_order) {
       if (secKey === "models") {
@@ -2585,6 +2586,10 @@ app.registerExtension({
       this._dsConfigured = true;
       this.widgets_start_y = 2;
       this._hubState = null;
+      if (info?.properties?.hub_state) {
+        this.properties = this.properties || {};
+        this.properties.hub_state = info.properties.hub_state;
+      }
       if (info?.size && Array.isArray(info.size)) {
         const savedW = Math.max(MIN_W, info.size[0]);
         const savedH = info.size[1];
@@ -2599,6 +2604,12 @@ app.registerExtension({
       this._renderUI?.();
       this._dsSyncHubHeight?.();
       scheduleAlign(this);
+    };
+
+    const origSerialize = nodeType.prototype.serialize;
+    nodeType.prototype.serialize = function () {
+      saveState(this);
+      return origSerialize?.apply(this, arguments);
     };
 
     const origResize = nodeType.prototype.onResize;
