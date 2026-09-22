@@ -73,6 +73,9 @@ class NSFWManager:
         ]
 
         priorities = [
+            # High-speed lightweight 5-class detector (16.5MB, 7.5ms per image)
+            ("nsfw_detector.onnx", "nsfwjs", 224),
+            ("classifier.onnx", "nsfwjs", 224),
             # High-accuracy ViT models (AdamCodd / fine-tuned)
             ("vit_nsfw_q4.onnx", "vit", 384),
             ("model_q4.onnx", "vit", 384),
@@ -83,9 +86,6 @@ class NSFWManager:
             ("640m.onnx", "yolo", 640),
             ("320m.onnx", "yolo", 320),
             ("320n.onnx", "yolo", 320),
-            ("classifier.onnx", "vit", 224),
-            # Legacy detector fallback
-            ("nsfw_detector.onnx", "vit", 224),
         ]
 
         found = None
@@ -124,8 +124,9 @@ class NSFWManager:
             import onnxruntime as ort
 
             opts = ort.SessionOptions()
-            opts.intra_op_num_threads = 1
-            opts.inter_op_num_threads = 1
+            cpu_threads = min(4, os.cpu_count() or 4)
+            opts.intra_op_num_threads = cpu_threads
+            opts.inter_op_num_threads = 2
             opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
 
             # Use CPUExecutionProvider to preserve GPU resources for ComfyUI workflows
@@ -151,12 +152,29 @@ class NSFWManager:
                 self.layout = "NCHW"
                 self.input_size = 384 if "vit" in os.path.basename(self.model_path).lower() else 224
 
-            logging.info(f"[DS Gallery] Loaded NSFW Model: {os.path.basename(self.model_path)} (Size: {self.input_size}, Layout: {self.layout}, Type: {self.model_type})")
+            logging.info(f"[DS Gallery] Loaded NSFW Model: {os.path.basename(self.model_path)} (Size: {self.input_size}, Layout: {self.layout}, Type: {self.model_type}, Threads: {cpu_threads})")
             return True
         except Exception as e:
             logging.error(f"[DS Gallery] Model load error: {e}")
             self.session = None
             return False
+
+    def prewarm(self):
+        """Asynchronously preloads the ONNX model and executes a fast warm-up forward pass."""
+        if not self.is_model_available():
+            return
+
+        def _worker():
+            try:
+                if self.load_model():
+                    dummy_shape = (1, self.input_size, self.input_size, 3) if getattr(self, "layout", "NCHW") == "NHWC" else (1, 3, self.input_size, self.input_size)
+                    dummy = np.zeros(dummy_shape, dtype=np.float32)
+                    self.session.run(None, {self.input_name: dummy})
+            except Exception as e:
+                logging.debug(f"[DS Gallery] NSFW prewarm notice: {e}")
+
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
 
     def start_download(self):
         """Asynchronously download the lightweight NSFW detector model."""
@@ -306,8 +324,7 @@ class NSFWManager:
             return results
 
         if not self.is_model_available() or not self.load_model():
-            for p, _ in to_infer:
-                results[p] = 0.0
+            # Model not ready yet; do not poison results with false 0.0
             return results
 
         # 2. Parallel image loading & preprocessing
@@ -332,7 +349,13 @@ class NSFWManager:
                         from .thumbnail_cache import extract_video_frame
                         img = extract_video_frame(path)
                     else:
-                        img = Image.open(path)
+                        im = Image.open(path)
+                        if hasattr(im, "draft"):
+                            try:
+                                im.draft("RGB", (self.input_size * 2, self.input_size * 2))
+                            except Exception:
+                                pass
+                        img = im
 
                 tensor = self.preprocess_single(img)
                 return path, ck, tensor, None
@@ -354,8 +377,6 @@ class NSFWManager:
                 if tensor is not None:
                     tensors.append(tensor)
                     valid_items.append((path, ck))
-                else:
-                    results[path] = 0.0
 
         if not tensors:
             return results
@@ -381,6 +402,13 @@ class NSFWManager:
                         if cls_max > s:
                             s = cls_max
                     scores.append(s)
+            elif len(raw_out.shape) == 2 and raw_out.shape[1] == 5:
+                # 5 classes: [0: Drawing, 1: Hentai, 2: Neutral, 3: Porn, 4: Sexy]
+                probs = np.array(raw_out, dtype=np.float32)
+                if np.min(probs) < 0 or np.max(probs) > 1.05:
+                    exp = np.exp(probs - np.max(probs, axis=-1, keepdims=True))
+                    probs = exp / np.sum(exp, axis=-1, keepdims=True)
+                scores = probs[:, 1] + probs[:, 3]
             else:
                 exp = np.exp(raw_out - np.max(raw_out, axis=-1, keepdims=True))
                 probs = exp / np.sum(exp, axis=-1, keepdims=True)

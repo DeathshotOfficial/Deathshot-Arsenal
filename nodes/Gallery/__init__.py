@@ -338,7 +338,8 @@ def register_routes():
         print(f"[DeathshotArsenal] Failed to register DS Gallery routes: {e}", flush=True)
 
 
-# Automatically register routes when imported
+# Automatically register routes and pre-warm detector when imported
 register_routes()
+nsfw_manager.prewarm()
 
 __all__ = ["DS_Gallery", "scan_gallery_folder", "generate_thumbnail", "nsfw_manager"]

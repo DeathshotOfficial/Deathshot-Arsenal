@@ -139,7 +139,7 @@ app.registerExtension({
 
       // Node size standards
       this.size = [480, 520];
-      this.min_size = [340, 280];
+      this.min_size = [340, 220];
 
       // Ensure properties state
       this.properties = this.properties || {};
@@ -168,8 +168,15 @@ app.registerExtension({
       const origInstConfigure = this.configure;
       this.configure = function (info) {
         const r = origInstConfigure ? origInstConfigure.apply(this, arguments) : undefined;
+        if (info?.size && Array.isArray(info.size)) {
+          self.size = [
+            Math.max(340, Number(info.size[0]) || 340),
+            Math.max(220, Number(info.size[1]) || 220),
+          ];
+        }
         setTimeout(() => {
           self._restoreState?.(info);
+          self._syncGalleryHostHeight?.();
           try { self.setDirtyCanvas?.(true, true); } catch (_) {}
         }, 30);
         return r;
@@ -192,6 +199,7 @@ app.registerExtension({
       }
 
       registerGalleryGearMenu();
+      setTimeout(() => this._syncGalleryHostHeight?.(), 50);
     };
 
     // Workflow serialize hook
@@ -210,24 +218,53 @@ app.registerExtension({
     nodeType.prototype.onConfigure = function (info) {
       const r = origOnConfigure?.apply(this, arguments);
       hideWidgets(this);
+      if (info?.size && Array.isArray(info.size)) {
+        this.size = [
+          Math.max(340, Number(info.size[0]) || 340),
+          Math.max(220, Number(info.size[1]) || 220),
+        ];
+      }
       setTimeout(() => {
         this._restoreState?.(info);
+        this._syncGalleryHostHeight?.();
         try { this.setDirtyCanvas?.(true, true); } catch (_) {}
       }, 30);
       return r;
     };
 
+    // Stable computeSize floor so LiteGraph allows shrinking and smooth resizing
+    const origComputeSize = nodeType.prototype.computeSize;
+    nodeType.prototype.computeSize = function (out) {
+      const minW = Math.max(340, this.min_size?.[0] || 340);
+      const minH = Math.max(220, this.min_size?.[1] || 220);
+      if (Array.isArray(out)) {
+        out[0] = minW;
+        out[1] = minH;
+        return out;
+      }
+      return [minW, minH];
+    };
+
+    // Dynamic widget height computation so DOM widget fills 100% of node body
+    nodeType.prototype._getWidgetHeight = function () {
+      const nodeH = Math.max(220, Number(this.size?.[1]) || 520);
+      const startY = Number.isFinite(this._galleryWidget?.y) && this._galleryWidget.y > 0
+        ? this._galleryWidget.y
+        : (30 + ((this.inputs?.length || 0) * 20));
+      return Math.max(180, Math.floor(nodeH - startY - 4));
+    };
+
     // Node resizing handler
+    const origOnResize = nodeType.prototype.onResize;
     nodeType.prototype.onResize = function (size) {
-      if (this._galleryWidget) {
-        this._galleryWidget.computeSize = (w) => [
-          Math.max(340, Number(w) || size[0]),
-          Math.max(180, size[1] - 45),
-        ];
+      if (Array.isArray(size)) {
+        size[0] = Math.max(340, Number(size[0]) || 340);
+        size[1] = Math.max(220, Number(size[1]) || 220);
       }
-      if (this._galleryRoot) {
-        this._updateGridSizeCSS();
+      if (typeof this._syncGalleryHostHeight === "function") {
+        this._syncGalleryHostHeight();
       }
+      return origOnResize ? origOnResize.apply(this, arguments) : undefined;
     };
 
     // Node Context Menu extensions
@@ -401,6 +438,15 @@ app.registerExtension({
             Clear NSFW Cache
           </button>
         </div>
+
+        <!-- Dedicated Corner Resize Grip -->
+        <div class="ds-gallery-resize-handle" data-resize-handle title="Drag to resize" aria-label="Resize node" role="separator" tabindex="-1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="21" y1="15" x2="15" y2="21"></line>
+            <line x1="21" y1="9" x2="9" y2="21"></line>
+            <line x1="21" y1="3" x2="3" y2="21"></line>
+          </svg>
+        </div>
       `;
 
       this._galleryRoot = root;
@@ -425,22 +471,56 @@ app.registerExtension({
       const widget = this.addDOMWidget("gallery_ui", "custom", root, {
         serialize: false,
         hideOnZoom: false,
+        margin: 0,
         getValue: () => null,
         setValue: () => {},
         getMinHeight: () => 180,
-        getHeight: () => Math.max(180, (Number(this.size?.[1]) || 520) - 45),
+        getHeight: () => (typeof this._getWidgetHeight === "function" ? this._getWidgetHeight() : Math.max(180, (Number(this.size?.[1]) || 520) - 54)),
       });
       this._galleryWidget = widget;
 
       widget.computeLayoutSize = () => ({
         minHeight: 180,
         minWidth: 340,
+        height: typeof this._getWidgetHeight === "function" ? this._getWidgetHeight() : 460,
       });
 
       widget.computeSize = (width) => [
-        Math.max(340, Number(width) || this.size[0]),
-        Math.max(180, (Number(this.size?.[1]) || 520) - 45),
+        Math.max(340, Number(width) || this.size?.[0] || 480),
+        typeof this._getWidgetHeight === "function" ? this._getWidgetHeight() : Math.max(180, (Number(this.size?.[1]) || 520) - 54),
       ];
+
+      this._syncGalleryHostHeight = () => {
+        const widgetH = typeof this._getWidgetHeight === "function" ? this._getWidgetHeight() : Math.max(180, (Number(this.size?.[1]) || 520) - 54);
+        if (this._galleryWidget) {
+          this._galleryWidget.computedHeight = widgetH;
+        }
+        if (root) {
+          root.style.boxSizing = "border-box";
+          root.style.width = "100%";
+          root.style.height = `${widgetH}px`;
+          root.style.maxHeight = `${widgetH}px`;
+          const host = root.parentElement;
+          if (host) {
+            host.style.height = `${widgetH}px`;
+            host.style.maxHeight = `${widgetH}px`;
+          }
+        }
+      };
+      this._syncGalleryHostHeight();
+
+      widget.onPointerDown = (pointer) => {
+        const e = pointer?.eDown || pointer?.e;
+        if (e && this.size) {
+          const rect = root.getBoundingClientRect();
+          const fromRight = rect.right - e.clientX;
+          const fromBottom = rect.bottom - e.clientY;
+          if (fromBottom <= 18 || (fromRight <= 22 && fromBottom <= 22)) {
+            return false; // Yield to LiteGraph resize handle
+          }
+        }
+        return undefined;
+      };
 
       normalizeDSWidgetHost(root, this, { shell: false });
       protectDSResizeCorners(this);
@@ -454,6 +534,7 @@ app.registerExtension({
           host.style.border = "none";
           host.style.boxSizing = "border-box";
         }
+        this._syncGalleryHostHeight?.();
       }, 0);
 
       // Bind node theme
@@ -594,6 +675,51 @@ app.registerExtension({
         e.stopPropagation();
         this._promptDeleteSelection();
       });
+
+      // Dedicated corner resize grip
+      const resizeHandle = root.querySelector("[data-resize-handle]");
+      if (resizeHandle) {
+        resizeHandle.addEventListener("pointerdown", (event) => {
+          if (event.button !== undefined && event.button !== 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+
+          resizeHandle.classList.add("is-active");
+          try { resizeHandle.setPointerCapture(event.pointerId); } catch (_) {}
+
+          const startX = event.clientX;
+          const startY = event.clientY;
+          const startW = Number(this.size?.[0]) || 480;
+          const startH = Number(this.size?.[1]) || 520;
+          const scale = app?.canvas?.ds?.scale || app?.canvas?.scale || 1;
+
+          const onMove = (moveEvent) => {
+            const dx = (moveEvent.clientX - startX) / scale;
+            const dy = (moveEvent.clientY - startY) / scale;
+            const newW = Math.max(340, Math.round(startW + dx));
+            const newH = Math.max(220, Math.round(startH + dy));
+
+            if (!this.size) this.size = [startW, startH];
+            this.size[0] = newW;
+            this.size[1] = newH;
+
+            if (typeof this.onResize === "function") this.onResize(this.size);
+            this.setDirtyCanvas?.(true, true);
+          };
+
+          const onUp = (upEvent) => {
+            resizeHandle.classList.remove("is-active");
+            try { resizeHandle.releasePointerCapture(upEvent.pointerId); } catch (_) {}
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+            if (typeof this.onResize === "function") this.onResize(this.size);
+            this.setDirtyCanvas?.(true, true);
+          };
+
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", onUp);
+        });
+      }
     };
 
     nodeType.prototype._updateGridSizeCSS = function () {
@@ -669,6 +795,7 @@ app.registerExtension({
 
       this._updateGridSizeCSS();
       this._updateSneakPeekDOM();
+      this._syncGalleryHostHeight?.();
       hideWidgets(this);
 
       if (state.folder_path) {
@@ -868,11 +995,11 @@ app.registerExtension({
                 }
               }
 
-              // Evaluate NSFW score in background if not already known
+              // Evaluate NSFW score in background if not already known (high-priority for visible viewport)
               const fullPath = entry.target.dataset.path;
               const item = this._filteredFiles?.find((f) => f.full_path === fullPath);
               if (state.nsfw_enabled && item && typeof item.nsfw_score !== "number") {
-                this._queueNSFWEval(fullPath);
+                this._queueNSFWEval(fullPath, true);
               }
 
               observer.unobserve(entry.target);
@@ -1091,29 +1218,55 @@ app.registerExtension({
     };
 
     // ------------------------------------------------------------------------
-    // NSFW Batch Evaluation & Instant DOM Blur Updates
+    // NSFW Batch Evaluation & Instant DOM Blur Updates (Dual-Priority Queue)
     // ------------------------------------------------------------------------
-    nodeType.prototype._queueNSFWEval = function (path) {
+    nodeType.prototype._queueNSFWEval = function (path, isHighPriority = false) {
       if (!path) return;
-      this._nsfwEvalQueue = this._nsfwEvalQueue || new Set();
+      this._nsfwEvalHighQueue = this._nsfwEvalHighQueue || new Set();
+      this._nsfwEvalLowQueue = this._nsfwEvalLowQueue || new Set();
       this._nsfwEvalPending = this._nsfwEvalPending || new Set();
 
       if (this._nsfwEvalPending.has(path)) return;
-      this._nsfwEvalQueue.add(path);
+
+      if (isHighPriority) {
+        this._nsfwEvalLowQueue.delete(path);
+        this._nsfwEvalHighQueue.add(path);
+      } else if (!this._nsfwEvalHighQueue.has(path)) {
+        this._nsfwEvalLowQueue.add(path);
+      }
 
       clearTimeout(this._nsfwEvalTimer);
       this._nsfwEvalTimer = setTimeout(() => {
         this._flushNSFWEvalQueue();
-      }, 100);
+      }, isHighPriority ? 25 : 90);
     };
 
     nodeType.prototype._flushNSFWEvalQueue = async function () {
-      if (!this._nsfwEvalQueue || this._nsfwEvalQueue.size === 0) return;
-      const batch = Array.from(this._nsfwEvalQueue).slice(0, 30);
-      batch.forEach((p) => {
-        this._nsfwEvalQueue.delete(p);
+      this._nsfwEvalHighQueue = this._nsfwEvalHighQueue || new Set();
+      this._nsfwEvalLowQueue = this._nsfwEvalLowQueue || new Set();
+      this._nsfwEvalPending = this._nsfwEvalPending || new Set();
+
+      if (this._nsfwEvalHighQueue.size === 0 && this._nsfwEvalLowQueue.size === 0) return;
+
+      const batch = [];
+      // Pull viewport/high-priority items first
+      for (const p of this._nsfwEvalHighQueue) {
+        batch.push(p);
+        this._nsfwEvalHighQueue.delete(p);
         this._nsfwEvalPending.add(p);
-      });
+        if (batch.length >= 24) break;
+      }
+      // Fill remainder with off-screen background items
+      if (batch.length < 24) {
+        for (const p of this._nsfwEvalLowQueue) {
+          batch.push(p);
+          this._nsfwEvalLowQueue.delete(p);
+          this._nsfwEvalPending.add(p);
+          if (batch.length >= 24) break;
+        }
+      }
+
+      if (batch.length === 0) return;
 
       try {
         const resp = await fetch("/ds/gallery/nsfw/eval_batch", {
@@ -1125,20 +1278,24 @@ app.registerExtension({
         const scores = data.scores || {};
 
         for (const [path, score] of Object.entries(scores)) {
-          this._nsfwEvalPending.delete(path);
-          const item = this._allFiles?.find((f) => f.full_path === path);
-          if (item) item.nsfw_score = score;
-          const filteredItem = this._filteredFiles?.find((f) => f.full_path === path);
-          if (filteredItem) filteredItem.nsfw_score = score;
+          if (typeof score === "number") {
+            const item = this._allFiles?.find((f) => f.full_path === path);
+            if (item) item.nsfw_score = score;
+            const filteredItem = this._filteredFiles?.find((f) => f.full_path === path);
+            if (filteredItem) filteredItem.nsfw_score = score;
 
-          this._updateCardNSFW(path, score);
+            this._updateCardNSFW(path, score);
+          }
         }
       } catch (err) {
         console.error("[DS Gallery] NSFW batch eval error:", err);
+      } finally {
+        // Guarantee pending paths are freed so temporary network drops never deadlock the session
+        batch.forEach((p) => this._nsfwEvalPending.delete(p));
       }
 
-      if (this._nsfwEvalQueue && this._nsfwEvalQueue.size > 0) {
-        this._flushNSFWEvalQueue();
+      if (this._nsfwEvalHighQueue.size > 0 || this._nsfwEvalLowQueue.size > 0) {
+        setTimeout(() => this._flushNSFWEvalQueue(), 15);
       }
     };
 
@@ -1154,9 +1311,21 @@ app.registerExtension({
       const state = this.properties[PROP_KEY];
       if (!state.nsfw_enabled || !this._filteredFiles) return;
 
+      // Queue visible cards with high priority first
+      if (this._gridEl) {
+        const visibleCards = this._gridEl.querySelectorAll(".ds-gallery-item");
+        visibleCards.forEach((card) => {
+          const p = card.dataset.path;
+          const item = this._filteredFiles.find((f) => f.full_path === p);
+          if (item && typeof item.nsfw_score !== "number") {
+            this._queueNSFWEval(p, true);
+          }
+        });
+      }
+
       for (const item of this._filteredFiles) {
         if (typeof item.nsfw_score !== "number") {
-          this._queueNSFWEval(item.full_path);
+          this._queueNSFWEval(item.full_path, false);
         }
       }
     };
