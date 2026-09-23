@@ -481,10 +481,24 @@ function getElementCenterY(node, el) {
 
   const rootRect = node._domRoot.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
-  const scale = app.canvas?.ds?.scale || 1.0;
+  const canvas = app.canvas;
+  const scale = canvas?.ds?.scale || 1.0;
   if (!rootRect || !elRect || scale <= 0) return null;
 
-  const localCenterY = (elRect.top + elRect.height * 0.5 - rootRect.top) / scale;
+  // getBoundingClientRect() returns screen-space CSS pixels.
+  // To convert to LiteGraph graph coordinates we need:
+  //   1. The pixel offset of the element's center relative to the canvas DOM element
+  //   2. Divide by scale to get canvas-local coords
+  //   3. Subtract the pan offset (ds.offset) — but offset is already factored into
+  //      node.pos, so we only need the relative offset from rootRect (the widget root).
+  // Simply: localCenterY = px distance from rootRect.top to elRect.center, divided by scale.
+  // This is correct because rootRect and elRect are both in the same screen-space,
+  // and their relative distance is independent of pan but must be divided by scale
+  // to go from screen pixels to graph-unit pixels.
+  const elCenterScreenY = elRect.top + elRect.height * 0.5;
+  const rootTopScreenY  = rootRect.top;
+  const localCenterY    = (elCenterScreenY - rootTopScreenY) / scale;
+
   return Math.round(widgetY + widgetMargin + localCenterY);
 }
 
@@ -556,6 +570,42 @@ function unwatchAlign(node) {
     clearInterval(node._dsAlignPoll);
     node._dsAlignPoll = null;
   }
+}
+
+// Re-align all active hub nodes immediately after a zoom/scroll gesture.
+// watchAlign polls every 250ms which is too slow — links visibly shift during
+// zoom before the next poll fires.  This listener fires on every wheel event
+// on the canvas element and immediately runs alignOutputs so links stay pinned.
+function _installHubZoomListener() {
+  const canvasEl = app.canvas?.canvas || document.querySelector("canvas.litegraph");
+  if (!canvasEl || canvasEl._dsHubZoomBound) return;
+  canvasEl._dsHubZoomBound = true;
+
+  const onZoom = () => {
+    const graph = app.graph;
+    if (!graph?._nodes) return;
+    for (const node of graph._nodes) {
+      if (node.type === NODE_TYPE && node._anchorEls && !node._dsRemoved) {
+        // rAF to let the DOM reflow finish before reading new rects
+        requestAnimationFrame(() => alignOutputs(node));
+      }
+    }
+  };
+
+  canvasEl.addEventListener("wheel", onZoom, { passive: true });
+}
+
+// Install the listener once the app is ready
+if (app.canvas?.canvas) {
+  _installHubZoomListener();
+} else {
+  // canvas may not be ready at module parse time — wait for it
+  const waitForCanvas = setInterval(() => {
+    if (app.canvas?.canvas) {
+      clearInterval(waitForCanvas);
+      _installHubZoomListener();
+    }
+  }, 200);
 }
 
 // ---------------------------------------------------------------------------
