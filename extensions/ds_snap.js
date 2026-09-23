@@ -420,14 +420,25 @@ class DSSnapEngine {
 
     const vBounds = getNodeVisualBounds(node);
 
-    // Filter candidate nodes within a reasonable neighborhood (1400px max)
+    // Build candidate list — only VISIBLE nodes, prioritizing topmost (last in graph.nodes = front)
+    // LiteGraph node.mode: 0 = always, 1 = on event, 2 = never (hidden), 3 = bypass, 4 = always no exec
+    const HIDDEN_MODES = new Set([2, 3]);   // never-draw and bypassed
+    const totalNodes = graph.nodes.length;
+
     const candidates = [];
-    for (const other of graph.nodes) {
+    for (let i = 0; i < graph.nodes.length; i++) {
+      const other = graph.nodes[i];
       if (!isNode(other) || other === node || selectedSet.has(other) || selectedIds.has(other.id)) continue;
+      // Skip hidden / bypassed nodes
+      if (HIDDEN_MODES.has(other.mode)) continue;
+      // Skip collapsed nodes that have no visible body (they mislead alignment)
+      // (collapsed nodes still have a title bar so keep them — but they're small)
       const b = getNodeVisualBounds(other);
       const dist = Math.hypot(b.centerX - vBounds.centerX, b.centerY - vBounds.centerY);
       if (dist < 1400) {
-        candidates.push({ ...b, dist });
+        // depthScore: nodes later in the array are rendered on top → lower score = higher priority
+        const depthScore = (totalNodes - 1 - i) / totalNodes;  // 0.0 = topmost, ~1.0 = bottommost
+        candidates.push({ ...b, dist, depthScore });
       }
     }
 
@@ -439,13 +450,24 @@ class DSSnapEngine {
     }
 
     // CRITICAL: Sort candidates by distance ascending (nearest neighbor first!)
-    candidates.sort((a, b) => a.dist - b.dist);
+    // Then apply a secondary sort bonus for topmost (lowest depthScore) nodes.
+    candidates.sort((a, b) => {
+      // Primary: distance; Secondary: z-order (topmost first)
+      const distDiff = a.dist - b.dist;
+      if (Math.abs(distDiff) > 40) return distDiff;  // clearly different distance → pure distance sort
+      return a.depthScore - b.depthScore;              // similar distance → prefer topmost node
+    });
 
     const baseThreshold = Number(state.snapThreshold) || 10;
     const scale = canvas?.ds?.scale || 1.0;
     // Gentle threshold across zoom levels (bounded between 6 and 14)
     const threshold = Math.min(14, Math.max(6, baseThreshold / Math.max(0.2, scale)));
-    const hysteresis = threshold * 1.25;
+    // Hysteresis: once snapped, require moving 1.5× threshold before trying again
+    const hysteresis = threshold * 1.5;
+    // Soft-pull factor: instead of teleporting the node 100% to the guide, only nudge
+    // it by PULL_FACTOR of the remaining delta.  This gives a "magnetic suggestion"
+    // feel rather than a hard lock.
+    const PULL_FACTOR = 0.35;
     const minMarginX = state.minMarginEnabled ? state.minMarginX : 0;
     const minMarginY = state.minMarginEnabled ? state.minMarginY : 0;
 
@@ -501,9 +523,9 @@ class DSSnapEngine {
             : threshold;
 
         if (absDiff <= limit) {
-          // Distance-weighted scoring formula:
-          // Heavily favors closest neighbor and edge/gap alignments over far center lines
-          const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0);
+          // Distance-weighted scoring formula.
+          // Depth bonus: topmost nodes (depthScore ≈ 0) are strongly preferred over buried ones.
+          const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0) + t.depthScore * 6;
           if (score < bestYScore) {
             bestYScore = score;
             bestYMatch = {
@@ -567,7 +589,8 @@ class DSSnapEngine {
             : threshold;
 
         if (absDiff <= limit) {
-          const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0);
+          // Depth bonus mirrors the Y scoring so topmost nodes dominate
+          const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0) + t.depthScore * 6;
           if (score < bestXScore) {
             bestXScore = score;
             bestXMatch = {
@@ -583,11 +606,13 @@ class DSSnapEngine {
       }
     }
 
-    // Apply snap adjustment to node & companion selected nodes
+    // Apply soft snap adjustment to node & companion selected nodes.
+    // Rather than teleporting the full delta (which causes the "locked" feeling),
+    // we nudge by PULL_FACTOR of the delta so the guide attracts without overpowering.
     const guides = [];
 
     if (bestYMatch) {
-      const dy = bestYMatch.deltaY;
+      const dy = bestYMatch.deltaY * PULL_FACTOR;
       for (const sn of selectedSet) {
         sn.pos[1] += dy;
       }
@@ -607,7 +632,7 @@ class DSSnapEngine {
     }
 
     if (bestXMatch) {
-      const dx = bestXMatch.deltaX;
+      const dx = bestXMatch.deltaX * PULL_FACTOR;
       for (const sn of selectedSet) {
         sn.pos[0] += dx;
       }
