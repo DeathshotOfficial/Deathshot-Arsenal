@@ -460,14 +460,24 @@ class DSSnapEngine {
 
     const baseThreshold = Number(state.snapThreshold) || 10;
     const scale = canvas?.ds?.scale || 1.0;
-    // Gentle threshold across zoom levels (bounded between 6 and 14)
-    const threshold = Math.min(14, Math.max(6, baseThreshold / Math.max(0.2, scale)));
-    // Hysteresis: once snapped, require moving 1.5× threshold before trying again
-    const hysteresis = threshold * 1.5;
-    // Soft-pull factor: instead of teleporting the node 100% to the guide, only nudge
-    // it by PULL_FACTOR of the remaining delta.  This gives a "magnetic suggestion"
-    // feel rather than a hard lock.
-    const PULL_FACTOR = 0.35;
+
+    // -------------------------------------------------------------------------
+    // TWO-ZONE GUIDE SYSTEM
+    // -------------------------------------------------------------------------
+    // visualThreshold  = outer zone: guide LINE is drawn, NO position change.
+    //                    This is the "suggestion" zone.
+    // snapZone         = inner zone (very tight): position actually adjusts — once.
+    //                    Spacing/margin guides get an even tighter inner zone so
+    //                    they're purely visual unless you're pixel-perfect.
+    // latch            = once we snap, we mark it as latched and apply zero delta
+    //                    on subsequent frames until the node escapes hysteresis.
+    //                    This prevents the "held in place" accumulation problem.
+    // -------------------------------------------------------------------------
+    const visualThreshold = Math.min(18, Math.max(8, baseThreshold / Math.max(0.2, scale)));
+    const snapZone        = 3;   // px: only actually move node when this close
+    const spacingSnapZone = 2;   // px: spacing/margin guides are even less grabby
+    const hysteresis      = visualThreshold * 1.6;  // must move this far to break latch
+
     const minMarginX = state.minMarginEnabled ? state.minMarginX : 0;
     const minMarginY = state.minMarginEnabled ? state.minMarginY : 0;
 
@@ -483,48 +493,26 @@ class DSSnapEngine {
       const tests = [];
 
       if (state.alignEdges) {
-        // Top Edge to Top Edge
-        tests.push({ targetY: t.top, sourceY: vBounds.top, delta: t.top - vBounds.top, label: "Top Align", isEdge: true });
-        // Bottom Edge to Bottom Edge
+        tests.push({ targetY: t.top,    sourceY: vBounds.top,    delta: t.top    - vBounds.top,    label: "Top Align",    isEdge: true });
         tests.push({ targetY: t.bottom, sourceY: vBounds.bottom, delta: t.bottom - vBounds.bottom, label: "Bottom Align", isEdge: true });
       }
 
       if (state.alignSpacing && state.minMarginEnabled && minMarginY > 0) {
-        // Spacing Gap: Node placed below target with minMarginY
-        tests.push({
-          targetY: t.bottom + minMarginY,
-          sourceY: vBounds.top,
-          delta: (t.bottom + minMarginY) - vBounds.top,
-          label: `${minMarginY}px Gap`,
-          isSpacing: true,
-          spacingY: t.bottom,
-        });
-        // Spacing Gap: Node placed above target with minMarginY
-        tests.push({
-          targetY: t.top - minMarginY,
-          sourceY: vBounds.bottom,
-          delta: (t.top - minMarginY) - vBounds.bottom,
-          label: `${minMarginY}px Gap`,
-          isSpacing: true,
-          spacingY: t.top,
-        });
+        tests.push({ targetY: t.bottom + minMarginY, sourceY: vBounds.top,    delta: (t.bottom + minMarginY) - vBounds.top,    label: `${minMarginY}px Gap`, isSpacing: true, spacingY: t.bottom });
+        tests.push({ targetY: t.top    - minMarginY, sourceY: vBounds.bottom, delta: (t.top    - minMarginY) - vBounds.bottom, label: `${minMarginY}px Gap`, isSpacing: true, spacingY: t.top    });
       }
 
-      // Center Y to Center Y (evaluated with priority penalty so edges take precedence)
       if (state.alignCenters) {
         tests.push({ targetY: t.centerY, sourceY: vBounds.centerY, delta: t.centerY - vBounds.centerY, label: "Center Align", isCenter: true });
       }
 
       for (const test of tests) {
         const absDiff = Math.abs(test.delta);
-        const limit =
-          this.lastSnappedY && this.lastSnappedY.targetId === t.id && this.lastSnappedY.label === test.label
-            ? hysteresis
-            : threshold;
+        // Use hysteresis window when already latched to this anchor, visual threshold otherwise
+        const isLatched = this.lastSnappedY?.targetId === t.id && this.lastSnappedY?.label === test.label;
+        const limit = isLatched ? hysteresis : visualThreshold;
 
         if (absDiff <= limit) {
-          // Distance-weighted scoring formula.
-          // Depth bonus: topmost nodes (depthScore ≈ 0) are strongly preferred over buried ones.
           const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0) + t.depthScore * 6;
           if (score < bestYScore) {
             bestYScore = score;
@@ -534,6 +522,7 @@ class DSSnapEngine {
               deltaY: test.delta,
               label: test.label,
               isSpacing: test.isSpacing || false,
+              isLatched,
               spacingY: test.spacingY,
             };
           }
@@ -549,47 +538,25 @@ class DSSnapEngine {
       const tests = [];
 
       if (state.alignEdges) {
-        // Left Edge to Left Edge
-        tests.push({ targetX: t.left, sourceX: vBounds.left, delta: t.left - vBounds.left, label: "Left Align", isEdge: true });
-        // Right Edge to Right Edge
+        tests.push({ targetX: t.left,  sourceX: vBounds.left,  delta: t.left  - vBounds.left,  label: "Left Align",  isEdge: true });
         tests.push({ targetX: t.right, sourceX: vBounds.right, delta: t.right - vBounds.right, label: "Right Align", isEdge: true });
       }
 
       if (state.alignSpacing && state.minMarginEnabled && minMarginX > 0) {
-        // Spacing Gap: Node placed to the right of target with minMarginX
-        tests.push({
-          targetX: t.right + minMarginX,
-          sourceX: vBounds.left,
-          delta: (t.right + minMarginX) - vBounds.left,
-          label: `${minMarginX}px Gap`,
-          isSpacing: true,
-          spacingX: t.right,
-        });
-        // Spacing Gap: Node placed to the left of target with minMarginX
-        tests.push({
-          targetX: t.left - minMarginX,
-          sourceX: vBounds.right,
-          delta: (t.left - minMarginX) - vBounds.right,
-          label: `${minMarginX}px Gap`,
-          isSpacing: true,
-          spacingX: t.left,
-        });
+        tests.push({ targetX: t.right + minMarginX, sourceX: vBounds.left,  delta: (t.right + minMarginX) - vBounds.left,  label: `${minMarginX}px Gap`, isSpacing: true, spacingX: t.right });
+        tests.push({ targetX: t.left  - minMarginX, sourceX: vBounds.right, delta: (t.left  - minMarginX) - vBounds.right, label: `${minMarginX}px Gap`, isSpacing: true, spacingX: t.left  });
       }
 
-      // Center X to Center X (evaluated with priority penalty)
       if (state.alignCenters) {
         tests.push({ targetX: t.centerX, sourceX: vBounds.centerX, delta: t.centerX - vBounds.centerX, label: "Center Align", isCenter: true });
       }
 
       for (const test of tests) {
         const absDiff = Math.abs(test.delta);
-        const limit =
-          this.lastSnappedX && this.lastSnappedX.targetId === t.id && this.lastSnappedX.label === test.label
-            ? hysteresis
-            : threshold;
+        const isLatched = this.lastSnappedX?.targetId === t.id && this.lastSnappedX?.label === test.label;
+        const limit = isLatched ? hysteresis : visualThreshold;
 
         if (absDiff <= limit) {
-          // Depth bonus mirrors the Y scoring so topmost nodes dominate
           const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0) + t.depthScore * 6;
           if (score < bestXScore) {
             bestXScore = score;
@@ -599,6 +566,7 @@ class DSSnapEngine {
               deltaX: test.delta,
               label: test.label,
               isSpacing: test.isSpacing || false,
+              isLatched,
               spacingX: test.spacingX,
             };
           }
@@ -606,16 +574,25 @@ class DSSnapEngine {
       }
     }
 
-    // Apply soft snap adjustment to node & companion selected nodes.
-    // Rather than teleporting the full delta (which causes the "locked" feeling),
-    // we nudge by PULL_FACTOR of the delta so the guide attracts without overpowering.
+    // -------------------------------------------------------------------------
+    // APPLY POSITION CHANGES  (two-zone: visual = no move, snap zone = move once)
+    // -------------------------------------------------------------------------
+    // Rule: if already latched to this guide → apply ZERO delta (guide is visual only).
+    //       If newly entering snap zone (absDiff ≤ snapZone) → apply EXACT delta once.
+    //       If in visual zone only (absDiff > snapZone) → apply ZERO delta.
+    // This means the guide line shows up early as a hint, but only snaps when truly close.
     const guides = [];
 
     if (bestYMatch) {
-      const dy = bestYMatch.deltaY * PULL_FACTOR;
-      for (const sn of selectedSet) {
-        sn.pos[1] += dy;
+      const absDY = Math.abs(bestYMatch.deltaY);
+      const innerZone = bestYMatch.isSpacing ? spacingSnapZone : snapZone;
+      if (!bestYMatch.isLatched && absDY <= innerZone) {
+        // First entry into snap zone: move exactly to alignment
+        for (const sn of selectedSet) {
+          sn.pos[1] += bestYMatch.deltaY;
+        }
       }
+      // If already latched or only in visual zone: zero position change — guide line only
       this.lastSnappedY = { targetId: bestYMatch.targetNode.id, label: bestYMatch.label };
 
       guides.push({
@@ -632,9 +609,12 @@ class DSSnapEngine {
     }
 
     if (bestXMatch) {
-      const dx = bestXMatch.deltaX * PULL_FACTOR;
-      for (const sn of selectedSet) {
-        sn.pos[0] += dx;
+      const absDX = Math.abs(bestXMatch.deltaX);
+      const innerZone = bestXMatch.isSpacing ? spacingSnapZone : snapZone;
+      if (!bestXMatch.isLatched && absDX <= innerZone) {
+        for (const sn of selectedSet) {
+          sn.pos[0] += bestXMatch.deltaX;
+        }
       }
       this.lastSnappedX = { targetId: bestXMatch.targetNode.id, label: bestXMatch.label };
 
