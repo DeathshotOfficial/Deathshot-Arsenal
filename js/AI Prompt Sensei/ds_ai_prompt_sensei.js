@@ -997,26 +997,28 @@ function isVueNodes() {
   );
 }
 
-function getElementTopInRoot(el, root) {
-  let top = 0;
-  let curr = el;
-  while (curr && curr !== root) {
-    top += curr.offsetTop || 0;
-    curr = curr.offsetParent;
-  }
-  return top;
-}
-
 function getElementCenterY(node, el) {
   if (!el || !node._domRoot) return null;
   const w = node._senseiWidget;
-  const widgetY = Number.isFinite(w?.y) ? w.y : (Number.isFinite(node.widgets_start_y) ? node.widgets_start_y : 2);
+  const widgetY      = Number.isFinite(w?.y) ? w.y : (Number.isFinite(node.widgets_start_y) ? node.widgets_start_y : 2);
   const widgetMargin = Number.isFinite(w?.margin) ? w.margin : (w?.options?.margin ?? 10);
-  const rootOffsetTop = node._domRoot.offsetTop || 4;
-  const top = getElementTopInRoot(el, node._domRoot);
-  const rowH = el.offsetHeight || (el === node._anchorEls?.[0] ? 64 : 28);
-  return Math.round(widgetY + widgetMargin + rootOffsetTop + top + rowH * 0.5);
+  const scale        = app.canvas?.ds?.scale || 1.0;
+  if (scale <= 0) return null;
+
+  const rootRect = node._domRoot.getBoundingClientRect();
+  const elRect   = el.getBoundingClientRect();
+
+  // When the node is off-screen ComfyUI hides the DOM widget (display:none).
+  // getBoundingClientRect() then returns all zeros — making localCenterY=0
+  // and writing all slots to the top of the node. Guard: skip when hidden.
+  if (!rootRect.height || !elRect.height) return null;
+
+  // Relative distance between two elements in the same subtree is pan-stable.
+  // Dividing by scale converts screen-space px → graph-space units.
+  const localCenterY = (elRect.top + elRect.height * 0.5 - rootRect.top) / scale;
+  return Math.round(widgetY + widgetMargin + localCenterY);
 }
+
 
 function alignOutputs(node) {
   if (!node || !node.outputs || !node._anchorEls) return;
