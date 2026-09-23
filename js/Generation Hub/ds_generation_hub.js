@@ -481,22 +481,21 @@ function getElementCenterY(node, el) {
   const scale = app.canvas?.ds?.scale || 1.0;
   if (scale <= 0) return null;
 
-  // Use offsetTop traversal instead of getBoundingClientRect.
-  // getBoundingClientRect is VIEWPORT-relative — as you pan the canvas, the
-  // element's screen position changes even though its position inside the widget
-  // DOM has not moved at all.  This caused link endpoints to shift on every pan.
-  //
-  // offsetTop gives the element's Y position within its offset parent chain,
-  // which is pan/scroll agnostic. We walk up to _domRoot to get the total
-  // local offset, then divide by scale to convert CSS layout pixels → graph-space.
-  let localCenterY = el.offsetHeight * 0.5;
-  let cur = el;
-  while (cur && cur !== node._domRoot) {
-    localCenterY += cur.offsetTop;
-    cur = cur.offsetParent;
-  }
+  const rootRect = node._domRoot.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
 
-  return Math.round(widgetY + widgetMargin + localCenterY / scale);
+  // When the node is off-screen, ComfyUI hides the DOM widget (display:none or
+  // moves it off-viewport). getBoundingClientRect() then returns all zeros for
+  // both rects, making localCenterY = (0 - 0) / scale = 0, which writes slot.pos
+  // to the top of the node. Guard against this: if either element has no rendered
+  // height, bail and let alignOutputs keep the last known good slot.pos.
+  if (!rootRect.height || !elRect.height) return null;
+
+  // The relative distance (elRect.top - rootRect.top) is pan-stable: panning moves
+  // both elements by the same amount so the difference is constant. Dividing by
+  // scale converts screen-space px → graph-space units.
+  const localCenterY = (elRect.top + elRect.height * 0.5 - rootRect.top) / scale;
+  return Math.round(widgetY + widgetMargin + localCenterY);
 }
 
 function alignOutputs(node) {
