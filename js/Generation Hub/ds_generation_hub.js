@@ -478,28 +478,25 @@ function getElementCenterY(node, el) {
   const w = node._hubWidget;
   const widgetY = Number.isFinite(w?.y) ? w.y : (Number.isFinite(node.widgets_start_y) ? node.widgets_start_y : 2);
   const widgetMargin = Number.isFinite(w?.margin) ? w.margin : (w?.options?.margin ?? 6);
+  const scale = app.canvas?.ds?.scale || 1.0;
+  if (scale <= 0) return null;
 
-  const rootRect = node._domRoot.getBoundingClientRect();
-  const elRect = el.getBoundingClientRect();
-  const canvas = app.canvas;
-  const scale = canvas?.ds?.scale || 1.0;
-  if (!rootRect || !elRect || scale <= 0) return null;
+  // Use offsetTop traversal instead of getBoundingClientRect.
+  // getBoundingClientRect is VIEWPORT-relative — as you pan the canvas, the
+  // element's screen position changes even though its position inside the widget
+  // DOM has not moved at all.  This caused link endpoints to shift on every pan.
+  //
+  // offsetTop gives the element's Y position within its offset parent chain,
+  // which is pan/scroll agnostic. We walk up to _domRoot to get the total
+  // local offset, then divide by scale to convert CSS layout pixels → graph-space.
+  let localCenterY = el.offsetHeight * 0.5;
+  let cur = el;
+  while (cur && cur !== node._domRoot) {
+    localCenterY += cur.offsetTop;
+    cur = cur.offsetParent;
+  }
 
-  // getBoundingClientRect() returns screen-space CSS pixels.
-  // To convert to LiteGraph graph coordinates we need:
-  //   1. The pixel offset of the element's center relative to the canvas DOM element
-  //   2. Divide by scale to get canvas-local coords
-  //   3. Subtract the pan offset (ds.offset) — but offset is already factored into
-  //      node.pos, so we only need the relative offset from rootRect (the widget root).
-  // Simply: localCenterY = px distance from rootRect.top to elRect.center, divided by scale.
-  // This is correct because rootRect and elRect are both in the same screen-space,
-  // and their relative distance is independent of pan but must be divided by scale
-  // to go from screen pixels to graph-unit pixels.
-  const elCenterScreenY = elRect.top + elRect.height * 0.5;
-  const rootTopScreenY  = rootRect.top;
-  const localCenterY    = (elCenterScreenY - rootTopScreenY) / scale;
-
-  return Math.round(widgetY + widgetMargin + localCenterY);
+  return Math.round(widgetY + widgetMargin + localCenterY / scale);
 }
 
 function alignOutputs(node) {
