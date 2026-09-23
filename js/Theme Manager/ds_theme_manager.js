@@ -515,6 +515,10 @@ class DSThemeManagerDashboard {
       wireAccent: "#67e8f9",
     };
 
+    // rAF token for color-picker drag throttle
+    this._pickerRafPending = false;
+    this._pickerRafToken = null;
+
     // Typography State
     this.typoState = {
       font: "Inter",
@@ -912,18 +916,36 @@ class DSThemeManagerDashboard {
 
   _refreshTargetSelection() {
     const selected = getSelectedNodes();
+    const tab = this.activeTab;
+
     if (selected.length === 1) {
       const name = selected[0].title || selected[0].type || "Node";
       this.el.targetText.textContent = `Target: 1 Node Selected (${name})`;
-      this.el.applySelectedBtn.textContent = "Apply to Selected Node";
+      if (tab === "themes") {
+        this.el.applySelectedBtn.textContent = "Apply to Selected DS Node";
+      } else {
+        this.el.applySelectedBtn.textContent = "Apply to Selected Node";
+      }
       this.el.applySelectedBtn.disabled = false;
     } else if (selected.length > 1) {
       this.el.targetText.textContent = `Target: ${selected.length} Nodes Selected`;
-      this.el.applySelectedBtn.textContent = `Apply to ${selected.length} Nodes`;
+      if (tab === "themes") {
+        this.el.applySelectedBtn.textContent = `Apply to ${selected.length} Selected DS Nodes`;
+      } else {
+        this.el.applySelectedBtn.textContent = `Apply to ${selected.length} Nodes`;
+      }
       this.el.applySelectedBtn.disabled = false;
     } else {
-      this.el.targetText.textContent = "Target: Canvas Defaults / Future Nodes";
-      this.el.applySelectedBtn.textContent = "Apply to Canvas";
+      if (tab === "themes") {
+        this.el.targetText.textContent = "Target: All DS Nodes on Canvas";
+        this.el.applySelectedBtn.textContent = "Apply to All DS Nodes";
+      } else if (tab === "typography") {
+        this.el.targetText.textContent = "Target: Global Typography";
+        this.el.applySelectedBtn.textContent = "Apply Typography Globally";
+      } else {
+        this.el.targetText.textContent = "Target: Future Nodes (No Selection)";
+        this.el.applySelectedBtn.textContent = "Set as Default Colors";
+      }
       this.el.applySelectedBtn.disabled = false;
     }
   }
@@ -936,6 +958,8 @@ class DSThemeManagerDashboard {
     this.overlay.querySelectorAll(".ds-tm-tab-panel").forEach(p => {
       p.classList.toggle("active", p.dataset.panel === tabId);
     });
+    // Refresh the apply button label to reflect the active tab's intent
+    this._refreshTargetSelection();
   }
 
   showToast(msg, type = "") {
@@ -1259,24 +1283,46 @@ class DSThemeManagerDashboard {
         row.classList.add("active");
 
         // Populate micro-tokens from theme
-        this.dsTokens.accent = v["--ds-accent"] || "#67e8f9";
-        this.dsTokens.surface = v["--ds-panel"] || "#12151c";
-        this.dsTokens.surface2 = v["--ds-panel-2"] || "#161a23";
-        this.dsTokens.headerBg = v["--ds-bg"] || "#0b0d12";
-        this.dsTokens.btnBg = v["--ds-btn-bg"] || v["--ds-panel-2"] || "#161a23";
-        this.dsTokens.btnHover = v["--ds-btn-hover"] || "#1c2130";
-        this.dsTokens.border = v["--ds-border"] || "#242a36";
-        this.dsTokens.borderActive = v["--ds-border-active"] || this.dsTokens.accent;
-        this.dsTokens.text = v["--ds-text"] || "#e5e7eb";
-        this.dsTokens.textMuted = v["--ds-text-muted"] || "#9ca3af";
+        this.dsTokens.accent       = v["--ds-accent"]       || "#67e8f9";
+        this.dsTokens.surface      = v["--ds-panel"]        || "#12151c";
+        this.dsTokens.surface2     = v["--ds-panel-2"]      || "#161a23";
+        this.dsTokens.headerBg     = v["--ds-bg"]           || "#0b0d12";
+        this.dsTokens.btnBg        = v["--ds-btn-bg"]       || v["--ds-panel-2"] || "#161a23";
+        this.dsTokens.btnHover     = v["--ds-btn-hover"]    || "#1c2130";
+        this.dsTokens.border       = v["--ds-border"]       || "#242a36";
+        this.dsTokens.borderActive = v["--ds-border-active"]|| this.dsTokens.accent;
+        this.dsTokens.text         = v["--ds-text"]         || "#e5e7eb";
+        this.dsTokens.textMuted    = v["--ds-text-muted"]   || "#9ca3af";
+        this.dsTokens.socketFill   = v["--ds-socket-fill"]  || this.dsTokens.socketFill;
+        this.dsTokens.wireAccent   = v["--ds-wire-accent"]  || this.dsTokens.accent;
 
         this._renderMicroElementRows();
         this._syncMockPreviews();
 
+        // Apply CSS vars to :root instantly so UI refreshes immediately,
+        // then defer the heavier per-node DOM work to the next frame.
+        const rootStyle = document.documentElement.style;
+        rootStyle.setProperty("--ds-accent",        this.dsTokens.accent);
+        rootStyle.setProperty("--ds-panel",         this.dsTokens.surface);
+        rootStyle.setProperty("--ds-panel-2",       this.dsTokens.surface2);
+        rootStyle.setProperty("--ds-bg",            this.dsTokens.headerBg);
+        rootStyle.setProperty("--ds-border",        this.dsTokens.border);
+        rootStyle.setProperty("--ds-border-active", this.dsTokens.borderActive);
+        rootStyle.setProperty("--ds-cp-accent",     this.dsTokens.accent);
+        if (this.dsTokens.btnBg)     rootStyle.setProperty("--ds-btn-bg",    this.dsTokens.btnBg);
+        if (this.dsTokens.btnHover)  rootStyle.setProperty("--ds-btn-hover", this.dsTokens.btnHover);
+        if (this.dsTokens.text)      rootStyle.setProperty("--ds-text",      this.dsTokens.text);
+        if (this.dsTokens.textMuted) rootStyle.setProperty("--ds-text-muted",this.dsTokens.textMuted);
+
         if (window.DSGlobalTheme) {
           window.DSGlobalTheme.apply({ theme: id }, { save: true });
         }
-        this._applyDSTokensToSelection(true);
+
+        // Defer the heavy per-node iteration so the UI isn't blocked
+        requestAnimationFrame(() => {
+          this._applyDSTokensToSelection(true);
+        });
+
         this.showToast(`Applied DS Theme: ${t.name || id}`, "success");
       });
 
@@ -1290,12 +1336,18 @@ class DSThemeManagerDashboard {
     container.innerHTML = "";
 
     const elements = [
-      { id: "accent", title: "Primary Accent Color", desc: "Active buttons, sliders, focus rings, badges", color: this.dsTokens.accent },
-      { id: "surface", title: "Card Surface Background", desc: "Inner modules, container panels, trays", color: this.dsTokens.surface },
-      { id: "surface2", title: "Secondary Surface / Trays", desc: "Sub-panels, button surfaces, input backdrops", color: this.dsTokens.surface2 },
-      { id: "headerBg", title: "Header & Base Frame", desc: "Node title bar background, outer canvas base", color: this.dsTokens.headerBg },
-      { id: "border", title: "Borders & Section Dividers", desc: "Outer node border stroke, interior lines", color: this.dsTokens.border },
-      { id: "socketFill", title: "Socket & Pin Highlights", desc: "Port accents, data type highlights, connection points", color: this.dsTokens.socketFill },
+      { id: "accent",       title: "Primary Accent Color",       desc: "Active buttons, sliders, focus rings, badges",            color: this.dsTokens.accent },
+      { id: "surface",      title: "Card Surface Background",     desc: "Inner modules, container panels, trays",                 color: this.dsTokens.surface },
+      { id: "surface2",     title: "Secondary Surface / Trays",   desc: "Sub-panels, button surfaces, input backdrops",           color: this.dsTokens.surface2 },
+      { id: "headerBg",     title: "Header & Base Frame",         desc: "Node title bar background, outer canvas base",          color: this.dsTokens.headerBg },
+      { id: "border",       title: "Borders & Section Dividers",  desc: "Outer node border stroke, interior lines",              color: this.dsTokens.border },
+      { id: "borderActive", title: "Active Border / Focus Ring",  desc: "Highlighted border on active/focused elements",         color: this.dsTokens.borderActive },
+      { id: "text",         title: "Primary Text Color",          desc: "Main body text, labels, node content",                 color: this.dsTokens.text },
+      { id: "textMuted",    title: "Muted / Secondary Text",      desc: "Descriptions, placeholders, disabled labels",          color: this.dsTokens.textMuted },
+      { id: "btnBg",        title: "Button Background",           desc: "Idle button fill, chip backgrounds",                   color: this.dsTokens.btnBg },
+      { id: "btnHover",     title: "Button Hover Background",     desc: "Interactive hover state for buttons and chips",        color: this.dsTokens.btnHover },
+      { id: "socketFill",   title: "Socket & Pin Highlights",     desc: "Port accents, data type highlights, connection points", color: this.dsTokens.socketFill },
+      { id: "wireAccent",   title: "Wire / Link Accent",          desc: "Node connection wire colour",                         color: this.dsTokens.wireAccent },
     ];
 
     elements.forEach(elem => {
@@ -1344,7 +1396,15 @@ class DSThemeManagerDashboard {
         anchor.querySelector(".ds-tm-element-swatch").style.backgroundColor = hex;
         anchor.querySelector(".ds-tm-element-hex").textContent = hex.toUpperCase();
         this._syncMockPreviews();
-        this._applyDSTokensToSelection(false);
+        // Throttle heavy token application to one rAF per drag frame
+        // to prevent UI freeze during continuous color picker drag.
+        if (!this._pickerRafPending) {
+          this._pickerRafPending = true;
+          this._pickerRafToken = requestAnimationFrame(() => {
+            this._pickerRafPending = false;
+            this._applyDSTokensToSelection(false);
+          });
+        }
       }
     });
 
@@ -1402,11 +1462,13 @@ class DSThemeManagerDashboard {
           domRoot.style.setProperty("--ds-panel-2", this.dsTokens.surface2);
           domRoot.style.setProperty("--ds-bg", this.dsTokens.headerBg);
           domRoot.style.setProperty("--ds-border", this.dsTokens.border);
+          domRoot.style.setProperty("--ds-border-active", this.dsTokens.borderActive);
           domRoot.style.setProperty("--ds-cp-accent", this.dsTokens.accent);
-          if (this.dsTokens.btnBg) domRoot.style.setProperty("--ds-btn-bg", this.dsTokens.btnBg);
-          if (this.dsTokens.btnHover) domRoot.style.setProperty("--ds-btn-hover", this.dsTokens.btnHover);
-          if (this.dsTokens.text) domRoot.style.setProperty("--ds-text", this.dsTokens.text);
-          if (this.dsTokens.textMuted) domRoot.style.setProperty("--ds-text-muted", this.dsTokens.textMuted);
+          if (this.dsTokens.btnBg)       domRoot.style.setProperty("--ds-btn-bg",     this.dsTokens.btnBg);
+          if (this.dsTokens.btnHover)    domRoot.style.setProperty("--ds-btn-hover",  this.dsTokens.btnHover);
+          if (this.dsTokens.text)        domRoot.style.setProperty("--ds-text",       this.dsTokens.text);
+          if (this.dsTokens.textMuted)   domRoot.style.setProperty("--ds-text-muted", this.dsTokens.textMuted);
+          if (this.dsTokens.wireAccent)  domRoot.style.setProperty("--ds-wire-accent",this.dsTokens.wireAccent);
         }
 
         node.setDirtyCanvas?.(true, true);
@@ -1415,16 +1477,18 @@ class DSThemeManagerDashboard {
 
     // Update global document :root CSS variables so all DS nodes across canvas update in real time
     const rootStyle = document.documentElement.style;
-    rootStyle.setProperty("--ds-accent", this.dsTokens.accent);
-    rootStyle.setProperty("--ds-panel", this.dsTokens.surface);
-    rootStyle.setProperty("--ds-panel-2", this.dsTokens.surface2);
-    rootStyle.setProperty("--ds-bg", this.dsTokens.headerBg);
-    rootStyle.setProperty("--ds-border", this.dsTokens.border);
-    rootStyle.setProperty("--ds-cp-accent", this.dsTokens.accent);
-    if (this.dsTokens.btnBg) rootStyle.setProperty("--ds-btn-bg", this.dsTokens.btnBg);
-    if (this.dsTokens.btnHover) rootStyle.setProperty("--ds-btn-hover", this.dsTokens.btnHover);
-    if (this.dsTokens.text) rootStyle.setProperty("--ds-text", this.dsTokens.text);
-    if (this.dsTokens.textMuted) rootStyle.setProperty("--ds-text-muted", this.dsTokens.textMuted);
+    rootStyle.setProperty("--ds-accent",        this.dsTokens.accent);
+    rootStyle.setProperty("--ds-panel",         this.dsTokens.surface);
+    rootStyle.setProperty("--ds-panel-2",       this.dsTokens.surface2);
+    rootStyle.setProperty("--ds-bg",            this.dsTokens.headerBg);
+    rootStyle.setProperty("--ds-border",        this.dsTokens.border);
+    rootStyle.setProperty("--ds-border-active", this.dsTokens.borderActive);
+    rootStyle.setProperty("--ds-cp-accent",     this.dsTokens.accent);
+    if (this.dsTokens.btnBg)      rootStyle.setProperty("--ds-btn-bg",     this.dsTokens.btnBg);
+    if (this.dsTokens.btnHover)   rootStyle.setProperty("--ds-btn-hover",  this.dsTokens.btnHover);
+    if (this.dsTokens.text)       rootStyle.setProperty("--ds-text",       this.dsTokens.text);
+    if (this.dsTokens.textMuted)  rootStyle.setProperty("--ds-text-muted", this.dsTokens.textMuted);
+    if (this.dsTokens.wireAccent) rootStyle.setProperty("--ds-wire-accent",this.dsTokens.wireAccent);
 
     dirtyCanvas();
   }
@@ -1822,27 +1886,40 @@ class DSThemeManagerDashboard {
 
   applyToActiveSelection() {
     const selected = getSelectedNodes();
-    if (selected.length === 0) {
-      this.applyToGlobalDefault();
-      return;
-    }
 
     if (this.activeTab === "themes") {
-      // In Themes tab, apply current DS theme tokens to selection
-      this._applyDSTokensToSelection(false);
-      this.showToast(`Applied DS theme tokens to ${selected.length} node(s)`, "success");
+      // In DS Themes tab: apply tokens to selected DS nodes,
+      // or — when nothing is selected — apply to ALL DS nodes on the canvas.
+      const isGlobal = selected.length === 0;
+      requestAnimationFrame(() => {
+        this._applyDSTokensToSelection(isGlobal);
+      });
+      const count = isGlobal
+        ? (app.graph?._nodes?.filter(isDSNode).length ?? 0)
+        : selected.length;
+      this.showToast(
+        isGlobal
+          ? `Applied DS theme to all ${count} DS node(s) on canvas`
+          : `Applied DS theme to ${count} selected DS node(s)`,
+        "success"
+      );
       return;
     }
 
     if (this.activeTab === "typography") {
-      // In Typography tab, apply font & typography settings
       this.applyToGlobalDefault();
       return;
     }
 
-    // In Customization tab, apply native/3rd-party color customizations
+    // Customization tab
+    if (selected.length === 0) {
+      // No selection — just save as the default for future nodes via the global engine
+      this.applyToGlobalDefault();
+      return;
+    }
+
+    // Apply native/3rd-party color customizations to explicitly selected nodes
     selected.forEach(node => {
-      // Native colors
       node.color = this.titleColor;
       delete node.title_color;
       if (node.constructor) {
@@ -1852,7 +1929,6 @@ class DSThemeManagerDashboard {
       node.title_text_color = this.titleTextColor;
       node.bgcolor = this.bodyColor;
       node.boxcolor = this.strokeColor;
-
       node.setDirtyCanvas?.(true, true);
     });
 
