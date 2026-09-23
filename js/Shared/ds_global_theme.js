@@ -1187,6 +1187,19 @@ app.registerExtension({
     }
   },
 
+  // Fires for every node added when a workflow is DRAGGED onto an existing canvas
+  // (merge/append path). afterConfigureGraph only fires for full workflow replaces.
+  loadedGraphNode(node) {
+    if (!ready || !isDSNode(node)) return;
+    if (!hasCustomNodeColors(node)) {
+      delete node.color;
+      delete node.bgcolor;
+      delete node.boxcolor;
+    }
+    patchNodeSerialize(node);
+    scheduleNodeBaseApply(node);
+  },
+
   async afterConfigureGraph() {
     if (!ready) return;
     // Clear any stale baked-in theme colors from the loaded JSON before
@@ -1202,6 +1215,8 @@ app.registerExtension({
       }
     }
     applyNodeBaseToAll(getTheme(config.theme));
+    // Short delay re-apply catches nodes whose DOM roots finish mounting slightly late
+    setTimeout(() => applyNodeBaseToAll(getTheme(config.theme)), 300);
   },
 
   async setup() {
