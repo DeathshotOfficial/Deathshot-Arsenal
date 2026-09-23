@@ -598,6 +598,10 @@ function scheduleNodeBaseApply(node) {
   setTimeout(run, 120);
 }
 
+// Theme-managed node.properties keys that must never be baked into workflow JSON.
+// They are always derived at runtime from the active theme.
+const DS_THEME_PROPS_TO_STRIP = new Set(["ds_bg_color", "ds_title_color", "ds_cp_accent"]);
+
 /**
  * Strip theme-managed canvas color props from a node so ComfyUI never
  * serializes them into the workflow JSON. Called once per DS node.
@@ -609,12 +613,19 @@ function patchNodeSerialize(node) {
   if (typeof origSerialize !== "function") return;
   node.serialize = function (...args) {
     const data = origSerialize(...args);
-    // Remove theme-managed color props — they are always applied at
-    // runtime from the active theme and must never be baked into JSON.
-    if (data && !hasCustomNodeColors(this)) {
-      delete data.color;
-      delete data.bgcolor;
-      delete data.boxcolor;
+    if (!data) return data;
+    // Always strip theme-managed canvas colors from the JSON output.
+    // These are applied at runtime from the active theme; baking them in
+    // causes stale colors to persist across theme changes.
+    delete data.color;
+    delete data.bgcolor;
+    delete data.boxcolor;
+    // Also strip theme-managed node.properties keys so they don't
+    // accumulate across saves and prevent future theme application.
+    if (data.properties) {
+      for (const key of DS_THEME_PROPS_TO_STRIP) {
+        delete data.properties[key];
+      }
     }
     return data;
   };
@@ -1191,11 +1202,11 @@ app.registerExtension({
   // (merge/append path). afterConfigureGraph only fires for full workflow replaces.
   loadedGraphNode(node) {
     if (!ready || !isDSNode(node)) return;
-    if (!hasCustomNodeColors(node)) {
-      delete node.color;
-      delete node.bgcolor;
-      delete node.boxcolor;
-    }
+    // Unconditionally wipe baked canvas colors — hasCustomNodeColors only checks
+    // node.properties.*, not node.color / node.bgcolor which LiteGraph baked from JSON.
+    delete node.color;
+    delete node.bgcolor;
+    delete node.boxcolor;
     patchNodeSerialize(node);
     scheduleNodeBaseApply(node);
   },
@@ -1206,7 +1217,9 @@ app.registerExtension({
     // applying the active theme to avoid mixed theme colors across workflow nodes.
     if (app.graph?._nodes) {
       for (const node of app.graph._nodes) {
-        if (isDSNode(node) && !hasCustomNodeColors(node)) {
+        if (isDSNode(node)) {
+          // Unconditional: LiteGraph restores node.color/bgcolor from JSON AFTER nodeCreated,
+          // so we must wipe them here regardless of hasCustomNodeColors.
           delete node.color;
           delete node.bgcolor;
           delete node.boxcolor;
@@ -1227,6 +1240,35 @@ app.registerExtension({
         delete globalThis.LiteGraph.LGraphNode.prototype.title_text_color;
       }
     } catch (_) {}
+
+    // Intercept the raw workflow JSON before LiteGraph applies it.
+    // This is the ONLY reliable place to strip baked node.color/bgcolor because
+    // LiteGraph's configure() runs AFTER nodeCreated and restores JSON values.
+    const origLoadGraphData = app.loadGraphData?.bind(app);
+    if (typeof origLoadGraphData === "function") {
+      app.loadGraphData = async function (graphData, ...rest) {
+        if (graphData?.nodes && Array.isArray(graphData.nodes)) {
+          for (const n of graphData.nodes) {
+            if (typeof n.type === "string" && n.type.startsWith("DS_")) {
+              // Unconditionally strip theme-managed canvas colors from raw JSON
+              // before LiteGraph's configure() restores them onto node instances.
+              delete n.color;
+              delete n.bgcolor;
+              delete n.boxcolor;
+              // Also strip theme-managed properties — old workflow saves baked
+              // these in, causing hasCustomNodeColors() to block theme application.
+              if (n.properties) {
+                for (const key of DS_THEME_PROPS_TO_STRIP) {
+                  delete n.properties[key];
+                }
+              }
+            }
+          }
+        }
+        return origLoadGraphData(graphData, ...rest);
+      };
+    }
+
     installDSUISystem();
     await fetchThemes();
     await fetchConfig();
