@@ -33,7 +33,7 @@ class DS_OutpaintStitch:
                 "outpaint_info": (outpaint_info_type,),
             },
             "optional": {
-                "feather": ("INT", {"default": 64, "min": 0, "max": 2048, "step": 1}),
+                "feather": ("INT", {"default": 64, "min": 0, "max": 1024, "step": 1}),
                 "color_match": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 2.0, "step": 0.01}),
             },
         }

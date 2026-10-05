@@ -1,105 +1,85 @@
-/* Document-level overlay strictly contained below the native socket lane */
-.ds-op-overlay {
-  position: fixed;
-  z-index: 30;
-  transform-origin: top left;
-  box-sizing: border-box;
-  pointer-events: none;
-  overflow: hidden;
-  border-radius: 0 0 10px 10px;
-  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
-  color: var(--ds-text, #e5e7eb);
-  user-select: none;
-  display: flex;
-  flex-direction: column;
+/**
+ * DeathshotArsenal — DS Outpaint Stylesheet
+ * Integrated with UIElements design system tokens and Card hierarchy.
+ */
+
+/* ==========================================================================
+   CARD ROOT & LAYOUT
+   ========================================================================== */
+.ds-op-card {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--ds-gap-sm, 6px) !important;
+  overflow: hidden !important;
+  pointer-events: auto !important;
 }
 
 /* ==========================================================================
-   SHELL & UNIFIED HEADER BAR
+   HEADER ROW (4 SYMMETRICAL COLUMNS: COLLAPSE, TO RATIO, BY SIDE, SWATCH)
    ========================================================================== */
-.ds-op-shell {
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  flex: 1 1 0;
-  min-height: 0;
-  padding: 0 4px 4px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  overflow: hidden;
-}
-
 .ds-op-header {
   height: 24px;
   min-height: 24px;
   display: grid;
-  grid-template-columns: 26px 1fr 1fr 24px 24px;
+  grid-template-columns: 24px 1fr 1fr 24px;
   gap: 4px;
   align-items: stretch;
 }
 
-.ds-op-btn {
-  appearance: none;
-  -webkit-appearance: none;
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  height: 22px;
-  padding: 0 4px;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 4px;
-  background: var(--ds-panel-2, #21252d);
-  color: var(--ds-text, #e2e8f0);
-  font: 600 9.5px/1 var(--ds-font, Inter, system-ui, sans-serif);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: all 0.12s ease;
-  box-shadow: none !important;
-  text-shadow: none !important;
-}
-
-.ds-op-btn:hover {
-  border-color: var(--ds-accent, #a855f7);
-  background: var(--ds-panel-3, #2b303a);
-}
-
-.ds-op-btn.is-active {
-  border-color: var(--ds-accent, #a855f7);
-  box-shadow: inset 0 -2px 0 var(--ds-accent, #a855f7) !important;
-  background: color-mix(in srgb, var(--ds-accent, #a855f7) 20%, var(--ds-panel-2, #21252d));
-  color: #ffffff;
-}
-
 .ds-op-collapse {
-  font-size: 8px;
-  padding: 0;
-}
-
-.ds-op-swatch {
-  height: 24px;
+  font-size: 8px !important;
   padding: 0 !important;
-  background: var(--ds-op-swatch-color, #808080) !important;
-  border-color: var(--ds-op-swatch-color, #808080) !important;
-  border-radius: 4px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.ds-op-swatch:hover {
-  filter: brightness(1.15);
+.ds-op-tab {
+  font-size: 9.5px !important;
+  font-weight: 600 !important;
+  white-space: nowrap;
 }
 
-.ds-op-gear {
-  height: 24px;
-  font-size: 12px;
-  padding: 0;
+/* Compact Color Swatch Button in Header (DOM-Anchored ColorPicker) */
+.ds-op-color-picker {
+  display: flex !important;
+  align-items: stretch !important;
+  width: 24px !important;
+  height: 22px !important;
+}
+
+.ds-op-color-picker .ds-ui-color-trigger {
+  width: 24px !important;
+  height: 22px !important;
+  min-width: 24px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  box-sizing: border-box !important;
+  border-radius: var(--ds-radius-control, 4px) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  background: transparent !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+}
+
+.ds-op-color-picker .ds-ui-color-swatch-box {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.ds-op-color-picker .ds-ui-color-hex-text {
+  display: none !important;
 }
 
 /* ==========================================================================
-   COMPACT CONTROLS GRID
+   SUMMARY ROW (COLLAPSED STATE)
    ========================================================================== */
 .ds-op-summary {
   display: none;
@@ -110,14 +90,20 @@
 }
 
 .ds-op-summary-item {
-  font-size: 8.5px;
-  padding: 0 2px;
+  font-size: 8.5px !important;
+  padding: 0 2px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* ==========================================================================
+   CONTROLS BODY & GRIDS (COLLAPSIBLE SECTION)
+   ========================================================================== */
 .ds-op-controls {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   flex: 0 0 auto;
   min-height: 0;
 }
@@ -147,10 +133,39 @@
   grid-template-columns: 1.15fr repeat(4, minmax(0, 1fr));
 }
 
+.ds-op-snap-toggle {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.ds-op-snap-toggle svg {
+  display: block;
+}
+
+.ds-op-snap.is-muted button:not(.ds-op-snap-toggle) {
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+  filter: grayscale(1) !important;
+}
+
 .ds-op-mp {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+/* Active buttons highlight */
+.ds-op-grid .ds-ui-btn.is-active,
+.ds-op-header .ds-ui-btn.is-active,
+.ds-op-summary .ds-ui-btn.is-active {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  font-weight: 700 !important;
+  text-shadow: var(--ds-color-on-accent-shadow, none) !important;
+}
+
+/* Side padding fields */
 .ds-op-side-field {
   height: 22px;
   min-width: 0;
@@ -159,16 +174,17 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 3px;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 4px;
-  background: var(--ds-panel-2, #21252d);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-input-bg, var(--ds-color-panel-2, #161a23));
   pointer-events: auto;
+  box-sizing: border-box;
 }
 
 .ds-op-side-field span {
   font-size: 8px;
   font-weight: 700;
-  color: var(--ds-text-muted, #9ca3af);
+  color: var(--ds-color-muted-text, #9ca3af);
   white-space: nowrap;
 }
 
@@ -180,7 +196,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--ds-text, #e5e7eb);
+  color: var(--ds-color-text, #e5e7eb);
   font: 700 9.5px/1 var(--ds-font, Inter, monospace, sans-serif);
   text-align: center !important;
   appearance: textfield;
@@ -195,22 +211,25 @@
 }
 
 .ds-op-reset {
-  font-size: 11px;
-  padding: 0;
+  font-size: 11px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* ==========================================================================
-   CANVAS PREVIEW CONTAINER
+   CANVAS PREVIEW CONTAINER (ALWAYS VISIBLE)
    ========================================================================== */
 .ds-op-preview {
   position: relative;
   flex: 1 1 0;
-  min-height: 120px;
+  min-height: 100px;
   min-width: 0;
   box-sizing: border-box;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 6px;
-  background: var(--ds-panel-2, #181c24);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-color-panel-2, #161a23);
   overflow: hidden;
   pointer-events: none;
 }
@@ -232,15 +251,15 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  color: var(--ds-text-muted, #9ca3af);
+  color: var(--ds-color-muted-text, #9ca3af);
   text-align: center;
-  background: var(--ds-panel-2, #181c24);
+  background: var(--ds-color-panel-2, #161a23);
 }
 
 .ds-op-empty-title {
   font-size: 11px;
   font-weight: 700;
-  color: var(--ds-text, #e5e7eb);
+  color: var(--ds-color-text, #e5e7eb);
 }
 
 .ds-op-empty-sub {
@@ -253,14 +272,14 @@
   z-index: 4;
   display: none;
   transform: translate(-50%, -50%);
-  min-width: 48px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--ds-panel, #0f1219) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ds-text, #fff) 20%, transparent);
-  color: var(--ds-text, #fff);
-  font: 700 9.5px/1 var(--ds-font, Inter, sans-serif);
+  min-width: 44px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--ds-radius-badge, 4px);
+  background: color-mix(in srgb, var(--ds-color-card, #12151c) 92%, transparent);
+  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.15));
+  color: var(--ds-color-text, #ffffff);
+  font: 700 9px/1 var(--ds-font, Inter, sans-serif);
   align-items: center;
   justify-content: center;
   white-space: nowrap;
@@ -271,30 +290,30 @@
   z-index: 5;
   right: 6px;
   bottom: 6px;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--ds-panel, #0f1219) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ds-text, #fff) 18%, transparent);
-  color: var(--ds-text, #fff);
+  padding: 2px 6px;
+  border-radius: var(--ds-radius-badge, 4px);
+  background: color-mix(in srgb, var(--ds-color-card, #12151c) 92%, transparent);
+  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.15));
+  color: var(--ds-color-text, #ffffff);
   font: 700 9px/1 var(--ds-font, Inter, monospace, sans-serif);
   white-space: nowrap;
 }
 
 /* ==========================================================================
-   SETTINGS POPUP MODAL & CHIP STYLING
+   SETTINGS POPUP MODAL
    ========================================================================== */
 .ds-op-settings {
   position: fixed;
   z-index: 10020;
-  width: 330px;
+  width: 320px;
   max-width: calc(100vw - 20px);
   max-height: calc(100vh - 20px);
   overflow: auto;
   box-sizing: border-box;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 8px;
-  background: var(--ds-panel, #12151c);
-  color: var(--ds-text, #e5e7eb);
+  border: 1px solid var(--ds-color-card-border, #242a36);
+  border-radius: var(--ds-radius-popup, 8px);
+  background: var(--ds-color-card, #12151c);
+  color: var(--ds-color-text, #e5e7eb);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   font-family: var(--ds-font, Inter, system-ui, sans-serif);
 }
@@ -307,37 +326,38 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--ds-border, #343a44);
-  background: var(--ds-panel, #12151c);
+  border-bottom: 1px solid var(--ds-color-border, #242a36);
+  background: var(--ds-color-card, #12151c);
 }
 
 .ds-op-settings-title {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
+  color: var(--ds-color-text, #e5e7eb);
 }
 
 .ds-op-settings-sub {
   margin-top: 1px;
   font-size: 8.5px;
-  color: var(--ds-text-muted, #8d96a3);
+  color: var(--ds-color-muted-text, #9ca3af);
 }
 
 .ds-op-settings-close {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 4px;
-  background: var(--ds-panel-2, #252a31);
-  color: var(--ds-text, #e5e7eb);
-  cursor: pointer;
+  width: 22px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
 }
 
 .ds-op-settings-body {
-  padding: 8px 10px 10px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ds-op-settings-label {
@@ -347,7 +367,10 @@
   font-size: 8.5px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--ds-text-muted, #8d96a3);
+  color: var(--ds-color-muted-text, #9ca3af);
+  text-transform: uppercase;
+  margin: 0;
+  padding: 0;
 }
 
 .ds-op-settings-ratios {
@@ -362,36 +385,19 @@
   gap: 4px;
 }
 
-.ds-op-set-chip,
-.ds-op-settings-add button,
-.ds-op-settings-restore {
-  appearance: none;
-  min-height: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 4px;
-  background: var(--ds-panel-2, #252a31);
-  color: var(--ds-text, #e5e7eb);
-  font: 600 9.5px/1 var(--ds-font, Inter, system-ui, sans-serif);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  transition: all 0.12s ease;
-}
-
-.ds-op-set-chip:hover {
-  border-color: var(--ds-accent, #a855f7);
+.ds-op-set-chip {
+  padding: 0 8px !important;
+  font-size: 9.5px !important;
+  height: 22px !important;
 }
 
 .ds-op-set-chip.is-active {
-  border-color: var(--ds-accent, #a855f7);
-  box-shadow: inset 0 -2px 0 var(--ds-accent, #a855f7) !important;
-  color: #ffffff;
+  background: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  font-weight: 700;
 }
 
-/* Red-accented delete tag for removable presets */
 .ds-op-chip-x {
   display: inline-flex;
   align-items: center;
@@ -403,14 +409,14 @@
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: var(--ds-text-muted, #9ca3af);
+  color: var(--ds-color-muted-text, #9ca3af);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .ds-op-chip-x:hover {
-  background: rgba(239, 68, 68, 0.25);
-  color: #ef4444;
+  background: color-mix(in srgb, var(--ds-color-danger, #ef4444) 25%, transparent);
+  color: var(--ds-color-danger, #ef4444);
 }
 
 .ds-op-settings-add {
@@ -423,39 +429,27 @@
   appearance: none;
   -moz-appearance: textfield;
   width: 100%;
-  height: 26px;
+  height: 24px;
   box-sizing: border-box;
   padding: 0 6px;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 4px;
-  background: var(--ds-input, #111318);
-  color: var(--ds-text, #e5e7eb);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 4px);
+  background: var(--ds-input-bg, var(--ds-color-panel-2, #161a23));
+  color: var(--ds-color-text, #e5e7eb);
   font: 500 9.5px var(--ds-font, Inter, sans-serif);
   outline: none;
 }
 
-.ds-op-settings-restore {
-  width: 100%;
+.ds-op-settings-add input:focus {
+  border-color: var(--ds-color-accent, #67e8f9);
 }
 
-.ds-op-settings-accent-row {
+.ds-op-settings-restore {
+  width: 100% !important;
+  height: 24px !important;
+}
+
+.ds-op-settings-color-wrap {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 26px;
-}
-
-.ds-op-settings-accent-row span {
-  font-size: 8.5px;
-  font-weight: 700;
-  color: var(--ds-text-muted, #8d96a3);
-}
-
-.ds-op-settings-accent {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 4px;
-  cursor: pointer;
 }

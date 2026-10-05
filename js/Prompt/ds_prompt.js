@@ -1,15 +1,12 @@
-/* ============================================================
-   DS Prompt - DeathshotArsenal
-   Custom DOM STRING editor.
-
-   The backend keeps the real `text` STRING widget for workflow
-   serialization. The native widget is hidden rather than removed;
-   the visible editor is a separate DOM widget. This avoids the
-   duplicate-widget / widget-store strip seen in newer ComfyUI builds.
-   ============================================================ */
-
 import { app } from "/scripts/app.js";
-import { protectDSResizeCorners } from "../Shared/ds_ui_system.js";
+import {
+  DSIconMarkup,
+  protectDSResizeCorners,
+  normalizeDSWidgetHost,
+  installDSUI,
+} from "../UIElements/index.js";
+
+installDSUI();
 
 const cssLink = document.createElement("link");
 cssLink.rel = "stylesheet";
@@ -19,17 +16,7 @@ if (!document.head.querySelector('link[data-ds-prompt-css]')) {
   document.head.appendChild(cssLink);
 }
 
-const ICONS = {
-  prompt: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h14v15H5z"/><path d="M8 8h8M8 11.5h8M8 15h5"/></svg>`,
-  copy: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy preview-icon" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
-  clear: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>`,
-  replace: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-ccw preview-icon" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>`,
-  expand: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/><path d="m3 8 5-5M21 8l-5-5M21 16l-5 5M3 16l5 5"/></svg>`,
-  collapse: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3-6 6M15 3l6 6M21 15l-6 6M3 15l6 6"/><path d="M3 9h6V3M15 3v6h6M21 15h-6v6M9 21v-6H3"/></svg>`,
-  resize: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21 21 6M12 21 21 12M18 21 21 18"/></svg>`,
-};
-
-async function copyText(text) {
+async function copyToClipboard(text) {
   const value = String(text ?? "");
   if (!value) return false;
   try {
@@ -41,8 +28,8 @@ async function copyText(text) {
       area.value = value;
       area.setAttribute("readonly", "");
       area.style.position = "fixed";
-      area.style.left = "-10000px";
-      area.style.top = "-10000px";
+      area.style.left = "-9999px";
+      area.style.top = "-9999px";
       document.body.appendChild(area);
       area.select();
       const ok = document.execCommand("copy");
@@ -54,7 +41,7 @@ async function copyText(text) {
   }
 }
 
-async function readClipboard() {
+async function readFromClipboard() {
   try {
     return await navigator.clipboard.readText();
   } catch (_) {
@@ -62,35 +49,58 @@ async function readClipboard() {
   }
 }
 
-function getWidget(node, name) {
-  return (node.widgets || []).find((widget) => widget?.name === name) || null;
-}
-
 function ensurePromptProperties(node) {
   node.properties = node.properties || {};
   return node.properties;
 }
 
+function getWidget(node, name) {
+  return (node.widgets || []).find((w) => w?.name === name) || null;
+}
+
 function hideNativeWidget(widget) {
   if (!widget) return;
+  widget.type = "hidden";
   widget.hidden = true;
   widget.options = widget.options || {};
   widget.options.hidden = true;
-  widget.computeSize = () => [0, 0];
+  widget.computeSize = () => [0, -4];
+  widget.draw = () => {};
 
-  // Some ComfyUI builds still keep the legacy input element mounted even
-  // after the widget is marked hidden. Hide those DOM remnants as well; this
-  // is the thin link-to-link strip visible with customtext widgets.
   for (const element of [widget.inputEl, widget.element]) {
     if (element?.style) {
       element.style.display = "none";
       element.style.visibility = "hidden";
       element.style.pointerEvents = "none";
     }
+    try {
+      element?.remove?.();
+    } catch (_) {}
   }
+  widget.inputEl = null;
+  widget.element = null;
+}
 
-  // Keep the real widget in node.widgets so ComfyUI's workflow serializer and
-  // widget-value store continue to own the actual STRING value.
+function deduplicateWidgets(node) {
+  if (!Array.isArray(node.widgets)) return;
+  const seen = new Set();
+  for (let i = node.widgets.length - 1; i >= 0; i--) {
+    const w = node.widgets[i];
+    if (!w) {
+      node.widgets.splice(i, 1);
+      continue;
+    }
+    if (w.name === "text" || w.name === "trigger_position") {
+      if (seen.has(w.name)) {
+        w.inputEl?.remove?.();
+        w.element?.remove?.();
+        node.widgets.splice(i, 1);
+      } else {
+        seen.add(w.name);
+        hideNativeWidget(w);
+      }
+    }
+  }
 }
 
 function getPersistedExpandedState(node) {
@@ -158,8 +168,96 @@ app.registerExtension({
     const originalOnSerialize = nodeType.prototype.onSerialize;
     const originalRemoved = nodeType.prototype.onRemoved;
     const originalSelected = nodeType.prototype.onSelected;
-    const originalComputeSize = nodeType.prototype.computeSize;
     const originalClone = nodeType.prototype.clone;
+
+    // DS Prompt uses ComfyUI's growable DOM-widget layout. The widget itself is
+    // the visible card; there is no extra DS HTML wrapper between the node base
+    // and the card. The DOM widget is intentionally 5px shorter than the node
+    // so the card bottom stays 5px above the node base and LiteGraph's native
+    // bottom resize corners remain outside the DOM hit area.
+    const DS_PROMPT_SIZE_VERSION = 10;
+    const DS_PROMPT_BOTTOM_GAP = 5;
+    const DS_PROMPT_CARD_MARGIN = 5;
+    const DS_PROMPT_NATURAL_CARD_HEIGHT = 138;
+    // ComfyUI renders the DOM widget element inside its widget margin: the
+    // rendered card is computedHeight - 2*margin. Include both margins in the
+    // widget allocation so the visible card retains its full 138px height.
+    const DS_PROMPT_MIN_WIDGET_HEIGHT =
+      DS_PROMPT_NATURAL_CARD_HEIGHT + (DS_PROMPT_CARD_MARGIN * 2);
+
+    nodeType.prototype._getPromptMinimumWidgetHeight = function () {
+      return DS_PROMPT_MIN_WIDGET_HEIGHT;
+    };
+
+    // Classic LiteGraph checks getWidgetOnPos() before findResizeDirection().
+    // A full-size DOM widget therefore must explicitly give all four native
+    // corner hit zones back to LiteGraph. The shared helper only releases the
+    // bottom edge/corners, so DS Prompt adds the top-corner release locally.
+    const protectPromptResizeCorners = (node) => {
+      if (!node || node._dsPromptResizeCornersProtected) return;
+      const originalGetWidgetOnPos = node.getWidgetOnPos;
+      if (typeof originalGetWidgetOnPos !== "function") return;
+
+      node._dsPromptResizeCornersProtected = true;
+      node._dsPromptOriginalGetWidgetOnPos = originalGetWidgetOnPos;
+      node.getWidgetOnPos = function (canvasX, canvasY, includeDisabled = false) {
+        if (this.resizable !== false) {
+          const localX = Number(canvasX) - Number(this.pos?.[0] ?? 0);
+          const localY = Number(canvasY) - Number(this.pos?.[1] ?? 0);
+          const width = Number(this.size?.[0]) || 0;
+          const height = Number(this.size?.[1]) || 0;
+          const handle = Number(this.constructor?.resizeHandleSize) || 15;
+
+          const inLeft = localX <= handle;
+          const inRight = localX >= width - handle;
+          const inTop = localY <= handle;
+          const inBottom = localY >= height - handle;
+
+          if ((inLeft || inRight) && (inTop || inBottom)) {
+            return undefined;
+          }
+        }
+
+        return originalGetWidgetOnPos.call(this, canvasX, canvasY, includeDisabled);
+      };
+    };
+
+    nodeType.prototype._getPromptWidgetY = function () {
+      const widget = this._dsPromptDOMWidget;
+      const y = Number(widget?.y);
+      if (Number.isFinite(y) && y >= 0) return y;
+      const lastY = Number(widget?.last_y);
+      if (Number.isFinite(lastY) && lastY >= 0) return lastY;
+      return 70;
+    };
+
+    nodeType.prototype._getPromptMinimumNodeHeight = function () {
+      return Math.ceil(
+        this._getPromptWidgetY() +
+        this._getPromptMinimumWidgetHeight() +
+        DS_PROMPT_BOTTOM_GAP,
+      );
+    };
+
+    nodeType.prototype._fitPromptToNaturalHeight = function () {
+      const widget = this._dsPromptDOMWidget;
+      if (!widget || !Array.isArray(this.size)) return;
+
+      const y = Number(widget.y);
+      if (!Number.isFinite(y) || y < 0) {
+        requestAnimationFrame(() => this._fitPromptToNaturalHeight?.());
+        return;
+      }
+
+      const width = Math.max(Number(this.size[0]) || 340, 340);
+      const targetHeight = Math.ceil(
+        y + this._getPromptMinimumWidgetHeight() + DS_PROMPT_BOTTOM_GAP,
+      );
+      this.setSize([width, targetHeight]);
+      this.size[0] = width;
+      this.size[1] = targetHeight;
+      this.setDirtyCanvas(true, true);
+    };
 
     nodeType.prototype.onNodeCreated = function () {
       const result = originalCreated
@@ -168,153 +266,152 @@ app.registerExtension({
 
       this.resizable = true;
       protectDSResizeCorners(this);
-      this._dsPromptExpanded = false;
+      protectPromptResizeCorners(this);
 
-      // Never remove the native `text` widget. Newer ComfyUI versions can
-      // keep a widget-store registration after removal, which creates the
-      // thin strip/duplicate DOM artifact. Hide it and use it only as the
-      // serialized source of truth.
+      deduplicateWidgets(this);
       this._dsPromptNativeText = getWidget(this, "text");
       hideNativeWidget(this._dsPromptNativeText);
 
       this._dsPromptPositionWidget = getWidget(this, "trigger_position");
       hideNativeWidget(this._dsPromptPositionWidget);
 
-      const current = Array.isArray(this.size) ? this.size : [400, 220];
+      this._dsPromptExpanded = getPersistedExpandedState(this);
+
+      const current = Array.isArray(this.size) ? this.size : [400, 200];
       this.size = [
-        Math.max(Number(current[0]) || 0, 320),
-        Math.max(Number(current[1]) || 0, 110),
+        Math.max(Number(current[0]) || 0, 340),
+        Math.max(Number(current[1]) || 0, 180),
       ];
 
+      if (this._dsPromptDOMWidget) {
+        const idx = (this.widgets || []).indexOf(this._dsPromptDOMWidget);
+        if (idx !== -1) this.widgets.splice(idx, 1);
+        this._dsPromptDOMWidget.element?.remove?.();
+        this._dsPromptDOMWidget = null;
+      }
+
       const root = document.createElement("div");
-      root.className = "ds-prompt-root";
+      root.className = "ds-ui-card ds-prompt-card";
       root.dataset.dsThemed = "true";
       root.innerHTML = `
-        <div class="ds-prompt-toolbar">
-          <div class="ds-prompt-title">
-            <span class="ds-prompt-title-icon">${ICONS.prompt}</span>
-            <span>Prompt</span>
+          <div class="ds-ui-card-head ds-prompt-head">
+            <div class="ds-ui-card-title-group ds-prompt-title-group">
+              <span class="ds-prompt-title-icon">${DSIconMarkup("edit", { size: 13, color: "var(--ds-color-accent, #67e8f9)" })}</span>
+              <span class="ds-prompt-title">Prompt</span>
+              <span class="ds-prompt-status-badge" data-status aria-live="polite"></span>
+            </div>
+            <div class="ds-prompt-actions" role="toolbar" aria-label="Prompt controls">
+              <div class="ds-prompt-trigger-control" role="group" aria-label="LoRA trigger placement">
+                <span class="ds-prompt-trigger-label">Triggers</span>
+                <button type="button" class="ds-prompt-seg" data-pos="before" aria-pressed="false">Before</button>
+                <button type="button" class="ds-prompt-seg is-active" data-pos="after" aria-pressed="true">After</button>
+              </div>
+              <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-ui-btn-icon-only ds-prompt-action-btn"
+                      data-action="copy" title="Copy prompt text" aria-label="Copy prompt text">
+                ${DSIconMarkup("copy", { size: 12 })}
+              </button>
+              <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-ui-btn-icon-only ds-prompt-action-btn"
+                      data-action="replace" title="Replace from clipboard" aria-label="Replace from clipboard">
+                ${DSIconMarkup("refresh-cw", { size: 12 })}
+              </button>
+              <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-ui-btn-icon-only ds-prompt-action-btn"
+                      data-action="clear" title="Clear prompt" aria-label="Clear prompt">
+                ${DSIconMarkup("trash-2", { size: 12 })}
+              </button>
+              <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-ui-btn-icon-only ds-prompt-action-btn"
+                      data-action="expand" title="Show effective prompt preview" aria-label="Show effective prompt preview" aria-pressed="false">
+                ${DSIconMarkup("maximize-2", { size: 12 })}
+              </button>
+            </div>
           </div>
-          <span class="ds-prompt-status" data-status aria-live="polite"></span>
-          <div class="ds-prompt-actions" role="toolbar" aria-label="Prompt actions">
-            <button class="ds-prompt-icon-btn ds-ui-button ds-ui-icon-button" type="button" data-action="copy"
-                    title="Copy prompt" aria-label="Copy prompt">
-              ${ICONS.copy}
-            </button>
-            <button class="ds-prompt-icon-btn ds-ui-button ds-ui-icon-button" type="button" data-action="replace"
-                    title="Replace prompt with clipboard text" aria-label="Replace prompt with clipboard text">
-              ${ICONS.replace}
-            </button>
-            <button class="ds-prompt-icon-btn ds-ui-button ds-ui-icon-button" type="button" data-action="clear"
-                    title="Clear prompt" aria-label="Clear prompt">
-              ${ICONS.clear}
-            </button>
+          <div class="ds-prompt-body">
+            <textarea class="ds-prompt-textarea" data-prompt spellcheck="false"
+                      placeholder="Write your prompt..."></textarea>
+            <div class="ds-prompt-preview-wrap" data-preview-wrap>
+              <div class="ds-prompt-preview-head">
+                <span class="ds-prompt-preview-title">Effective Prompt</span>
+                <span class="ds-prompt-preview-subtitle">Prompt + Wired Triggers</span>
+              </div>
+              <div class="ds-prompt-preview-content" data-preview></div>
+            </div>
           </div>
-          <div class="ds-prompt-trigger-control" role="group" aria-label="LoRA trigger position">
-            <span class="ds-prompt-trigger-label">Triggers</span>
-            <button class="ds-prompt-segment" type="button" data-position="before">Before</button>
-            <button class="ds-prompt-segment active" type="button" data-position="after">After</button>
-          </div>
-          <button class="ds-prompt-icon-btn ds-ui-button ds-ui-icon-button" type="button" data-action="expand"
-                  title="Show effective prompt preview" aria-label="Show effective prompt preview">
-            ${ICONS.expand}
-          </button>
-        </div>
-
-        <div class="ds-prompt-editor">
-          <textarea class="ds-prompt-textarea" data-prompt spellcheck="false"
-                    placeholder="Write your prompt..."></textarea>
-          <div class="ds-prompt-preview" data-preview-wrap>
-            <div class="ds-prompt-preview-head">Effective prompt</div>
-            <div class="ds-prompt-preview-text" data-preview></div>
-          </div>
-        </div>
-
-        <div class="ds-prompt-resize-handle" data-resize-handle title="Drag to resize" aria-label="Resize node" role="separator" tabindex="-1">
-          ${ICONS.resize}
-        </div>
       `;
 
       this._dsPromptRoot = root;
+      normalizeDSWidgetHost(root, this, { shell: false });
+
+      // The card itself is the widget surface. Keep the surface styling on
+      // the actual widget element so no transparent host/theme rule can erase
+      // the card background or border.
+      root.style.setProperty("background", "var(--ds-color-card, #12151c)", "important");
+      root.style.setProperty("background-color", "var(--ds-color-card, #12151c)", "important");
+      root.style.setProperty("border", "1px solid var(--ds-color-card-border, #242a36)", "important");
+      root.style.setProperty("border-radius", "var(--ds-radius-card, 8px)", "important");
+      root.style.setProperty("box-sizing", "border-box", "important");
+
+      // The card is the DOM widget root. Keep the root itself transparent to
+      // canvas hit-testing; only the actual controls opt back in.
+      root.style.pointerEvents = "none";
+      this._dsPromptCard = root;
       this._dsPromptTextarea = root.querySelector("[data-prompt]");
       this._dsPromptPreview = root.querySelector("[data-preview]");
       this._dsPromptStatus = root.querySelector("[data-status]");
-      this._dsPromptExpand = root.querySelector('[data-action="expand"]');
-      this._dsPromptPositionButtons = [...root.querySelectorAll("[data-position]")];
-      this._dsPromptResizeHandle = root.querySelector("[data-resize-handle]");
-
-      // Native LiteGraph corner-resize hit-testing can't reach through this
-      // full-bleed DOM overlay reliably across ComfyUI frontend versions, so
-      // the node gets its own resize grip instead of depending on it. This
-      // drags node.size directly and reuses the same onResize() clamp/sync
-      // logic defined below, so behavior stays identical either way.
-      if (this._dsPromptResizeHandle) {
-        this._dsPromptResizeHandle.addEventListener("pointerdown", (event) => {
-          if (event.button !== undefined && event.button !== 0) return;
-          event.preventDefault();
-          event.stopPropagation();
-
-          const handle = this._dsPromptResizeHandle;
-          handle.classList.add("is-active");
-          try { handle.setPointerCapture(event.pointerId); } catch (_) {}
-
-          const startX = event.clientX;
-          const startY = event.clientY;
-          const startW = Number(this.size?.[0]) || 400;
-          const startH = Number(this.size?.[1]) || 200;
-          // Divide screen-space drag distance by the canvas zoom so the grip
-          // tracks the cursor 1:1 regardless of how far zoomed in/out.
-          const scale = app?.canvas?.ds?.scale || 1;
-
-          const onMove = (moveEvent) => {
-            const dx = (moveEvent.clientX - startX) / scale;
-            const dy = (moveEvent.clientY - startY) / scale;
-            if (!this.size) this.size = [startW, startH];
-            this.size[0] = Math.max(startW + dx, 320);
-            this.size[1] = Math.max(startH + dy, 110);
-            if (typeof this.onResize === "function") this.onResize(this.size);
-            this.setDirtyCanvas(true, true);
-          };
-
-          const onUp = (upEvent) => {
-            handle.classList.remove("is-active");
-            try { handle.releasePointerCapture(upEvent.pointerId); } catch (_) {}
-            window.removeEventListener("pointermove", onMove);
-            window.removeEventListener("pointerup", onUp);
-          };
-
-          window.addEventListener("pointermove", onMove);
-          window.addEventListener("pointerup", onUp);
-        });
-      }
+      this._dsPromptExpandBtn = root.querySelector('[data-action="expand"]');
+      this._dsPromptPosButtons = [...root.querySelectorAll("[data-pos]")];
 
       const props = ensurePromptProperties(this);
       const hasSavedPrompt = Object.prototype.hasOwnProperty.call(props, "ds_prompt_text");
       const hasSavedPosition = Object.prototype.hasOwnProperty.call(props, "ds_prompt_trigger_position");
-      const hasSavedExpanded = Object.prototype.hasOwnProperty.call(props, "ds_prompt_expanded");
 
       const nativeInitialText = String(this._dsPromptNativeText?.value ?? "");
-      const nativeInitialPosition = this._dsPromptPositionWidget?.value === "before" ? "before" : "after";
+      const nativeInitialPos = this._dsPromptPositionWidget?.value === "before" ? "before" : "after";
 
-      // Prefer the node property values when present. They survive workflow
-      // save/load independently of the hidden/native widget and the DOM widget.
       const initialText = hasSavedPrompt ? String(props.ds_prompt_text ?? "") : nativeInitialText;
-      const initialPosition = hasSavedPosition
+      const initialPos = hasSavedPosition
         ? (props.ds_prompt_trigger_position === "before" ? "before" : "after")
-        : nativeInitialPosition;
-      const initialExpanded = getPersistedExpandedState(this);
+        : nativeInitialPos;
 
       this._dsPromptValue = initialText;
-      this._dsPromptPosition = initialPosition;
+      this._dsPromptPosition = initialPos;
       this._dsPromptTextarea.value = initialText;
-      this._dsPromptPreview.textContent = initialText;
+      this._dsPromptPreview.textContent = props.ds_prompt_effective_text || initialText;
 
       if (hasSavedPrompt && this._dsPromptNativeText) {
         this._dsPromptNativeText.value = initialText;
       }
       if (hasSavedPosition && this._dsPromptPositionWidget) {
-        this._dsPromptPositionWidget.value = initialPosition;
+        this._dsPromptPositionWidget.value = initialPos;
       }
+
+      const showStatus = (text) => {
+        if (!this._dsPromptStatus) return;
+        this._dsPromptStatus.textContent = text;
+        this._dsPromptStatus.classList.add("is-visible");
+        clearTimeout(this._dsPromptStatusTimer);
+        this._dsPromptStatusTimer = setTimeout(() => {
+          if (this._dsPromptStatus) {
+            this._dsPromptStatus.textContent = "";
+            this._dsPromptStatus.classList.remove("is-visible");
+          }
+        }, 1400);
+      };
+      this._showStatus = showStatus;
+
+      const setPosition = (position) => {
+        const next = position === "before" ? "before" : "after";
+        this._dsPromptPosition = next;
+        ensurePromptProperties(this).ds_prompt_trigger_position = next;
+        if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = next;
+
+        this._dsPromptPosButtons.forEach((btn) => {
+          const active = btn.dataset.pos === next;
+          btn.classList.toggle("is-active", active);
+          btn.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+        this.setDirtyCanvas(true, true);
+      };
+      setPosition(initialPos);
+      this._dsSetTriggerPosition = setPosition;
 
       const setExpanded = (expanded) => {
         this._dsPromptExpanded = Boolean(expanded);
@@ -324,38 +421,29 @@ app.registerExtension({
             localStorage.setItem(`ds_prompt_expanded_${this.id}`, String(this._dsPromptExpanded));
           } catch (_) {}
         }
-        root.classList.toggle("is-expanded", this._dsPromptExpanded);
-        if (this._dsPromptExpand) {
-          this._dsPromptExpand.classList.toggle("active", this._dsPromptExpanded);
-          this._dsPromptExpand.setAttribute("aria-pressed", this._dsPromptExpanded ? "true" : "false");
-          this._dsPromptExpand.innerHTML = this._dsPromptExpanded ? ICONS.collapse : ICONS.expand;
-          this._dsPromptExpand.title = this._dsPromptExpanded
+
+        this._dsPromptCard?.classList.toggle("is-expanded", this._dsPromptExpanded);
+
+        if (this._dsPromptExpandBtn) {
+          this._dsPromptExpandBtn.classList.toggle("is-active", this._dsPromptExpanded);
+          this._dsPromptExpandBtn.setAttribute("aria-pressed", this._dsPromptExpanded ? "true" : "false");
+          this._dsPromptExpandBtn.innerHTML = this._dsPromptExpanded
+            ? DSIconMarkup("minimize-2", { size: 12 })
+            : DSIconMarkup("maximize-2", { size: 12 });
+          this._dsPromptExpandBtn.title = this._dsPromptExpanded
             ? "Hide effective prompt preview"
             : "Show effective prompt preview";
-          this._dsPromptExpand.setAttribute("aria-label", this._dsPromptExpand.title);
+          this._dsPromptExpandBtn.setAttribute("aria-label", this._dsPromptExpandBtn.title);
         }
-        if (this._dsPromptExpanded && this._dsPromptPreview) {
-          const props = ensurePromptProperties(this);
-          const savedPreview = props.ds_prompt_effective_text;
-          if (savedPreview) {
-            this._dsPromptPreview.textContent = savedPreview;
-          } else if (!this._dsPromptPreview.textContent) {
-            this._dsPromptPreview.textContent = this._dsPromptValue || "";
-          }
+
+        if (this._dsPromptExpanded) {
+          const eff = props.ds_prompt_effective_text || this._dsPromptValue || "";
+          if (this._dsPromptPreview) this._dsPromptPreview.textContent = eff;
         }
-        try {
-          const g = this.graph || app?.graph;
-          if (g) {
-            if (typeof g.beforeChange === "function") g.beforeChange();
-            if (typeof g.afterChange === "function") g.afterChange();
-            if (typeof g.change === "function") g.change();
-          }
-          if (app?.canvas?.setDirty) app.canvas.setDirty(true, true);
-        } catch (_) {}
+
         this.setDirtyCanvas(true, true);
       };
-
-      setExpanded(initialExpanded);
+      setExpanded(this._dsPromptExpanded);
       this._dsSetPromptExpanded = setExpanded;
 
       const syncValue = (value, updatePreview = true) => {
@@ -364,184 +452,111 @@ app.registerExtension({
         ensurePromptProperties(this).ds_prompt_text = next;
         this._dsPromptTextarea.value = next;
         if (this._dsPromptNativeText) this._dsPromptNativeText.value = next;
-        if (updatePreview && !this._dsPromptExpanded) {
+        if (updatePreview && !this._dsPromptExpanded && this._dsPromptPreview) {
           this._dsPromptPreview.textContent = next;
         }
         this.setDirtyCanvas(true, true);
       };
-
-      const setPosition = (position) => {
-        // This is a true two-state switch: normalize the value first, then
-        // derive BOTH button states from that single value. Never toggle a
-        // button independently, so "Before" and "After" cannot both be active.
-        const next = position === "before" ? "before" : "after";
-        this._dsPromptPosition = next;
-        ensurePromptProperties(this).ds_prompt_trigger_position = next;
-        if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = next;
-        this._dsPromptPositionButtons.forEach((button) => {
-          const active = button.dataset.position === next;
-          button.classList.toggle("active", active);
-          button.setAttribute("aria-pressed", active ? "true" : "false");
-        });
-        this.setDirtyCanvas(true, true);
-      };
-
-      // Apply the saved/default state immediately. The old UI started with
-      // "After" visually active even when the stored value was "Before",
-      // until a later sync pass corrected it.
-      setPosition(initialPosition);
-
       this._dsSetPromptValue = syncValue;
-      this._dsSetTriggerPosition = setPosition;
 
       this._dsPromptTextarea.addEventListener("input", () => {
         syncValue(this._dsPromptTextarea.value, false);
-        this._dsPromptStatus.textContent = "";
       });
 
       root.addEventListener("click", async (event) => {
-        const positionButton = event.target.closest("button[data-position]");
-        if (positionButton) {
+        const posBtn = event.target.closest("button[data-pos]");
+        if (posBtn) {
           event.preventDefault();
           event.stopPropagation();
-          setPosition(positionButton.dataset.position);
+          setPosition(posBtn.dataset.pos);
           return;
         }
 
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
+        const actionBtn = event.target.closest("button[data-action]");
+        if (!actionBtn) return;
         event.preventDefault();
         event.stopPropagation();
 
-        const action = button.dataset.action;
+        const action = actionBtn.dataset.action;
         if (action === "expand") {
           setExpanded(!this._dsPromptExpanded);
           return;
         }
 
-        const showStatus = (text, btn = null) => {
-          if (this._dsPromptStatus) {
-            this._dsPromptStatus.textContent = text;
-            this._dsPromptStatus.classList.add("is-visible");
-          }
-          if (btn) {
-            btn.classList.add("is-success");
-          }
-          clearTimeout(this._dsPromptStatusTimer);
-          this._dsPromptStatusTimer = setTimeout(() => {
-            if (this._dsPromptStatus) {
-              this._dsPromptStatus.textContent = "";
-              this._dsPromptStatus.classList.remove("is-visible");
-            }
-            if (btn) {
-              btn.classList.remove("is-success");
-            }
-          }, 1500);
-        };
-
         if (action === "copy") {
-          const text = this._dsPromptExpanded
+          const textToCopy = this._dsPromptExpanded && this._dsPromptPreview?.textContent
             ? this._dsPromptPreview.textContent
             : this._dsPromptValue;
-          const ok = await copyText(text);
-          showStatus(ok ? "Copied" : "Copy failed", button);
+          const ok = await copyToClipboard(textToCopy);
+          showStatus(ok ? "Copied" : "Copy failed");
           return;
         }
 
         if (action === "clear") {
           syncValue("");
-          this._dsPromptPreview.textContent = "";
-          showStatus("Cleared", button);
+          if (this._dsPromptPreview) this._dsPromptPreview.textContent = "";
+          showStatus("Cleared");
           return;
         }
 
         if (action === "replace") {
-          const clipboard = await readClipboard();
-          if (clipboard === null) {
-            showStatus("Unavailable", button);
+          const clipText = await readFromClipboard();
+          if (clipText === null) {
+            showStatus("Unavailable");
             return;
           }
-          syncValue(clipboard);
-          this._dsPromptPreview.textContent = clipboard;
-          showStatus("Replaced", button);
+          syncValue(clipText);
+          if (this._dsPromptPreview) this._dsPromptPreview.textContent = clipText;
+          showStatus("Replaced");
         }
       });
 
       this._dsPromptDOMWidget = this.addDOMWidget("ds_prompt_ui", "custom", root, {
         serialize: false,
         hideOnZoom: false,
-        margin: 0,
+        margin: DS_PROMPT_CARD_MARGIN,
         getValue: () => this._dsPromptValue ?? "",
-        setValue: (value) => syncValue(value),
-        getMinHeight: () => 60,
-        getMaxHeight: () => 2000,
-        getHeight: () => Math.max(60, (Number(this.size?.[1]) || 200) - 30),
+        setValue: (val) => syncValue(val),
+        // The widget itself is exactly the card. Its preferred height consumes
+        // the node's remaining space minus the 5px canvas gap reserved below
+        // the card for LiteGraph's native resize handles.
+        getMinHeight: () => this._getPromptMinimumWidgetHeight(),
+        // The DOM widget host is the actual hit-test surface used by ComfyUI.
+        // Cap that host itself to 5px above the node bottom so the native
+        // LiteGraph resize corners are physically outside the DOM overlay.
+        // This is the key difference from getHeight(): current ComfyUI uses
+        // getMaxHeight() during computeLayoutSize() to constrain the allocated
+        // DOM-widget height.
+        getMaxHeight: () => {
+          const y = this._getPromptWidgetY();
+          const nodeHeight = Number(this.size?.[1]) || 0;
+          const available = nodeHeight - y - DS_PROMPT_BOTTOM_GAP;
+          // With margin=5, the visible card ends at y + computedHeight - 5.
+          // Allow the widget allocation to reach nodeHeight - y so the visible
+          // card stays exactly 5px above the node base while retaining 5px
+          // margins on both horizontal sides.
+          return Math.max(
+            this._getPromptMinimumWidgetHeight(),
+            available + DS_PROMPT_BOTTOM_GAP,
+          );
+        },
       });
 
-      // ComfyUI wraps whatever element addDOMWidget() is given in its own
-      // positioning container ("host") and clips it with overflow: hidden -
-      // but that host never gets a border-radius of its own. Root's rounded
-      // corners get clipped back to square by that flat-edged host, which is
-      // why only the canvas-drawn title bar (outside this DOM host) looked
-      // rounded while the DOM widget's own bottom corners stayed sharp.
-      // Round the host to match so the clip mask itself is rounded too.
-      this._dsSyncPromptHostRadius = () => {
-        const host = this._dsPromptRoot?.parentElement;
-        if (!host) return;
-        host.style.borderRadius = "var(--ds-radius, 6px)";
-        host.style.overflow = "hidden";
-      };
-      this._dsSyncPromptHostRadius();
+      if (Array.isArray(this.widgets)) {
+        const domIdx = this.widgets.indexOf(this._dsPromptDOMWidget);
+        if (domIdx > 0) {
+          this.widgets.splice(domIdx, 1);
+          this.widgets.unshift(this._dsPromptDOMWidget);
+        }
+      }
 
-      // This is the widget's own render-size function (distinct from the
-      // node-level computeSize() below, which intentionally stays fixed so
-      // LiteGraph's drag-resize minimum never ratchets up). ComfyUI uses
-      // THIS function to size the DOM widget's actual content box each
-      // layout pass, so it must track the live node height via the cached
-      // value onResize() maintains below - a fixed height here is what
-      // previously kept the textarea pinned at the floor while the node
-      // itself grew.
-      this._dsPromptWidgetHeight = Math.max(60, (Number(this.size?.[1]) || 200) - 30);
-      this._dsPromptDOMWidget.computeSize = (width) => [
-        Math.max(200, Number(width) || 320),
-        this._dsPromptWidgetHeight,
-      ];
-
-      // The DOM widget itself is the root element. ComfyUI's DOM-widget
-      // layout owns its position and height; do not resize its parent host
-      // manually (doing so causes a one-frame jump while LiteGraph is
-      // applying the resize). We only keep the root's explicit height in
-      // sync with the node so its flex children have a stable containing box.
-      this._dsSyncPromptWidgetHeight = () => {
-        const widget = this._dsPromptDOMWidget;
-        const rootEl = this._dsPromptRoot;
-        if (!widget || !rootEl) return;
-
-        const nodeHeight = Math.max(110, Number(this.size?.[1]) || 200);
-        const widgetHeight = Math.max(60, nodeHeight - 30);
-
-        widget.computedHeight = widgetHeight;
-        this._dsPromptWidgetHeight = widgetHeight;
-        rootEl.style.boxSizing = "border-box";
-        rootEl.style.width = "100%";
-        rootEl.style.height = `${widgetHeight}px`;
-        rootEl.style.minHeight = "0";
-        rootEl.style.maxHeight = `${widgetHeight}px`;
-      };
-
-      this._dsSyncPromptWidgetHeight();
-      this._dsSyncPromptHostRadius?.();
 
       setTimeout(() => {
-        try {
-          if (window.DSGlobalTheme) {
-            window.DSGlobalTheme.bindNode?.(root, this);
-            window.DSGlobalTheme.applyNodeBase?.(this);
-          }
-        } catch (_) {}
         this._dsSyncPromptUI?.();
-        this._dsSyncPromptHostRadius?.();
-        this.setDirtyCanvas(true, true);
+        const props = this.properties || {};
+        if (!Array.isArray(props.ds_prompt_size)) {
+          this._fitPromptToNaturalHeight();
+        }
       }, 0);
 
       return result;
@@ -550,6 +565,7 @@ app.registerExtension({
     nodeType.prototype._dsSyncPromptUI = function () {
       if (!this._dsPromptTextarea) return;
 
+      deduplicateWidgets(this);
       const nativeText = getWidget(this, "text");
       if (nativeText) this._dsPromptNativeText = nativeText;
       hideNativeWidget(this._dsPromptNativeText);
@@ -562,45 +578,40 @@ app.registerExtension({
       const hasSavedPrompt = Object.prototype.hasOwnProperty.call(props, "ds_prompt_text");
       const hasSavedPosition = Object.prototype.hasOwnProperty.call(props, "ds_prompt_trigger_position");
 
-      const value = hasSavedPrompt
+      const val = hasSavedPrompt
         ? String(props.ds_prompt_text ?? "")
         : String(this._dsPromptNativeText?.value ?? this._dsPromptValue ?? "");
 
-      this._dsPromptValue = value;
-      if (this._dsPromptNativeText) this._dsPromptNativeText.value = value;
+      this._dsPromptValue = val;
+      if (this._dsPromptNativeText) this._dsPromptNativeText.value = val;
       if (document.activeElement !== this._dsPromptTextarea) {
-        this._dsPromptTextarea.value = value;
+        this._dsPromptTextarea.value = val;
       }
 
-      const position = hasSavedPosition
+      const pos = hasSavedPosition
         ? (props.ds_prompt_trigger_position === "before" ? "before" : "after")
         : (this._dsPromptPositionWidget?.value === "before" ? "before" : (this._dsPromptPosition || "after"));
 
-      this._dsPromptPosition = position;
-      if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = position;
-      this._dsPromptPositionButtons?.forEach((button) => {
-        const active = button.dataset.position === position;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-pressed", active ? "true" : "false");
+      this._dsPromptPosition = pos;
+      if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = pos;
+      this._dsPromptPosButtons?.forEach((btn) => {
+        const active = btn.dataset.pos === pos;
+        btn.classList.toggle("is-active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
       });
 
-      const isExpanded = getPersistedExpandedState(this);
-      this._dsPromptExpanded = isExpanded;
-      ensurePromptProperties(this).ds_prompt_expanded = isExpanded;
+      const isExp = getPersistedExpandedState(this);
+      this._dsPromptExpanded = isExp;
+      ensurePromptProperties(this).ds_prompt_expanded = isExp;
       if (typeof this._dsSetPromptExpanded === "function") {
-        this._dsSetPromptExpanded(isExpanded);
+        this._dsSetPromptExpanded(isExp);
       }
 
-      if (this._dsPromptExpanded) {
-        const effective = props.ds_prompt_effective_text || this._dsPromptPreview?.textContent || value;
-        if (this._dsPromptPreview) {
-          this._dsPromptPreview.textContent = effective;
-        }
-      } else {
-        if (this._dsPromptPreview) {
-          this._dsPromptPreview.textContent = value;
-        }
+      const effectiveText = props.ds_prompt_effective_text || this._dsPromptPreview?.textContent || val;
+      if (this._dsPromptPreview) {
+        this._dsPromptPreview.textContent = effectiveText;
       }
+
     };
 
     nodeType.prototype.onRemoved = function () {
@@ -608,10 +619,6 @@ app.registerExtension({
         try { localStorage.removeItem(`ds_prompt_expanded_${this.id}`); } catch (_) {}
       }
       clearTimeout(this._dsPromptStatusTimer);
-      if (this._dsPromptResizeObserver) {
-        try { this._dsPromptResizeObserver.disconnect(); } catch (_) {}
-        this._dsPromptResizeObserver = null;
-      }
       return originalRemoved
         ? originalRemoved.apply(this, arguments)
         : undefined;
@@ -622,9 +629,12 @@ app.registerExtension({
         ? originalClone.apply(this, arguments)
         : (globalThis.LiteGraph?.createNode?.(this.type) || null);
       if (cloned && Array.isArray(this.size)) {
+        const minHeight = typeof cloned._getPromptMinimumNodeHeight === "function"
+          ? cloned._getPromptMinimumNodeHeight()
+          : 160;
         cloned.size = [
-          Math.max(Number(this.size[0]) || 0, 320),
-          Math.max(Number(this.size[1]) || 0, 110),
+          Math.max(Number(this.size[0]) || 0, 340),
+          Math.max(Number(this.size[1]) || 0, minHeight),
         ];
         if (typeof cloned.onResize === "function") {
           cloned.onResize(cloned.size);
@@ -643,31 +653,30 @@ app.registerExtension({
       if (this.id === -1 || this.id == null) {
         fixInvalidNodeId(this);
       }
+
       const props = info?.properties || this.properties || {};
+      const savedSizeVersion = Number(props?.ds_prompt_size_version || 0);
+      const migrateLegacyBaseSize = savedSizeVersion < DS_PROMPT_SIZE_VERSION;
       const targetSize = (info?.size && Array.isArray(info.size))
         ? info.size
         : (props?.ds_prompt_size && Array.isArray(props.ds_prompt_size) ? props.ds_prompt_size : null);
-      if (targetSize) {
+
+      if (targetSize && !migrateLegacyBaseSize) {
         this.size = [
-          Math.max(Number(targetSize[0]) || 0, 320),
-          Math.max(Number(targetSize[1]) || 0, 110),
+          Math.max(Number(targetSize[0]) || 0, 340),
+          Math.max(Number(targetSize[1]) || 0, this._getPromptMinimumNodeHeight()),
         ];
         if (typeof this.onResize === "function") {
           this.onResize(this.size);
         }
       }
-      const isExp = getPersistedExpandedState(this);
-      this._dsPromptExpanded = isExp;
-      ensurePromptProperties(this).ds_prompt_expanded = isExp;
-      if (typeof this._dsSetPromptExpanded === "function") {
-        this._dsSetPromptExpanded(isExp);
-      }
-      if (Object.prototype.hasOwnProperty.call(props, "ds_prompt_effective_text")) {
-        ensurePromptProperties(this).ds_prompt_effective_text = String(props.ds_prompt_effective_text ?? "");
-      }
+
       setTimeout(() => {
         this._dsSyncPromptUI?.();
-        this._dsSyncPromptWidgetHeight?.();
+        if (migrateLegacyBaseSize) {
+          this._fitPromptToNaturalHeight();
+        } else {
+          }
       }, 0);
     };
 
@@ -684,31 +693,31 @@ app.registerExtension({
       }
 
       const props = info?.properties || ensurePromptProperties(this);
+      const isExp = getPersistedExpandedState(this);
+      this._dsPromptExpanded = isExp;
+      ensurePromptProperties(this).ds_prompt_expanded = isExp;
+
+      const savedSizeVersion = Number(props?.ds_prompt_size_version || 0);
+      const migrateLegacyBaseSize = savedSizeVersion < DS_PROMPT_SIZE_VERSION;
       const targetSize = (info?.size && Array.isArray(info.size))
         ? info.size
         : (props?.ds_prompt_size && Array.isArray(props.ds_prompt_size) ? props.ds_prompt_size : null);
-      if (targetSize) {
+
+      if (targetSize && !migrateLegacyBaseSize) {
         this.size = [
-          Math.max(Number(targetSize[0]) || 0, 320),
-          Math.max(Number(targetSize[1]) || 0, 110),
+          Math.max(Number(targetSize[0]) || 0, 340),
+          Math.max(Number(targetSize[1]) || 0, this._getPromptMinimumNodeHeight()),
         ];
         if (typeof this.onResize === "function") {
           this.onResize(this.size);
         }
       }
 
-      const isExp = getPersistedExpandedState(this);
-      this._dsPromptExpanded = isExp;
-      ensurePromptProperties(this).ds_prompt_expanded = isExp;
-      if (typeof this._dsSetPromptExpanded === "function") {
-        this._dsSetPromptExpanded(isExp);
-      }
-
       if (Object.prototype.hasOwnProperty.call(props, "ds_prompt_text")) {
-        const value = String(props.ds_prompt_text ?? "");
-        this._dsPromptValue = value;
-        if (this._dsPromptNativeText) this._dsPromptNativeText.value = value;
-        if (this._dsPromptTextarea) this._dsPromptTextarea.value = value;
+        const val = String(props.ds_prompt_text ?? "");
+        this._dsPromptValue = val;
+        if (this._dsPromptNativeText) this._dsPromptNativeText.value = val;
+        if (this._dsPromptTextarea) this._dsPromptTextarea.value = val;
       }
 
       if (Object.prototype.hasOwnProperty.call(props, "ds_prompt_trigger_position")) {
@@ -726,9 +735,12 @@ app.registerExtension({
 
       setTimeout(() => {
         this._dsSyncPromptUI?.();
-        this._dsSyncPromptWidgetHeight?.();
-        this._dsSyncPromptHostRadius?.();
+        if (migrateLegacyBaseSize) {
+          this._fitPromptToNaturalHeight();
+        } else {
+          }
       }, 0);
+
       return result;
     };
 
@@ -744,17 +756,17 @@ app.registerExtension({
         const props = ensurePromptProperties(this);
 
         if (this._dsPromptTextarea) {
-          const value = this._dsPromptTextarea.value;
-          this._dsPromptValue = value;
-          props.ds_prompt_text = value;
-          if (this._dsPromptNativeText) this._dsPromptNativeText.value = value;
+          const val = this._dsPromptTextarea.value;
+          this._dsPromptValue = val;
+          props.ds_prompt_text = val;
+          if (this._dsPromptNativeText) this._dsPromptNativeText.value = val;
         } else if (this._dsPromptValue != null) {
           props.ds_prompt_text = String(this._dsPromptValue);
         }
 
-        const position = this._dsPromptPosition === "before" ? "before" : "after";
-        props.ds_prompt_trigger_position = position;
-        if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = position;
+        const pos = this._dsPromptPosition === "before" ? "before" : "after";
+        props.ds_prompt_trigger_position = pos;
+        if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = pos;
 
         props.ds_prompt_expanded = Boolean(this._dsPromptExpanded);
         if (this._dsPromptPreview?.textContent) {
@@ -763,40 +775,28 @@ app.registerExtension({
 
         if (Array.isArray(this.size)) {
           props.ds_prompt_size = [
-            Math.max(Number(this.size[0]) || 0, 320),
-            Math.max(Number(this.size[1]) || 0, 110),
+            Math.max(Number(this.size[0]) || 0, 340),
+            Math.max(Number(this.size[1]) || 0, this._getPromptMinimumNodeHeight()),
           ];
+          props.ds_prompt_size_version = DS_PROMPT_SIZE_VERSION;
         }
       } catch (_) {}
 
-      let o;
-      if (originalSerialize) {
-        o = originalSerialize.apply(this, arguments);
-      } else {
-        o = { ...this };
-      }
-
+      let o = originalSerialize ? originalSerialize.apply(this, arguments) : { ...this };
       if (o) {
         if (Array.isArray(this.size)) {
           o.size = [
-            Math.max(Number(this.size[0]) || 0, 320),
-            Math.max(Number(this.size[1]) || 0, 110),
+            Math.max(Number(this.size[0]) || 0, 340),
+            Math.max(Number(this.size[1]) || 0, this._getPromptMinimumNodeHeight()),
           ];
         }
         o.properties = o.properties || {};
-        if (Array.isArray(this.size)) {
-          o.properties.ds_prompt_size = [
-            Math.max(Number(this.size[0]) || 0, 320),
-            Math.max(Number(this.size[1]) || 0, 110),
-          ];
-        }
         o.properties.ds_prompt_text = this._dsPromptValue ?? "";
         o.properties.ds_prompt_trigger_position = this._dsPromptPosition === "before" ? "before" : "after";
         o.properties.ds_prompt_expanded = Boolean(this._dsPromptExpanded);
+        o.properties.ds_prompt_size_version = DS_PROMPT_SIZE_VERSION;
         if (this._dsPromptPreview?.textContent) {
           o.properties.ds_prompt_effective_text = this._dsPromptPreview.textContent;
-        } else if (this.properties?.ds_prompt_effective_text) {
-          o.properties.ds_prompt_effective_text = this.properties.ds_prompt_effective_text;
         }
       }
       return o;
@@ -807,41 +807,36 @@ app.registerExtension({
         const props = ensurePromptProperties(this);
 
         if (this._dsPromptTextarea) {
-          const value = this._dsPromptTextarea.value;
-          this._dsPromptValue = value;
-          props.ds_prompt_text = value;
-          if (this._dsPromptNativeText) this._dsPromptNativeText.value = value;
+          const val = this._dsPromptTextarea.value;
+          this._dsPromptValue = val;
+          props.ds_prompt_text = val;
+          if (this._dsPromptNativeText) this._dsPromptNativeText.value = val;
         } else if (this._dsPromptValue != null) {
           props.ds_prompt_text = String(this._dsPromptValue);
         }
 
-        const position = this._dsPromptPosition === "before" ? "before" : "after";
-        props.ds_prompt_trigger_position = position;
-        if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = position;
+        const pos = this._dsPromptPosition === "before" ? "before" : "after";
+        props.ds_prompt_trigger_position = pos;
+        if (this._dsPromptPositionWidget) this._dsPromptPositionWidget.value = pos;
 
         props.ds_prompt_expanded = Boolean(this._dsPromptExpanded);
         if (this._dsPromptPreview?.textContent) {
           props.ds_prompt_effective_text = this._dsPromptPreview.textContent;
         }
 
-        if (Array.isArray(this.size)) {
-          props.ds_prompt_size = [
-            Math.max(Number(this.size[0]) || 0, 320),
-            Math.max(Number(this.size[1]) || 0, 110),
-          ];
-        }
-
         if (info && typeof info === "object") {
           if (Array.isArray(this.size)) {
             info.size = [
-              Math.max(Number(this.size[0]) || 0, 320),
-              Math.max(Number(this.size[1]) || 0, 110),
+              Math.max(Number(this.size[0]) || 0, 340),
+              Math.max(Number(this.size[1]) || 0, this._getPromptMinimumNodeHeight()),
             ];
           }
           info.properties = info.properties || {};
-          if (props.ds_prompt_size) {
-            info.properties.ds_prompt_size = props.ds_prompt_size;
-          }
+          info.properties.ds_prompt_size = [
+            Math.max(Number(this.size[0]) || 0, 340),
+            Math.max(Number(this.size[1]) || 0, this._getPromptMinimumNodeHeight()),
+          ];
+          info.properties.ds_prompt_size_version = DS_PROMPT_SIZE_VERSION;
           info.properties.ds_prompt_text = props.ds_prompt_text;
           info.properties.ds_prompt_trigger_position = props.ds_prompt_trigger_position;
           info.properties.ds_prompt_expanded = props.ds_prompt_expanded;
@@ -861,19 +856,13 @@ app.registerExtension({
 
       const raw = message?.prompt_preview ?? message?.ui?.prompt_preview;
       const preview = Array.isArray(raw) ? raw[0] : raw;
-      if (typeof preview === "string" && this._dsPromptPreview) {
-        this._dsPromptPreview.textContent = preview;
+      if (typeof preview === "string") {
+        if (this._dsPromptPreview) {
+          this._dsPromptPreview.textContent = preview;
+        }
         ensurePromptProperties(this).ds_prompt_effective_text = preview;
-        if (this._dsPromptExpanded && this._dsPromptStatus) {
-          this._dsPromptStatus.textContent = "Updated";
-          this._dsPromptStatus.classList.add("is-visible");
-          clearTimeout(this._dsPromptStatusTimer);
-          this._dsPromptStatusTimer = setTimeout(() => {
-            if (this._dsPromptStatus) {
-              this._dsPromptStatus.textContent = "";
-              this._dsPromptStatus.classList.remove("is-visible");
-            }
-          }, 1500);
+        if (this._dsPromptExpanded) {
+          this._showStatus?.("Updated");
         }
       }
       return result;
@@ -883,67 +872,29 @@ app.registerExtension({
       const result = originalConnections
         ? originalConnections.apply(this, arguments)
         : undefined;
-      if (this._dsPromptPreview && this._dsPromptExpanded && this._dsPromptStatus) {
-        this._dsPromptStatus.textContent = "Run to refresh";
-        this._dsPromptStatus.classList.add("is-visible");
-        clearTimeout(this._dsPromptStatusTimer);
-        this._dsPromptStatusTimer = setTimeout(() => {
-          if (this._dsPromptStatus) {
-            this._dsPromptStatus.textContent = "";
-            this._dsPromptStatus.classList.remove("is-visible");
-          }
-        }, 1500);
+      if (this._dsPromptExpanded) {
+        this._showStatus?.("Run to update");
       }
       return result;
     };
 
     nodeType.prototype.computeSize = function () {
-      const base = originalComputeSize
-        ? originalComputeSize.apply(this, arguments)
-        : [340, 110];
-      const width = Math.max(320, Number(base?.[0]) || 0);
-      // Stable floor for resize. Never use this.size here: LiteGraph calls
-      // computeSize() while dragging a resize handle to determine the minimum.
-      //
-      // Also never fall through to base[1] for the height: LiteGraph's default
-      // computeSize() sums each widget's own computeSize(), and the DOM prompt
-      // widget's computeSize() now intentionally tracks the live node height
-      // (that's what lets the textarea grow with the node). If that dynamic
-      // value leaked into this floor, LiteGraph would re-apply the "minimum"
-      // to node.size on every layout pass, and each pass would grow it a
-      // little more than the last - runaway height growth on every resize.
-      // The floor must stay a fixed constant, fully independent of widgets.
-      return [width, 110];
+      return [340, this._getPromptMinimumNodeHeight()];
     };
 
     nodeType.prototype.onResize = function (size) {
-      // LiteGraph gives us the proposed size before its DOM-widget layout pass.
-      // Clamp that proposal and update the widget geometry ONCE, before the
-      // original handler runs. Do not perform a second correction after the
-      // handler: that was the source of the visible resize snap/jump.
       if (size) {
-        size[0] = Math.max(Number(size[0]) || 0, 320);
-        size[1] = Math.max(Number(size[1]) || 0, 110);
-
-        const widgetHeight = Math.max(60, size[1] - 30);
-        this._dsPromptWidgetHeight = widgetHeight;
-        if (this._dsPromptDOMWidget) {
-          this._dsPromptDOMWidget.computedHeight = widgetHeight;
-        }
-        if (this._dsPromptRoot) {
-          this._dsPromptRoot.style.boxSizing = "border-box";
-          this._dsPromptRoot.style.width = "100%";
-          this._dsPromptRoot.style.height = `${widgetHeight}px`;
-          this._dsPromptRoot.style.minHeight = "0";
-          this._dsPromptRoot.style.maxHeight = `${widgetHeight}px`;
-        }
+        size[0] = Math.max(Number(size[0]) || 0, 340);
+        size[1] = Math.max(Number(size[1]) || 0, this._getPromptMinimumNodeHeight());
+        this.size[0] = size[0];
+        this.size[1] = size[1];
+        ensurePromptProperties(this).ds_prompt_size_version = DS_PROMPT_SIZE_VERSION;
       }
 
       const result = originalResize
         ? originalResize.apply(this, arguments)
         : undefined;
 
-      this._dsSyncPromptHostRadius?.();
       this.setDirtyCanvas(true, true);
       return result;
     };

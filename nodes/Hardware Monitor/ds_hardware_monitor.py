@@ -5,6 +5,7 @@ import shutil
 import threading
 import time
 import logging
+from typing import Optional
 
 import psutil
 import server
@@ -78,6 +79,13 @@ def _find_nvidia_smi():
             if base:
                 candidates.append(os.path.join(base, "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"))
         candidates.append(os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "nvidia-smi.exe"))
+    else:
+        candidates.extend([
+            "/usr/bin/nvidia-smi",
+            "/usr/local/cuda/bin/nvidia-smi",
+            "/usr/lib/wsl/lib/nvidia-smi",
+            "/opt/cuda/bin/nvidia-smi",
+        ])
     for candidate in candidates:
         try:
             if os.path.isfile(candidate):
@@ -88,7 +96,37 @@ def _find_nvidia_smi():
 
 
 def _nvidia():
-    """Prefer NVML, then nvidia-smi. Return live utilization, thermals and power."""
+    """Prefer direct ctypes NVML, then pynvml, then nvidia-smi. Return live utilization, thermals and power."""
+    try:
+        import sys
+        sensei_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "AI Prompt Sensei"))
+        if sensei_dir not in sys.path:
+            sys.path.insert(0, sensei_dir)
+        import telemetry
+        nv_data = telemetry._NVML.query()
+        if nv_data:
+            out = {
+                "gpu_available": True,
+                "gpu_vendor": "NVIDIA",
+                "gpu_name": nv_data.get("gpu_name") or "NVIDIA GPU",
+                "gpu": float(nv_data.get("gpu", 0.0)),
+                "gpu_temp": float(nv_data["gpu_temp"]) if nv_data.get("gpu_temp") is not None else None,
+                "gpu_fan": None,
+                "gpu_fan_supported": False,
+            }
+            if torch is not None and torch.cuda.is_available():
+                try:
+                    idx = torch.cuda.current_device()
+                    free, total = torch.cuda.mem_get_info(idx)
+                    out["vram_total_gb"] = float(total) / 2**30
+                    out["vram_free_gb"] = float(free) / 2**30
+                    out["vram_used_gb"] = max(0.0, float(total - free)) / 2**30
+                except Exception:
+                    pass
+            return out
+    except Exception as e:
+        _LOG.debug("Direct NVML query failed: %s", e)
+
     if pynvml is not None:
         try:
             try:
@@ -277,60 +315,121 @@ def collect():
     return result
 
 
+_monitor: Optional[threading.Thread] = None
+_monitor_lock = threading.Lock()
+_last_request_time = 0.0
+_IDLE_TIMEOUT_SECS = 15.0
+
+
 class _MonitorThread(threading.Thread):
     daemon = True
+
+    def __init__(self):
+        super().__init__(name="DS-HardwareMonitor", daemon=True)
+        self.stop_event = threading.Event()
+
     def run(self):
-        while True:
-            started = time.monotonic()
-            try:
-                data = collect()
-                with _LOCK:
-                    _CACHE.clear(); _CACHE.update(data)
+        global _monitor
+        _LOG.info("Hardware telemetry thread started on demand")
+        try:
+            while not self.stop_event.is_set():
+                if time.monotonic() - _last_request_time > _IDLE_TIMEOUT_SECS:
+                    _LOG.info("Hardware telemetry thread stopping after idle period")
+                    break
+                started = time.monotonic()
                 try:
-                    server.PromptServer.instance.send_sync("ds_hardware_stats", data)
+                    data = collect()
+                    with _LOCK:
+                        _CACHE.clear()
+                        _CACHE.update(data)
                 except Exception:
-                    pass
+                    _LOG.exception("Telemetry collection failed")
+                sleep_dur = max(0.1, 1.0 - (time.monotonic() - started))
+                if self.stop_event.wait(timeout=sleep_dur):
+                    break
+        finally:
+            with _monitor_lock:
+                _monitor = None
+            _LOG.info("Hardware telemetry thread stopped cleanly")
+
+
+def _touch_monitor():
+    global _last_request_time, _monitor
+    _last_request_time = time.monotonic()
+    with _monitor_lock:
+        if _monitor is None or not _monitor.is_alive():
+            _monitor = _MonitorThread()
+            _monitor.start()
+
+
+def register_routes():
+    try:
+        if not hasattr(server, "PromptServer") or not hasattr(server.PromptServer, "instance") or server.PromptServer.instance is None:
+            return
+        routes = server.PromptServer.instance.routes
+
+        @routes.get("/ds/hardware_monitor/stats")
+        async def hardware_stats(_request):
+            _touch_monitor()
+            with _LOCK:
+                if not _CACHE:
+                    data = collect()
+                    _CACHE.update(data)
+                else:
+                    data = dict(_CACHE)
+            return web.json_response(data)
+
+        @routes.post("/ds/hardware_monitor/action")
+        async def hardware_action(request):
+            try:
+                body = await request.json()
+                action = body.get("action")
+                _LOG.info("Action request: %s", action)
             except Exception:
-                _LOG.exception("Telemetry collection failed")
-            time.sleep(max(0.05, 1.0 - (time.monotonic() - started)))
+                _LOG.exception("Invalid hardware action request")
+                return web.json_response({"ok": False, "error": "Invalid request"}, status=400)
 
+            if action not in {"free_vram", "unload_models"}:
+                _LOG.warning("Unknown action: %r", action)
+                return web.json_response({"ok": False, "error": "Unknown action"}, status=400)
 
-_LOG.info("Starting hardware telemetry thread")
-_monitor = _MonitorThread(name="DS-HardwareMonitor", daemon=True)
-_monitor.start()
-
-
-@server.PromptServer.instance.routes.get("/ds/hardware_monitor/stats")
-async def hardware_stats(_request):
-    with _LOCK:
-        data = dict(_CACHE)
-    return web.json_response(data)
-
-
-@server.PromptServer.instance.routes.post("/ds/hardware_monitor/action")
-async def hardware_action(request):
-    try:
-        body = await request.json()
-        action = body.get("action")
-        _LOG.info("Action request: %s", action)
-    except Exception:
-        _LOG.exception("Invalid hardware action request")
-        return web.json_response({"ok": False, "error": "Invalid request"}, status=400)
-
-    if action not in {"free_vram", "unload_models"}:
-        _LOG.warning("Unknown action: %r", action)
-        return web.json_response({"ok": False, "error": "Unknown action"}, status=400)
-
-    try:
-        import comfy.model_management as mm
-        if action == "unload_models":
-            mm.unload_all_models()
-        mm.soft_empty_cache()
-        _LOG.info("Action completed: %s", action)
-        return web.json_response({"ok": True})
+            try:
+                import gc
+                import comfy.model_management as mm
+                if action == "unload_models":
+                    mm.unload_all_models()
+                mm.soft_empty_cache()
+                if torch is not None and hasattr(torch, "cuda") and torch.cuda.is_available():
+                    try:
+                        torch.cuda.empty_cache()
+                        torch.cuda.ipc_collect()
+                    except Exception:
+                        pass
+                gc.collect()
+                if sys.platform.startswith("linux"):
+                    try:
+                        import ctypes
+                        libc = ctypes.CDLL("libc.so.6")
+                        if hasattr(libc, "malloc_trim"):
+                            libc.malloc_trim(0)
+                    except Exception:
+                        pass
+                if sys.platform == "win32":
+                    try:
+                        import ctypes
+                        k32 = ctypes.windll.kernel32
+                        psapi = ctypes.windll.psapi
+                        psapi.EmptyWorkingSet(k32.GetCurrentProcess())
+                    except Exception:
+                        pass
+            except Exception:
+                _LOG.exception("Hardware action failed: %s", action)
+                return web.json_response({"ok": False, "error": "Action failed"}, status=500)
+            return web.json_response({"ok": True, "action": action})
     except Exception as e:
-        _LOG.exception("Action failed: %s", action)
-        return web.json_response({"ok": False, "error": str(e)}, status=500)
+        _LOG.debug("Route registration skipped/failed: %s", e)
+
+register_routes()
 
 
 class DS_HardwareMonitor:

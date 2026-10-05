@@ -1,37 +1,57 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
+import { Card, ColorPicker, normalizeDSWidgetHost, protectDSResizeCorners, installDSUI, DSIcon } from "../UIElements/index.js";
 import { createPreview } from "./outpaint_canvas.js";
 import { openSettings } from "./outpaint_settings.js";
-import { openAccentPicker } from "../Control Panel/settings.mjs";
 import { calculatePreview } from "./outpaint_math.js";
 
 const TYPE = "DS_Outpaint";
 const CSS = "/extensions/DeathshotArsenal/Outpaint/outpaint.css";
 const UI_KEY = "ds_outpaint_state";
 
-// Compact geometry footprint
 const MIN_W = 280;
-const DEFAULT_W = 320;
+const DEFAULT_W = 340;
+const MIN_COLLAPSED_H = 260;
 const MIN_EXPANDED_H = 360;
-const DEFAULT_EXPANDED_H = 450;
-const MIN_COLLAPSED_H = 240;
-const DEFAULT_COLLAPSED_H = 300;
+const DEFAULT_EXPANDED_H = 480;
 
-// The native socket lane (title + 4 output slots) spans 0 to 106px.
-// DOM controls start below this lane so sockets and link wires are never covered.
-const NATIVE_LANE_H = 106;
-const BOTTOM_INSET = 6;
-const SIDE_INSET = 4;
+function getMinHeight(node) {
+  return node?._dsState?.collapsed ? MIN_COLLAPSED_H : MIN_EXPANDED_H;
+}
+
+const NATIVE_LANE_H = 110;
+const CARD_MARGIN = 5;
 
 const DEFAULT_RATIOS = ["1:1", "4:5", "16:9", "9:16", "3:2", "2:3", "21:9", "4:3"];
 const DEFAULT_MP = [0, 1, 1.5, 2, 2.5, 3];
 const SNAP_VALUES = [8, 16, 32, 64];
+
+installDSUI();
 
 if (!document.querySelector(`link[href="${CSS}"]`)) {
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href = CSS;
   document.head.appendChild(link);
+}
+
+function registerOutpaintGearMenu() {
+  if (typeof window !== "undefined" && window.DSGearMenu?.register) {
+    const gearConfig = {
+      icon: "settings",
+      tooltip: "Outpaint Settings",
+      onClick: (n) => openSettings(n),
+    };
+    window.DSGearMenu.register(TYPE, gearConfig);
+    window.DSGearMenu.register("DS Outpaint", gearConfig);
+    return true;
+  }
+  return false;
+}
+
+if (!registerOutpaintGearMenu()) {
+  setTimeout(registerOutpaintGearMenu, 250);
+  setTimeout(registerOutpaintGearMenu, 1000);
 }
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
@@ -52,7 +72,6 @@ function defaults() {
     collapsed: false,
     saved_width: DEFAULT_W,
     expanded_height: DEFAULT_EXPANDED_H,
-    collapsed_height: DEFAULT_COLLAPSED_H,
     custom_ratios: [...DEFAULT_RATIOS],
     custom_mp: [...DEFAULT_MP],
   };
@@ -70,8 +89,7 @@ function loadState(node) {
   s.target_mp = Math.max(0, Number(s.target_mp) || 0);
   s.fill_color = /^#[0-9a-f]{6}$/i.test(String(s.fill_color || "")) ? String(s.fill_color) : "#808080";
   s.saved_width = Math.max(MIN_W, Math.round(Number(s.saved_width) || DEFAULT_W));
-  s.expanded_height = Math.max(MIN_EXPANDED_H, Math.round(Number(s.expanded_height) || DEFAULT_EXPANDED_H));
-  s.collapsed_height = Math.max(MIN_COLLAPSED_H, Math.round(Number(s.collapsed_height) || DEFAULT_COLLAPSED_H));
+  s.expanded_height = Math.max(s.collapsed ? MIN_COLLAPSED_H : MIN_EXPANDED_H, Math.round(Number(s.expanded_height) || DEFAULT_EXPANDED_H));
   s.collapsed = Boolean(s.collapsed);
   return s;
 }
@@ -147,7 +165,7 @@ function syncHiddenWidgets(node) {
 function btn(text, cls = "", active = false) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = `ds-op-btn ${cls}${active ? " is-active" : ""}`.trim();
+  b.className = `ds-ui-btn ds-ui-btn-compact ${cls}${active ? " is-active" : ""}`.trim();
   b.textContent = text;
   return b;
 }
@@ -175,45 +193,6 @@ function normalizeDirection(node) {
   if (labels.includes(s.direction)) return false;
   s.direction = "Both";
   return true;
-}
-
-function screenRect(node) {
-  const canvas = app?.canvas?.canvas;
-  const ds = app?.canvas?.ds;
-  if (!canvas || !ds || !node) return null;
-  const r = canvas.getBoundingClientRect();
-  const scale = Number(ds.scale) || 1;
-  const off = ds.offset || [0, 0];
-  return {
-    left: r.left + (Number(node.pos?.[0] || 0) + Number(off[0] || 0)) * scale,
-    top: r.top + (Number(node.pos?.[1] || 0) + Number(off[1] || 0)) * scale,
-    scale,
-  };
-}
-
-function syncOverlay(node) {
-  const root = node?._dsOverlay;
-  if (!root) return;
-  if (node.flags?.collapsed) {
-    root.style.display = "none";
-    return;
-  }
-  root.style.display = "flex";
-  const p = screenRect(node);
-  if (!p) return;
-
-  const currentW = Math.max(MIN_W, Number(node.size?.[0]) || DEFAULT_W);
-  const currentH = Math.max(
-    node._dsState?.collapsed ? MIN_COLLAPSED_H : MIN_EXPANDED_H,
-    Number(node.size?.[1]) || DEFAULT_EXPANDED_H
-  );
-
-  // Overlay starts below the socket lane at NATIVE_LANE_H
-  root.style.left = `${Math.round(p.left + SIDE_INSET * p.scale)}px`;
-  root.style.top = `${Math.round(p.top + NATIVE_LANE_H * p.scale)}px`;
-  root.style.width = `${Math.max(1, currentW - SIDE_INSET * 2)}px`;
-  root.style.height = `${Math.max(1, currentH - NATIVE_LANE_H - BOTTOM_INSET)}px`;
-  root.style.transform = `scale(${p.scale})`;
 }
 
 function isDrawable(v) {
@@ -303,7 +282,7 @@ function findImage(node) {
       for (const key of [
         "img", "image", "images", "imgs", "_dsLIPreview", "_dsILPreview",
         "previewImages", "preview_images", "preview", "previewImage",
-        "_dsImage", "_dsPreviewImage", "cachedImage", "outputImages"
+        "_dsImage", "_dsPreviewImage", "cachedImage", "outputImages",
       ]) {
         if (key in value) {
           const found = unwrap(value[key], depth + 1);
@@ -313,7 +292,6 @@ function findImage(node) {
       return null;
     };
 
-    // 1. Direct candidate checks on upstream node
     const candidates = [
       upstream._dsLIPreview?.img,
       upstream._dsLIPreview,
@@ -335,7 +313,6 @@ function findImage(node) {
       if (img) return img;
     }
 
-    // 2. Output images from executed node
     const out = app.nodeOutputs?.[upstream.id];
     if (out?.images?.length) {
       const item = out.images[0];
@@ -349,7 +326,6 @@ function findImage(node) {
       if (img) return img;
     }
 
-    // 3. Fallback to image loader widget before execution (real-time preview)
     const isImgFile = (v) => /\.(png|jpe?g|webp|bmp|tiff?|avif)$/i.test(String(v || "").trim());
     let fn = null;
     const imageWidget = upstream.widgets?.find((w) => w?.name === "image");
@@ -380,14 +356,10 @@ function findImage(node) {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Native Canvas Resolution HUD (Drawn between link sockets)
-// ---------------------------------------------------------------------------
 function drawResolutionHUD(node, ctx) {
   if (node.flags?.collapsed) return;
   const w = Number(node.size?.[0]) || DEFAULT_W;
 
-  // Clearances: left input slot ends at ~54px; right outputs start at (w - 92px)
   const leftClearance = 56;
   const rightClearance = 94;
   const availableW = w - leftClearance - rightClearance;
@@ -396,11 +368,10 @@ function drawResolutionHUD(node, ctx) {
   const boxW = Math.min(320, Math.max(130, availableW));
   const boxH = 46;
   const cx = leftClearance + availableW / 2;
-  const cy = Math.round(NATIVE_LANE_H / 2); // Symmetrical vertical center in the 0 to NATIVE_LANE_H socket lane
+  const cy = Math.round(NATIVE_LANE_H / 2);
   const x = Math.round(cx - boxW / 2);
   const y = Math.round(cy - boxH / 2);
 
-  // Compute telemetry values
   const img = node._dsImage || findImage(node);
   const iw = Number(img?.naturalWidth || img?.width || 0);
   const ih = Number(img?.naturalHeight || img?.height || 0);
@@ -416,30 +387,26 @@ function drawResolutionHUD(node, ctx) {
     isPadded = dims.totalW > iw || dims.totalH > ih;
   }
 
-  // Extract current theme colors with global theme support
-  const global = window.DSGlobalTheme;
   const getThemeVar = (name, fallback) => {
     try {
-      const v = global?.getVar?.(name, "");
+      const v = window.DSGlobalTheme?.getVar?.(name, "");
       if (v) return String(v).trim();
     } catch {}
-    if (node._dsOverlay) {
-      const cs = window.getComputedStyle(node._dsOverlay);
-      const v = cs.getPropertyValue(name).trim();
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
       if (v) return v;
-    }
+    } catch {}
     return fallback;
   };
 
-  const panelBg = getThemeVar("--ds-panel-2", "#151821");
-  const textCol = getThemeVar("--ds-text", "#ffffff");
-  const mutedCol = getThemeVar("--ds-text-muted", "#94a3b8");
-  const borderCol = getThemeVar("--ds-border", "rgba(255, 255, 255, 0.12)");
-  const accentCol = getThemeVar("--ds-accent", "#06b6d4");
+  const panelBg = getThemeVar("--ds-color-card", "#12151c");
+  const textCol = getThemeVar("--ds-color-text", "#e5e7eb");
+  const mutedCol = getThemeVar("--ds-color-muted-text", "#9ca3af");
+  const borderCol = getThemeVar("--ds-color-card-border", "rgba(255, 255, 255, 0.12)");
+  const accentCol = getThemeVar("--ds-color-accent", "#67e8f9");
 
   ctx.save();
 
-  // Draw card plate
   ctx.beginPath();
   if (ctx.roundRect) {
     ctx.roundRect(x, y, boxW, boxH, 8);
@@ -452,7 +419,6 @@ function drawResolutionHUD(node, ctx) {
   ctx.strokeStyle = borderCol;
   ctx.stroke();
 
-  // Layout columns
   const colW = (boxW - 32) / 2;
   const inColX = x + 10 + colW / 2;
   const arrowX = cx;
@@ -463,7 +429,6 @@ function drawResolutionHUD(node, ctx) {
 
   const numFont = colW < 70 ? "bold 9.5px Inter, monospace, sans-serif" : "bold 11px Inter, monospace, sans-serif";
 
-  // 1. IN Section
   ctx.font = "bold 8.5px Inter, system-ui, sans-serif";
   ctx.fillStyle = mutedCol;
   ctx.fillText("IN", inColX, y + 14);
@@ -472,12 +437,10 @@ function drawResolutionHUD(node, ctx) {
   ctx.fillStyle = textCol;
   ctx.fillText(inStr, inColX, y + 31);
 
-  // 2. Middle Chevron
   ctx.font = "900 12px Inter, system-ui, sans-serif";
   ctx.fillStyle = accentCol;
   ctx.fillText("❯❯", arrowX, y + 23);
 
-  // 3. OUT Section
   ctx.font = "bold 8.5px Inter, system-ui, sans-serif";
   ctx.fillStyle = isPadded ? "#38ef7d" : mutedCol;
   ctx.fillText(isPadded ? "OUT ▲" : "OUT", outColX, y + 14);
@@ -496,14 +459,36 @@ app.registerExtension({
 
     const oldCreated = nodeType.prototype.onNodeCreated;
     const oldConfigure = nodeType.prototype.onConfigure;
+    const oldSetSize = nodeType.prototype.setSize;
     const oldConnections = nodeType.prototype.onConnectionsChange;
     const oldSerialize = nodeType.prototype.onSerialize;
     const oldRemoved = nodeType.prototype.onRemoved;
     const oldDraw = nodeType.prototype.onDrawForeground;
     const oldMenu = nodeType.prototype.getExtraMenuOptions;
 
+    function removeHiddenSockets(node) {
+      if (!Array.isArray(node?.inputs)) return;
+      for (let i = node.inputs.length - 1; i >= 0; i--) {
+        const inp = node.inputs[i];
+        if (inp?.name !== "image") {
+          try {
+            if (inp.link != null && node.graph) {
+              node.graph.removeLink(inp.link);
+            }
+            node.removeInput(i);
+          } catch (_) {}
+        }
+      }
+    }
+
+    const oldAddInput = nodeType.prototype.addInput;
+    nodeType.prototype.addInput = function (name, type, extra_info) {
+      if (name !== "image") return null;
+      return oldAddInput.apply(this, arguments);
+    };
+
     nodeType.prototype.computeSize = function (out) {
-      const minH = this?._dsState?.collapsed ? MIN_COLLAPSED_H : MIN_EXPANDED_H;
+      const minH = getMinHeight(this);
       const result = [MIN_W, minH];
       if (Array.isArray(out)) {
         out[0] = result[0];
@@ -516,42 +501,44 @@ app.registerExtension({
     nodeType.prototype.onNodeCreated = function () {
       const result = oldCreated?.apply(this, arguments);
       try {
+        removeHiddenSockets(this);
         this.resizable = true;
         this.properties ||= {};
         this._dsState = loadState(this);
 
         const targetW = Math.max(MIN_W, Number(this._dsState.saved_width) || DEFAULT_W);
-        const targetH = Math.max(
-          this._dsState.collapsed ? MIN_COLLAPSED_H : MIN_EXPANDED_H,
-          this._dsState.collapsed ? this._dsState.collapsed_height : this._dsState.expanded_height
-        );
+        const targetH = Math.max(getMinHeight(this), Number(this._dsState.expanded_height) || (this._dsState.collapsed ? MIN_COLLAPSED_H : DEFAULT_EXPANDED_H));
         this.size = [targetW, targetH];
         this._dsImage = null;
         syncHiddenWidgets(this);
 
-        // Overlay placed strictly below the socket lane
-        const root = document.createElement("div");
-        root.className = "ds-op-overlay";
-        root.dataset.dsThemed = "true";
-        this._dsOverlay = root;
-        document.body.appendChild(root);
-        this._dsThemeUnsub = window.DSGlobalTheme?.bindNode?.(root, null) || null;
+        const card = Card({ className: "ds-op-card" });
 
-        // Shell containing all interactive controls
-        const shell = document.createElement("div");
-        shell.className = "ds-op-shell";
-
+        // Header: [ Collapse ] [ To ratio ] [ By side ] [ ColorPicker Trigger ]
         const header = document.createElement("div");
         header.className = "ds-op-header";
-        const collapse = btn("▼", "ds-op-collapse");
+        const collapse = btn(this._dsState.collapsed ? "▲" : "▼", "ds-op-collapse");
         collapse.title = "Collapse / Expand Controls";
         const toRatio = btn("To ratio", "ds-op-tab", this._dsState.mode === "To ratio");
         const bySide = btn("By side", "ds-op-tab", this._dsState.mode === "By side");
-        const swatch = btn("", "ds-op-swatch");
-        swatch.title = "Pad Color";
-        const gear = btn("⚙", "ds-op-gear");
-        gear.title = "Preset Settings";
-        header.append(collapse, toRatio, bySide, swatch, gear);
+
+        // ColorPicker directly anchored inside header for exact positioning next to node
+        const colorPicker = ColorPicker({
+          node: this,
+          className: "ds-op-color-picker",
+          value: this._dsState.fill_color,
+          onChange: (hex) => {
+            this._dsBeginChange();
+            this._dsState.fill_color = String(hex).toLowerCase();
+            this._dsCommit();
+          },
+        });
+        this._dsColorPicker = colorPicker;
+
+        this._toggleOutpaintGearPopover = () => openSettings(this);
+        this._openOutpaintGearPopover = () => openSettings(this);
+
+        header.append(collapse, toRatio, bySide, colorPicker.root);
 
         const summary = document.createElement("div");
         summary.className = "ds-op-summary";
@@ -572,17 +559,16 @@ app.registerExtension({
 
         const preview = document.createElement("div");
         preview.className = "ds-op-preview";
-        shell.append(header, summary, body, preview);
-        root.append(shell);
 
+        card.append(header, summary, body, preview);
+
+        this._dsCard = card;
         this._dsRefs = {
-          shell,
           header,
           collapse,
           toRatio,
           bySide,
-          swatch,
-          gear,
+          colorPicker,
           summary,
           body,
           ratios,
@@ -596,13 +582,49 @@ app.registerExtension({
         this._dsPreview = createPreview(preview, () => this._dsState);
         this._dsPreview.mount();
 
+        const minWidgetH = () => (this._dsState?.collapsed ? 140 : 240);
+        const getWidgetHeight = () => {
+          const widgetY = Number(domWidget?.y ?? this._getWidgetY?.() ?? NATIVE_LANE_H);
+          const nodeHeight = Number(this.size?.[1] ?? (this._dsState?.collapsed ? MIN_COLLAPSED_H : DEFAULT_EXPANDED_H));
+          return Math.max(minWidgetH(), nodeHeight - widgetY - CARD_MARGIN);
+        };
+        this._dsGetWidgetHeight = getWidgetHeight;
+
+        const domWidget = this.addDOMWidget("ds_outpaint_ui", "custom", card.root, {
+          serialize: false,
+          margin: CARD_MARGIN,
+          getMinHeight: minWidgetH,
+          getHeight: getWidgetHeight,
+        });
+        this._dsDOMWidget = domWidget;
+
+        domWidget.computeSize = (width) => [width || this.size?.[0] || DEFAULT_W, getWidgetHeight()];
+
+        this._dsSyncLayout = () => {
+          if (!this.size) return;
+          const targetH = getWidgetHeight();
+          if (domWidget) {
+            domWidget.computedHeight = targetH;
+          }
+          if (card.root) {
+            card.root.style.height = "100%";
+          }
+          if (card.root?.parentElement) {
+            card.root.parentElement.style.height = `${targetH}px`;
+          }
+        };
+
+        normalizeDSWidgetHost(card.root, this, { shell: false });
+        protectDSResizeCorners(this);
+        registerOutpaintGearMenu();
+
         const refresh = () => {
           this._dsImage = findImage(this);
           const directionChanged = normalizeDirection(this);
           if (directionChanged) persist(this);
           this._dsPreview?.setState(this._dsState, this._dsImage);
           this._dsUpdateUI?.();
-          syncOverlay(this);
+          this._dsSyncLayout?.();
           this.setDirtyCanvas?.(true, true);
         };
         this._dsRefreshPreview = refresh;
@@ -613,6 +635,7 @@ app.registerExtension({
             persist(this);
             syncHiddenWidgets(this);
             this._dsUpdateUI?.();
+            this._dsSyncLayout?.();
             refresh();
             this.setDirtyCanvas?.(true, true);
           } catch (e) {
@@ -622,22 +645,18 @@ app.registerExtension({
           }
         };
 
+        // Collapse toggles ONLY the middle controls block; node dimensions are never shrunk below preview
         collapse.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
           this._dsBeginChange();
-          const w = Math.max(MIN_W, Number(this.size?.[0]) || DEFAULT_W);
-          if (this._dsState.collapsed) {
-            this._dsState.collapsed = false;
-            const targetH = Math.max(MIN_EXPANDED_H, Number(this._dsState.expanded_height) || DEFAULT_EXPANDED_H);
-            this.size = [w, targetH];
-          } else {
-            this._dsState.expanded_height = Math.max(MIN_EXPANDED_H, Number(this.size?.[1]) || DEFAULT_EXPANDED_H);
-            this._dsState.collapsed = true;
-            const targetH = Math.max(MIN_COLLAPSED_H, Number(this._dsState.collapsed_height) || DEFAULT_COLLAPSED_H);
-            this.size = [w, targetH];
+          this._dsState.collapsed = !this._dsState.collapsed;
+          if (!this._dsState.collapsed && Array.isArray(this.size) && this.size[1] < MIN_EXPANDED_H) {
+            this.size[1] = MIN_EXPANDED_H;
+            this._dsState.expanded_height = MIN_EXPANDED_H;
           }
           this._dsCommit();
+          this.setDirtyCanvas?.(true, true);
         });
 
         toRatio.addEventListener("click", (e) => {
@@ -655,26 +674,6 @@ app.registerExtension({
           this._dsBeginChange();
           this._dsState.mode = "By side";
           this._dsCommit();
-        });
-
-        gear.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          openSettings(this);
-        });
-
-        swatch.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          this.properties.ds_cp_accent = String(this._dsState.fill_color).toLowerCase();
-          openAccentPicker(app, this, {
-            setAccent: (color) => {
-              this._dsBeginChange();
-              this._dsState.fill_color = String(color).toLowerCase();
-              this.properties.ds_cp_accent = this._dsState.fill_color;
-              this._dsCommit();
-            },
-          });
         });
 
         const rebuildGrid = (container, items, active, handler, cls) => {
@@ -700,14 +699,19 @@ app.registerExtension({
           r.collapse.textContent = s.collapsed ? "▲" : "▼";
           r.toRatio.classList.toggle("is-active", s.mode === "To ratio");
           r.bySide.classList.toggle("is-active", s.mode === "By side");
-          r.swatch.style.setProperty("--ds-op-swatch-color", s.fill_color);
-          r.swatch.style.setProperty("background-color", s.fill_color, "important");
-          r.swatch.style.setProperty("border-color", s.fill_color, "important");
+          this._dsColorPicker?.setValue?.(s.fill_color, false);
+
+          const snapSummary = btn("", "ds-op-summary-item", s.snap_enabled);
+          snapSummary.style.display = "inline-flex";
+          snapSummary.style.alignItems = "center";
+          snapSummary.style.justifyContent = "center";
+          snapSummary.style.gap = "2px";
+          snapSummary.append(DSIcon("magnet", { size: 12 }), document.createTextNode(s.snap_enabled ? ` ${s.snap_multiple}` : " Off"));
 
           r.summary.replaceChildren(
             btn(`${s.ratio}`, "ds-op-summary-item", true),
             btn(s.direction || "Both", "ds-op-summary-item", true),
-            btn(s.snap_enabled ? `S:${s.snap_multiple}` : "Snap:Off", "ds-op-summary-item", s.snap_enabled),
+            snapSummary,
             btn(Number(s.target_mp) > 0 ? `${s.target_mp}MP` : "MP:Off", "ds-op-summary-item", Number(s.target_mp) > 0)
           );
           r.summary.children[0].onclick = () => openSettings(this);
@@ -717,8 +721,11 @@ app.registerExtension({
             this._dsCommit();
           };
           r.summary.children[3].onclick = () => openSettings(this);
+
+          // Controls collapse into summary row; preview remains 100% visible and expands
           r.summary.style.display = s.collapsed ? "grid" : "none";
           r.body.style.display = s.collapsed ? "none" : "flex";
+          r.preview.style.display = "block";
 
           rebuildGrid(
             r.ratios,
@@ -731,6 +738,7 @@ app.registerExtension({
             },
             "ds-op-ratios"
           );
+          r.ratios.style.display = s.mode === "To ratio" ? "grid" : "none";
 
           rebuildGrid(
             r.directions,
@@ -782,24 +790,38 @@ app.registerExtension({
           r.sides.appendChild(reset);
           r.sides.style.display = s.mode === "By side" ? "grid" : "none";
 
-          const snapItems = ["Snap ON", ...SNAP_VALUES.map(String)];
-          rebuildGrid(
-            r.snap,
-            snapItems,
-            null,
-            (v) => {
-              if (v === "Snap ON") s.snap_enabled = !s.snap_enabled;
-              else s.snap_multiple = Number(v);
+          // Snap row with magnet icon toggle
+          r.snap.replaceChildren();
+          r.snap.classList.toggle("is-muted", !s.snap_enabled);
+          const snapToggle = document.createElement("button");
+          snapToggle.type = "button";
+          snapToggle.className = `ds-ui-btn ds-ui-btn-compact ds-op-snap-toggle${s.snap_enabled ? " is-active" : ""}`;
+          snapToggle.title = s.snap_enabled ? "Snap: ON" : "Snap: OFF";
+          snapToggle.appendChild(DSIcon("magnet", { size: 14 }));
+          snapToggle.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this._dsBeginChange?.();
+            s.snap_enabled = !s.snap_enabled;
+            this._dsCommit();
+          });
+          r.snap.appendChild(snapToggle);
+
+          for (const val of SNAP_VALUES) {
+            const b = btn(String(val), "", s.snap_enabled && Number(s.snap_multiple) === Number(val));
+            if (!s.snap_enabled) {
+              b.style.opacity = "0.35";
+              b.style.pointerEvents = "none";
+              b.style.filter = "grayscale(1)";
+            }
+            b.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              this._dsBeginChange?.();
+              s.snap_multiple = Number(val);
               this._dsCommit();
-            },
-            "ds-op-snap"
-          );
-          r.snap.children[0]?.classList.toggle("is-active", s.snap_enabled);
-          for (let i = 1; i < r.snap.children.length; i++) {
-            r.snap.children[i]?.classList.toggle(
-              "is-active",
-              Number(r.snap.children[i].textContent) === Number(s.snap_multiple)
-            );
+            });
+            r.snap.appendChild(b);
           }
 
           rebuildGrid(
@@ -812,13 +834,10 @@ app.registerExtension({
             },
             "ds-op-mp"
           );
-
-          syncOverlay(this);
         };
 
         this._dsUpdateUI();
         refresh();
-        syncOverlay(this);
       } catch (e) {
         errorLog("node-created", e, { node: this.id });
       }
@@ -826,25 +845,28 @@ app.registerExtension({
     };
 
     const oldResize = nodeType.prototype.onResize;
-    nodeType.prototype.onResize = function () {
+    nodeType.prototype.onResize = function (size) {
+      const minH = getMinHeight(this);
+      const targetW = size ? size[0] : this.size?.[0];
+      const targetH = size ? size[1] : this.size?.[1];
+      const w = Math.max(MIN_W, Math.round(Number(targetW) || MIN_W));
+      const h = Math.max(minH, Math.round(Number(targetH) || minH));
+      if (size) {
+        size[0] = w;
+        size[1] = h;
+      }
+      if (this.size) {
+        this.size[0] = w;
+        this.size[1] = h;
+      }
       const result = oldResize?.apply(this, arguments);
       try {
-        if (Array.isArray(this.size) && this._dsState) {
-          const w = Math.max(MIN_W, Math.round(Number(this.size[0]) || DEFAULT_W));
-          const minH = this._dsState.collapsed ? MIN_COLLAPSED_H : MIN_EXPANDED_H;
-          const h = Math.max(minH, Math.round(Number(this.size[1]) || minH));
-          this.size[0] = w;
-          this.size[1] = h;
-
+        if (this._dsState) {
           this._dsState.saved_width = w;
-          if (this._dsState.collapsed) {
-            this._dsState.collapsed_height = h;
-          } else {
-            this._dsState.expanded_height = h;
-          }
+          this._dsState.expanded_height = h;
           persist(this);
         }
-        syncOverlay(this);
+        this._dsSyncLayout?.();
         this._dsPreview?.setState?.(this._dsState, this._dsImage);
         this.setDirtyCanvas?.(true, true);
       } catch (e) {
@@ -853,32 +875,68 @@ app.registerExtension({
       return result;
     };
 
-    nodeType.prototype.onConfigure = function () {
+    nodeType.prototype.setSize = function (size) {
+      if (!size) return;
+      const minH = getMinHeight(this);
+      const w = Math.max(MIN_W, Math.round(Number(size[0]) || MIN_W));
+      const h = Math.max(minH, Math.round(Number(size[1]) || minH));
+      this.size = [w, h];
+      const result = oldSetSize ? oldSetSize.apply(this, [[w, h]]) : undefined;
+      if (this.size) {
+        this.size[0] = w;
+        this.size[1] = h;
+      }
+      if (this._dsState) {
+        this._dsState.saved_width = w;
+        this._dsState.expanded_height = h;
+        persist(this);
+      }
+      this._dsSyncLayout?.();
+      this._dsPreview?.setState?.(this._dsState, this._dsImage);
+      this.setDirtyCanvas?.(true, true);
+      return result;
+    };
+
+    nodeType.prototype.onConfigure = function (info) {
       const result = oldConfigure?.apply(this, arguments);
       try {
+        removeHiddenSockets(this);
         this.properties ||= {};
+        if (info?.properties?.[UI_KEY]) {
+          this.properties[UI_KEY] = { ...(this.properties[UI_KEY] || {}), ...info.properties[UI_KEY] };
+        }
         this._dsState = loadState(this);
         syncHiddenWidgets(this);
 
-        const loadedW = Math.max(MIN_W, Number(this.size?.[0]) || Number(this._dsState.saved_width) || DEFAULT_W);
-        const minH = this._dsState.collapsed ? MIN_COLLAPSED_H : MIN_EXPANDED_H;
-        const loadedH = Math.max(
-          minH,
-          Number(this.size?.[1]) || (this._dsState.collapsed ? this._dsState.collapsed_height : this._dsState.expanded_height)
-        );
+        const minH = getMinHeight(this);
+        const rawW = info?.size?.[0] ?? this.properties?.[UI_KEY]?.saved_width ?? this._dsState?.saved_width ?? this.size?.[0];
+        const rawH = info?.size?.[1] ?? this.properties?.[UI_KEY]?.expanded_height ?? this._dsState?.expanded_height ?? this.size?.[1];
+
+        const loadedW = Math.max(MIN_W, Math.round(Number(rawW) || DEFAULT_W));
+        const loadedH = Math.max(minH, Math.round(Number(rawH) || (this._dsState?.collapsed ? MIN_COLLAPSED_H : DEFAULT_EXPANDED_H)));
 
         this.size = [loadedW, loadedH];
         this._dsState.saved_width = loadedW;
-        if (this._dsState.collapsed) this._dsState.collapsed_height = loadedH;
-        else this._dsState.expanded_height = loadedH;
+        this._dsState.expanded_height = loadedH;
+        persist(this);
 
         this._dsUpdateUI?.();
+        this._dsSyncLayout?.();
         this._dsRefreshPreview?.();
-        syncOverlay(this);
         this.setDirtyCanvas?.(true, true);
+
         setTimeout(() => {
+          this.size = [loadedW, loadedH];
+          this._dsSyncLayout?.();
+          this._dsPreview?.setState?.(this._dsState, this._dsImage);
           this._dsRefreshPreview?.();
-        }, 150);
+          this.setDirtyCanvas?.(true, true);
+        }, 50);
+        setTimeout(() => {
+          this.size = [loadedW, loadedH];
+          this._dsSyncLayout?.();
+          this.setDirtyCanvas?.(true, true);
+        }, 200);
       } catch (e) {
         errorLog("configure", e, { node: this.id });
       }
@@ -902,15 +960,21 @@ app.registerExtension({
       return result;
     };
 
-    nodeType.prototype.onSerialize = function () {
+    nodeType.prototype.onSerialize = function (o) {
       try {
         if (Array.isArray(this.size) && this._dsState) {
           this._dsState.saved_width = Math.round(this.size[0]);
-          if (this._dsState.collapsed) this._dsState.collapsed_height = Math.round(this.size[1]);
-          else this._dsState.expanded_height = Math.round(this.size[1]);
+          this._dsState.expanded_height = Math.round(this.size[1]);
         }
         persist(this);
         syncHiddenWidgets(this);
+        if (o) {
+          if (Array.isArray(this.size)) {
+            o.size = [Math.round(this.size[0]), Math.round(this.size[1])];
+          }
+          o.properties = o.properties || {};
+          o.properties[UI_KEY] = clone(this._dsState);
+        }
       } catch (e) {
         errorLog("serialize", e, { node: this.id });
       }
@@ -920,8 +984,6 @@ app.registerExtension({
     nodeType.prototype.onDrawForeground = function (ctx) {
       const result = oldDraw?.apply(this, arguments);
       try {
-        syncOverlay(this);
-
         const currentImg = findImage(this);
         const prevImg = this._dsImage;
         const currentW = Number(currentImg?.naturalWidth || currentImg?.width || 0);
@@ -946,30 +1008,25 @@ app.registerExtension({
 
     nodeType.prototype.getExtraMenuOptions = function (canvas, options) {
       oldMenu?.apply(this, arguments);
-      options.push({ content: "Outpaint Settings", callback: () => openSettings(this) });
+      options.push({
+        content: "⚙ Outpaint Settings",
+        callback: () => openSettings(this),
+      });
       options.push({
         content: this._dsState?.collapsed ? "Expand Controls" : "Collapse Controls",
         callback: () => {
           this._dsState ||= loadState(this);
           beginHistory(this);
-          const w = Math.max(MIN_W, Number(this.size?.[0]) || DEFAULT_W);
-          if (this._dsState.collapsed) {
-            this._dsState.collapsed = false;
-            this.size = [w, Math.max(MIN_EXPANDED_H, Number(this._dsState.expanded_height) || DEFAULT_EXPANDED_H)];
-          } else {
-            this._dsState.expanded_height = Math.max(MIN_EXPANDED_H, Number(this.size?.[1]) || DEFAULT_EXPANDED_H);
-            this._dsState.collapsed = true;
-            this.size = [w, Math.max(MIN_COLLAPSED_H, Number(this._dsState.collapsed_height) || DEFAULT_COLLAPSED_H)];
-          }
+          this._dsState.collapsed = !this._dsState.collapsed;
           this._dsCommit?.();
         },
       });
     };
 
     nodeType.prototype.onRemoved = function () {
+      try { this._dsColorPicker?.destroy?.(); } catch (_) {}
       try { this._dsPreview?.destroy?.(); } catch (_) {}
-      try { this._dsThemeUnsub?.(); } catch (_) {}
-      try { this._dsOverlay?.remove?.(); } catch (_) {}
+      try { this._dsCard?.destroy?.(); } catch (_) {}
       return oldRemoved?.apply(this, arguments);
     };
   },

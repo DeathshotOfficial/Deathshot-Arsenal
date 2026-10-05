@@ -1,7 +1,7 @@
 // DeathshotArsenal/js/Load Images From Folder/ds_load_images_from_folder.js
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
-import { installDSUISystem, normalizeDSWidgetHost, protectDSResizeCorners } from "../Shared/ds_ui_system.js";
+import { installDSUI, normalizeDSWidgetHost, protectDSResizeCorners } from "../UIElements/index.js";
 import { browseFolderOS } from "./os_dialog_bridge.js";
 import { openGalleryModal } from "./gallery_modal.js";
 import {
@@ -50,7 +50,7 @@ const DEFAULT_STATE = {
 };
 
 function injectCSS() {
-  installDSUISystem();
+  installDSUI();
 
   let link = document.getElementById("ds-load-images-from-folder-link");
   if (!link) {
@@ -462,7 +462,7 @@ function injectCSS() {
       pointer-events: none;
     }
     /* Switch Toggle */
-    .ds-ui-toggle {
+    [class*="ds-fl"] .ds-ui-toggle {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -474,7 +474,7 @@ function injectCSS() {
       font: 700 9px inherit;
       user-select: none;
     }
-    .ds-ui-toggle-track {
+    [class*="ds-fl"] .ds-ui-toggle-track {
       position: relative;
       width: 28px;
       height: 15px;
@@ -485,7 +485,7 @@ function injectCSS() {
       display: inline-block;
       flex-shrink: 0;
     }
-    .ds-ui-toggle-thumb {
+    [class*="ds-fl"] .ds-ui-toggle-thumb {
       position: absolute;
       top: 50%;
       left: 2px;
@@ -497,20 +497,20 @@ function injectCSS() {
       transition: left 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
       display: block;
     }
-    .ds-ui-toggle.is-on .ds-ui-toggle-track {
+    [class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-track {
       border-color: var(--ds-accent, #67e8f9);
       background: color-mix(in srgb, var(--ds-accent, #67e8f9) 20%, var(--ds-panel-2, #161a23));
     }
-    .ds-ui-toggle.is-on .ds-ui-toggle-thumb {
+    [class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-thumb {
       left: 15px;
       background: var(--ds-accent, #67e8f9);
       box-shadow: 0 0 6px var(--ds-accent, #67e8f9);
     }
-    .ds-ui-toggle-label {
+    [class*="ds-fl"] .ds-ui-toggle-label {
       color: var(--ds-text-muted, #a1a8b3);
       font-size: 9px;
     }
-    .ds-ui-toggle.is-on .ds-ui-toggle-label {
+    [class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-label {
       color: var(--ds-text, #fff);
     }
     .ds-fl-dropdown {
@@ -670,7 +670,7 @@ function injectCSS() {
     }
 
     /* Node Widget Switch Toggle */
-    .ds-ui-toggle {
+    [class*="ds-fl"] .ds-ui-toggle {
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -685,10 +685,10 @@ function injectCSS() {
       line-height: 1;
       vertical-align: middle;
     }
-    .ds-ui-toggle:hover .ds-ui-toggle-track {
+    [class*="ds-fl"] .ds-ui-toggle:hover .ds-ui-toggle-track {
       border-color: var(--ds-accent, #67e8f9);
     }
-    .ds-ui-toggle-track {
+    [class*="ds-fl"] .ds-ui-toggle-track {
       position: relative;
       width: 28px;
       height: 15px;
@@ -699,7 +699,7 @@ function injectCSS() {
       display: inline-block;
       flex-shrink: 0;
     }
-    .ds-ui-toggle-thumb {
+    [class*="ds-fl"] .ds-ui-toggle-thumb {
       position: absolute;
       top: 50%;
       left: 2px;
@@ -711,22 +711,22 @@ function injectCSS() {
       transition: left 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
       display: block;
     }
-    .ds-ui-toggle.is-on .ds-ui-toggle-track {
+    [class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-track {
       border-color: var(--ds-accent, #67e8f9);
       background: color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, var(--ds-panel-2, #161a23));
     }
-    .ds-ui-toggle.is-on .ds-ui-toggle-thumb {
+    [class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-thumb {
       left: 15px;
       background: var(--ds-accent, #67e8f9);
       box-shadow: 0 0 6px var(--ds-accent, #67e8f9);
     }
-    .ds-ui-toggle-label {
+    [class*="ds-fl"] .ds-ui-toggle-label {
       color: var(--ds-text-muted, #a1a8b3);
       font-size: 9.5px;
       line-height: 15px;
       white-space: nowrap;
     }
-    .ds-ui-toggle.is-on .ds-ui-toggle-label {
+    [class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-label {
       color: var(--ds-text, #fff);
     }
 

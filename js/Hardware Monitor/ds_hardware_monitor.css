@@ -26,10 +26,10 @@
   row-gap:2.6%;
   padding:2.5%;
   overflow:hidden;
-  background:var(--hw-bg);
+  background:var(--hw-panel);
   color:var(--hw-text);
   border:1px solid color-mix(in srgb,var(--hw-border) 88%,transparent);
-  border-radius:10px;
+  border-radius:8px;
   font-family:var(--ds-font,Inter,"Segoe UI",system-ui,sans-serif);
   user-select:none;
   position:relative;

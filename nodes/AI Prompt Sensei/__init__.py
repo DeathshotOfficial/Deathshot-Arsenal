@@ -19,6 +19,7 @@ try:
         analyze_image_for_context,
         fetch_lm_studio_models,
         unload_lm_studio_model,
+        start_lm_studio_server,
     )
 except (ImportError, ValueError):
     import sys
@@ -41,55 +42,22 @@ logger = logging.getLogger("DeathshotArsenal.AIPromptSensei")
 
 
 def _get_hardware_info():
-    """Return GPU and system memory information for VRAM advisory warnings."""
-    info = {
-        "gpu_name": "Unknown",
-        "total_vram_mb": 0,
-        "available_vram_mb": 0,
-        "system_ram_mb": 0,
-        "has_gpu": False,
-    }
-    # GPU via pynvml
+    """Return GPU and system memory information for VRAM advisory warnings (Linux & Windows)."""
     try:
-        import pynvml
-        pynvml.nvmlInit()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-        info["gpu_name"] = pynvml.nvmlDeviceGetName(handle)
-        if isinstance(info["gpu_name"], bytes):
-            info["gpu_name"] = info["gpu_name"].decode("utf-8", errors="replace")
-        mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        info["total_vram_mb"] = int(mem.total / 1024 / 1024)
-        info["available_vram_mb"] = int(mem.free / 1024 / 1024)
-        info["has_gpu"] = True
-    except Exception:
-        pass
-
-    # Fallback via torch
-    if not info["has_gpu"]:
         try:
-            import torch
-            if torch.cuda.is_available():
-                props = torch.cuda.get_device_properties(0)
-                info["gpu_name"] = props.name
-                total = props.total_memory
-                info["total_vram_mb"] = int(total / 1024 / 1024)
-                reserved = torch.cuda.memory_reserved(0)
-                allocated = torch.cuda.memory_allocated(0)
-                available = total - reserved
-                info["available_vram_mb"] = int(available / 1024 / 1024)
-                info["has_gpu"] = True
+            from .telemetry import get_hardware_info
         except Exception:
-            pass
-
-    # System RAM
-    try:
-        import psutil
-        vm = psutil.virtual_memory()
-        info["system_ram_mb"] = int(vm.total / 1024 / 1024)
-    except Exception:
-        pass
-
-    return info
+            from telemetry import get_hardware_info
+        return get_hardware_info()
+    except Exception as e:
+        logger.warning(f"[Prompt Sensei] Telemetry get_hardware_info error: {e}")
+        return {
+            "gpu_name": "Unknown",
+            "total_vram_mb": 0,
+            "available_vram_mb": 0,
+            "system_ram_mb": 0,
+            "has_gpu": False,
+        }
 
 
 def register_prompt_sensei_routes():
@@ -175,33 +143,92 @@ def register_prompt_sensei_routes():
             return web.json_response({"unloaded": unloaded})
 
         # ------------------------------------------------------------------
+        # Default System Prompts
+        # ------------------------------------------------------------------
+        @routes.get("/ds/prompt_sensei/default_prompts")
+        async def get_default_prompts_handler(request):
+            try:
+                try:
+                    from .prompt_manager import get_all_default_prompts
+                except Exception:
+                    from prompt_manager import get_all_default_prompts
+                return web.json_response(get_all_default_prompts())
+            except Exception as e:
+                logger.error(f"[Prompt Sensei] Failed to get default prompts: {e}")
+                return web.json_response({"error": str(e)}, status=500)
+
+        # ------------------------------------------------------------------
         # Prompt generation (LM Studio API: Image + Notes + System Prompt)
         # ------------------------------------------------------------------
         @routes.post("/ds/prompt_sensei/generate")
         async def generate_handler(request):
             try:
                 data = await request.json()
+                mode = str(data.get("mode") or "i2v").lower()
+                provider = str(data.get("provider") or "lm_studio").lower()
+
+                # In Custom mode, return the custom prompt directly without LLM
+                if mode == "custom":
+                    custom_text = str(data.get("custom_text") or data.get("scene_notes") or "").strip()
+                    return web.json_response({
+                        "status": "completed",
+                        "prompt": custom_text,
+                        "tokens": 0,
+                        "speed": 0.0,
+                        "elapsed": 0.01,
+                        "model": "Custom",
+                    })
+
                 scene_notes = data.get("scene_notes", "")
-                system_prompt = data.get("system_prompt", "")
+                system_prompts = data.get("system_prompts") or {}
+                system_prompt = data.get("system_prompt") or system_prompts.get(mode, "")
                 context = data.get("context", {})
                 task_id = data.get("task_id")
                 lm_studio_cfg = data.get("lm_studio") or {}
                 auto_unload = bool(data.get("auto_unload", False)) or bool(lm_studio_cfg.get("unload_after_run", False))
                 lm_studio_cfg["unload_after_run"] = auto_unload
 
-                image_path = data.get("image_path", "") or context.get("image_path", "")
-                if image_path:
-                    try:
-                        img_analysis = analyze_image_for_context(image_path)
-                        context["image_analysis"] = img_analysis
-                        context["has_image"] = True
-                    except Exception as e:
-                        logger.warning(f"[Prompt Sensei] Image analysis failed: {e}")
-                        context["has_image"] = bool(image_path)
-                else:
+                # Image is ignored in T2I and T2V modes
+                if mode in ("t2i", "t2v"):
+                    image_path = None
                     context["has_image"] = False
+                else:
+                    image_path = data.get("image_path", "") or context.get("image_path", "")
+                    if image_path:
+                        try:
+                            img_analysis = analyze_image_for_context(image_path)
+                            context["image_analysis"] = img_analysis
+                            context["has_image"] = True
+                        except Exception as e:
+                            logger.warning(f"[Prompt Sensei] Image analysis failed: {e}")
+                            context["has_image"] = bool(image_path)
+                    else:
+                        context["has_image"] = False
 
-                result = generate_prompt_lm_studio(
+                if provider == "built_in":
+                    try:
+                        from .builtin_llm import generate_prompt_builtin
+                    except Exception:
+                        from builtin_llm import generate_prompt_builtin
+
+                    builtin_cfg = data.get("built_in") or {}
+                    if "auto_unload" not in builtin_cfg:
+                        builtin_cfg["auto_unload"] = auto_unload
+
+                    import asyncio
+                    result = await asyncio.to_thread(
+                        generate_prompt_builtin,
+                        scene_notes=scene_notes,
+                        system_prompt=system_prompt,
+                        image_path=image_path,
+                        builtin_config=builtin_cfg,
+                        context=context,
+                    )
+                    return web.json_response(result)
+
+                import asyncio
+                result = await asyncio.to_thread(
+                    generate_prompt_lm_studio,
                     scene_notes=scene_notes,
                     system_prompt=system_prompt,
                     image_path=image_path,
@@ -271,6 +298,47 @@ def register_prompt_sensei_routes():
                 return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         # ------------------------------------------------------------------
+        # Built-in LLM Routes
+        # ------------------------------------------------------------------
+        @routes.get("/ds/prompt_sensei/builtin/models")
+        async def builtin_models_handler(request):
+            try:
+                try:
+                    from .builtin_llm import list_builtin_models
+                except Exception:
+                    from builtin_llm import list_builtin_models
+                models = list_builtin_models()
+                return web.json_response({"ok": True, "models": models})
+            except Exception as e:
+                logger.error(f"[Prompt Sensei] Failed to query builtin models: {e}")
+                return web.json_response({"ok": False, "error": str(e), "models": []})
+
+        @routes.post("/ds/prompt_sensei/builtin/unload")
+        async def builtin_unload_handler(request):
+            try:
+                try:
+                    from .builtin_llm import unload
+                except Exception:
+                    from builtin_llm import unload
+                unloaded = unload()
+                return web.json_response({"ok": True, "unloaded": unloaded})
+            except Exception as e:
+                logger.error(f"[Prompt Sensei] Failed to unload builtin model: {e}")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+        @routes.get("/ds/prompt_sensei/builtin/status")
+        async def builtin_status_handler(request):
+            try:
+                try:
+                    from .builtin_llm import get_backend_status
+                except Exception:
+                    from builtin_llm import get_backend_status
+                status_info = get_backend_status()
+                return web.json_response({"ok": True, **status_info})
+            except Exception as e:
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+        # ------------------------------------------------------------------
         # Hardware info for VRAM advisory warnings
         # ------------------------------------------------------------------
         @routes.get("/ds/prompt_sensei/hardware")
@@ -288,6 +356,41 @@ def register_prompt_sensei_routes():
                     "has_gpu": False,
                     "error": str(e),
                 })
+
+        # ------------------------------------------------------------------
+        # Realtime Hardware Telemetry & Quick Memory Actions
+        # ------------------------------------------------------------------
+        @routes.get("/ds/prompt_sensei/hw_stats")
+        async def hw_stats_handler(request):
+            try:
+                try:
+                    from .telemetry import get_realtime_hw_stats
+                except Exception:
+                    from telemetry import get_realtime_hw_stats
+                stats = get_realtime_hw_stats()
+                return web.json_response(stats)
+            except Exception as e:
+                logger.error(f"[Prompt Sensei] hw_stats error: {e}")
+                return web.json_response({
+                    "cpu": 0, "ram": 0, "gpu": 0,
+                    "vram_used_gb": 0, "vram_total_gb": 0, "vram_free_gb": 0,
+                    "error": str(e)
+                })
+
+        @routes.post("/ds/prompt_sensei/hw_action")
+        async def hw_action_handler(request):
+            try:
+                body = await request.json()
+                action = str(body.get("action") or "").strip()
+                try:
+                    from .telemetry import perform_hardware_action
+                except Exception:
+                    from telemetry import perform_hardware_action
+                ok = perform_hardware_action(action)
+                return web.json_response({"ok": ok})
+            except Exception as e:
+                logger.error(f"[Prompt Sensei] hw_action error: {e}")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         logger.info("[DeathshotArsenal] DS AI Prompt Sensei routes registered successfully.")
     except Exception as e:

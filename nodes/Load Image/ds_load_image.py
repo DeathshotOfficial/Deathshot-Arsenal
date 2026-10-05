@@ -39,7 +39,7 @@ def _parse_state(value):
     if not value:
         return merged
     try:
-        data = json.loads(value)
+        data = value if isinstance(value, dict) else json.loads(value)
     except Exception:
         return merged
     if isinstance(data, dict):
@@ -161,7 +161,7 @@ class DS_LoadImage:
                     {"tooltip": "Select an image. Upload or drag-and-drop directly onto the node."},
                 ),
             },
-            "hidden": {
+            "optional": {
                 "ds_load_image_state": (
                     "STRING",
                     {"default": json.dumps(DEFAULT_STATE, separators=(",", ":"))},
@@ -175,24 +175,47 @@ class DS_LoadImage:
     CATEGORY = "☠️ Deathshot Arsenal/🖼️ Images"
 
     @classmethod
-    def VALIDATE_INPUTS(cls, image, ds_load_image_state=""):
-        if not image or not folder_paths.exists_annotated_filepath(image):
+    def _resolve_image_path(cls, image):
+        if not image:
+            return ""
+        clean = str(image).strip()
+        if os.path.exists(clean) and os.path.isfile(clean):
+            return os.path.normpath(clean)
+        clean_slash = clean.replace("\\", "/")
+        if os.path.exists(clean_slash) and os.path.isfile(clean_slash):
+            return os.path.normpath(clean_slash)
+        try:
+            return folder_paths.get_annotated_filepath(image)
+        except Exception:
+            return ""
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, image, ds_load_image_state="", **kwargs):
+        if not image:
+            return "No image specified"
+        path = cls._resolve_image_path(image)
+        if not path or not os.path.exists(path):
             return f"Invalid image file: {image}"
         return True
 
     @classmethod
-    def IS_CHANGED(cls, image, ds_load_image_state=""):
-        path = folder_paths.get_annotated_filepath(image)
-        if not os.path.exists(path):
+    def IS_CHANGED(cls, image, ds_load_image_state="", **kwargs):
+        path = cls._resolve_image_path(image)
+        if not path or not os.path.exists(path):
             return float("nan")
         digest = hashlib.sha256()
         with open(path, "rb") as handle:
             digest.update(handle.read())
-        digest.update((ds_load_image_state or "").encode("utf-8"))
+        if isinstance(ds_load_image_state, dict):
+            digest.update(json.dumps(ds_load_image_state, sort_keys=True).encode("utf-8"))
+        else:
+            digest.update((ds_load_image_state or "").encode("utf-8"))
         return digest.hexdigest()
 
-    def load_image(self, image, ds_load_image_state=""):
-        path = folder_paths.get_annotated_filepath(image)
+    def load_image(self, image, ds_load_image_state="", **kwargs):
+        path = self._resolve_image_path(image)
+        if not path or not os.path.exists(path):
+            raise FileNotFoundError(f"Image not found: {image}")
         state = _parse_state(ds_load_image_state)
 
         try:

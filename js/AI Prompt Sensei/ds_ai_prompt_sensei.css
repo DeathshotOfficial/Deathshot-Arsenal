@@ -1,29 +1,117 @@
-/* DS AI Prompt Sensei Stylesheet */
+/* DS AI Prompt Sensei Stylesheet — Deathshot Arsenal UI Overhaul */
 
-.ds-sensei-root {
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  width: 100%;
+/* ========================================================================= */
+/* 1. Multi-Card Container & Hierarchy                                      */
+/* ========================================================================= */
+
+[data-ds-ui-host="true"].ds-sensei-container,
+.ds-sensei-container {
+  box-sizing: border-box !important;
+  width: 100% !important;
   height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
   position: relative !important;
-  padding: 4px 18px 8px 8px;
-  gap: 5px;
-  background: transparent;
-  border: none;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 5px 0 5px !important;
+  margin: 0 !important;
+  pointer-events: auto !important;
   overflow: visible !important;
-  color: var(--ds-text, #f8fafc);
-  font-family: var(--ds-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif);
-  font-size: 12px;
-  line-height: 1.4;
   user-select: none;
 }
 
-/* Nodes 2.0 / Vue Frontend Output Slot Zero-Height Floating Alignment */
-.lg-node:has(.ds-sensei-root) .lg-slots,
-.lg-node:has(.ds-sensei-root) .lg-slots--output {
+.ds-sensei-container *,
+.ds-sensei-root * {
+  box-sizing: border-box;
+}
+
+/* Distinct Cards stacked vertically with 10px gap per PRD Section 3 */
+[data-ds-ui-host="true"].ds-sensei-container > .ds-ui-card,
+.ds-sensei-container > .ds-ui-card,
+.ds-sensei-card,
+.ds-ui-card.ds-sensei-card {
+  pointer-events: auto !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+  padding: 10px !important;
+  gap: var(--ds-gap-sm, 6px) !important;
+  background: var(--ds-color-card, #12151c) !important;
+  border: 1px solid var(--ds-color-card-border, #242a36) !important;
+  border-radius: var(--ds-radius-card, 8px) !important;
+  color: var(--ds-color-text, #f8fafc) !important;
+  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
+  font-size: 12px;
+  line-height: 1.4;
+  user-select: none;
+  display: flex !important;
+  flex-direction: column !important;
+  transition: border-color var(--ds-transition, 120ms ease);
+}
+
+/* Card Header & Title styling */
+[class*="ds-sensei"] .ds-ui-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-gap-sm, 6px);
+  min-width: 0;
+  user-select: none;
+}
+
+[class*="ds-sensei"] .ds-ui-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-xs, 4px);
+  min-width: 0;
+}
+
+[class*="ds-sensei"] .ds-ui-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ds-color-accent, #67e8f9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[class*="ds-sensei"] .ds-ui-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-xs, 4px);
+}
+
+.ds-sensei-container .ds-ui-card-body,
+.ds-sensei-card .ds-ui-card-body,
+[class*="ds-sensei"] .ds-ui-card-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* ========================================================================= */
+/* 2. Nodes 2.0 / Vue Frontend Output Slot Zero-Height Floating Alignment   */
+/* ========================================================================= */
+
+.lg-node:has(.ds-sensei-container) .lg-slots,
+.lg-node:has(.ds-sensei-container) .lg-slots--output,
+.lg-node:has(.ds-sensei-card) .lg-slots,
+.lg-node:has(.ds-sensei-card) .lg-slots--output {
   position: absolute !important;
   top: 0 !important;
   right: 0 !important;
@@ -35,7 +123,8 @@
   z-index: 10 !important;
 }
 
-.lg-node:has(.ds-sensei-root) .lg-slot--output {
+.lg-node:has(.ds-sensei-container) .lg-slot--output,
+.lg-node:has(.ds-sensei-card) .lg-slot--output {
   position: absolute !important;
   right: 0 !important;
   margin: 0 !important;
@@ -43,216 +132,343 @@
   pointer-events: none !important;
 }
 
-.lg-node:has(.ds-sensei-root) .lg-slot--output > div:first-child,
-.lg-node:has(.ds-sensei-root) .lg-slot--output .lg-slot__label,
-.lg-node:has(.ds-sensei-root) .lg-slot--output span {
+.lg-node:has(.ds-sensei-container) .lg-slot--output > div:first-child,
+.lg-node:has(.ds-sensei-container) .lg-slot--output .lg-slot__label,
+.lg-node:has(.ds-sensei-container) .lg-slot--output span,
+.lg-node:has(.ds-sensei-card) .lg-slot--output > div:first-child,
+.lg-node:has(.ds-sensei-card) .lg-slot--output .lg-slot__label,
+.lg-node:has(.ds-sensei-card) .lg-slot--output span {
   display: none !important;
 }
 
-.lg-node:has(.ds-sensei-root) .lg-slot--output [data-testid="slot-connection-dot"],
-.lg-node:has(.ds-sensei-root) .lg-slot--output .lg-slot__dot,
-.lg-node:has(.ds-sensei-root) .lg-slot--output svg,
-.lg-node:has(.ds-sensei-root) .lg-slot--output .lg-slot-circle {
+.lg-node:has(.ds-sensei-container) .lg-slot--output [data-testid="slot-connection-dot"],
+.lg-node:has(.ds-sensei-container) .lg-slot--output .lg-slot__dot,
+.lg-node:has(.ds-sensei-container) .lg-slot--output svg,
+.lg-node:has(.ds-sensei-container) .lg-slot--output .lg-slot-circle,
+.lg-node:has(.ds-sensei-card) .lg-slot--output [data-testid="slot-connection-dot"],
+.lg-node:has(.ds-sensei-card) .lg-slot--output .lg-slot__dot,
+.lg-node:has(.ds-sensei-card) .lg-slot--output svg,
+.lg-node:has(.ds-sensei-card) .lg-slot--output .lg-slot-circle {
   pointer-events: auto !important;
 }
 
-.ds-sensei-root * {
-  box-sizing: border-box;
-}
+/* ========================================================================= */
+/* 3. Custom Unified Scrollbars                                             */
+/* ========================================================================= */
 
-/* Custom Deathshot Scrollbars (No native Windows chunky scrollbars or arrow buttons) */
-.ds-sensei-root *::-webkit-scrollbar,
-.ds-sensei-root::-webkit-scrollbar,
+.ds-sensei-container *::-webkit-scrollbar,
+.ds-sensei-container::-webkit-scrollbar,
+[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar,
+[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar,
 .ds-sensei-menu-popover *::-webkit-scrollbar,
 .ds-sensei-menu-popover::-webkit-scrollbar,
 .ds-sensei-modal-dialog *::-webkit-scrollbar,
-.ds-sensei-modal-dialog::-webkit-scrollbar {
+.ds-sensei-modal-dialog::-webkit-scrollbar,
+.ds-sensei-gear-popover *::-webkit-scrollbar,
+.ds-sensei-gear-popover::-webkit-scrollbar {
   width: 5px !important;
   height: 5px !important;
 }
 
-.ds-sensei-root *::-webkit-scrollbar-track,
-.ds-sensei-root::-webkit-scrollbar-track,
+.ds-sensei-container *::-webkit-scrollbar-track,
+.ds-sensei-container::-webkit-scrollbar-track,
+[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-track,
+[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-track,
 .ds-sensei-menu-popover *::-webkit-scrollbar-track,
 .ds-sensei-menu-popover::-webkit-scrollbar-track,
 .ds-sensei-modal-dialog *::-webkit-scrollbar-track,
-.ds-sensei-modal-dialog::-webkit-scrollbar-track {
+.ds-sensei-modal-dialog::-webkit-scrollbar-track,
+.ds-sensei-gear-popover *::-webkit-scrollbar-track,
+.ds-sensei-gear-popover::-webkit-scrollbar-track {
   background: transparent !important;
 }
 
-.ds-sensei-root *::-webkit-scrollbar-thumb,
-.ds-sensei-root::-webkit-scrollbar-thumb,
+.ds-sensei-container *::-webkit-scrollbar-thumb,
+.ds-sensei-container::-webkit-scrollbar-thumb,
+[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-thumb,
+[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-thumb,
 .ds-sensei-menu-popover *::-webkit-scrollbar-thumb,
 .ds-sensei-menu-popover::-webkit-scrollbar-thumb,
 .ds-sensei-modal-dialog *::-webkit-scrollbar-thumb,
-.ds-sensei-modal-dialog::-webkit-scrollbar-thumb {
-  background: var(--ds-border, rgba(255, 255, 255, 0.2)) !important;
+.ds-sensei-modal-dialog::-webkit-scrollbar-thumb,
+.ds-sensei-gear-popover *::-webkit-scrollbar-thumb,
+.ds-sensei-gear-popover::-webkit-scrollbar-thumb {
+  background: var(--ds-scrollbar, var(--ds-color-border, #374151)) !important;
   border-radius: 4px !important;
 }
 
-.ds-sensei-root *::-webkit-scrollbar-thumb:hover,
-.ds-sensei-root::-webkit-scrollbar-thumb:hover,
+.ds-sensei-container *::-webkit-scrollbar-thumb:hover,
+.ds-sensei-container::-webkit-scrollbar-thumb:hover,
+[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-thumb:hover,
+[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-thumb:hover,
 .ds-sensei-menu-popover *::-webkit-scrollbar-thumb:hover,
 .ds-sensei-menu-popover::-webkit-scrollbar-thumb:hover,
 .ds-sensei-modal-dialog *::-webkit-scrollbar-thumb:hover,
-.ds-sensei-modal-dialog::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-accent, #67e8f9) !important;
+.ds-sensei-modal-dialog::-webkit-scrollbar-thumb:hover,
+.ds-sensei-gear-popover *::-webkit-scrollbar-thumb:hover,
+.ds-sensei-gear-popover::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-color-accent, #67e8f9) !important;
 }
 
-.ds-sensei-root *::-webkit-scrollbar-button,
-.ds-sensei-root::-webkit-scrollbar-button,
+.ds-sensei-container *::-webkit-scrollbar-button,
+.ds-sensei-container::-webkit-scrollbar-button,
+[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-button,
+[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-button,
 .ds-sensei-menu-popover *::-webkit-scrollbar-button,
 .ds-sensei-menu-popover::-webkit-scrollbar-button,
 .ds-sensei-modal-dialog *::-webkit-scrollbar-button,
-.ds-sensei-modal-dialog::-webkit-scrollbar-button {
+.ds-sensei-modal-dialog::-webkit-scrollbar-button,
+.ds-sensei-gear-popover *::-webkit-scrollbar-button,
+.ds-sensei-gear-popover::-webkit-scrollbar-button {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
 }
 
-.ds-sensei-root,
-.ds-sensei-root *,
+.ds-sensei-container,
+.ds-sensei-container *,
+[class*="ds-sensei"] .ds-ui-card,
+[class*="ds-sensei"] .ds-ui-card *,
 .ds-sensei-menu-popover,
 .ds-sensei-modal-dialog {
   scrollbar-width: thin;
-  scrollbar-color: var(--ds-border, rgba(255, 255, 255, 0.2)) transparent;
+  scrollbar-color: var(--ds-scrollbar, var(--ds-color-border, #374151)) transparent;
 }
 
-/* Section Container */
-.ds-sensei-section {
-  display: flex;
-  flex-direction: column;
-  background: var(--ds-panel, rgba(18, 22, 30, 0.75));
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
-  border-radius: 6px;
-  padding: 6px 8px;
-  gap: 4px;
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
+/* ========================================================================= */
+/* 4. Unified Button System (Strict Token Variables)                        */
+/* ========================================================================= */
 
-.ds-sensei-section-header-wrap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ds-sensei-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--ds-accent, #67e8f9);
-  padding: 1px 2px;
-}
-
-.ds-sensei-section-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-}
-
-.ds-sensei-section-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-}
-
-/* Base Buttons */
+[class*="ds-sensei"] .ds-ui-btn,
 .ds-sensei-btn {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 5px;
-  background: var(--ds-panel-2, #161b22);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
+  gap: var(--ds-gap-xs, 4px);
+  height: var(--ds-btn-height, 28px);
+  padding: var(--ds-btn-padding, 0 10px);
+  border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36));
+  border-radius: var(--ds-btn-radius, 5px);
+  background: var(--ds-btn-bg, #161a23);
+  color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb));
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: all var(--ds-transition, 120ms ease);
   white-space: nowrap;
+  user-select: none;
+  outline: none;
 }
 
+[class*="ds-sensei"] .ds-ui-btn svg,
+[class*="ds-sensei"] .ds-ui-btn .ds-icon,
+.ds-sensei-btn svg {
+  stroke: currentColor !important;
+  fill: none !important;
+  color: inherit !important;
+  pointer-events: none;
+}
+
+[class*="ds-sensei"] .ds-ui-btn:hover,
 .ds-sensei-btn:hover {
-  background: var(--ds-btn-hover, #21262d);
-  border-color: var(--ds-border-active, var(--ds-accent, #67e8f9));
-  color: var(--ds-text, #f8fafc);
+  background: var(--ds-btn-hover, #1e2433);
+  border-color: var(--ds-color-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
 }
 
-.ds-sensei-btn.active {
-  background: var(--ds-panel-2, #161b22) !important;
-  border: 1px solid var(--ds-accent, #67e8f9) !important;
-  color: var(--ds-accent, #67e8f9) !important;
+[class*="ds-sensei"] .ds-ui-btn:hover svg,
+[class*="ds-sensei"] .ds-ui-btn:hover .ds-icon {
+  stroke: var(--ds-color-accent, #67e8f9) !important;
 }
 
-.ds-sensei-btn.active::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2.5px;
-  background: var(--ds-accent, #67e8f9);
+[class*="ds-sensei"] .ds-ui-btn:active,
+.ds-sensei-btn:active {
+  transform: translateY(1px);
 }
 
+[class*="ds-sensei"] .ds-ui-btn:focus-visible,
+.ds-sensei-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--ds-color-focus-ring);
+}
+
+/* Active / Selected Toggles: Solid Accent Background per PRD Section 5 */
+[class*="ds-sensei"] .ds-ui-btn.is-active,
+[class*="ds-sensei"] .ds-ui-btn.active,
+[class*="ds-sensei"] .ds-ui-btn[aria-pressed="true"],
+[class*="ds-sensei"] .ds-ui-btn[data-active="true"],
+.ds-sensei-btn.active,
+.ds-sensei-btn.is-active {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  font-weight: 700 !important;
+  text-shadow: var(--ds-color-on-accent-shadow, none);
+}
+
+[class*="ds-sensei"] .ds-ui-btn.is-active svg,
+[class*="ds-sensei"] .ds-ui-btn.active svg,
+[class*="ds-sensei"] .ds-ui-btn[aria-pressed="true"] svg,
+[class*="ds-sensei"] .ds-ui-btn.is-active .ds-icon {
+  stroke: var(--ds-color-on-accent, #0a0c10) !important;
+}
+
+[class*="ds-sensei"] .ds-ui-btn.is-active:hover,
+[class*="ds-sensei"] .ds-ui-btn.active:hover,
+.ds-sensei-btn.active:hover,
+.ds-sensei-btn.is-active:hover {
+  background: var(--ds-color-accent-hover, #22d3ee) !important;
+  border-color: var(--ds-color-accent-hover, #22d3ee) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+}
+
+/* Primary buttons */
+[class*="ds-sensei"] .ds-ui-btn-primary,
+.ds-sensei-btn-primary,
+.ds-sensei-btn-continue {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  font-weight: 700 !important;
+  text-shadow: var(--ds-color-on-accent-shadow, none);
+}
+
+[class*="ds-sensei"] .ds-ui-btn-primary:hover,
+.ds-sensei-btn-primary:hover,
+.ds-sensei-btn-continue:hover {
+  background: var(--ds-color-accent-hover, #22d3ee) !important;
+  border-color: var(--ds-color-accent-hover, #22d3ee) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+}
+
+/* Danger buttons */
+[class*="ds-sensei"] .ds-ui-btn-danger,
+.ds-sensei-btn-danger {
+  color: var(--ds-color-danger, #f87171) !important;
+  border-color: color-mix(in srgb, var(--ds-color-danger, #f87171) 35%, var(--ds-btn-border, var(--ds-color-border, #242a36))) !important;
+  background: var(--ds-btn-bg, #161a23) !important;
+}
+
+[class*="ds-sensei"] .ds-ui-btn-danger:hover,
+.ds-sensei-btn-danger:hover {
+  background: color-mix(in srgb, var(--ds-color-danger, #f87171) 20%, transparent) !important;
+  border-color: var(--ds-color-danger, #f87171) !important;
+  color: var(--ds-color-danger, #f87171) !important;
+}
+
+[class*="ds-sensei"] .ds-ui-btn-compact,
 .ds-sensei-btn-compact {
-  height: 22px;
+  height: var(--ds-btn-height-compact, 22px);
   padding: 0 6px;
   font-size: 10px;
 }
 
-.ds-sensei-btn-primary,
-.ds-sensei-btn-continue {
-  background: var(--ds-panel-2, #161b22) !important;
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.2)) !important;
-  color: var(--ds-text, #f8fafc) !important;
+[class*="ds-sensei"] .ds-ui-btn:disabled,
+.ds-sensei-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* ========================================================================= */
+/* 5. Unified Toggle Component (Soft-Rectangle Track)                       */
+/* ========================================================================= */
+
+[class*="ds-sensei"] .ds-ui-toggle-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-gap-sm, 6px);
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+[class*="ds-sensei"] .ds-ui-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[class*="ds-sensei"] .ds-ui-toggle-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ds-color-text, #e5e7eb);
+  white-space: nowrap;
+}
+
+[class*="ds-sensei"] .ds-ui-toggle-desc {
+  font-size: 9px;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+[class*="ds-sensei"] .ds-ui-toggle-track {
   position: relative;
-  overflow: hidden;
-  font-weight: 700;
+  width: 34px;
+  min-width: 34px;
+  height: 20px;
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: 4px;
+  transition: all var(--ds-transition, 120ms ease);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  cursor: pointer;
+  outline: none;
 }
 
-.ds-sensei-btn-primary:hover,
-.ds-sensei-btn-continue:hover {
-  background: var(--ds-btn-hover, #21262d) !important;
-  border-color: var(--ds-accent, #67e8f9) !important;
-  color: var(--ds-accent, #67e8f9) !important;
+[class*="ds-sensei"] .ds-ui-toggle-track:focus-visible {
+  box-shadow: 0 0 0 2px var(--ds-color-focus-ring);
+  border-color: var(--ds-color-accent, #67e8f9);
 }
 
-.ds-sensei-btn-danger:hover {
-  border-color: #f87171 !important;
-  color: #f87171 !important;
+[class*="ds-sensei"] .ds-ui-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--ds-color-muted-text, #9ca3af);
+  border-radius: 3px;
+  transition: transform var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease);
 }
 
-/* Inputs */
+[class*="ds-sensei"] .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
+  background: var(--ds-color-accent, #67e8f9);
+  border-color: var(--ds-color-accent, #67e8f9);
+}
+
+[class*="ds-sensei"] .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {
+  transform: translateX(14px);
+  background: var(--ds-color-on-accent, #0a0c10);
+}
+
+/* ========================================================================= */
+/* 6. Inputs & Numeric Value Boxes (Strictly Centered per PRD Section 5)     */
+/* ========================================================================= */
+
 .ds-sensei-input {
   width: 100%;
   box-sizing: border-box;
   min-width: 0;
-  height: 28px;
+  height: var(--ds-control-h, 28px);
   padding: 0 8px;
-  border-radius: 5px;
-  background: var(--ds-panel-2, #161b22);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  color: var(--ds-text, #f8fafc);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  color: var(--ds-color-text, #f8fafc);
   font-family: var(--ds-font, inherit);
   font-size: 11px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--ds-transition, 120ms ease);
   -moz-appearance: textfield;
   appearance: textfield;
 }
@@ -265,33 +481,34 @@
 }
 
 .ds-sensei-input:focus {
-  border-color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-color-accent, #67e8f9);
+  box-shadow: 0 0 0 2px var(--ds-color-focus-ring);
 }
 
-/* Custom Stepper with custom vector chevrons and centered numbers */
+/* Custom Stepper with centered numeric text and vector buttons */
 .ds-sensei-stepper {
   display: inline-flex;
   align-items: center;
-  height: 28px;
-  background: var(--ds-panel-2, #161b22);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  border-radius: 5px;
+  height: var(--ds-control-h, 28px);
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--ds-transition, 120ms ease);
 }
 
 .ds-sensei-stepper:focus-within {
-  border-color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-color-accent, #67e8f9);
 }
 
 .ds-sensei-stepper.active {
-  border-color: var(--ds-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
 }
 
 .ds-sensei-stepper.active .ds-sensei-stepper-input {
-  color: var(--ds-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
 }
 
 .ds-sensei-stepper-input {
@@ -301,7 +518,7 @@
   height: 100%;
   border: none;
   background: transparent;
-  color: var(--ds-text, #f8fafc);
+  color: var(--ds-color-text, #f8fafc);
   font-family: var(--ds-font, inherit);
   font-size: 11px;
   font-weight: 600;
@@ -315,7 +532,7 @@
 }
 
 .ds-sensei-stepper-input::placeholder {
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.42));
+  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.42));
   font-size: 9.5px;
   font-weight: 500;
   text-align: center;
@@ -334,7 +551,7 @@
   flex-direction: column;
   width: 14px;
   height: 100%;
-  border-left: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
+  border-left: 1px solid var(--ds-color-border, #242a36);
   flex-shrink: 0;
 }
 
@@ -345,18 +562,65 @@
   justify-content: center;
   border: none;
   background: transparent;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
+  color: var(--ds-color-muted-text, #9ca3af);
   cursor: pointer;
   padding: 0;
-  transition: background 0.1s ease, color 0.1s ease;
+  transition: background var(--ds-transition, 120ms ease), color var(--ds-transition, 120ms ease);
 }
 
 .ds-sensei-stepper-btn:hover {
-  background: var(--ds-panel-3, rgba(255, 255, 255, 0.1));
-  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-btn-hover, #1e2433);
+  color: var(--ds-color-accent, #67e8f9);
 }
 
-/* Telemetry Bar (LLM stats directly below title bar) */
+/* ========================================================================= */
+/* 7. Dropdown Select Trigger                                               */
+/* ========================================================================= */
+
+.ds-sensei-select {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--ds-control-h, 28px);
+  padding: 0 8px;
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  color: var(--ds-color-text, #f8fafc);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color var(--ds-transition, 120ms ease);
+  box-sizing: border-box;
+}
+
+.ds-sensei-select:hover {
+  border-color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-sensei-select-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+
+.ds-sensei-select-arrow {
+  margin-left: 6px;
+  font-size: 9px;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+/* ========================================================================= */
+/* 8. Telemetry Bar                                                         */
+/* ========================================================================= */
+
 .ds-sensei-telemetry-bar {
   display: flex;
   align-items: center;
@@ -364,18 +628,18 @@
   width: 100%;
   height: 24px;
   padding: 0 8px;
-  background: var(--ds-panel-2, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
-  border-radius: 5px;
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
   font-family: var(--ds-font, inherit);
   font-size: 10px;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.7));
+  color: var(--ds-color-muted-text, #9ca3af);
   box-sizing: border-box;
 }
 
 .ds-sensei-telemetry-badge {
   font-weight: 700;
-  color: var(--ds-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -389,7 +653,7 @@
 }
 
 .ds-sensei-telemetry-stats b {
-  color: var(--ds-text, #f8fafc);
+  color: var(--ds-color-text, #f8fafc);
   font-weight: 700;
 }
 
@@ -397,34 +661,110 @@
   opacity: 0.4;
 }
 
-/* Image Upload & Preview */
+/* ========================================================================= */
+/* 9. Rows, Segmented Controls & Groups                                     */
+/* ========================================================================= */
+
+.ds-sensei-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+}
+
+.ds-sensei-row-label {
+  width: 72px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+.ds-sensei-segmented {
+  display: inline-flex;
+  background: var(--ds-color-base, rgba(0, 0, 0, 0.3));
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.ds-sensei-segmented .ds-ui-btn,
+.ds-sensei-segmented .ds-sensei-btn {
+  border: none;
+  background: transparent;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 3px;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+.ds-sensei-segmented .ds-ui-btn.active,
+.ds-sensei-segmented .ds-sensei-btn.active {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  font-weight: 700;
+}
+
+.ds-sensei-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.ds-sensei-btn-group .ds-ui-btn,
+.ds-sensei-btn-group .ds-sensei-btn {
+  flex: 1;
+  min-width: 24px;
+  padding: 0 2px;
+  height: 28px;
+  font-size: 11px;
+}
+
+.ds-sensei-btn-group > .ds-sensei-stepper {
+  flex: 1.3;
+  min-width: 54px;
+  width: auto !important;
+  max-width: 76px;
+  flex-shrink: 0;
+}
+
+/* ========================================================================= */
+/* 10. Image Upload & Preview Container                                     */
+/* ========================================================================= */
+
 .ds-sensei-dropzone {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 85px;
-  border: 1.5px dashed var(--ds-border, rgba(255, 255, 255, 0.2));
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.2);
+  border: 1.5px dashed var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.2));
   cursor: pointer;
   padding: 10px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all var(--ds-transition, 120ms ease);
   position: relative;
   overflow: hidden;
   width: 100%;
 }
 
 .ds-sensei-dropzone.drag-over {
-  border-color: var(--ds-accent, #67e8f9);
-  background: rgba(103, 232, 249, 0.08);
-  box-shadow: 0 0 10px rgba(103, 232, 249, 0.2);
+  border-color: var(--ds-color-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 10%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 25%, transparent);
 }
 
 .ds-sensei-dropzone-text {
   font-size: 11px;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
+  color: var(--ds-color-muted-text, #9ca3af);
   margin-top: 4px;
 }
 
@@ -436,9 +776,10 @@
   width: 100%;
   max-height: 200px;
   overflow: hidden;
-  border-radius: 5px;
+  border-radius: var(--ds-radius-control, 5px);
   background: #000;
   transition: max-height 0.25s ease;
+  border: 1px solid var(--ds-color-border, #242a36);
 }
 
 .ds-sensei-preview-container.expanded {
@@ -461,226 +802,103 @@
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
+  color: var(--ds-color-muted-text, #9ca3af);
   padding: 4px 2px;
 }
 
-/* Rows & Grids */
-.ds-sensei-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  min-height: 28px;
-}
+/* ========================================================================= */
+/* ========================================================================= */
+/* 12. Text Areas & Scene Notes Actions                                     */
+/* ========================================================================= */
 
-.ds-sensei-row-label {
-  width: 72px;
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.75));
-}
-
-/* Custom Select Dropdown Trigger */
-.ds-sensei-select {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 5px;
-  background: var(--ds-panel-2, #161b22);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  color: var(--ds-text, #f8fafc);
-  font-size: 11px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ds-sensei-select:hover {
-  border-color: var(--ds-border-active, var(--ds-accent, #67e8f9));
-}
-
-.ds-sensei-select-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  text-align: left;
-}
-
-.ds-sensei-select-arrow {
-  margin-left: 6px;
-  font-size: 9px;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.5));
-}
-
-/* LoRA Rows */
-.ds-sensei-lora-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 100%;
-  max-height: 120px;
-  overflow-y: auto;
-  padding-right: 2px;
-  transition: max-height 0.25s ease;
-}
-
-.ds-sensei-lora-list.expanded {
-  max-height: 99999px;
-  overflow-y: auto;
-}
-
-.ds-sensei-lora-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 4px;
-  width: 100%;
-}
-
-.ds-sensei-lora-toggle {
-  min-width: 30px;
-  height: 26px;
-  padding: 0 4px;
-  font-size: 10px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.ds-sensei-lora-strength-pair {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  flex-shrink: 0;
-}
-
-.ds-sensei-lora-str-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.ds-sensei-lora-tag {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--ds-accent, #67e8f9);
-  white-space: nowrap;
-}
-
-/* Segmented Buttons */
-.ds-sensei-segmented {
-  display: inline-flex;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 5px;
-  padding: 2px;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.ds-sensei-segmented .ds-sensei-btn {
-  border-color: transparent;
-  height: 24px;
-  padding: 0 8px;
-}
-
-.ds-sensei-segmented .ds-sensei-btn.active {
-  border-color: var(--ds-accent, #67e8f9);
-}
-
-/* Video Settings Space Distribution */
-.ds-sensei-output-fields {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  width: 100%;
-}
-
-.ds-sensei-field-pair {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
-  flex: 1;
-}
-
-.ds-sensei-field-pair input,
-.ds-sensei-field-pair .ds-sensei-stepper {
-  flex: 1;
-  width: 100%;
-  text-align: center;
-}
-
-.ds-sensei-btn-group {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-  width: 100%;
-}
-
-.ds-sensei-btn-group .ds-sensei-btn {
-  flex: 1;
-  min-width: 24px;
-  padding: 0 2px;
-  height: 28px;
-  font-size: 11px;
-}
-
-.ds-sensei-btn-group > .ds-sensei-stepper {
-  flex: 1.3;
-  min-width: 54px;
-  width: auto !important;
-  max-width: 76px;
-  flex-shrink: 0;
-}
-
-/* Text Areas */
 .ds-sensei-textarea {
   width: 100%;
-  border-radius: 5px;
-  background: var(--ds-panel-2, #161b22);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  color: var(--ds-text, #f8fafc);
+  box-sizing: border-box;
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  color: var(--ds-color-text, #f8fafc);
   font-family: var(--ds-font, inherit);
   font-size: 11px;
   padding: 8px;
   resize: vertical;
   outline: none;
   line-height: 1.4;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--ds-transition, 120ms ease);
 }
 
 .ds-sensei-textarea:focus {
-  border-color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-color-accent, #67e8f9);
+  box-shadow: 0 0 0 2px var(--ds-color-focus-ring);
 }
 
 .ds-sensei-notes-area {
   min-height: 48px;
 }
 
+.ds-sensei-notes-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: var(--ds-gap-sm, 6px) !important;
+  width: 100% !important;
+  margin-top: 4px !important;
+}
+
+.ds-sensei-notes-actions-left {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: var(--ds-gap-xs, 4px) !important;
+}
+
+.ds-sensei-auto-unload-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+  user-select: none !important;
+}
+
+.ds-sensei-auto-unload-toggle .ds-ui-toggle-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+}
+
+.ds-sensei-auto-unload-toggle .ds-ui-toggle-track {
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 16px !important;
+}
+
+.ds-sensei-auto-unload-toggle .ds-ui-toggle-thumb {
+  width: 12px !important;
+  height: 12px !important;
+  top: 1px !important;
+  left: 1px !important;
+}
+
+.ds-sensei-auto-unload-toggle.is-on .ds-ui-toggle-thumb {
+  transform: translateX(12px) !important;
+}
+
 .ds-sensei-prompt-area {
   min-height: 80px;
 }
 
-/* Status Bar */
+/* ========================================================================= */
+/* 13. Status Bar & Status Badges                                           */
+/* ========================================================================= */
+
 .ds-sensei-status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
+  color: var(--ds-color-muted-text, #9ca3af);
   padding: 2px;
 }
 
@@ -689,87 +907,167 @@
   align-items: center;
   gap: 5px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--ds-radius-badge, 4px);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.3));
 }
 
 .ds-sensei-status-generating {
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.4);
+  color: var(--ds-color-warning, #fbbf24);
+  border: 1px solid color-mix(in srgb, var(--ds-color-warning, #fbbf24) 40%, transparent);
+  text-transform: none !important;
+  font-feature-settings: "tnum" on;
 }
 
 .ds-sensei-status-completed {
-  color: #34d399;
-  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: var(--ds-color-success, #34d399);
+  border: 1px solid color-mix(in srgb, var(--ds-color-success, #34d399) 40%, transparent);
+  text-transform: none !important;
+  font-feature-settings: "tnum" on;
 }
 
 .ds-sensei-status-cancelled {
-  color: #94a3b8;
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: var(--ds-color-muted-text, #94a3b8);
+  border: 1px solid color-mix(in srgb, var(--ds-color-muted-text, #94a3b8) 40%, transparent);
 }
 
 .ds-sensei-status-failed {
-  color: #f87171;
-  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: var(--ds-color-danger, #f87171);
+  border: 1px solid color-mix(in srgb, var(--ds-color-danger, #f87171) 40%, transparent);
 }
 
-/* Custom Deathshot Toggle Switch */
-.ds-sensei-switch-wrap {
+.ds-sensei-status-paused {
+  color: var(--ds-color-accent, #38bdf8);
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent, #38bdf8) 40%, transparent);
+  background: color-mix(in srgb, var(--ds-color-accent, #38bdf8) 10%, transparent);
+}
+
+.ds-sensei-ar-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: var(--ds-radius-badge, 3px);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.ds-sensei-ar-badge.auto {
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent, #67e8f9) 35%, transparent);
+  color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-sensei-ar-badge.manual {
+  background: color-mix(in srgb, var(--ds-color-warning, #fbbf24) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-warning, #fbbf24) 35%, transparent);
+  color: var(--ds-color-warning, #fbbf24);
+}
+
+.ds-sensei-img-prompt-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
-  user-select: none;
+  color: var(--ds-color-accent, #67e8f9);
+  padding: 2px 0;
+}
+
+/* ========================================================================= */
+/* 14. Hardware VRAM Advisory                                                */
+/* ========================================================================= */
+
+.ds-sensei-hw-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--ds-radius-control, 5px);
+  background: color-mix(in srgb, var(--ds-color-warning, #fbbf24) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-warning, #fbbf24) 35%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ds-color-warning, #fbbf24);
+  line-height: 1.4;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ds-sensei-hw-warning-icon {
   flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1;
+  margin-top: 1px;
 }
 
-.ds-sensei-switch-input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
+.ds-sensei-hw-warning-text {
+  flex: 1;
+  color: var(--ds-color-warning, #fbbf24);
 }
 
-.ds-sensei-switch-track {
-  width: 32px;
-  height: 18px;
-  background: var(--ds-panel-2, #161b22);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.18));
-  border-radius: 9px;
-  position: relative;
-  transition: all 0.2s ease;
-  display: inline-block;
-  flex-shrink: 0;
+.ds-sensei-hw-ok {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ds-color-success, #34d399);
+  padding: 3px 2px;
 }
 
-.ds-sensei-switch-thumb {
-  width: 12px;
-  height: 12px;
-  background: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: transform 0.2s ease, background 0.2s ease;
+/* ========================================================================= */
+/* 15. Error Banner                                                         */
+/* ========================================================================= */
+
+.ds-sensei-error-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: color-mix(in srgb, var(--ds-color-danger, #f87171) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-danger, #f87171) 38%, transparent);
+  border-radius: var(--ds-radius-control, 6px);
+  padding: 8px 10px;
+  margin-bottom: 4px;
 }
 
-.ds-sensei-switch-input:checked + .ds-sensei-switch-track {
-  border-color: var(--ds-accent, #67e8f9);
-  background: rgba(103, 232, 249, 0.12);
+.ds-sensei-error-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--ds-color-danger, #fca5a5);
+  line-height: 1.3;
 }
 
-.ds-sensei-switch-input:checked + .ds-sensei-switch-track .ds-sensei-switch-thumb {
-  transform: translateX(14px);
-  background: var(--ds-accent, #67e8f9);
-  box-shadow: 0 0 6px var(--ds-accent, #67e8f9);
+.ds-sensei-error-text strong {
+  font-weight: 700;
+  color: var(--ds-color-danger, #f87171);
 }
 
-/* System Prompt Modal */
+.ds-sensei-error-sub {
+  font-family: monospace, var(--ds-font);
+  font-size: 10px;
+  opacity: 0.9;
+  color: #fecaca;
+  word-break: break-all;
+}
+
+.ds-sensei-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* ========================================================================= */
+/* 16. Modal Dialog & Menus                                                 */
+/* ========================================================================= */
+
 .ds-sensei-modal-backdrop {
   position: fixed;
   top: 0;
@@ -785,23 +1083,23 @@
 }
 
 .ds-sensei-modal-dialog {
-  background: #0f141c;
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.18));
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 1px var(--ds-accent, #67e8f9);
+  background: var(--ds-color-card, #0f141c);
+  border: 1px solid var(--ds-color-card-border, #242a36);
+  border-radius: var(--ds-radius-popup, 8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 1px var(--ds-color-accent, #67e8f9);
   width: 520px;
   max-width: 90vw;
   display: flex;
   flex-direction: column;
   padding: 16px;
   gap: 12px;
-  color: var(--ds-text, #f8fafc);
+  color: var(--ds-color-text, #f8fafc);
 }
 
 .ds-sensei-modal-title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--ds-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
 }
 
 .ds-sensei-modal-footer {
@@ -810,12 +1108,11 @@
   gap: 8px;
 }
 
-/* Custom Dropdown Menu Popover */
 .ds-sensei-menu-popover {
   position: fixed;
-  background: var(--ds-panel, #12151c) !important;
-  border: 1px solid var(--ds-border, #343a44) !important;
-  border-radius: 6px;
+  background: var(--ds-color-card, #12151c) !important;
+  border: 1px solid var(--ds-color-card-border, #343a44) !important;
+  border-radius: var(--ds-radius-popup, 6px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
   z-index: 100020 !important;
   display: flex;
@@ -824,14 +1121,14 @@
   min-width: 180px;
   overflow: hidden;
   font-family: var(--ds-font, inherit);
-  color: var(--ds-text, #e2e8f0);
+  color: var(--ds-color-text, #e2e8f0);
   padding: 4px;
 }
 
 .ds-sensei-menu-search {
   padding: 4px;
   background: transparent;
-  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
+  border-bottom: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.12));
   margin-bottom: 4px;
 }
 
@@ -839,20 +1136,20 @@
   width: 100%;
   height: 26px;
   box-sizing: border-box;
-  background: var(--ds-panel-2, #21252d);
-  border: 1px solid var(--ds-border, #343a44);
-  border-radius: 4px;
+  background: var(--ds-color-panel-2, #21252d);
+  border: 1px solid var(--ds-color-border, #343a44);
+  border-radius: var(--ds-radius-control, 4px);
   padding: 0 8px;
-  color: var(--ds-text, #e2e8f0);
+  color: var(--ds-color-text, #e2e8f0);
   font-family: var(--ds-font, inherit);
   font-size: 11px;
   font-weight: 600;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: border-color var(--ds-transition, 120ms ease);
 }
 
 .ds-sensei-menu-search input:focus {
-  border-color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-color-accent, #67e8f9);
 }
 
 .ds-sensei-menu-list {
@@ -868,138 +1165,60 @@
   align-items: center;
   justify-content: space-between;
   padding: 6px 8px;
-  border-radius: 4px;
+  border-radius: var(--ds-radius-control, 4px);
   font-size: 11px;
   font-weight: 600;
   font-family: var(--ds-font, inherit);
-  color: var(--ds-text, #e2e8f0);
+  color: var(--ds-color-text, #e2e8f0);
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all var(--ds-transition, 100ms ease);
 }
 
 .ds-sensei-menu-item:hover {
-  background: var(--ds-panel-3, #2b303a);
-  border-color: var(--ds-accent, #67e8f9);
-  color: #ffffff;
+  background: var(--ds-btn-hover, #1e2433);
+  color: var(--ds-color-accent, #67e8f9);
 }
 
 .ds-sensei-menu-item.active {
-  background: var(--ds-panel-2, #21252d);
-  border-color: var(--ds-border, #343a44);
-  box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-color-panel-2, #21252d);
+  border-color: var(--ds-color-border, #343a44);
+  box-shadow: inset 0 -2px 0 var(--ds-color-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
   font-weight: 700;
 }
 
-/* =========================================================
-   Hardware VRAM Advisory Warning Bar
-   ========================================================= */
-.ds-sensei-hw-warning {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 5px;
-  background: rgba(251, 191, 36, 0.07);
-  border: 1px solid rgba(251, 191, 36, 0.35);
-  font-size: 10px;
-  font-weight: 600;
-  color: #fbbf24;
-  line-height: 1.4;
-  width: 100%;
-  box-sizing: border-box;
-}
+/* ========================================================================= */
+/* 17. LM Studio Toolbar Gear Popover                                       */
+/* ========================================================================= */
 
-.ds-sensei-hw-warning-icon {
-  flex-shrink: 0;
-  font-size: 12px;
-  line-height: 1;
-  margin-top: 1px;
-}
-
-.ds-sensei-hw-warning-text {
-  flex: 1;
-  color: #fbbf24;
-}
-
-.ds-sensei-hw-ok {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #34d399;
-  padding: 3px 2px;
-}
-
-/* =========================================================
-   Aspect Ratio Auto-detect Badge
-   ========================================================= */
-.ds-sensei-ar-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
-}
-
-.ds-sensei-ar-badge.auto {
-  background: rgba(103, 232, 249, 0.1);
-  border: 1px solid rgba(103, 232, 249, 0.35);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-sensei-ar-badge.manual {
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  color: #fbbf24;
-}
-
-/* =========================================================
-   Image-derived prompt indicator
-   ========================================================= */
-.ds-sensei-img-prompt-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ds-accent, #67e8f9);
-  padding: 2px 0;
-}
-
-/* =========================================================
-   LM Studio Toolbar Gear Popover
-   ========================================================= */
 .ds-sensei-gear-popover {
   position: fixed;
-  width: 320px;
-  background: var(--ds-panel, #0f141c) !important;
-  border: 1px solid var(--ds-border, #334155) !important;
-  border-radius: 8px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 1px var(--ds-accent, #67e8f9);
+  width: 380px !important;
+  max-width: 95vw !important;
+  max-height: min(94vh, 900px) !important;
+  background: var(--ds-color-card, #0f141c) !important;
+  border: 1px solid var(--ds-color-card-border, #334155) !important;
+  border-radius: var(--ds-radius-popup, 8px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 1px var(--ds-color-accent, #67e8f9);
   z-index: 100010;
-  display: flex;
-  flex-direction: column;
+  display: flex !important;
+  flex-direction: column !important;
   padding: 12px;
   gap: 10px;
-  font-family: var(--ds-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-  color: var(--ds-text, #f8fafc);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  color: var(--ds-color-text, #f8fafc);
   user-select: none;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .ds-sensei-gear-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.1));
   padding-bottom: 8px;
 }
 
@@ -1012,11 +1231,11 @@
 .ds-sensei-gear-badge {
   font-size: 10px;
   font-weight: 800;
-  background: rgba(103, 232, 249, 0.15);
-  border: 1px solid var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 15%, transparent);
+  border: 1px solid var(--ds-color-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--ds-radius-badge, 4px);
   letter-spacing: 0.05em;
 }
 
@@ -1024,30 +1243,30 @@
   display: block;
   font-size: 12px;
   font-weight: 700;
-  color: var(--ds-text, #f8fafc);
+  color: var(--ds-color-text, #f8fafc);
   line-height: 1.2;
 }
 
 .ds-sensei-gear-sub {
   display: block;
   font-size: 10px;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
+  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.6));
   line-height: 1.2;
 }
 
 .ds-sensei-gear-close {
   background: transparent;
   border: none;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
+  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.6));
   font-size: 18px;
   cursor: pointer;
   padding: 0 4px;
   line-height: 1;
-  transition: color 0.15s ease;
+  transition: color var(--ds-transition, 120ms ease);
 }
 
 .ds-sensei-gear-close:hover {
-  color: #f87171;
+  color: var(--ds-color-danger, #f87171);
 }
 
 .ds-sensei-gear-field {
@@ -1062,7 +1281,7 @@
 .ds-sensei-gear-label {
   font-size: 10px;
   font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.65));
+  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.65));
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -1080,108 +1299,1265 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--ds-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
   margin-top: 2px;
 }
 
 .ds-sensei-gear-behavior-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  background: var(--ds-panel-2, rgba(0, 0, 0, 0.25));
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.08));
-  border-radius: 6px;
-  padding: 8px;
+  gap: 8px;
+  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--ds-radius-control, 6px);
+  padding: 8px 10px;
 }
 
-.ds-sensei-gear-toggle-row {
+.ds-sensei-gear-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.35));
+  padding: 3px;
+  border-radius: var(--ds-radius-control, 6px);
+  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
+}
+
+.ds-sensei-gear-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.65));
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-tab, 4px);
+  cursor: pointer;
+  transition: all var(--ds-transition, 120ms ease);
+}
+
+.ds-sensei-gear-tab-btn:hover {
+  color: var(--ds-color-text, #f8fafc);
+  background: var(--ds-color-surface-hover, rgba(255, 255, 255, 0.06));
+}
+
+.ds-sensei-gear-tab-btn.is-active {
+  color: var(--ds-color-accent, #67e8f9);
+  background: var(--ds-color-surface, rgba(255, 255, 255, 0.1));
+  border-color: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 40%, transparent);
+}
+
+.ds-sensei-gear-status-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--ds-radius-control, 6px);
+  font-size: 11px;
+}
+
+.ds-sensei-gear-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.ds-sensei-gear-status-dot.is-loaded {
+  background: #34d399;
+  box-shadow: 0 0 6px #34d399;
+}
+
+.ds-sensei-gear-status-dot.is-idle {
+  background: var(--ds-color-muted-text, #64748b);
+}
+
+.ds-sensei-gear-rescan-btn {
+  height: 24px;
+  line-height: 22px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.ds-sensei-gear-unload-btn {
+  width: 100%;
+  height: 28px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+
+
+/* ========================================================================= */
+/* LoRA Section (matches Generation Hub ss3)                                 */
+/* ========================================================================= */
+.ds-sensei-loras-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   width: 100%;
 }
 
-.ds-sensei-gear-toggle-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ds-text, #f8fafc);
+.ds-sensei-lora-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 3px 6px !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+  transition: border-color var(--ds-transition, 120ms ease), opacity var(--ds-transition, 120ms ease) !important;
+  width: 100% !important;
 }
 
-.ds-sensei-gear-toggle-btn {
-  height: 22px;
-  padding: 0 8px;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 4px;
+.ds-sensei-lora-row.is-off {
+  opacity: 0.55 !important;
 }
 
-.ds-sensei-gear-err-toast {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid #ef4444;
-  color: #fca5a5;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
-  text-align: center;
+.ds-sensei-lora-row.is-dragover {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 10%, var(--ds-color-panel-2, #161a23)) !important;
 }
 
-/* =========================================================
-   Error Banner (Node UI)
-   ========================================================= */
-.ds-sensei-error-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.38);
-  border-radius: 6px;
-  padding: 8px 10px;
-  margin-bottom: 4px;
-}
-
-.ds-sensei-error-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 11px;
-  color: #fca5a5;
-  line-height: 1.3;
-}
-
-.ds-sensei-error-text strong {
-  font-weight: 700;
-  color: #f87171;
-}
-
-.ds-sensei-error-sub {
-  font-family: var(--ds-font-mono, monospace);
-  font-size: 10px;
-  opacity: 0.9;
-  color: #fecaca;
-  word-break: break-all;
-}
-
-.ds-sensei-error-actions {
+.ds-sensei-lora-row .ds-sensei-drag-handle {
+  cursor: grab;
+  color: var(--ds-color-muted-text, #737c89);
+  padding: 0 2px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 2px;
+  flex-shrink: 0;
+  user-select: none;
 }
 
-.ds-sensei-btn-sm {
-  height: 22px;
-  padding: 0 8px;
-  font-size: 10px;
+.ds-sensei-lora-row .ds-sensei-drag-handle:active {
+  cursor: grabbing;
+}
+
+.ds-sensei-lora-row .ds-ui-dropdown {
+  flex: 1 1 auto !important;
+  min-width: 80px !important;
+  height: 24px !important;
+}
+
+.ds-sensei-lora-row .ds-ui-dropdown-trigger {
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 6px !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  font-size: 11px !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-stepper,
+.ds-sensei-lora-row .ds-sensei-lora-stepper {
+  width: 58px !important;
+  min-width: 58px !important;
+  max-width: 58px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  background: var(--ds-input-bg, var(--ds-color-panel-2, #161a23)) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-stepper:focus-within,
+.ds-sensei-lora-row .ds-sensei-lora-stepper:focus-within {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-stepper .ds-sensei-stepper-input,
+.ds-sensei-lora-row .ds-sensei-lora-stepper .ds-sensei-stepper-input {
+  flex: 1 1 0% !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--ds-color-text, #f8fafc) !important;
+  font-family: var(--ds-font, inherit) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums !important;
+  text-align: center !important;
+  outline: none !important;
+  padding: 0 2px !important;
+  box-sizing: border-box !important;
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  line-height: 22px !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-stepper .ds-sensei-stepper-btns,
+.ds-sensei-lora-row .ds-sensei-lora-stepper .ds-sensei-stepper-btns {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 14px !important;
+  min-width: 14px !important;
+  max-width: 14px !important;
+  height: 100% !important;
+  border-left: 1px solid var(--ds-color-border, #242a36) !important;
+  flex-shrink: 0 !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-stepper .ds-sensei-stepper-btn,
+.ds-sensei-lora-row .ds-sensei-lora-stepper .ds-sensei-stepper-btn {
+  flex: 1 !important;
+  height: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: background var(--ds-transition, 120ms ease), color var(--ds-transition, 120ms ease) !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-stepper .ds-sensei-stepper-btn:hover,
+.ds-sensei-lora-row .ds-sensei-lora-stepper .ds-sensei-stepper-btn:hover {
+  background: var(--ds-btn-hover, #1e2433) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-sensei-lora-row .ds-ui-btn.ds-ui-btn-compact,
+.ds-sensei-lora-row .ds-sensei-lora-info-btn,
+.ds-sensei-lora-row .ds-sensei-lora-del-btn {
+  width: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  padding: 0 !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
+  background: var(--ds-btn-bg, #161a23) !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+  transition: all var(--ds-transition, 120ms ease) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-lora-info-btn:hover,
+.ds-sensei-lora-row .ds-sensei-lora-del-btn:hover {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  background: var(--ds-btn-hover, #1e2433) !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-lora-del-btn:hover {
+  border-color: var(--ds-color-danger, #f87171) !important;
+  color: var(--ds-color-danger, #f87171) !important;
+}
+
+.ds-sensei-lora-row .ds-sensei-lora-info-btn.has-triggers {
+  color: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 15%, transparent) !important;
+}
+
+.ds-sensei-lora-row .ds-ui-toggle-row,
+.ds-sensei-lora-row .ds-sensei-lora-toggle {
+  margin: 0 4px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  gap: 0 !important;
+  cursor: pointer !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.ds-sensei-lora-row .ds-ui-toggle-copy {
+  display: none !important;
+}
+
+.ds-sensei-lora-row .ds-ui-toggle-track {
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  border-radius: var(--ds-radius-control, 4px) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  position: relative !important;
+  transition: all var(--ds-transition, 120ms ease) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+}
+
+.ds-sensei-lora-row .ds-ui-toggle-thumb {
+  width: 12px !important;
+  height: 12px !important;
+  top: 2px !important;
+  left: 2px !important;
+  border-radius: 3px !important;
+  background: var(--ds-color-muted-text, #9ca3af) !important;
+  position: absolute !important;
+  transition: transform var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease) !important;
+}
+
+.ds-sensei-lora-row .ds-ui-toggle-row.is-on .ds-ui-toggle-track,
+.ds-sensei-lora-row .is-on .ds-ui-toggle-track {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-sensei-lora-row .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb,
+.ds-sensei-lora-row .is-on .ds-ui-toggle-thumb {
+  transform: translateX(14px) !important;
+  background: var(--ds-color-on-accent, #0a0c10) !important;
+}
+
+.ds-sensei-add-btn {
+  width: 100%;
+  height: 26px;
+  border-radius: var(--ds-btn-radius, 5px);
+  border: 1px dashed var(--ds-color-border, rgba(255, 255, 255, 0.15)) !important;
+  background: var(--ds-btn-bg, #1a1e28) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  font-family: var(--ds-font, inherit);
+  font-size: 11px;
   font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-gap-xs, 4px);
+  outline: none;
+  transition: all var(--ds-transition, 0.15s ease);
 }
 
-/* =========================================================
-   Paused Status Tag
-   ========================================================= */
-.ds-sensei-status-paused {
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  background: rgba(56, 189, 248, 0.08);
+.ds-sensei-add-btn:hover {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  background: var(--ds-btn-hover, #242a36) !important;
 }
+
+/* ========================================================================= */
+/* Section Order Cards in Gear Menu (matches Generation Hub)                */
+/* ========================================================================= */
+.ds-sensei-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ds-sensei-order-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ds-color-text, #f8fafc);
+  cursor: grab;
+  user-select: none;
+  transition: all var(--ds-transition, 0.15s ease);
+}
+
+.ds-sensei-order-card:active {
+  cursor: grabbing;
+}
+
+.ds-sensei-order-card > * {
+  pointer-events: none;
+}
+
+.ds-sensei-order-card.is-dragging {
+  opacity: 0.55;
+}
+
+.ds-sensei-order-card.is-dragover {
+  border-color: var(--ds-color-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 12%, transparent);
+}
+
+/* ========================================================================= */
+/* CivitAI Trigger Words Modal                                              */
+/* ========================================================================= */
+.ds-sensei-modal {
+  position: fixed;
+  z-index: 99999;
+  width: 390px;
+  max-width: calc(100vw - 24px);
+  background: var(--ds-color-panel, #12151c);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-card, 8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--ds-color-text, #f8fafc);
+  font-family: var(--ds-font, sans-serif);
+}
+
+.ds-sensei-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--ds-color-border, #242a36);
+  padding-bottom: 8px;
+  font-size: 12px;
+}
+
+.ds-sensei-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.ds-sensei-modal-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ds-sensei-modal-status-text {
+  font-size: 11px;
+  color: var(--ds-color-muted-text, #94a3b8);
+}
+
+.ds-sensei-btn-civitai {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--ds-radius-control, 4px);
+  background: var(--ds-btn-bg, #1e293b);
+  border: 1px solid var(--ds-color-border, #334155);
+  color: var(--ds-color-accent, #67e8f9);
+  cursor: pointer;
+}
+
+.ds-sensei-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ds-sensei-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--ds-color-border, #242a36);
+  padding-top: 8px;
+}
+
+/* ========================================================================= */
+/* Tabs, Status Line & Mode Dimming                                          */
+/* ========================================================================= */
+
+.ds-sensei-tabs-row {
+  display: flex !important;
+  gap: 6px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-tabs-row > .ds-ui-btn {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 0 6px !important;
+}
+
+.ds-sensei-tabs-dimmed {
+  opacity: 0.45 !important;
+  pointer-events: none !important;
+}
+
+.ds-sensei-card-dimmed {
+  opacity: 0.55 !important;
+  filter: grayscale(0.2) !important;
+  transition: opacity var(--ds-transition, 150ms ease) !important;
+}
+
+.ds-sensei-dimmed-badge {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  margin-left: 6px !important;
+}
+
+.ds-sensei-status-line {
+  display: flex !important;
+  align-items: center !important;
+  font-size: 11px !important;
+  color: var(--ds-color-muted-text, #94a3b8) !important;
+  background: var(--ds-color-surface, rgba(0, 0, 0, 0.2)) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: var(--ds-radius-control, 4px) !important;
+  padding: 4px 8px !important;
+  min-height: 22px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.ds-sensei-sysprompt-box {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  width: 100% !important;
+}
+
+.ds-sensei-sysprompt-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, #94a3b8) !important;
+}
+
+.ds-sensei-sysprompt-area {
+  min-height: 70px !important;
+  font-family: monospace !important;
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+}
+
+/* ========================================================================= */
+/* Gear Menu Scrollable Body & Slim Arrowless Scrollbar                      */
+/* ========================================================================= */
+
+.ds-sensei-gear-scroll-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding-right: 6px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-gear-popover ::-webkit-scrollbar,
+.ds-sensei-gear-scroll-body::-webkit-scrollbar {
+  width: 4px !important;
+  height: 4px !important;
+}
+
+.ds-sensei-gear-popover ::-webkit-scrollbar-track,
+.ds-sensei-gear-scroll-body::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.ds-sensei-gear-popover ::-webkit-scrollbar-thumb,
+.ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb {
+  background: rgba(103, 232, 249, 0.25) !important;
+  border-radius: 4px !important;
+}
+
+.ds-sensei-gear-popover ::-webkit-scrollbar-thumb:hover,
+.ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(103, 232, 249, 0.55) !important;
+}
+
+.ds-sensei-gear-popover ::-webkit-scrollbar-button,
+.ds-sensei-gear-scroll-body::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Hardware Detection Card & VRAM Warning */
+.ds-sensei-gear-hw-card {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 8px 10px !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: var(--ds-radius-control, 6px) !important;
+  font-size: 11px !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-gear-hw-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.ds-sensei-gear-hw-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.ds-sensei-hw-name {
+  color: var(--ds-color-text, #e2e8f0) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  line-height: 1.3 !important;
+}
+
+.ds-sensei-autotune-btn {
+  flex-shrink: 0 !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  padding: 0 8px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: var(--ds-accent, #67e8f9) !important;
+  background: rgba(103, 232, 249, 0.14) !important;
+  border: 1px solid rgba(103, 232, 249, 0.25) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+
+.ds-sensei-autotune-btn:hover {
+  background: rgba(103, 232, 249, 0.25) !important;
+  border-color: var(--ds-accent, #67e8f9) !important;
+}
+
+.ds-sensei-gear-hw-warn {
+  display: none;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: var(--ds-radius-control, 4px);
+  color: #fcd34d;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.ds-sensei-gear-hw-warn.is-visible {
+  display: flex !important;
+}
+
+.ds-sensei-gear-hw-warn:empty {
+  display: none !important;
+  padding: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+}
+
+/* ========================================================================= */
+/* 22. Collapsible Sections & Collapsed Socket Dock                         */
+/* ========================================================================= */
+
+.ds-sensei-card.is-collapsed {
+  padding: 6px 10px !important;
+  gap: 0 !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-card.is-collapsed > .ds-ui-card-body {
+  display: none !important;
+}
+
+.ds-sensei-collapsed-dock {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  width: 100% !important;
+  padding: 4px 0 2px 0 !important;
+}
+
+.ds-sensei-collapsed-socket-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  padding-right: 6px !important;
+  gap: 6px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, #94a3b8) !important;
+  user-select: none !important;
+  border-radius: 3px !important;
+  transition: background-color 0.12s ease !important;
+}
+
+.ds-sensei-collapsed-socket-row:hover {
+  background: rgba(103, 232, 249, 0.06) !important;
+  color: #f1f5f9 !important;
+}
+
+.ds-sensei-collapsed-socket-row .ds-sensei-socket-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: var(--ds-color-accent, #67e8f9) !important;
+  opacity: 0.8 !important;
+}
+
+/* ========================================================================= */
+/* 23. Split Image Card & Realtime Hardware / LLM Monitor (Ultra Compact)    */
+/* ========================================================================= */
+
+.ds-sensei-image-split-row {
+  display: flex !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  width: 100% !important;
+  height: 172px !important;
+  min-height: 172px !important;
+  max-height: 172px !important;
+  box-sizing: border-box !important;
+}
+
+/* Left Image Column */
+.ds-sensei-image-col {
+  width: 132px !important;
+  min-width: 132px !important;
+  max-width: 132px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+  height: 172px !important;
+  min-height: 172px !important;
+  max-height: 172px !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-preview-square {
+  position: relative !important;
+  width: 132px !important;
+  min-height: 144px !important;
+  height: 144px !important;
+  max-height: 144px !important;
+  flex: 0 0 144px !important;
+  border-radius: 5px !important;
+  background: #08090c !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-preview-square:hover {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  box-shadow: 0 0 10px rgba(103, 232, 249, 0.15) !important;
+}
+
+.ds-sensei-preview-square .ds-sensei-preview-img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+.ds-sensei-image-col-ignored {
+  transition: opacity var(--ds-transition, 150ms ease) !important;
+}
+
+.ds-sensei-preview-square.ds-sensei-preview-ignored {
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.ds-sensei-preview-square.ds-sensei-preview-ignored .ds-sensei-preview-img {
+  opacity: 0.45 !important;
+  filter: grayscale(0.5) !important;
+}
+
+.ds-sensei-preview-ignored-badge {
+  position: absolute !important;
+  bottom: 6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: rgba(15, 20, 28, 0.92) !important;
+  color: #f59e0b !important;
+  border: 1px solid rgba(245, 158, 11, 0.45) !important;
+  border-radius: 4px !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  white-space: nowrap !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(4px) !important;
+  z-index: 2 !important;
+}
+
+.ds-sensei-dropzone-square {
+  position: relative !important;
+  width: 132px !important;
+  min-height: 172px !important;
+  height: 172px !important;
+  max-height: 172px !important;
+  flex: 0 0 172px !important;
+  border-radius: 5px !important;
+  background: rgba(15, 20, 28, 0.6) !important;
+  border: 1.5px dashed var(--ds-color-border, #333d4e) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  padding: 8px !important;
+  gap: 4px !important;
+  transition: all 0.15s ease !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-dropzone-square.ds-sensei-dropzone-ignored {
+  opacity: 0.7 !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  background: rgba(15, 20, 28, 0.5) !important;
+}
+
+.ds-sensei-dropzone-square.ds-sensei-dropzone-ignored .ds-sensei-ignored-title {
+  color: #f59e0b !important;
+}
+
+.ds-sensei-dropzone-square:hover,
+.ds-sensei-dropzone-square.drag-over {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  background: rgba(103, 232, 249, 0.08) !important;
+  box-shadow: 0 0 12px rgba(103, 232, 249, 0.2) !important;
+}
+
+.ds-sensei-dropzone-square-title {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.ds-sensei-dropzone-square-sub {
+  font-size: 8.5px !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  line-height: 1.2 !important;
+}
+
+.ds-sensei-img-actions-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  width: 100% !important;
+  height: 22px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.ds-sensei-img-actions-bar .ds-ui-btn,
+.ds-sensei-img-actions-bar .ds-sensei-img-res-badge,
+.ds-sensei-img-res-badge {
+  box-sizing: border-box !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  border-radius: 5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 8.5px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+
+.ds-sensei-img-res-badge {
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  padding: 0 5px !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  max-width: none !important;
+  flex: 1 1 auto !important;
+  text-align: center !important;
+}
+
+.ds-sensei-img-actions-bar .ds-ui-btn {
+  padding: 0 8px !important;
+  flex-shrink: 0 !important;
+  gap: 3px !important;
+}
+
+/* Right Monitor Column */
+.ds-sensei-monitor-col {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  background: rgba(10, 12, 18, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 6px !important;
+  padding: 6px 8px !important;
+  box-sizing: border-box !important;
+  height: 172px !important;
+  min-height: 172px !important;
+  max-height: 172px !important;
+}
+
+/* LLM Live Monitor Header & Box */
+.ds-sensei-llm-monitor-box {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 2px !important;
+  background: rgba(18, 22, 32, 0.75) !important;
+  border: 1px solid rgba(103, 232, 249, 0.18) !important;
+  border-radius: 4px !important;
+  padding: 4px 6px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  overflow: hidden !important;
+}
+
+.ds-sensei-llm-top-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 6px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  max-height: 18px !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-llm-live-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3.5px !important;
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+  padding: 1px 6px !important;
+  border-radius: 3px !important;
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #4ade80 !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  flex-shrink: 0 !important;
+  min-width: 72px !important;
+  height: 16px !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+}
+
+.ds-sensei-llm-live-badge.is-generating {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  animation: ds-pulse-glow 1.5s infinite ease-in-out !important;
+}
+
+.ds-sensei-llm-live-badge.is-idle {
+  background: rgba(148, 163, 184, 0.12) !important;
+  color: #94a3b8 !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+}
+
+.ds-sensei-llm-live-dot {
+  width: 4px !important;
+  height: 4px !important;
+  border-radius: 50% !important;
+  background: currentColor !important;
+}
+
+.ds-sensei-llm-model-name {
+  font-size: 8.5px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 140px !important;
+  text-align: right !important;
+}
+
+.ds-sensei-llm-metrics-strip {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: center !important;
+  background: rgba(0, 0, 0, 0.35) !important;
+  border-radius: 3px !important;
+  padding: 0 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  gap: 6px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-llm-pill {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 3.5px !important;
+  font-size: 8.5px !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.ds-sensei-llm-pill-lbl {
+  color: var(--ds-color-muted-text, #94a3b8) !important;
+  font-weight: 500 !important;
+  flex-shrink: 0 !important;
+}
+
+.ds-sensei-llm-pill b,
+.ds-sensei-llm-pill-val {
+  color: #f1f5f9 !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* 4 Hardware Bars (Compact Inline Rows) */
+.ds-sensei-hw-bars-box {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 3.5px !important;
+  background: rgba(15, 19, 28, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 4px !important;
+  padding: 4px 6px !important;
+  margin: 0 !important;
+  height: 74px !important;
+  min-height: 74px !important;
+  max-height: 74px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.ds-sensei-hw-bar-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 13px !important;
+}
+
+.ds-sensei-hw-bar-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  width: 48px !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+}
+
+.ds-sensei-hw-bar-track {
+  flex: 1 1 0 !important;
+  height: 4px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.ds-sensei-hw-bar-fill {
+  height: 100% !important;
+  border-radius: 2px !important;
+  transition: width 0.3s ease, background-color 0.3s ease !important;
+  background: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-sensei-hw-bar-fill.normal {
+  background: linear-gradient(90deg, #22c55e, #10b981) !important;
+}
+
+.ds-sensei-hw-bar-fill.warning {
+  background: linear-gradient(90deg, #f59e0b, #eab308) !important;
+}
+
+.ds-sensei-hw-bar-fill.critical {
+  background: linear-gradient(90deg, #ef4444, #f43f5e) !important;
+}
+
+.ds-sensei-hw-bar-val {
+  font-size: 8.5px !important;
+  font-weight: 600 !important;
+  color: #cbd5e1 !important;
+  font-variant-numeric: tabular-nums !important;
+  min-width: 86px !important;
+  width: auto !important;
+  text-align: right !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  line-height: 1 !important;
+}
+
+/* Quick Action Memory Buttons */
+.ds-sensei-mem-actions-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  margin-top: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.ds-sensei-mem-btn {
+  flex: 1 1 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  height: 22px !important;
+  box-sizing: border-box !important;
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  border-radius: 5px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e2e8f0 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  white-space: nowrap !important;
+  padding: 0 4px !important;
+}
+
+.ds-sensei-mem-btn:hover {
+  background: rgba(103, 232, 249, 0.15) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: #67e8f9 !important;
+}
+
+.ds-sensei-mem-btn.is-active {
+  background: rgba(34, 197, 94, 0.2) !important;
+  border-color: #22c55e !important;
+  color: #4ade80 !important;
+}
+
+/* Header Summary Badges for Collapsed Cards */
+.ds-sensei-collapsed-badge {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, #94a3b8) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-right: 4px !important;
+  white-space: nowrap !important;
+}
+
+/* Word Count Badge (Placed inside title bar actions before buttons) */
+.ds-sensei-word-count {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, #94a3b8) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-right: 4px !important;
+  white-space: nowrap !important;
+}
+
+@keyframes ds-pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+
+
 

@@ -9,6 +9,7 @@
 // Zero browser-native controls.
 
 import { app } from "/scripts/app.js";
+import { Toggle } from "/extensions/DeathshotArsenal/UIElements/Controls/Toggle.js";
 
 const EXTENSION_NAME = "DeathshotArsenal.DSSnap";
 const STORAGE_KEY = "DS_SNAP_CONFIG_V1";
@@ -720,7 +721,9 @@ class DSSnapEngine {
     if (!ctx || allGuides.length === 0) return;
 
     const accent =
+      window.DSGlobalTheme?.getVar?.("--ds-color-accent") ||
       window.DSGlobalTheme?.getVar?.("--ds-accent") ||
+      getComputedStyle(document.documentElement).getPropertyValue("--ds-color-accent")?.trim() ||
       getComputedStyle(document.documentElement).getPropertyValue("--ds-accent")?.trim() ||
       "#67e8f9";
     const scale = canvas?.ds?.scale || 1.0;
@@ -751,9 +754,9 @@ class DSSnapEngine {
       ctx.lineWidth = lineWidth;
       ctx.setLineDash(dash);
 
-      // Glowing stroke
-      ctx.shadowColor = accent;
-      ctx.shadowBlur = 8 / scale;
+      // Clean guide stroke without glow blur
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
 
       ctx.beginPath();
       if (guide.type === "horizontal") {
@@ -1391,7 +1394,7 @@ class DSSnapToolbarManager {
 
     const popover = document.createElement("div");
     popover.id = "ds-snap-global-popover";
-    popover.className = "ds-snap-popover ds-ui-section";
+    popover.className = "ds-snap-popover";
     popover.setAttribute("data-ds-themed", "true");
 
     if (window.DSGlobalTheme?.applyToElement) {
@@ -1404,26 +1407,42 @@ class DSSnapToolbarManager {
     this.btn?.classList.add("is-active");
 
     this.renderPopoverContent();
+    this.updatePosition();
 
-    // Position relative to toolbar button
-    if (this.btn) {
-      const rect = this.btn.getBoundingClientRect();
-      const popRect = popover.getBoundingClientRect();
-
-      let top;
-      if (rect.top > window.innerHeight / 2) {
-        top = rect.top - popRect.height - 8;
-      } else {
-        top = rect.bottom + 8;
-      }
-
-      // Center horizontally on button, clamped to viewport padding
-      let left = rect.left + rect.width / 2 - popRect.width / 2;
-      left = Math.max(12, Math.min(window.innerWidth - popRect.width - 12, left));
-
-      popover.style.top = `${Math.max(8, Math.round(top))}px`;
-      popover.style.left = `${Math.round(left)}px`;
+    if (!this._resizeAttached) {
+      this._resizeAttached = true;
+      window.addEventListener("resize", () => {
+        if (this.isOpen && this.popover) {
+          this.updatePosition();
+        }
+      });
     }
+  }
+
+  updatePosition() {
+    if (!this.popover) return;
+    const btnRect = this.btn?.getBoundingClientRect();
+    let top = 48;
+    if (btnRect && btnRect.bottom > 0 && btnRect.top < window.innerHeight / 2) {
+      top = btnRect.bottom + 6;
+    } else {
+      const topBar = document.querySelector(".comfyui-menu, .action-bar, .top-bar-button-group, .comfyui-body-top");
+      if (topBar) {
+        const r = topBar.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < window.innerHeight / 2) {
+          top = r.bottom + 6;
+        } else {
+          top = 10;
+        }
+      } else {
+        top = 10;
+      }
+    }
+    this.popover.style.setProperty("top", `${Math.max(6, Math.round(top))}px`, "important");
+    this.popover.style.setProperty("bottom", "auto", "important");
+    this.popover.style.setProperty("left", "5px", "important");
+    this.popover.style.setProperty("right", "5px", "important");
+    this.popover.style.setProperty("width", "calc(100vw - 10px)", "important");
   }
 
   closePopover() {
@@ -1436,280 +1455,177 @@ class DSSnapToolbarManager {
   }
 
   /**
-   * Renders the spacious, compact Deathshot menu UI.
-   * Features custom editable steppers, presets, clear buttons, and zero native controls.
+   * Renders the single thick horizontal toolbar strip.
+   * Options cleanly divided into sections across the full browser width:
+   * DS Snap | Snap toggle, input field | Margin toggle, input field | Row, Column | Measure, Clear, Width, Height, Apply Both | Arrow step input field | History (Undo, Redo) | Status, Close
    */
   renderPopoverContent() {
     if (!this.popover) return;
     const state = snapStore.state;
 
-    const measuredLabel =
-      state.measuredWidth && state.measuredHeight
-        ? `${state.measuredWidth} × ${state.measuredHeight}`
-        : "None";
-
     this.popover.innerHTML = `
-      <div class="ds-snap-menu-header">
-        <div class="ds-snap-header-left">
+      <div class="ds-snap-bar">
+        <!-- Section 1: DS Snap Brand -->
+        <div class="ds-snap-sec ds-snap-sec-brand">
           <span class="ds-snap-badge-icon">${DS_SNAP_ICON_SVG}</span>
           <strong class="ds-snap-title">DS SNAP</strong>
           <span class="ds-snap-version">v1.1</span>
         </div>
-        <div class="ds-snap-header-right">
-          <div class="ds-snap-header-history">
-            <button type="button" class="ds-snap-header-btn" id="ds-snap-btn-undo" title="Undo node change (Ctrl+Z)">
-              <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 6.5h7a3.5 3.5 0 0 1 3.5 3.5v0a3.5 3.5 0 0 1-3.5 3.5H7" />
-                <path d="M6 3.5L3 6.5l3 3" />
-              </svg>
-              <span>Undo</span>
-            </button>
-            <button type="button" class="ds-snap-header-btn" id="ds-snap-btn-redo" title="Redo node change (Ctrl+Shift+Z / Ctrl+Y)">
-              <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M13 6.5H6a3.5 3.5 0 0 0-3.5 3.5v0a3.5 3.5 0 0 0 3.5 3.5H9" />
-                <path d="M10 3.5l3 3-3 3" />
-              </svg>
-              <span>Redo</span>
-            </button>
-          </div>
-          <span class="ds-snap-status-tag ${state.enabled ? "is-on" : ""}">
-            ${state.enabled ? "ACTIVE" : "OFF"}
-          </span>
-          <button type="button" class="ds-snap-close-btn" aria-label="Close">✕</button>
-        </div>
-      </div>
 
-      <!-- Spacious 5-Column Side-by-Side Horizontal Layout -->
-      <div class="ds-snap-columns-row">
-        
-        <!-- Column 1: Snap & Threshold -->
-        <div class="ds-snap-col">
-          <div class="ds-snap-col-head">
-            <span class="ds-snap-col-title">SNAP</span>
-            <button type="button" class="ds-snap-switch ${state.enabled ? "is-on" : ""}" id="ds-snap-toggle" role="switch" aria-checked="${state.enabled}">
-              <span class="ds-snap-switch-track">
-                <span class="ds-snap-switch-thumb"></span>
-              </span>
-            </button>
-          </div>
-          <span class="ds-snap-col-sub">THRESHOLD</span>
-          
-          <!-- Custom Stepper Input -->
-          <div class="ds-snap-stepper" data-target="snapThreshold">
-            <button type="button" class="ds-snap-step-btn" data-action="dec" title="Decrease threshold">−</button>
-            <input type="text" class="ds-snap-stepper-input" id="ds-snap-input-threshold" value="${state.snapThreshold}px" aria-label="Custom threshold" />
-            <button type="button" class="ds-snap-step-btn" data-action="inc" title="Increase threshold">+</button>
-          </div>
+        <div class="ds-snap-divider"></div>
 
-          <!-- Quick Chips -->
-          <div class="ds-snap-chips-row" id="ds-snap-threshold-chips">
-            ${[6, 10, 15, 20]
-              .map(
-                (v) => `
-                <button type="button" class="ds-snap-chip ${state.snapThreshold === v ? "is-active" : ""}" data-val="${v}">
-                  ${v}px
-                </button>
-              `
-              )
-              .join("")}
+        <!-- Section 2: Snap toggle & input field -->
+        <div class="ds-snap-sec">
+          <span class="ds-snap-sec-title">SNAP</span>
+          <div id="ds-snap-toggle-slot"></div>
+          <div class="ds-snap-input-wrap" title="Snap hysteresis threshold (px)">
+            <input type="number" class="ds-snap-input" id="ds-snap-input-threshold" value="${state.snapThreshold}" min="1" max="100" aria-label="Snap threshold" />
+            <span class="ds-snap-input-unit">px</span>
           </div>
         </div>
 
-        <!-- Column 2: Spacing & Margin -->
-        <div class="ds-snap-col">
-          <div class="ds-snap-col-head">
-            <span class="ds-snap-col-title">MARGIN</span>
-            <button type="button" class="ds-snap-switch ${state.minMarginEnabled ? "is-on" : ""}" id="ds-snap-margin-toggle" role="switch" aria-checked="${state.minMarginEnabled}">
-              <span class="ds-snap-switch-track">
-                <span class="ds-snap-switch-thumb"></span>
-              </span>
-            </button>
-          </div>
-          <span class="ds-snap-col-sub">SPACING GAP</span>
+        <div class="ds-snap-divider"></div>
 
-          <!-- Custom Stepper Input -->
-          <div class="ds-snap-stepper" data-target="margin">
-            <button type="button" class="ds-snap-step-btn" data-action="dec" title="Decrease margin">−</button>
-            <input type="text" class="ds-snap-stepper-input" id="ds-snap-input-margin" value="${state.minMarginX}px" aria-label="Custom margin" />
-            <button type="button" class="ds-snap-step-btn" data-action="inc" title="Increase margin">+</button>
-          </div>
-
-          <!-- Quick Chips -->
-          <div class="ds-snap-chips-row" id="ds-snap-margin-chips">
-            ${[10, 20, 30, 40]
-              .map(
-                (v) => `
-                <button type="button" class="ds-snap-chip ${state.minMarginX === v ? "is-active" : ""}" data-val="${v}">
-                  ${v}px
-                </button>
-              `
-              )
-              .join("")}
+        <!-- Section 3: Margin toggle & input field -->
+        <div class="ds-snap-sec">
+          <span class="ds-snap-sec-title">MARGIN</span>
+          <div id="ds-snap-margin-toggle-slot"></div>
+          <div class="ds-snap-input-wrap" title="Minimum node spacing gap (px)">
+            <input type="number" class="ds-snap-input" id="ds-snap-input-margin" value="${state.minMarginX}" min="0" max="250" aria-label="Margin gap" />
+            <span class="ds-snap-input-unit">px</span>
           </div>
         </div>
 
-        <!-- Column 3: Multi-Node Arrangement -->
-        <div class="ds-snap-col">
-          <div class="ds-snap-col-head">
-            <span class="ds-snap-col-title">ARRANGE</span>
-            <span class="ds-snap-col-tag">UNIFORM</span>
-          </div>
-          <span class="ds-snap-col-sub">MULTI-NODE SELECTION</span>
-          <div class="ds-snap-actions-stack">
-            <button type="button" class="ds-snap-btn ds-snap-btn-large" id="ds-snap-btn-row" title="Arrange selected nodes into a horizontal row">
-              ${ICON_ROW}
-              <span>Row</span>
-            </button>
-            <button type="button" class="ds-snap-btn ds-snap-btn-large" id="ds-snap-btn-col" title="Arrange selected nodes into a vertical column (Zero overlap)">
-              ${ICON_COL}
-              <span>Column</span>
-            </button>
-          </div>
+        <div class="ds-snap-divider"></div>
+
+        <!-- Section 4: Row, Column -->
+        <div class="ds-snap-sec">
+          <span class="ds-snap-sec-title">ARRANGE</span>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-row" title="Arrange selected nodes into a horizontal row">
+            ${ICON_ROW}
+            <span>Row</span>
+          </button>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-col" title="Arrange selected nodes into a vertical column">
+            ${ICON_COL}
+            <span>Column</span>
+          </button>
         </div>
 
-        <!-- Column 4: Dimension Matching -->
-        <div class="ds-snap-col ds-snap-col-wide">
-          <div class="ds-snap-col-head">
-            <span class="ds-snap-col-title">DIMENSIONS</span>
-            <span class="ds-snap-dim-readout" id="ds-snap-dim-text">
-              ${measuredLabel}
-            </span>
-          </div>
-          <div class="ds-snap-dim-grid">
-            <button type="button" class="ds-snap-btn" id="ds-snap-btn-measure" title="Measure selected node width & height">
-              Measure
-            </button>
-            <button type="button" class="ds-snap-btn" id="ds-snap-btn-clear" title="Clear measured dimensions">
-              Clear
-            </button>
-            <button type="button" class="ds-snap-btn" id="ds-snap-btn-apply-w" title="Apply measured width to selected nodes">
-              Width
-            </button>
-            <button type="button" class="ds-snap-btn" id="ds-snap-btn-apply-h" title="Apply measured height to selected nodes">
-              Height
-            </button>
-            <button type="button" class="ds-snap-btn ds-snap-btn-accent ds-snap-btn-span2" id="ds-snap-btn-apply-both" title="Apply measured width and height">
-              Apply Both
-            </button>
-          </div>
+        <div class="ds-snap-divider"></div>
+
+        <!-- Section 5: Measure, Clear, Width, Height, Apply Both -->
+        <div class="ds-snap-sec">
+          <span class="ds-snap-sec-title">DIMENSIONS</span>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-measure" title="Measure selected node width & height">
+            Measure
+          </button>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-clear" title="Clear measured dimensions">
+            Clear
+          </button>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-apply-w" title="Apply measured width to selected nodes">
+            Width
+          </button>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-apply-h" title="Apply measured height to selected nodes">
+            Height
+          </button>
+          <button type="button" class="ds-snap-btn ds-snap-btn-accent" id="ds-snap-btn-apply-both" title="Apply measured width & height to selected nodes">
+            Apply Both
+          </button>
         </div>
 
-        <!-- Column 5: Keyboard Movement -->
-        <div class="ds-snap-col">
-          <div class="ds-snap-col-head">
-            <span class="ds-snap-col-title">KEYBOARD</span>
-            <span class="ds-snap-col-tag">SHIFT=5×</span>
-          </div>
-          <span class="ds-snap-col-sub">ARROW STEP</span>
+        <div class="ds-snap-divider"></div>
 
-          <!-- Custom Stepper Input -->
-          <div class="ds-snap-stepper" data-target="keyboardStep">
-            <button type="button" class="ds-snap-step-btn" data-action="dec" title="Decrease step">−</button>
-            <input type="text" class="ds-snap-stepper-input" id="ds-snap-input-step" value="${state.keyboardStep}px" aria-label="Custom arrow step" />
-            <button type="button" class="ds-snap-step-btn" data-action="inc" title="Increase step">+</button>
+        <!-- Section 6: Arrow step input field -->
+        <div class="ds-snap-sec">
+          <span class="ds-snap-sec-title">ARROW STEP</span>
+          <div class="ds-snap-input-wrap" title="Keyboard arrow nudge step (px)">
+            <input type="number" class="ds-snap-input" id="ds-snap-input-step" value="${state.keyboardStep}" min="1" max="100" aria-label="Arrow step" />
+            <span class="ds-snap-input-unit">px</span>
           </div>
-
-          <!-- Quick Chips -->
-          <div class="ds-snap-chips-row" id="ds-snap-step-chips">
-            ${[1, 5, 10, 20]
-              .map(
-                (v) => `
-                <button type="button" class="ds-snap-chip ${state.keyboardStep === v ? "is-active" : ""}" data-val="${v}">
-                  ${v}px
-                </button>
-              `
-              )
-              .join("")}
-          </div>
+          <span class="ds-snap-tag" title="Holding Shift multiplies arrow movement by 5×">SHIFT=5×</span>
         </div>
 
+        <div class="ds-snap-divider"></div>
+
+        <!-- Section 7: History (Undo / Redo with icon + text) -->
+        <div class="ds-snap-sec">
+          <span class="ds-snap-sec-title">HISTORY</span>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-undo" title="Undo node change (Ctrl+Z)" aria-label="Undo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-undo-2 preview-icon"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+            <span>Undo</span>
+          </button>
+          <button type="button" class="ds-snap-btn" id="ds-snap-btn-redo" title="Redo node change (Ctrl+Shift+Z / Ctrl+Y)" aria-label="Redo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-redo-2 preview-icon"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg>
+            <span>Redo</span>
+          </button>
+        </div>
+
+        <div class="ds-snap-divider"></div>
+
+        <!-- Section 8: Close (Far Right) -->
+        <div class="ds-snap-sec ds-snap-sec-actions">
+          <button type="button" class="ds-snap-close-btn" id="ds-snap-close-btn" aria-label="Close Snap Bar" title="Close Snap Bar">
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3.5" y1="3.5" x2="12.5" y2="12.5" />
+              <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" />
+            </svg>
+          </button>
+        </div>
       </div>
     `;
 
+    // Mount official UI Toggle components
+    const snapToggle = Toggle({
+      checked: state.enabled,
+      onChange: (checked) => {
+        snapStore.update({ enabled: checked });
+      },
+    });
+    this.popover.querySelector("#ds-snap-toggle-slot")?.replaceWith(snapToggle.root);
+
+    const marginToggle = Toggle({
+      checked: state.minMarginEnabled,
+      onChange: (checked) => {
+        snapStore.update({ minMarginEnabled: checked });
+      },
+    });
+    this.popover.querySelector("#ds-snap-margin-toggle-slot")?.replaceWith(marginToggle.root);
+
     // --- Interactive Event Bindings ---
-    this.popover.querySelector(".ds-snap-close-btn")?.addEventListener("click", () => this.closePopover());
+    this.popover.querySelector("#ds-snap-close-btn")?.addEventListener("click", () => this.closePopover());
 
-    // Toggle master snap
-    this.popover.querySelector("#ds-snap-toggle")?.addEventListener("click", () => {
-      snapStore.update({ enabled: !snapStore.state.enabled });
-    });
-
-    // Toggle margin
-    this.popover.querySelector("#ds-snap-margin-toggle")?.addEventListener("click", () => {
-      snapStore.update({ minMarginEnabled: !snapStore.state.minMarginEnabled });
-    });
-
-    // Threshold stepper & input
+    // Threshold input
     const thresholdInput = this.popover.querySelector("#ds-snap-input-threshold");
     thresholdInput?.addEventListener("change", (e) => {
-      const val = Math.max(2, Math.min(100, parseInt(e.target.value) || 12));
+      const val = Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 6));
       snapStore.update({ snapThreshold: val });
     });
 
-    const thresholdStepper = this.popover.querySelector('[data-target="snapThreshold"]');
-    thresholdStepper?.addEventListener("click", (e) => {
-      const btn = e.target.closest(".ds-snap-step-btn");
-      if (!btn) return;
-      const delta = btn.dataset.action === "inc" ? 2 : -2;
-      const next = Math.max(2, Math.min(100, snapStore.state.snapThreshold + delta));
-      snapStore.update({ snapThreshold: next });
-    });
-
-    // Threshold quick chips
-    this.popover.querySelector("#ds-snap-threshold-chips")?.addEventListener("click", (e) => {
-      const chip = e.target.closest(".ds-snap-chip");
-      if (chip && chip.dataset.val) {
-        snapStore.update({ snapThreshold: Number(chip.dataset.val) });
-      }
-    });
-
-    // Margin stepper & input
+    // Margin input
     const marginInput = this.popover.querySelector("#ds-snap-input-margin");
     marginInput?.addEventListener("change", (e) => {
-      const val = Math.max(0, Math.min(250, parseInt(e.target.value) || 20));
+      const val = Math.max(0, Math.min(250, parseInt(e.target.value, 10) || 10));
       snapStore.update({ minMarginX: val, minMarginY: val });
     });
 
-    const marginStepper = this.popover.querySelector('[data-target="margin"]');
-    marginStepper?.addEventListener("click", (e) => {
-      const btn = e.target.closest(".ds-snap-step-btn");
-      if (!btn) return;
-      const delta = btn.dataset.action === "inc" ? 5 : -5;
-      const next = Math.max(0, Math.min(250, snapStore.state.minMarginX + delta));
-      snapStore.update({ minMarginX: next, minMarginY: next });
-    });
-
-    // Margin quick chips
-    this.popover.querySelector("#ds-snap-margin-chips")?.addEventListener("click", (e) => {
-      const chip = e.target.closest(".ds-snap-chip");
-      if (chip && chip.dataset.val) {
-        const val = Number(chip.dataset.val);
-        snapStore.update({ minMarginX: val, minMarginY: val });
-      }
-    });
-
-    // Keyboard step stepper & input
+    // Keyboard step input
     const stepInput = this.popover.querySelector("#ds-snap-input-step");
     stepInput?.addEventListener("change", (e) => {
-      const val = Math.max(1, Math.min(100, parseInt(e.target.value) || 10));
+      const val = Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1));
       snapStore.update({ keyboardStep: val });
     });
 
-    const stepStepper = this.popover.querySelector('[data-target="keyboardStep"]');
-    stepStepper?.addEventListener("click", (e) => {
-      const btn = e.target.closest(".ds-snap-step-btn");
-      if (!btn) return;
-      const delta = btn.dataset.action === "inc" ? 1 : -1;
-      const next = Math.max(1, Math.min(100, snapStore.state.keyboardStep + delta));
-      snapStore.update({ keyboardStep: next });
-    });
-
-    // Keyboard quick chips
-    this.popover.querySelector("#ds-snap-step-chips")?.addEventListener("click", (e) => {
-      const chip = e.target.closest(".ds-snap-chip");
-      if (chip && chip.dataset.val) {
-        snapStore.update({ keyboardStep: Number(chip.dataset.val) });
-      }
+    // Mouse wheel on inputs for fast increment/decrement
+    [thresholdInput, marginInput, stepInput].forEach((inp) => {
+      inp?.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 1 : -1;
+        const current = parseInt(inp.value, 10) || 0;
+        const minVal = Number(inp.min) || 0;
+        const maxVal = Number(inp.max) || 250;
+        inp.value = String(Math.max(minVal, Math.min(maxVal, current + delta)));
+        inp.dispatchEvent(new Event("change"));
+      }, { passive: false });
     });
 
     // Arrange and history buttons
@@ -1969,10 +1885,14 @@ function installCanvasHooks() {
 // 10. STYLESHEET INJECTION (STRICT DEATHSHOT DESIGN SYSTEM)
 // ---------------------------------------------------------------------------
 function injectSnapStyles() {
-  if (document.getElementById("ds-snap-styles-v1")) return;
-
-  const style = document.createElement("style");
-  style.id = "ds-snap-styles-v1";
+  const oldStyle = document.getElementById("ds-snap-styles-v1");
+  if (oldStyle) oldStyle.remove();
+  let style = document.getElementById("ds-snap-styles-v2");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "ds-snap-styles-v2";
+    document.head.appendChild(style);
+  }
   style.textContent = `
     /* Action Bar Dock Wrapper */
     .ds-snap-toolbar-group,
@@ -1996,7 +1916,7 @@ function injectSnapStyles() {
       content: none !important;
     }
 
-    /* DS Snap Toolbar Button (Matches 38px Action Bar Standard & Theme Variables) */
+    /* DS Snap Toolbar Button */
     .ds-snap-tb-btn {
       display: inline-flex !important;
       align-items: center !important;
@@ -2007,10 +1927,10 @@ function injectSnapStyles() {
       height: 38px !important;
       padding: 0 10px !important;
       margin: 0 !important;
-      border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.18)) !important;
-      border-radius: 8px !important;
-      background: var(--ds-panel-2, #181d26) !important;
-      color: var(--ds-text, var(--text, #e2e8f0)) !important;
+      border: 1px solid var(--ds-btn-border, var(--ds-color-border, rgba(255, 255, 255, 0.18))) !important;
+      border-radius: var(--ds-radius-control, 6px) !important;
+      background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
+      color: var(--ds-btn-text, var(--ds-color-text, #e2e8f0)) !important;
       cursor: pointer !important;
       box-sizing: border-box !important;
       outline: none !important;
@@ -2020,25 +1940,15 @@ function injectSnapStyles() {
       font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
     }
     .ds-snap-tb-btn:hover {
-      border-color: var(--ds-accent, #67e8f9) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-      background: var(--ds-btn-hover, var(--ds-hover, #202633)) !important;
-      box-shadow: 0 0 10px color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, transparent) !important;
+      border-color: var(--ds-color-accent, #67e8f9) !important;
+      color: var(--ds-color-accent, #67e8f9) !important;
+      background: var(--ds-btn-hover, #202633) !important;
+      box-shadow: none !important;
     }
     .ds-snap-tb-btn.is-active {
-      border-color: var(--ds-accent, #67e8f9) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-      background: var(--ds-panel-2, #181d26) !important;
-    }
-    .ds-snap-tb-btn.is-active::after {
-      content: "" !important;
-      position: absolute !important;
-      bottom: 0 !important;
-      left: 6px !important;
-      right: 6px !important;
-      height: 2.5px !important;
-      background: var(--ds-accent, #67e8f9) !important;
-      border-radius: 2px 2px 0 0 !important;
+      border-color: var(--ds-color-accent, #67e8f9) !important;
+      color: var(--ds-color-accent, #67e8f9) !important;
+      background: var(--ds-btn-hover, #202633) !important;
     }
     .ds-snap-tb-icon-box {
       display: inline-flex !important;
@@ -2046,427 +1956,368 @@ function injectSnapStyles() {
       justify-content: center !important;
       width: 22px !important;
       height: 22px !important;
-      color: var(--ds-text, currentColor) !important;
+      color: var(--ds-color-text, currentColor) !important;
     }
     .ds-snap-svg {
       display: block !important;
       width: 22px !important;
       height: 22px !important;
-      stroke: var(--ds-text, currentColor) !important;
-      color: var(--ds-text, currentColor) !important;
+      stroke: var(--ds-color-text, currentColor) !important;
+      color: var(--ds-color-text, currentColor) !important;
       transition: color 0.15s ease, stroke 0.15s ease !important;
     }
     .ds-snap-tb-btn:hover .ds-snap-svg,
     .ds-snap-tb-btn.is-active .ds-snap-svg {
-      color: var(--ds-accent, #67e8f9) !important;
-      stroke: var(--ds-accent, #67e8f9) !important;
+      color: var(--ds-color-accent, #67e8f9) !important;
+      stroke: var(--ds-color-accent, #67e8f9) !important;
     }
 
-    /* DS Snap Spacious Wide Popover Panel */
+    /* DS Snap Single Thick Row Bar across full browser width (5px margin on each side) */
     .ds-snap-popover {
       position: fixed !important;
+      top: 48px !important;
+      bottom: auto !important;
       z-index: 100010 !important;
-      width: 880px !important;
-      max-width: calc(100vw - 28px) !important;
-      background: var(--ds-panel, #12151c) !important;
-      border: 1px solid var(--ds-border, #242a36) !important;
-      border-radius: 8px !important;
-      padding: 12px 16px 14px 16px !important;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
-      font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-      color: var(--ds-text, #e5e7eb) !important;
+      left: 5px !important;
+      right: 5px !important;
+      width: calc(100vw - 10px) !important;
+      min-width: calc(100vw - 10px) !important;
+      max-width: calc(100vw - 10px) !important;
+      flex-shrink: 0 !important;
       box-sizing: border-box !important;
+      background: var(--ds-color-card, #12151c) !important;
+      border: 1px solid var(--ds-color-card-border, var(--ds-color-border, #242a36)) !important;
+      border-radius: var(--ds-radius-card, 8px) !important;
+      padding: 6px 10px !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+      font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
+      color: var(--ds-color-text, #e5e7eb) !important;
       animation: dsSnapPopIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      backdrop-filter: blur(12px) !important;
+      -webkit-backdrop-filter: blur(12px) !important;
+      overflow: hidden !important;
     }
     @keyframes dsSnapPopIn {
-      from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Popover Header */
-    .ds-snap-menu-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
-      border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.08));
+    .ds-snap-bar {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+      gap: 6px !important;
+      min-height: 24px !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      flex-wrap: nowrap !important;
     }
-    .ds-snap-header-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .ds-snap-badge-icon {
-      color: var(--ds-accent, #67e8f9);
-      display: flex;
-      align-items: center;
-    }
-    .ds-snap-title {
-      font-size: 11.5px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      color: var(--ds-text, #f8fafc);
-      text-transform: uppercase;
-    }
-    .ds-snap-version {
-      font-size: 9.5px;
-      font-weight: 700;
-      color: var(--ds-text-muted, #94a3b8);
-      opacity: 0.7;
-    }
-    .ds-snap-header-right {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .ds-snap-header-history {
+
+    .ds-snap-sec {
       display: inline-flex !important;
       align-items: center !important;
-      gap: 4px !important;
-      margin-right: 4px !important;
+      gap: 5px !important;
+      flex-shrink: 0 !important;
+      box-sizing: border-box !important;
     }
-    .ds-snap-header-btn {
-      height: 22px !important;
+
+    .ds-snap-sec-brand {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      padding-right: 2px !important;
+      flex-shrink: 0 !important;
+    }
+    .ds-snap-badge-icon {
+      color: var(--ds-color-accent, #67e8f9) !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+    .ds-snap-badge-icon .ds-snap-svg {
+      width: 16px !important;
+      height: 16px !important;
+    }
+    .ds-snap-title {
+      font-size: 11px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.06em !important;
+      color: var(--ds-color-text, #f8fafc) !important;
+      text-transform: uppercase !important;
+      white-space: nowrap !important;
+    }
+    .ds-snap-version {
+      font-size: 8px !important;
+      font-weight: 700 !important;
+      color: var(--ds-color-muted-text, #94a3b8) !important;
+      opacity: 0.75 !important;
+      user-select: none !important;
+    }
+
+    .ds-snap-sec-title {
+      font-size: 9px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.04em !important;
+      color: var(--ds-color-muted-text, #94a3b8) !important;
+      text-transform: uppercase !important;
+      user-select: none !important;
+      white-space: nowrap !important;
+      margin-right: 1px !important;
+    }
+
+    .ds-snap-divider {
+      width: 1px !important;
+      height: 18px !important;
+      background: var(--ds-color-border, rgba(255, 255, 255, 0.12)) !important;
+      margin: 0 3px !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* UIElements Toggle integration inside toolbar */
+    .ds-snap-sec .ds-ui-toggle-row {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
-      gap: 4px !important;
-      padding: 0 7px !important;
-      background: rgba(255, 255, 255, 0.04) !important;
-      border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12)) !important;
-      border-radius: 4px !important;
-      color: var(--ds-text, #e2e8f0) !important;
-      font-size: 10px !important;
-      font-weight: 700 !important;
+      gap: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
       cursor: pointer !important;
       user-select: none !important;
-      transition: all 0.12s ease !important;
-      box-sizing: border-box !important;
     }
-    .ds-snap-header-btn svg {
-      opacity: 0.85 !important;
-      transition: opacity 0.12s ease !important;
+    .ds-snap-sec .ds-ui-toggle-copy {
+      display: none !important;
     }
-    .ds-snap-header-btn:hover {
-      background: var(--ds-btn-hover, #1f2530) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-    }
-    .ds-snap-header-btn:hover svg {
-      opacity: 1 !important;
-    }
-    .ds-snap-header-btn:active {
-      transform: translateY(1px) !important;
-    }
-    .ds-snap-status-tag {
-      font-size: 9.5px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      padding: 3px 8px;
-      border-radius: 4px;
-      background: rgba(255, 255, 255, 0.06);
-      color: var(--ds-text-muted, #94a3b8);
-      border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
-    }
-    .ds-snap-status-tag.is-on {
-      background: color-mix(in srgb, var(--ds-accent, #67e8f9) 15%, transparent);
-      color: var(--ds-accent, #67e8f9);
-      border-color: var(--ds-accent, #67e8f9);
-    }
-    .ds-snap-close-btn {
-      background: transparent;
-      border: none;
-      color: var(--ds-text-muted, #94a3b8);
-      font-size: 12px;
-      cursor: pointer;
-      padding: 3px 6px;
-      border-radius: 4px;
-      transition: all 0.12s ease;
-    }
-    .ds-snap-close-btn:hover {
-      color: var(--ds-text, #ffffff);
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    /* 5-Column Spacious Flex Layout */
-    .ds-snap-columns-row {
-      display: flex;
-      flex-direction: row;
-      gap: 10px;
-      align-items: stretch;
-      width: 100%;
-    }
-    .ds-snap-col {
-      flex: 1 1 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      padding: 8px 10px;
-      background: var(--ds-panel-2, #161a23);
-      border: 1px solid var(--ds-border, #242a36);
-      border-radius: 6px;
-      min-width: 0;
-    }
-    .ds-snap-col-wide {
-      flex: 1.35 1 0;
-    }
-    .ds-snap-col-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 22px;
-    }
-    .ds-snap-col-title {
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      color: var(--ds-text, #e5e7eb);
-      text-transform: uppercase;
-    }
-    .ds-snap-col-sub {
-      font-size: 8px;
-      font-weight: 700;
-      color: var(--ds-text-muted, #94a3b8);
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      margin-top: -1px;
-    }
-    .ds-snap-col-tag {
-      font-size: 8.5px;
-      font-weight: 700;
-      color: var(--ds-text-muted, #94a3b8);
-      opacity: 0.75;
-      font-family: monospace;
-    }
-
-    /* Reliable Deathshot Switch (Strict Fixed Geometry) */
-    .ds-snap-switch {
-      flex: 0 0 32px !important;
+    .ds-snap-sec .ds-ui-toggle-track {
+      position: relative !important;
       width: 32px !important;
+      min-width: 32px !important;
+      max-width: 32px !important;
       height: 18px !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      border: none !important;
-      background: transparent !important;
-      cursor: pointer !important;
+      border-radius: var(--ds-radius-control, 4px) !important;
+      background: var(--ds-color-panel-2, #161a23) !important;
+      border: 1px solid var(--ds-color-border, #242a36) !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
+      overflow: hidden !important;
       outline: none !important;
-      display: inline-block !important;
-      box-sizing: border-box !important;
-      position: relative !important;
+      box-shadow: none !important;
+      transition: background 120ms ease, border-color 120ms ease !important;
     }
-    .ds-snap-switch-track {
-      display: block !important;
-      width: 32px !important;
-      height: 18px !important;
-      border-radius: 999px !important;
-      background: var(--ds-panel, #11141c) !important;
-      border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.2)) !important;
-      position: relative !important;
-      transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
-      box-sizing: border-box !important;
+    .ds-snap-sec .ds-ui-toggle-row:focus-visible .ds-ui-toggle-track,
+    .ds-snap-sec .ds-ui-toggle-track:focus-visible {
+      outline: 1px solid var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-snap-switch.is-on .ds-snap-switch-track {
-      background: color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, var(--ds-panel, #11141c)) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-      box-shadow: 0 0 6px color-mix(in srgb, var(--ds-accent, #67e8f9) 30%, transparent) !important;
+    .ds-snap-sec .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
+      background: var(--ds-color-accent, #67e8f9) !important;
+      border-color: var(--ds-color-accent, #67e8f9) !important;
+      box-shadow: none !important;
     }
-    .ds-snap-switch-thumb {
+    .ds-snap-sec .ds-ui-toggle-thumb {
       position: absolute !important;
       top: 2px !important;
       left: 2px !important;
       width: 12px !important;
       height: 12px !important;
-      border-radius: 50% !important;
-      background: var(--ds-text-muted, #94a3b8) !important;
-      transition: left 0.15s ease, background 0.15s ease, box-shadow 0.15s ease !important;
+      border-radius: 2px !important;
+      background: var(--ds-color-muted-text, #94a3b8) !important;
+      transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1), background-color 120ms ease !important;
+      pointer-events: none !important;
+      box-shadow: none !important;
     }
-    .ds-snap-switch.is-on .ds-snap-switch-thumb {
-      left: 16px !important;
-      background: var(--ds-accent, #67e8f9) !important;
-      box-shadow: 0 0 6px var(--ds-accent, #67e8f9) !important;
+    .ds-snap-sec .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {
+      transform: translateX(14px) !important;
+      background: var(--ds-color-on-accent, #0a0c10) !important;
     }
 
-    /* Custom Editable Stepper Control */
-    .ds-snap-stepper {
-      display: flex !important;
+    /* Clean Input Field */
+    .ds-snap-input-wrap {
+      display: inline-flex !important;
       align-items: center !important;
-      width: 100% !important;
-      height: 26px !important;
-      background: var(--ds-panel, #12161e) !important;
-      border: 1px solid var(--ds-border, #242a36) !important;
-      border-radius: 5px !important;
-      overflow: hidden !important;
+      height: 24px !important;
+      background: var(--ds-color-panel-2, #161a23) !important;
+      border: 1px solid var(--ds-color-border, #242a36) !important;
+      border-radius: var(--ds-radius-control, 4px) !important;
+      padding: 0 4px !important;
       box-sizing: border-box !important;
+      transition: border-color 0.12s ease !important;
+      box-shadow: none !important;
     }
-    .ds-snap-step-btn {
+    .ds-snap-input-wrap:focus-within {
+      border-color: var(--ds-color-accent, #67e8f9) !important;
+      box-shadow: none !important;
+    }
+    .ds-snap-input {
+      all: unset !important;
       width: 24px !important;
-      height: 100% !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      background: transparent !important;
-      border: none !important;
-      color: var(--ds-text-muted, #94a3b8) !important;
-      font-size: 13px !important;
-      font-weight: 700 !important;
-      cursor: pointer !important;
-      transition: all 0.12s ease !important;
-      user-select: none !important;
-      padding: 0 !important;
-    }
-    .ds-snap-step-btn:hover {
-      background: var(--ds-btn-hover, #1f2530) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-    }
-    .ds-snap-stepper-input {
-      flex: 1 1 auto !important;
-      min-width: 0 !important;
       height: 100% !important;
       background: transparent !important;
       border: none !important;
       outline: none !important;
       text-align: center !important;
-      font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-      font-size: 10px !important;
+      font-family: var(--ds-font, Inter, monospace) !important;
+      font-size: 10.5px !important;
       font-weight: 700 !important;
-      color: var(--ds-accent, #67e8f9) !important;
-      padding: 0 4px !important;
+      color: var(--ds-color-accent, #67e8f9) !important;
+      padding: 0 !important;
+      margin: 0 !important;
       box-sizing: border-box !important;
+      -moz-appearance: textfield !important;
     }
-    .ds-snap-stepper-input:focus {
-      background: rgba(0, 0, 0, 0.25) !important;
+    .ds-snap-input::-webkit-outer-spin-button,
+    .ds-snap-input::-webkit-inner-spin-button {
+      -webkit-appearance: none !important;
+      margin: 0 !important;
     }
-
-    /* Custom Segmented Quick Chips */
-    .ds-snap-chips-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 3px;
-      width: 100%;
-    }
-    .ds-snap-chip {
-      position: relative !important;
-      box-sizing: border-box !important;
-      height: 24px !important;
-      padding: 0 2px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      background: var(--ds-panel, #12161e) !important;
-      border: 1px solid var(--ds-border, #242a36) !important;
-      border-radius: 4px !important;
-      color: var(--ds-text-muted, #94a3b8) !important;
-      font-size: 9px !important;
+    .ds-snap-input-unit {
+      font-size: 8.5px !important;
       font-weight: 700 !important;
-      cursor: pointer !important;
+      color: var(--ds-color-muted-text, #94a3b8) !important;
       user-select: none !important;
-      transition: all 0.12s ease !important;
-      overflow: hidden !important;
-    }
-    .ds-snap-chip:hover {
-      background: var(--ds-btn-hover, #1f2530) !important;
-      border-color: var(--ds-border-active, #384152) !important;
-      color: var(--ds-text, #ffffff) !important;
-    }
-    .ds-snap-chip.is-active {
-      background: var(--ds-panel-2, #181d26) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-    }
-    .ds-snap-chip.is-active::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--ds-accent, #67e8f9);
+      pointer-events: none !important;
+      opacity: 0.8 !important;
     }
 
-    /* Custom Standard Buttons */
-    .ds-snap-actions-stack {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      width: 100%;
-    }
-
+    /* Buttons */
     .ds-snap-btn {
-      height: 26px !important;
+      height: 24px !important;
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
-      gap: 5px !important;
-      padding: 0 8px !important;
-      background: var(--ds-panel, #12161e) !important;
-      border: 1px solid var(--ds-border, #242a36) !important;
-      border-radius: 5px !important;
-      color: var(--ds-text, #e5e7eb) !important;
+      gap: 4px !important;
+      padding: 0 7px !important;
+      background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23)) !important;
+      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
+      border-radius: var(--ds-radius-control, 4px) !important;
+      color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb)) !important;
+      font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
       font-size: 10px !important;
       font-weight: 700 !important;
+      line-height: 1 !important;
       cursor: pointer !important;
       user-select: none !important;
       transition: all 0.12s ease !important;
       box-sizing: border-box !important;
+      white-space: nowrap !important;
+      outline: none !important;
+      box-shadow: none !important;
+      vertical-align: middle !important;
     }
-    .ds-snap-btn-large {
-      height: 28px !important;
+    .ds-snap-btn span {
+      display: inline-flex !important;
+      align-items: center !important;
+      line-height: 1 !important;
+      margin: 0 !important;
+      vertical-align: middle !important;
+    }
+    .ds-snap-btn svg,
+    .ds-snap-btn .preview-icon {
+      display: inline-block !important;
+      flex-shrink: 0 !important;
+      stroke: currentColor !important;
+      fill: none !important;
+      pointer-events: none !important;
+      margin: 0 !important;
+      vertical-align: middle !important;
     }
     .ds-snap-btn:hover {
-      background: var(--ds-btn-hover, #1f2530) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-      color: var(--ds-accent, #67e8f9) !important;
+      background: var(--ds-btn-hover, #1e2433) !important;
+      border-color: var(--ds-color-accent, #67e8f9) !important;
+      color: var(--ds-color-accent, #67e8f9) !important;
+      box-shadow: none !important;
     }
     .ds-snap-btn:active {
       transform: translateY(1px) !important;
     }
     .ds-snap-btn-accent {
-      background: color-mix(in srgb, var(--ds-accent, #67e8f9) 16%, var(--ds-panel, #12161e)) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-      color: var(--ds-accent, #67e8f9) !important;
+      background: var(--ds-color-accent, #67e8f9) !important;
+      border-color: var(--ds-color-accent, #67e8f9) !important;
+      color: var(--ds-color-on-accent, #0a0c10) !important;
     }
-    .ds-snap-btn-span2 {
-      grid-column: span 2 !important;
+    .ds-snap-btn-accent:hover {
+      background: var(--ds-color-accent-hover, #22d3ee) !important;
+      border-color: var(--ds-color-accent-hover, #22d3ee) !important;
+      color: var(--ds-color-on-accent, #0a0c10) !important;
+      box-shadow: none !important;
     }
 
-    /* Dimension Panel Readout & Grid */
-    .ds-snap-dim-readout {
+    .ds-snap-tag {
+      font-size: 8px !important;
+      font-weight: 800 !important;
+      font-family: monospace !important;
+      color: var(--ds-color-muted-text, #9ca3af) !important;
+      background: var(--ds-color-panel-2, #161a23) !important;
+      border: 1px solid var(--ds-color-border, #242a36) !important;
+      padding: 1px 3px !important;
+      border-radius: var(--ds-radius-badge, 3px) !important;
+      user-select: none !important;
+    }
+
+    /* Right Section: Actions */
+    .ds-snap-sec-actions {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0 !important;
+      flex-shrink: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* Close Button (Zero text fallback artifact, pure SVG) */
+    .ds-snap-close-btn {
+      width: 24px !important;
+      min-width: 24px !important;
+      height: 24px !important;
+      padding: 0 !important;
+      margin: 0 !important;
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
-      font-size: 10px !important;
-      font-weight: 800 !important;
-      font-family: monospace, var(--ds-font, sans-serif) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-      background: var(--ds-panel, #12161e) !important;
-      border: 1px solid var(--ds-accent, #67e8f9) !important;
-      padding: 2px 7px !important;
-      border-radius: 4px !important;
-      box-shadow: 0 0 6px color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, transparent) !important;
-      letter-spacing: 0.04em !important;
+      background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23)) !important;
+      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
+      border-radius: var(--ds-radius-control, 4px) !important;
+      color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb)) !important;
+      cursor: pointer !important;
+      outline: none !important;
+      box-shadow: none !important;
+      transition: all 0.12s ease !important;
+      box-sizing: border-box !important;
+      flex-shrink: 0 !important;
     }
-    .ds-snap-dim-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      width: 100%;
+    .ds-snap-close-btn svg {
+      display: block !important;
+      width: 12px !important;
+      height: 12px !important;
+      stroke: currentColor !important;
+      fill: none !important;
+      pointer-events: none !important;
+    }
+    .ds-snap-close-btn:hover {
+      border-color: var(--ds-color-accent, #67e8f9) !important;
+      color: var(--ds-color-accent, #67e8f9) !important;
+      background: var(--ds-btn-hover, #1e2433) !important;
+      box-shadow: none !important;
+    }
+    .ds-snap-close-btn:focus,
+    .ds-snap-close-btn:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
     }
 
     /* Toast Notification */
     .ds-snap-toast {
       position: fixed !important;
-      bottom: 24px !important;
+      top: 60px !important;
+      bottom: auto !important;
       left: 50% !important;
       transform: translateX(-50%) !important;
-      background: var(--ds-panel-2, #181d26) !important;
-      border: 1px solid var(--ds-accent, #67e8f9) !important;
-      border-radius: 6px !important;
-      padding: 8px 18px !important;
+      background: var(--ds-color-panel-2, #181d26) !important;
+      border: 1px solid var(--ds-color-accent, #67e8f9) !important;
+      border-radius: var(--ds-radius-control, 6px) !important;
+      padding: 6px 16px !important;
       font-size: 11px !important;
       font-weight: 700 !important;
-      color: var(--ds-text, #f8fafc) !important;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 14px color-mix(in srgb, var(--ds-accent, #67e8f9) 30%, transparent) !important;
+      color: var(--ds-color-text, #f8fafc) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
       z-index: 999999 !important;
       pointer-events: none !important;
       animation: dsToastPop 0.18s ease-out !important;
@@ -2480,12 +2331,80 @@ function injectSnapStyles() {
       to { opacity: 1; transform: translate(-50%, 0); }
     }
   `;
-
-  document.head.appendChild(style);
 }
 
 // ---------------------------------------------------------------------------
-// 11. COMFYUI WEB EXTENSION REGISTRATION
+// 11. CONTEXT MENU & CANVAS INTEGRATION FALLBACK
+// ---------------------------------------------------------------------------
+function installLegacySnapCanvasMenuFallback() {
+  const LG = window.LiteGraph || globalThis.LiteGraph || app?.canvas?.constructor;
+  const canvasProto = app?.canvas?.constructor?.prototype || LG?.LGraphCanvas?.prototype;
+  if (!canvasProto || canvasProto.__dsaSnapLegacyMenuInstalled) return Boolean(canvasProto?.__dsaSnapLegacyMenuInstalled);
+
+  const originalCanvasMenu = canvasProto.getCanvasMenuOptions;
+  if (typeof originalCanvasMenu === "function") {
+    canvasProto.getCanvasMenuOptions = function(...args) {
+      const options = originalCanvasMenu.apply(this, args);
+      if (!Array.isArray(options)) return options;
+      const alreadyPresent = options.some(item =>
+        item && typeof item === "object" &&
+        String(item.content || "").includes("DS Snap")
+      );
+      if (!alreadyPresent) {
+        options.push(null, {
+          content: "🎯 DS Snap",
+          callback: () => toolbarManager.togglePopover(),
+        });
+      }
+      return options;
+    };
+  }
+
+  const originalNodeMenu = canvasProto.getNodeMenuOptions;
+  if (typeof originalNodeMenu === "function") {
+    canvasProto.getNodeMenuOptions = function(...args) {
+      const options = originalNodeMenu.apply(this, args);
+      if (!Array.isArray(options)) return options;
+      const alreadyPresent = options.some(item =>
+        item && typeof item === "object" &&
+        String(item.content || "").includes("DS Snap")
+      );
+      if (!alreadyPresent) {
+        options.push(
+          null,
+          {
+            content: "🎯 DS Snap: Arrange Row",
+            callback: () => arrangeNodesInRow(),
+          },
+          {
+            content: "🎯 DS Snap: Arrange Column",
+            callback: () => arrangeNodesInColumn(),
+          },
+          {
+            content: "🎯 DS Snap: Measure Node",
+            callback: () => measureSelectedNode(),
+          }
+        );
+      }
+      return options;
+    };
+  }
+
+  canvasProto.__dsaSnapLegacyMenuInstalled = true;
+  return true;
+}
+
+function scheduleLegacySnapCanvasMenuFallback() {
+  if (installLegacySnapCanvasMenuFallback()) return;
+  for (const delay of [0, 100, 400, 1000, 2500]) {
+    setTimeout(() => {
+      installLegacySnapCanvasMenuFallback();
+    }, delay);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 12. COMFYUI WEB EXTENSION REGISTRATION
 // ---------------------------------------------------------------------------
 app.registerExtension({
   name: EXTENSION_NAME,
@@ -2524,12 +2443,57 @@ app.registerExtension({
     },
   ],
 
+  menuCommands: [
+    {
+      path: ["DeathshotArsenal"],
+      commands: [
+        "DeathshotArsenal.DSSnap.ToggleMenu",
+        "DeathshotArsenal.DSSnap.ArrangeRow",
+        "DeathshotArsenal.DSSnap.ArrangeColumn",
+        "DeathshotArsenal.DSSnap.Measure",
+      ],
+    },
+  ],
+
+  getNodeMenuItems(node) {
+    return [
+      null,
+      {
+        content: "🎯 DS Snap",
+        callback: () => toolbarManager.togglePopover(),
+      },
+      {
+        content: "🎯 DS Snap: Arrange Row",
+        callback: () => arrangeNodesInRow(),
+      },
+      {
+        content: "🎯 DS Snap: Arrange Column",
+        callback: () => arrangeNodesInColumn(),
+      },
+      {
+        content: "🎯 DS Snap: Measure Node",
+        callback: () => measureSelectedNode(),
+      },
+    ];
+  },
+
+  getCanvasMenuItems(canvas) {
+    return [
+      null,
+      {
+        content: "🎯 DS Snap",
+        callback: () => toolbarManager.togglePopover(),
+      },
+    ];
+  },
+
   async setup() {
     console.log("[DS Snap] Initializing DeathshotArsenal frontend extension...");
     injectSnapStyles();
     installCanvasHooks();
     toolbarManager.init();
-    console.log("[DS Snap] Successfully mounted DS Snap action bar & canvas hooks.");
+    scheduleLegacySnapCanvasMenuFallback();
+    console.log("[DS Snap] Successfully mounted DS Snap action bar, canvas hooks, and context menu.");
   },
 });
 
@@ -2538,6 +2502,8 @@ try {
   injectSnapStyles();
   installCanvasHooks();
   toolbarManager.init();
+  scheduleLegacySnapCanvasMenuFallback();
 } catch (err) {
   console.warn("[DS Snap] Immediate bootstrap warning:", err);
 }
+

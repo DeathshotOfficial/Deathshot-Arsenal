@@ -1266,10 +1266,21 @@ app.registerExtension({
   }
 });
 
-setInterval(() => {
+setInterval(async () => {
   try {
-    for (const n of app.graph?._nodes || []) {
-      if (n?.type === NODE_NAME || n?.comfyClass === NODE_NAME) fetchStats(n);
+    const nodes = (app.graph?._nodes || []).filter(
+      n => n?.type === NODE_NAME || n?.comfyClass === NODE_NAME
+    );
+    if (!nodes.length) return;
+
+    const r = await fetch("/ds/hardware_monitor/stats", { cache: "no-store" });
+    if (!r.ok) return;
+    const d = await r.json();
+    for (const n of nodes) {
+      applyData(n, d);
+      n.setDirtyCanvas?.(true, false);
     }
-  } catch (e) { err("Polling loop error", e); }
+  } catch (e) {
+    err("Polling loop error", e);
+  }
 }, 1000);

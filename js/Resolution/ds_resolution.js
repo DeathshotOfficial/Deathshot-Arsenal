@@ -3,7 +3,8 @@
 // the node still exposes two normal INT outputs.
 
 import { app } from "/scripts/app.js";
-import { protectDSResizeCorners } from "../Shared/ds_ui_system.js";
+import { Card, Stepper, Field, protectDSResizeCorners, normalizeDSWidgetHost } from "../UIElements/index.js";
+import { DSIcon } from "../Icons/index.js";
 
 const cssHref = "/extensions/DeathshotArsenal/Resolution/ds_resolution.css";
 if (!document.querySelector(`link[href="${cssHref}"]`)) {
@@ -14,29 +15,29 @@ if (!document.querySelector(`link[href="${cssHref}"]`)) {
 }
 
 const ASPECT_RATIOS = [
-  { key: "1:1",  ratio: 1 / 1,  group: "Common" },
-  { key: "4:3",  ratio: 4 / 3,  group: "Common" },
-  { key: "3:2",  ratio: 3 / 2,  group: "Common" },
+  { key: "1:1", ratio: 1 / 1, group: "Common" },
+  { key: "4:3", ratio: 4 / 3, group: "Common" },
+  { key: "3:2", ratio: 3 / 2, group: "Common" },
   { key: "16:9", ratio: 16 / 9, group: "Common" },
   { key: "21:9", ratio: 21 / 9, group: "Common" },
 
-  { key: "2:3",  ratio: 2 / 3,  group: "Portrait" },
-  { key: "3:4",  ratio: 3 / 4,  group: "Portrait" },
-  { key: "4:5",  ratio: 4 / 5,  group: "Portrait" },
+  { key: "2:3", ratio: 2 / 3, group: "Portrait" },
+  { key: "3:4", ratio: 3 / 4, group: "Portrait" },
+  { key: "4:5", ratio: 4 / 5, group: "Portrait" },
   { key: "9:16", ratio: 9 / 16, group: "Portrait" },
 
-  { key: "5:4",  ratio: 5 / 4,  group: "Other" },
-  { key: "5:7",  ratio: 5 / 7,  group: "Other" },
-  { key: "7:5",  ratio: 7 / 5,  group: "Other" },
-  { key: "3:5",  ratio: 3 / 5,  group: "Other" },
-  { key: "5:8",  ratio: 5 / 8,  group: "Other" },
-  { key: "7:9",  ratio: 7 / 9,  group: "Other" },
+  { key: "5:4", ratio: 5 / 4, group: "Other" },
+  { key: "5:7", ratio: 5 / 7, group: "Other" },
+  { key: "7:5", ratio: 7 / 5, group: "Other" },
+  { key: "3:5", ratio: 3 / 5, group: "Other" },
+  { key: "5:8", ratio: 5 / 8, group: "Other" },
+  { key: "7:9", ratio: 7 / 9, group: "Other" },
   { key: "9:19", ratio: 9 / 19, group: "Other" },
   { key: "9:21", ratio: 9 / 21, group: "Other" },
   { key: "9:32", ratio: 9 / 32, group: "Other" },
-  { key: "5:3",  ratio: 5 / 3,  group: "Other" },
-  { key: "8:5",  ratio: 8 / 5,  group: "Other" },
-  { key: "9:7",  ratio: 9 / 7,  group: "Other" },
+  { key: "5:3", ratio: 5 / 3, group: "Other" },
+  { key: "8:5", ratio: 8 / 5, group: "Other" },
+  { key: "9:7", ratio: 9 / 7, group: "Other" },
   { key: "19:9", ratio: 19 / 9, group: "Other" },
   { key: "32:9", ratio: 32 / 9, group: "Other" },
 ];
@@ -49,8 +50,10 @@ const PRESET_GROUPS = [
 
 const DEFAULT_PRESETS = ["1:1", "4:3", "16:9", "9:16", "21:9"];
 
-const MIN_NODE_W = 280;
-const MIN_NODE_H = 190;
+const MIN_NODE_W = 320;
+const MIN_NODE_H = 150;
+const DEFAULT_NODE_W = 340;
+const DEFAULT_NODE_H = 260;
 const TITLE_H = 30;
 const UI_VERSION = 8;
 const MIN_DIM = 64;
@@ -88,7 +91,7 @@ function parsePresets(val, currentAspect = null) {
     try {
       const parsed = JSON.parse(val);
       if (Array.isArray(parsed)) list = parsed;
-    } catch (_) {}
+    } catch (_) { }
   }
   if (!list || list.length === 0) {
     list = [...DEFAULT_PRESETS];
@@ -186,17 +189,83 @@ app.registerExtension({
 
     const oldCreated = nodeType.prototype.onNodeCreated;
 
-    // LiteGraph computeSize hook: calculates size based on candidate width
-    nodeType.prototype.computeSize = function (out) {
-      const width = Math.max(MIN_NODE_W, Number(this.size?.[0]) || MIN_NODE_W);
-      const minH = this._measureMinHeight ? this._measureMinHeight(width) : MIN_NODE_H;
-      const result = [MIN_NODE_W, minH];
-      if (Array.isArray(out)) {
-        out[0] = result[0];
-        out[1] = result[1];
-        return out;
+    nodeType.prototype._measureCardHeight = function (candidateWidth = this.size?.[0] || DEFAULT_NODE_W) {
+      if (!this.dom) return 176;
+      const width = Math.max(MIN_NODE_W, Number(candidateWidth) || DEFAULT_NODE_W);
+      const cardW = width - 20;
+
+      // 1. If connected to document, use offsetHeight (UNZOOMED CSS pixels)
+      if (this.dom.isConnected && this.dom.offsetHeight >= 80) {
+        return this.dom.offsetHeight;
       }
-      return result;
+
+      // 2. If not connected, measure via hidden offscreen clone in document.body
+      const clone = this.dom.cloneNode(true);
+      clone.style.width = `${cardW}px`;
+      clone.style.height = "auto";
+      clone.style.minHeight = "0";
+      clone.style.maxHeight = "none";
+      clone.style.position = "fixed";
+      clone.style.left = "-100000px";
+      clone.style.top = "0";
+      clone.style.visibility = "hidden";
+      clone.style.pointerEvents = "none";
+      clone.style.overflow = "visible";
+      document.body.appendChild(clone);
+      try {
+        const measured = Math.ceil(clone.offsetHeight || clone.scrollHeight || 0);
+        if (measured >= 80) return measured;
+      } catch (_) {
+      } finally {
+        clone.remove();
+      }
+
+      // 3. Fallback: exact mathematical formula based on button count and rows
+      const count = this._enabledPresets?.length || DEFAULT_PRESETS.length;
+      const rows = Math.max(1, Math.ceil(count / 5));
+      const gridH = rows * 26 + (rows - 1) * 4;
+      return 152 + gridH;
+    };
+
+    nodeType.prototype._fitNodeHeightToContent = function (candidateWidth = this.size?.[0] || DEFAULT_NODE_W) {
+      const width = Math.max(MIN_NODE_W, Number(candidateWidth) || DEFAULT_NODE_W);
+      const count = this._enabledPresets?.length || DEFAULT_PRESETS.length;
+      const innerW = width - 42;
+      const cols = Math.max(1, Math.min(5, Math.floor((innerW + 4) / 40)));
+      const rows = Math.max(1, Math.ceil(count / cols));
+      const targetH = 240 + (rows - 1) * 30;
+      return [width, targetH];
+    };
+
+    nodeType.prototype._syncDomGeometry = function () {
+      if (!this.dom) return;
+      delete this.dom.dataset.dsUiHost;
+      this.dom.style.width = "100%";
+      this.dom.style.height = "auto";
+      this.dom.style.minHeight = "0";
+      this.dom.style.boxSizing = "border-box";
+      this.dom.style.pointerEvents = "auto";
+      this.dom.style.setProperty("background", "var(--ds-color-card, #12151c)", "important");
+      this.dom.style.setProperty("background-color", "var(--ds-color-card, #12151c)", "important");
+
+      const host = this.dom.parentElement;
+      if (host) {
+        host.style.width = "100%";
+        host.style.pointerEvents = "none";
+        host.style.background = "transparent";
+        host.style.backgroundColor = "transparent";
+        host.style.overflow = "visible";
+        if (host.parentElement && host.parentElement !== document.body) {
+          host.parentElement.style.background = "transparent";
+          host.parentElement.style.backgroundColor = "transparent";
+          host.parentElement.style.overflow = "visible";
+        }
+      }
+    };
+
+    // LiteGraph computeSize hook: returns floor minimums so user can freely resize/shrink
+    nodeType.prototype.computeSize = function () {
+      return [MIN_NODE_W, MIN_NODE_H];
     };
 
     nodeType.prototype.onNodeCreated = function () {
@@ -230,6 +299,29 @@ app.registerExtension({
         divisible: Number(this.properties.ui_divisible) || DEFAULT_DIVISIBLE,
       };
 
+      this.dom = this._buildResolutionUI();
+      protectDSResizeCorners(this);
+
+      // Add DOM widget FIRST so it sits directly below output slots at y = 64
+      const domWidget = this.addDOMWidget("ds_resolution_ui", "custom", this.dom, {
+        serialize: false,
+        hideOnZoom: false,
+        margin: 5,
+        getMinHeight: () => {
+          return (this._fitNodeHeightToContent(this.size?.[0] || DEFAULT_NODE_W)[1] - 84);
+        },
+        getHeight: () => {
+          return (this._fitNodeHeightToContent(this.size?.[0] || DEFAULT_NODE_W)[1] - 84);
+        },
+      });
+      this.domWidget = domWidget;
+
+      this.domWidget.computeSize = (width) => {
+        const w = Math.max(MIN_NODE_W, Number(width) || DEFAULT_NODE_W);
+        return [w, this._fitNodeHeightToContent(w)[1] - 84];
+      };
+
+      // Hidden output widgets: fully zeroed so they never push domWidget down
       let wWidget = this.widgets?.find(w => w.name === "width");
       let hWidget = this.widgets?.find(w => w.name === "height");
 
@@ -249,44 +341,39 @@ app.registerExtension({
 
       this._hideOutputWidgets();
 
-      this.dom = this._buildResolutionUI();
-      this.dom.dataset.dsThemed = "true";
+      const initialFitted = this._fitNodeHeightToContent(DEFAULT_NODE_W);
+      this.size = [DEFAULT_NODE_W, initialFitted[1]];
+      this._dsMinSize = [MIN_NODE_W, MIN_NODE_H];
 
-      const domWidget = this.addDOMWidget("ds_resolution_ui", "div", this.dom, {
-        serialize: false,
-        hideOnZoom: false,
-        margin: 0,
-      });
-      this.domWidget = domWidget;
+      this.setSize = function (size) {
+        if (!size) return;
+        const w = Math.max(MIN_NODE_W, Number(size[0]) || DEFAULT_NODE_W);
+        const fitted = this._fitNodeHeightToContent ? this._fitNodeHeightToContent(w) : [w, initialFitted[1]];
+        this.size = [w, fitted[1]];
+      };
 
-      // Fit node geometry synchronously right at creation
-      const initialW = Math.max(MIN_NODE_W, Number(this.size?.[0]) || MIN_NODE_W);
-      const fitted = this._fitNodeHeightToContent(initialW);
-      this.size = [fitted[0], fitted[1]];
-      this._minBodyH = Math.max(1, fitted[1] - TITLE_H);
-      this._bodyW = fitted[0];
-      this._bodyH = this._minBodyH;
+      const origOnResize = this.onResize;
+      this.onResize = function (size) {
+        if (!size || this._dsInResize) return;
+        this._dsInResize = true;
+        try {
+          const w = Math.max(MIN_NODE_W, Number(size[0]) || DEFAULT_NODE_W);
+          const fitted = this._fitNodeHeightToContent(w);
+          size[0] = w;
+          size[1] = fitted[1];
+          if (this.size) {
+            this.size[0] = w;
+            this.size[1] = fitted[1];
+          }
+          this._syncDomGeometry?.();
+          this._syncCollapsedState?.();
+          this.setDirtyCanvas?.(true, true);
+        } finally {
+          this._dsInResize = false;
+        }
+        if (origOnResize) origOnResize.apply(this, arguments);
+      };
 
-      domWidget.options.getMinHeight = () => this._minBodyH;
-      domWidget.options.getMaxHeight = () => this._minBodyH;
-      domWidget.computeLayoutSize = () => ({
-        minHeight: this._minBodyH,
-        maxHeight: this._minBodyH,
-        minWidth: 0,
-      });
-      domWidget.computeSize = () => [0, this._minBodyH];
-
-      // Prevent DOM container from blocking LiteGraph resize handle hits
-      if (domWidget?.element?.style) {
-        domWidget.element.style.background = "transparent";
-        domWidget.element.style.pointerEvents = "none";
-      }
-      if (domWidget?.container?.style) {
-        domWidget.container.style.background = "transparent";
-        domWidget.container.style.pointerEvents = "none";
-      }
-
-      this._syncDomGeometry();
       this._hideOutputWidgets();
 
       // Establish initial state
@@ -305,12 +392,11 @@ app.registerExtension({
           if (window.DSGlobalTheme && this.dom) {
             window.DSGlobalTheme.bindNode(this.dom, this);
           }
-          const refitted = this._fitNodeHeightToContent(this.size?.[0] || MIN_NODE_W);
-          if (Math.abs((this.size?.[1] || 0) - refitted[1]) > 0.5) {
-            this.size[1] = refitted[1];
-            this._minBodyH = Math.max(1, refitted[1] - TITLE_H);
-            this._syncDomGeometry();
-          }
+          this._syncDomGeometry();
+          const refitted = this._fitNodeHeightToContent(this.size?.[0] || DEFAULT_NODE_W);
+          this.size[0] = refitted[0];
+          this.size[1] = refitted[1];
+          if (this._dsMinSize) this._dsMinSize[1] = refitted[1];
           this._syncCollapsedState();
           this._syncUI();
           this.setDirtyCanvas(true, true);
@@ -322,62 +408,6 @@ app.registerExtension({
       return result;
     };
 
-    nodeType.prototype._measureMinHeight = function (candidateWidth = MIN_NODE_W) {
-      if (!this.dom) return MIN_NODE_H;
-      const width = Math.max(MIN_NODE_W, Number(candidateWidth) || MIN_NODE_W);
-      const clone = this.dom.cloneNode(true);
-      clone.classList.add("ds-res-measure-clone");
-      clone.style.width = `${width}px`;
-      clone.style.height = "auto";
-      clone.style.minHeight = "0";
-      clone.style.maxHeight = "none";
-      clone.style.position = "fixed";
-      clone.style.left = "-100000px";
-      clone.style.top = "0";
-      clone.style.visibility = "hidden";
-      clone.style.pointerEvents = "none";
-      clone.style.overflow = "visible";
-      document.body.appendChild(clone);
-      try {
-        const measured = Math.ceil(clone.getBoundingClientRect().height || clone.scrollHeight || 0);
-        return Math.max(MIN_NODE_H, measured + TITLE_H);
-      } catch (_) {
-        return MIN_NODE_H;
-      } finally {
-        clone.remove();
-      }
-    };
-
-    nodeType.prototype._syncDomGeometry = function () {
-      if (!this.dom) return;
-      this.dom.style.width = "100%";
-      this.dom.style.height = "auto";
-      this.dom.style.minHeight = "0";
-      this.dom.style.maxHeight = "none";
-      this.dom.style.overflow = "visible";
-
-      const host = this.dom.parentElement;
-      if (host) {
-        host.classList.add("ds-res-host");
-        host.style.width = "100%";
-        host.style.height = "auto";
-        host.style.minHeight = "0";
-        host.style.maxHeight = `${this._minBodyH}px`;
-        host.style.padding = "0";
-        host.style.margin = "0";
-        host.style.boxSizing = "border-box";
-        host.style.overflow = "visible";
-        host.style.alignSelf = "flex-start";
-        host.style.flex = "0 0 auto";
-        host.style.pointerEvents = "none";
-      }
-    };
-
-    nodeType.prototype._fitNodeHeightToContent = function (width = this.size?.[0]) {
-      const targetW = Math.max(MIN_NODE_W, Number(width) || MIN_NODE_W);
-      const targetH = this._measureMinHeight(targetW);
-      return [targetW, targetH];
-    };
 
     nodeType.prototype._syncCollapsedState = function () {
       const collapsed = !!this.flags?.collapsed;
@@ -394,8 +424,11 @@ app.registerExtension({
       if (this.widgets) {
         for (const widget of this.widgets) {
           if (!names.has(widget.name)) continue;
+          widget.type = "hidden";
           widget.hidden = true;
-          widget.computeSize = () => [0, 0];
+          widget.computeSize = () => [0, -4];
+          widget.draw = () => { };
+          if (widget.options) widget.options.hidden = true;
           if (widget.element) {
             widget.element.style.display = "none";
             widget.element.style.height = "0";
@@ -548,15 +581,25 @@ app.registerExtension({
       this.properties.ui_ar_presets = [...this._enabledPresets];
       this._renderARButtons();
 
-      const fitted = this._fitNodeHeightToContent(this.size?.[0] || MIN_NODE_W);
+      const width = Math.max(MIN_NODE_W, Number(this.size?.[0]) || DEFAULT_NODE_W);
+      const fitted = this._fitNodeHeightToContent(width);
       this.size[0] = fitted[0];
       this.size[1] = fitted[1];
-      this._minBodyH = Math.max(1, fitted[1] - TITLE_H);
-      this._bodyW = fitted[0];
-      this._bodyH = this._minBodyH;
-
+      if (this._dsMinSize) {
+        this._dsMinSize[1] = fitted[1];
+      }
       this._syncDomGeometry();
       this.setDirtyCanvas(true, true);
+
+      requestAnimationFrame(() => {
+        const reFitted = this._fitNodeHeightToContent(this.size?.[0] || width);
+        if (Math.abs((this.size?.[1] || 0) - reFitted[1]) > 0.5) {
+          this.size[1] = reFitted[1];
+          if (this._dsMinSize) this._dsMinSize[1] = reFitted[1];
+          this._syncDomGeometry();
+          this.setDirtyCanvas(true, true);
+        }
+      });
     };
 
     nodeType.prototype._toggleGearPopover = function (anchorEl) {
@@ -786,22 +829,7 @@ app.registerExtension({
     };
 
     nodeType.prototype._buildResolutionUI = function () {
-      const root = document.createElement("div");
-      root.className = "ds-res-root";
-
-      const head = document.createElement("div");
-      head.className = "ds-res-head";
-
-      const title = document.createElement("div");
-      title.className = "ds-res-title";
-      title.innerHTML = `<span class="ds-res-title-mark">◈</span>DS Resolution`;
-
-      const sub = document.createElement("span");
-      sub.className = "ds-res-subtitle";
-      sub.textContent = "MP • AR • divisible";
-
-      head.append(title, sub);
-      root.appendChild(head);
+      const card = Card({ className: "ds-res-card" });
 
       const preview = document.createElement("div");
       preview.className = "ds-res-preview";
@@ -810,62 +838,53 @@ app.registerExtension({
       const previewMeta = document.createElement("div");
       previewMeta.className = "ds-res-preview-meta";
       preview.append(previewValue, previewMeta);
-      root.appendChild(preview);
-      root._preview = previewValue;
-      root._previewMeta = previewMeta;
+      card.body.appendChild(preview);
+      card.root._preview = previewValue;
+      card.root._previewMeta = previewMeta;
 
       const label = document.createElement("div");
       label.className = "ds-res-section-label";
       label.textContent = "Aspect Ratio";
-      root.appendChild(label);
+      card.body.appendChild(label);
 
       const grid = document.createElement("div");
       grid.className = "ds-res-ar-grid";
-      root.appendChild(grid);
-      root._arGrid = grid;
+      card.body.appendChild(grid);
+      card.root._arGrid = grid;
 
       this._renderARButtons(grid);
 
       const controls = document.createElement("div");
       controls.className = "ds-res-controls";
 
-      const mpBox = document.createElement("div");
-      mpBox.className = "ds-res-control";
-      const mpLabel = document.createElement("div");
-      mpLabel.className = "ds-res-control-label";
-      mpLabel.textContent = "Megapixels";
-      mpBox.appendChild(mpLabel);
+      const mpStepper = Stepper({
+        min: MIN_MP,
+        max: MAX_MP,
+        step: 0.1,
+        value: Number(this._resState.mp) || DEFAULT_MP,
+        onChange: (val) => this._setMP(val)
+      });
+      const mpField = Field({
+        label: "Megapixels",
+        control: mpStepper.root
+      });
+      card.root._mpInput = mpStepper.input;
 
-      const mp = makeStepInput(
-        Number(this._resState.mp) || DEFAULT_MP,
-        0.1, MIN_MP, MAX_MP, 1
-      );
-      mp.input.title = `Type ${MIN_MP}–${MAX_MP} MP or use the arrows`;
-      mp.input.onchange = () => this._setMP(mp.input.value);
-      mp.input.onblur = () => this._setMP(mp.input.value);
-      mpBox.appendChild(mp.wrap);
-      controls.appendChild(mpBox);
-      root._mpInput = mp.input;
+      const divStepper = Stepper({
+        min: 1,
+        max: 1024,
+        step: 8,
+        value: Number(this._resState.divisible) || DEFAULT_DIVISIBLE,
+        onChange: (val) => this._setDivisible(val)
+      });
+      const divField = Field({
+        label: "Divisible By",
+        control: divStepper.root
+      });
+      card.root._divInput = divStepper.input;
 
-      const divBox = document.createElement("div");
-      divBox.className = "ds-res-control";
-      const divLabel = document.createElement("div");
-      divLabel.className = "ds-res-control-label";
-      divLabel.textContent = "Divisible By";
-      divBox.appendChild(divLabel);
-
-      const div = makeStepInput(
-        Number(this._resState.divisible) || DEFAULT_DIVISIBLE,
-        8, 1, 1024, 0
-      );
-      div.input.title = "Type any positive multiple or use ±8";
-      div.input.onchange = () => this._setDivisible(div.input.value);
-      div.input.onblur = () => this._setDivisible(div.input.value);
-      divBox.appendChild(div.wrap);
-      controls.appendChild(divBox);
-      root._divInput = div.input;
-
-      root.appendChild(controls);
+      controls.append(mpField.root, divField.root);
+      card.body.appendChild(controls);
 
       const note = document.createElement("div");
       note.className = "ds-res-note";
@@ -873,9 +892,9 @@ app.registerExtension({
         <span>Resolution follows MP + selected AR</span>
         <span>Snapped to divisibility</span>
       `;
-      root.appendChild(note);
+      card.body.appendChild(note);
 
-      return root;
+      return card.root;
     };
 
     const oldConfigure = nodeType.prototype.onConfigure;
@@ -913,14 +932,11 @@ app.registerExtension({
 
       this.properties.ui_version = String(UI_VERSION);
 
-      const loadedWidth = Math.max(MIN_NODE_W, Number(this.size?.[0]) || MIN_NODE_W);
       this._renderARButtons();
+      const loadedWidth = Math.max(MIN_NODE_W, Number(this.size?.[0]) || DEFAULT_NODE_W);
       const fitted = this._fitNodeHeightToContent(loadedWidth);
-      this.size[0] = fitted[0];
-      this.size[1] = fitted[1];
-      this._bodyW = fitted[0];
-      this._bodyH = Math.max(1, fitted[1] - TITLE_H);
-      this._minBodyH = this._bodyH;
+      this.size = [loadedWidth, fitted[1]];
+      this._dsMinSize = [MIN_NODE_W, MIN_NODE_H];
       this._persist();
 
       setTimeout(() => {
@@ -929,6 +945,10 @@ app.registerExtension({
           this._syncDomGeometry();
           this._syncCollapsedState();
           this._syncUI();
+          const reFitted = this._fitNodeHeightToContent(this.size?.[0] || loadedWidth);
+          if (Math.abs((this.size?.[1] || 0) - reFitted[1]) > 0.5) {
+            this.size[1] = reFitted[1];
+          }
           if (window.DSGlobalTheme && this.dom) {
             window.DSGlobalTheme.bindNode(this.dom, this);
           }
@@ -939,29 +959,30 @@ app.registerExtension({
       }, 20);
     };
 
+    nodeType.prototype.computeSize = function () {
+      return [MIN_NODE_W, MIN_NODE_H];
+    };
+
     const oldResize = nodeType.prototype.onResize;
     nodeType.prototype.onResize = function (size) {
       if (!Array.isArray(size) || this._dsInResize) return;
-      const width = Math.max(MIN_NODE_W, Number(size[0]) || MIN_NODE_W);
-
-      const fitted = this._fitNodeHeightToContent(width);
-      const same = Math.abs((this.size?.[0] || 0) - fitted[0]) < 0.5
-        && Math.abs((this.size?.[1] || 0) - fitted[1]) < 0.5;
-
       this._dsInResize = true;
       try {
-        if (oldResize) oldResize.apply(this, [fitted]);
-        this.size[0] = fitted[0];
-        this.size[1] = fitted[1];
-        this._bodyW = fitted[0];
-        this._bodyH = Math.max(1, fitted[1] - TITLE_H);
-        this._minBodyH = this._bodyH;
+        const width = Math.max(MIN_NODE_W, Number(size[0]) || DEFAULT_NODE_W);
+        const fitted = this._fitNodeHeightToContent(width);
+        size[0] = width;
+        size[1] = fitted[1];
+        if (this.size) {
+          this.size[0] = width;
+          this.size[1] = fitted[1];
+        }
         this._syncDomGeometry();
         this._syncCollapsedState();
-        if (!same) this.setDirtyCanvas(true, true);
+        this.setDirtyCanvas(true, true);
       } finally {
         this._dsInResize = false;
       }
+      if (oldResize) oldResize.apply(this, arguments);
     };
 
     const oldRemoved = nodeType.prototype.onRemoved;
@@ -973,7 +994,11 @@ app.registerExtension({
     const oldDrawForeground = nodeType.prototype.onDrawForeground;
     nodeType.prototype.onDrawForeground = function () {
       this._syncCollapsedState();
-      this._syncDomGeometry();
+      const fitted = this._fitNodeHeightToContent ? this._fitNodeHeightToContent(this.size?.[0] || DEFAULT_NODE_W) : null;
+      if (fitted && Math.abs((this.size?.[1] || 0) - fitted[1]) > 0.5) {
+        this.size[1] = fitted[1];
+        this.setDirtyCanvas(true, true);
+      }
       if (oldDrawForeground) return oldDrawForeground.apply(this, arguments);
     };
   },

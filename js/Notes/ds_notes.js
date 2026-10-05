@@ -4,7 +4,20 @@
    ============================================================ */
 
 import { app } from "/scripts/app.js";
-import { protectDSResizeCorners } from "../Shared/ds_ui_system.js";
+import {
+  Card,
+  Button,
+  Field,
+  StatusBar,
+  DSIcon,
+  DSIconMarkup,
+  protectDSResizeCorners,
+  normalizeDSWidgetHost,
+  installDSUI,
+} from "../UIElements/index.js";
+
+
+installDSUI();
 
 // Ensure stylesheet is loaded
 const CSS_ID = "ds-notes-css";
@@ -16,68 +29,105 @@ if (!document.getElementById(CSS_ID)) {
   document.head.appendChild(link);
 }
 
-// Curated SVG Icons (Local, strictly stroked to avoid dead black silhouettes)
+// Modern Unified SVG Icons (Sourced from Lucide via DSIconMarkup)
 const ICONS = {
-  notes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
-  edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
-  bold: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>`,
-  italic: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>`,
-  underline: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>`,
-  strike: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.3 4.9c-2.3-.6-4.4-1-6.2-.9-2.7.2-5 1.7-5 4.3 0 2.2 1.6 3.6 4.3 4.2"/><path d="M6.7 19.1c2.3.6 4.4 1 6.2.9 2.7-.2 5-1.7 5-4.3 0-2.2-1.6-3.6-4.3-4.2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>`,
-  clear: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>`,
-  ul: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg>`,
-  ol: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>`,
-  link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
-  code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`,
-  hr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><line x1="5" y1="6" x2="19" y2="6" stroke-dasharray="2 2"/><line x1="5" y1="18" x2="19" y2="18" stroke-dasharray="2 2"/></svg>`,
-  grid: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>`,
-  icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></svg>`,
-  button: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="3"/><circle cx="8" cy="12" r="1"/></svg>`,
-  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
-  youtube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor"/></svg>`,
-  discord: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.9 4.3A17.9 17.9 0 0 0 14.6 3a.1.1 0 0 0-.1.1 12.3 12.3 0 0 0-.5 1.1 16.5 16.5 0 0 0-5 0 11 11 0 0 0-.5-1.1.1.1 0 0 0-.1-.1 17.8 17.8 0 0 0-4.3 1.3.1.1 0 0 0-.1.1A19.8 19.8 0 0 0 1 17.8a.1.1 0 0 0 0 .1 18 18 0 0 0 5.5 2.8.1.1 0 0 0 .1 0 13 13 0 0 0 1.2-1.9.1.1 0 0 0-.1-.1 11.8 11.8 0 0 1-1.7-.8.1.1 0 0 1 0-.2c.1-.1.2-.2.4-.3a12.8 12.8 0 0 0 11.2 0c.1.1.2.2.4.3a.1.1 0 0 1 0 .2 11.4 11.4 0 0 1-1.7.8.1.1 0 0 0-.1.1 14 14 0 0 0 1.2 1.9.1.1 0 0 0 .1 0 18 18 0 0 0 5.5-2.8.1.1 0 0 0 0-.1 19.8 19.8 0 0 0-2.8-13.4.1.1 0 0 0-.1-.1ZM8.5 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2c1 0 1.9.9 1.8 2 0 1.1-.8 2-1.8 2Zm7 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2c1 0 1.9.9 1.8 2 0 1.1-.8 2-1.8 2Z" fill="currentColor"/></svg>`,
-  callout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
-  undo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>`,
-  redo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg>`,
-  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
-  externalLink: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
-  star: `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
-  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  flame: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
-  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
-  alert: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-  heart: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
-  zap: `<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  notes: DSIconMarkup("notes", { size: 14 }),
+  edit: DSIconMarkup("edit", { size: 13 }),
+  bold: DSIconMarkup("bold", { size: 13 }),
+  italic: DSIconMarkup("italic", { size: 13 }),
+  underline: DSIconMarkup("underline", { size: 13 }),
+  strike: DSIconMarkup("strike", { size: 13 }),
+  clear: DSIconMarkup("clear", { size: 13 }),
+  ul: DSIconMarkup("list", { size: 13 }),
+  ol: DSIconMarkup("list-ordered", { size: 13 }),
+  link: DSIconMarkup("external-link", { size: 13 }),
+  code: DSIconMarkup("code", { size: 13 }),
+  grid: DSIconMarkup("table", { size: 13 }),
+  folder: DSIconMarkup("folder", { size: 13 }),
+  youtube: DSIconMarkup("youtube", { size: 13 }),
+  discord: DSIconMarkup("discord", { size: 13 }),
+  callout: DSIconMarkup("alert-circle", { size: 13 }),
+  undo: DSIconMarkup("undo", { size: 13 }),
+  redo: DSIconMarkup("redo", { size: 13 }),
+  download: DSIconMarkup("download", { size: 13 }),
+  externalLink: DSIconMarkup("external-link", { size: 13 }),
+  star: DSIconMarkup("star", { size: 13 }),
+  check: DSIconMarkup("check", { size: 13 }),
+  flame: DSIconMarkup("flame", { size: 13 }),
+  info: DSIconMarkup("info", { size: 13 }),
+  alert: DSIconMarkup("alert-triangle", { size: 13 }),
+  heart: DSIconMarkup("heart", { size: 13 }),
+  zap: DSIconMarkup("zap", { size: 13 }),
+  close: DSIconMarkup("x", { size: 14 }),
+  lightbulb: DSIconMarkup("lightbulb", { size: 13 }),
+  pin: DSIconMarkup("pin", { size: 13 }),
+  tag: DSIconMarkup("tag", { size: 13 }),
+  globe: DSIconMarkup("globe", { size: 13 }),
+  book: DSIconMarkup("book-open", { size: 13 }),
+  github: DSIconMarkup("github", { size: 13 }),
+  copy: DSIconMarkup("copy", { size: 12 }),
+  palette: DSIconMarkup("palette", { size: 13 }),
+  users: DSIconMarkup("users", { size: 13 }),
+  hash: DSIconMarkup("hash", { size: 13 }),
+  mail: DSIconMarkup("mail", { size: 13 }),
+  play: DSIconMarkup("play", { size: 12 }),
+  mousePointer: DSIconMarkup("mouse-pointer", { size: 13 }),
+  square: DSIconMarkup("square", { size: 13 }),
+  film: DSIconMarkup("film", { size: 13 }),
+  save: DSIconMarkup("save", { size: 13 }),
+  type: DSIconMarkup("type", { size: 13 }),
+  icon: DSIconMarkup("sparkles", { size: 13 }),
 };
+
+const FONT_FAMILIES = [
+  { id: "Inter, sans-serif",                       label: "Inter",           sample: "Aa" },
+  { id: "system-ui, sans-serif",                   label: "System UI",       sample: "Aa" },
+  { id: "'Segoe UI', Roboto, sans-serif",           label: "Segoe UI",        sample: "Aa" },
+  { id: "Georgia, serif",                          label: "Georgia",         sample: "Aa" },
+  { id: "'Times New Roman', Times, serif",         label: "Times New Roman", sample: "Aa" },
+  { id: "'JetBrains Mono', Consolas, monospace",   label: "JetBrains Mono",  sample: "Aa" },
+  { id: "'Fira Code', monospace",                  label: "Fira Code",       sample: "Aa" },
+  { id: "Consolas, monospace",                     label: "Consolas",        sample: "Aa" },
+];
+
+const FONT_SIZES = [
+  { id: "1", label: "10px",  px: 10 },
+  { id: "2", label: "13px",  px: 13 },
+  { id: "3", label: "16px",  px: 16 },
+  { id: "4", label: "18px",  px: 18 },
+  { id: "5", label: "24px",  px: 24 },
+  { id: "6", label: "32px",  px: 32 },
+  { id: "7", label: "48px",  px: 48 },
+];
 
 const DEFAULT_DOC = {
   version: 1,
   settings: {
     bgColor: "",
   },
-  html: `<h1>Welcome to Deathshot Arsenal</h1>
-<p>This is <strong>DS Notes</strong> — your rich-text workflow documentation and guide node.</p>
-<div class="ds-notes-callout ds-notes-callout-tip" contenteditable="false">
-  <div class="ds-notes-callout-icon">${ICONS.info}</div>
+  html: `<h2>Workflow Documentation</h2>
+<p>Document checkpoints, LoRA trigger words, prompt recipes, and instructions for this workflow.</p>
+<div class="ds-notes-callout ds-notes-callout-tip">
+  <div class="ds-notes-callout-icon">${DSIconMarkup("lightbulb", { size: 16 })}</div>
   <div class="ds-notes-callout-content">
     <div class="ds-notes-callout-title">PRO TIP</div>
-    <div class="ds-notes-callout-body" contenteditable="true">Click <strong>Edit Note</strong> to open the full-screen modal editor with custom dividers, code blocks, tables, YouTube cards, and Discord invites.</div>
+    <div class="ds-notes-callout-body">Click <strong>Edit</strong> in the top-right to open the dedicated full-screen editor to format notes, add callouts, code blocks, tables, and links.</div>
   </div>
-  <button type="button" class="ds-notes-block-delete-btn" title="Delete block">×</button>
 </div>
 <hr class="ds-notes-sep ds-notes-sep-glow">
-<p>Use the buttons below to document your checkpoints, prompts, and settings.</p>`,
+<p>This note is displayed in read-only mode directly on the canvas. All editing is performed in the dedicated editor workspace.</p>`,
 };
 
 function sanitizeDoc(doc) {
   if (!doc || typeof doc !== "object") {
     return JSON.parse(JSON.stringify(DEFAULT_DOC));
   }
+  const bg = typeof doc.settings?.bgColor === "string" ? doc.settings.bgColor.trim() : "";
+  const isYellow = bg.toLowerCase() === "#e5a93c" || bg.toLowerCase() === "#f2c94c" || bg.toLowerCase() === "yellow";
   return {
     version: doc.version || 1,
     settings: {
-      bgColor: doc.settings?.bgColor || "",
+      bgColor: isYellow ? "" : bg,
     },
     html: typeof doc.html === "string" ? doc.html : DEFAULT_DOC.html,
   };
@@ -165,6 +215,35 @@ app.registerExtension({
     const origRemoved = nodeType.prototype.onRemoved;
     const origResize = nodeType.prototype.onResize;
 
+    const DS_NOTES_CARD_MARGIN = 5;
+    const DS_NOTES_MIN_CARD_HEIGHT = 160;
+    const DS_NOTES_MIN_WIDGET_HEIGHT = DS_NOTES_MIN_CARD_HEIGHT + (DS_NOTES_CARD_MARGIN * 2);
+
+    nodeType.prototype._getNotesWidgetY = function () {
+      const widget = this._dsNotesDOMWidget;
+      const y = Number(widget?.y);
+      if (Number.isFinite(y) && y >= 0) return y;
+      const lastY = Number(widget?.last_y);
+      if (Number.isFinite(lastY) && lastY >= 0) return lastY;
+      return 0;
+    };
+
+    nodeType.prototype._calcStats = function (html) {
+      const temp = document.createElement("div");
+      temp.innerHTML = html || "";
+      const text = temp.innerText || "";
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+      const chars = text.length;
+      const readingTime = Math.max(1, Math.ceil(words / 200));
+      return { words, chars, readingTime };
+    };
+
+    nodeType.prototype._getPlainText = function () {
+      const temp = document.createElement("div");
+      temp.innerHTML = this._dsDoc?.html || "";
+      return temp.innerText.trim();
+    };
+
     nodeType.prototype.onNodeCreated = function () {
       const res = origCreated ? origCreated.apply(this, arguments) : undefined;
 
@@ -172,12 +251,25 @@ app.registerExtension({
       this.shape = "round";
       protectDSResizeCorners(this);
 
-      // Clean default size on canvas
-      const curSize = Array.isArray(this.size) ? this.size : [400, 240];
+      // Default dark palette so LiteGraph base NEVER shows bright yellow
+      this.color = "#161b24";
+      this.bgcolor = "#0b0f17";
+      this.boxcolor = "#242a36";
+
+      // Spacious, high-grade dimensions on canvas
+      const curW = Number(this.size?.[0]) || 0;
+      const curH = Number(this.size?.[1]) || 0;
       this.size = [
-        Math.max(Number(curSize[0]) || 400, 320),
-        Math.max(Number(curSize[1]) || 240, 160),
+        curW >= 480 ? curW : 520,
+        curH >= 420 ? curH : 480,
       ];
+
+      // Card starts exactly 5px below title bar (no sockets = bodyTop 0, margin:5 handles the gap)
+      Object.defineProperty(this, "widgets_start_y", {
+        configurable: true,
+        get() { return 0; },
+        set() { },
+      });
 
       this.properties = this.properties || {};
       if (!this.properties.ds_notes_data) {
@@ -186,42 +278,73 @@ app.registerExtension({
 
       this._dsDoc = sanitizeDoc(this.properties.ds_notes_data);
 
-      // DOM Root for in-node canvas preview
-      const root = document.createElement("div");
-      root.className = "ds-notes-root";
-      root.dataset.dsThemed = "true";
-      this._dsRoot = root;
+      // Card primitive from UIElements
+      const card = Card({
+        title: "DS Notes",
+        icon: "notes",
+        className: "ds-notes-card",
+      });
+      this._dsCard = card;
+      this._dsRoot = card.root;
 
       // Mount DOM Widget on canvas
-      this._dsNotesWidget = this.addDOMWidget("ds_notes_ui", "div", root, {
+      const domWidget = this.addDOMWidget("ds_notes_ui", "custom", card.root, {
         serialize: false,
         hideOnZoom: false,
-        getMinHeight: () => 140,
-        getHeight: () => Math.max(100, (Number(this.size?.[1]) || 240) - 22),
+        margin: DS_NOTES_CARD_MARGIN,
+        getMinHeight: () => DS_NOTES_MIN_WIDGET_HEIGHT,
+        getMaxHeight: () => {
+          const widgetY = Number(domWidget?.y ?? this._getNotesWidgetY?.() ?? 0);
+          const nodeHeight = Number(this.size?.[1] || 480);
+          return Math.max(DS_NOTES_MIN_WIDGET_HEIGHT, nodeHeight - widgetY);
+        },
+        getHeight: () => {
+          const widgetY = Number(domWidget?.y ?? this._getNotesWidgetY?.() ?? 0);
+          const nodeHeight = Number(this.size?.[1] || 480);
+          return Math.max(DS_NOTES_MIN_WIDGET_HEIGHT, nodeHeight - widgetY);
+        },
       });
+      this._dsNotesDOMWidget = domWidget;
 
-      this._dsSyncHostHeight = () => {
-        const nodeHeight = Math.max(140, Number(this.size?.[1]) || 240);
-        const widgetHeight = Math.max(100, nodeHeight - 22);
-        if (this._dsNotesWidget) {
-          this._dsNotesWidget.computedHeight = widgetHeight;
+      normalizeDSWidgetHost(card.root, this, { shell: false });
+
+      if (Array.isArray(this.widgets)) {
+        const domIdx = this.widgets.indexOf(this._dsNotesDOMWidget);
+        if (domIdx > 0) {
+          this.widgets.splice(domIdx, 1);
+          this.widgets.unshift(this._dsNotesDOMWidget);
         }
-        root.style.height = `${widgetHeight}px`;
-        root.style.maxHeight = `${widgetHeight}px`;
-      };
-      this._dsSyncHostHeight();
+      }
 
-      // Render the in-node canvas preview
+      // Render the in-node canvas card (Read-Only Content Display)
       this._dsRenderCanvasPreview();
 
       // Theme Integration
+      try {
+        if (window.DSGlobalTheme) {
+          window.DSGlobalTheme.bindNode?.(card.root, this);
+          window.DSGlobalTheme.applyNodeBase?.(this);
+        }
+      } catch (_) { }
+
+      if (!this._dsThemeSubscribed && window.DSGlobalTheme?.subscribe) {
+        this._dsThemeSubscribed = true;
+        window.DSGlobalTheme.subscribe(() => {
+          try {
+            window.DSGlobalTheme?.applyNodeBase?.(this);
+          } catch (_) { }
+          this._dsRenderCanvasPreview?.();
+          this.setDirtyCanvas?.(true, true);
+        });
+      }
+
       setTimeout(() => {
         try {
           if (window.DSGlobalTheme) {
-            window.DSGlobalTheme.bindNode?.(root, this);
+            window.DSGlobalTheme.bindNode?.(card.root, this);
             window.DSGlobalTheme.applyNodeBase?.(this);
           }
-        } catch (_) {}
+        } catch (_) { }
         this.setDirtyCanvas(true, true);
       }, 0);
 
@@ -235,6 +358,31 @@ app.registerExtension({
         this._dsDoc = sanitizeDoc(props.ds_notes_data);
         this.properties.ds_notes_data = this._dsDoc;
       }
+
+      this.color = "#161b24";
+      this.bgcolor = "#0b0f17";
+      this.boxcolor = "#242a36";
+
+      // Upgrade squished old dimensions
+      if (this.size) {
+        const curW = Number(this.size[0]) || 0;
+        const curH = Number(this.size[1]) || 0;
+        if (curW < 480 || curH < 420) {
+          this.setSize([
+            curW >= 480 ? curW : 520,
+            curH >= 420 ? curH : 480,
+          ]);
+        }
+      }
+
+      // Re-apply global theme base
+      try {
+        if (window.DSGlobalTheme) {
+          window.DSGlobalTheme.bindNode?.(this._dsCard?.root, this);
+          window.DSGlobalTheme.applyNodeBase?.(this);
+        }
+      } catch (_) { }
+
       this._dsRenderCanvasPreview();
       return res;
     };
@@ -254,7 +402,11 @@ app.registerExtension({
 
     nodeType.prototype.onResize = function (size) {
       origResize?.apply(this, arguments);
-      this._dsSyncHostHeight?.();
+      if (this.size) {
+        this.size[0] = Math.max(Number(this.size[0]) || 480, 320);
+        this.size[1] = Math.max(Number(this.size[1]) || 420, 200);
+      }
+      this.setDirtyCanvas?.(true, true);
     };
 
     nodeType.prototype.onRemoved = function () {
@@ -264,63 +416,107 @@ app.registerExtension({
     };
 
     // -------------------------------------------------------------
-    // CANVAS PREVIEW RENDERER (Clean, Compact, In-Node)
+    // CANVAS CARD RENDERER (Read-Only Content Display, Proper Sizing)
     // -------------------------------------------------------------
     nodeType.prototype._dsRenderCanvasPreview = function () {
-      const root = this._dsRoot;
-      if (!root) return;
-      root.innerHTML = "";
+      const card = this._dsCard;
+      if (!card) return;
 
-      const shell = document.createElement("div");
-      shell.className = "ds-notes-preview-shell";
+      // Header Actions: Dedicated Edit Button & Copy Button
+      const actionsGroup = card.head?.querySelector(".ds-ui-card-actions");
+      if (actionsGroup) {
+        actionsGroup.replaceChildren();
 
-      // Header Bar
-      const header = document.createElement("div");
-      header.className = "ds-notes-preview-header";
-      header.innerHTML = `
-        <div class="ds-notes-brand">
-          ${ICONS.notes}
-          <span>DS NOTES</span>
-        </div>
-        <button class="ds-notes-preview-edit-btn" type="button" data-open-editor title="Open Fullscreen Rich Editor">
-          Edit Note
-        </button>
-      `;
-
-      header.querySelector("[data-open-editor]").addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this._dsOpenEditorModal();
-      });
-
-      // Preview Body
-      const body = document.createElement("div");
-      body.className = "ds-notes-preview-body";
-      if (this._dsDoc.settings?.bgColor) {
-        body.style.backgroundColor = this._dsDoc.settings.bgColor;
-      }
-      body.innerHTML = this._dsDoc.html || "";
-
-      // Interactive copy code buttons in preview
-      body.querySelectorAll("[data-copy-code]").forEach((btn) => {
-        btn.addEventListener("click", async (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const block = btn.closest(".ds-notes-code-block");
-          const codeEl = block ? block.querySelector("code") : null;
-          const text = codeEl ? codeEl.innerText : "";
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(text);
-            const orig = btn.innerText;
-            btn.innerText = "Copied!";
-            setTimeout(() => { btn.innerText = orig; }, 1400);
-          }
+        // 1. Open Dedicated Editor Button (UIElements Button)
+        const editBtn = Button({
+          icon: "edit",
+          label: "Edit",
+          size: "compact",
+          variant: "primary",
+          tooltip: "Open Note Editor",
+          onClick: (e) => {
+            e.stopPropagation();
+            this._dsOpenEditorModal();
+          },
         });
-      });
 
-      shell.appendChild(header);
-      shell.appendChild(body);
-      root.appendChild(shell);
+        // 2. Copy Note to Clipboard Button (UIElements Button)
+        const copyBtn = Button({
+          icon: "copy",
+          size: "compact",
+          tooltip: "Copy Note to Clipboard",
+          onClick: async (e) => {
+            e.stopPropagation();
+            const plain = this._getPlainText();
+            if (navigator.clipboard) {
+              await navigator.clipboard.writeText(plain);
+              copyBtn.setIcon("check");
+              copyBtn.root.classList.add("is-success");
+              setTimeout(() => {
+                copyBtn.setIcon("copy");
+                copyBtn.root.classList.remove("is-success");
+              }, 1400);
+            }
+          },
+        });
+
+        actionsGroup.append(editBtn.root, copyBtn.root);
+      }
+
+      // Clear card body
+      card.clear();
+
+      // STRICTLY READ-ONLY CONTENT VIEWER (No editing allowed on the node itself)
+      const previewBody = document.createElement("div");
+      previewBody.className = "ds-notes-card-body ds-notes-preview-body";
+      if (this._dsDoc.settings?.bgColor) {
+        previewBody.style.backgroundColor = this._dsDoc.settings.bgColor;
+      }
+
+      const rawHtml = (this._dsDoc.html || "").trim();
+      if (!rawHtml) {
+        const emptyState = document.createElement("div");
+        emptyState.className = "ds-notes-empty-state";
+        emptyState.innerHTML = `
+          <div class="ds-notes-empty-icon">${DSIconMarkup("notes", { size: 30 })}</div>
+          <div class="ds-notes-empty-title">Empty Note</div>
+          <div class="ds-notes-empty-desc">Click <strong>Edit</strong> in the header to open the editor and write documentation.</div>
+        `;
+        emptyState.addEventListener("click", () => this._dsOpenEditorModal());
+        previewBody.appendChild(emptyState);
+      } else {
+        previewBody.innerHTML = this._dsDoc.html;
+
+        // Strip any contenteditable attributes to guarantee 100% read-only on canvas
+        previewBody.querySelectorAll("[contenteditable]").forEach((el) => {
+          el.removeAttribute("contenteditable");
+        });
+
+        // Ensure links open safely in new window/tab
+        previewBody.querySelectorAll("a").forEach((link) => {
+          link.setAttribute("target", "_blank");
+          link.setAttribute("rel", "noopener noreferrer");
+        });
+
+        // Copy buttons inside code blocks
+        previewBody.querySelectorAll("[data-copy-code]").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const block = btn.closest(".ds-notes-code-block");
+            const codeEl = block ? block.querySelector("code") : null;
+            const text = codeEl ? codeEl.innerText : "";
+            if (navigator.clipboard) {
+              await navigator.clipboard.writeText(text);
+              const origHtml = btn.innerHTML;
+              btn.innerHTML = `${DSIconMarkup("check", { size: 12, color: "var(--ds-color-success, #34d399)" })} <span>Copied!</span>`;
+              setTimeout(() => { btn.innerHTML = origHtml; }, 1400);
+            }
+          });
+        });
+      }
+
+      card.append(previewBody);
     };
 
     // -------------------------------------------------------------
@@ -333,6 +529,8 @@ app.registerExtension({
       this._dsSavedSnapshot = JSON.stringify(this._dsDoc);
       // Clone isolated draft
       this._dsDraftDoc = JSON.parse(this._dsSavedSnapshot);
+      this._dsInitialHtml = this._dsDraftDoc.html || "";
+      this._dsIsDirty = false;
       this._dsEditorTab = "edit";
       this._dsSavedRange = null;
       this._dsHistory = [this._dsDraftDoc.html || ""];
@@ -345,19 +543,19 @@ app.registerExtension({
 
       // Modal Card
       const modal = document.createElement("div");
-      modal.className = "ds-notes-editor-modal";
+      modal.className = "ds-ui-card ds-notes-editor-modal";
       backdrop.appendChild(modal);
 
       // Top Bar (Tabs: Editor, Code View, Live Preview + Title + Close)
       const topbar = document.createElement("div");
-      topbar.className = "ds-notes-modal-topbar";
+      topbar.className = "ds-ui-card-head ds-notes-modal-topbar";
 
       const titleWrap = document.createElement("div");
       titleWrap.className = "ds-notes-modal-title-wrap";
       titleWrap.innerHTML = `
         <div class="ds-notes-modal-title">
-          ${ICONS.notes}
-          <span>DS Notes Document Editor</span>
+          ${DSIconMarkup("notes", { size: 16, color: "var(--ds-color-accent, #67e8f9)" })}
+          <span>DS Notes Editor</span>
         </div>
       `;
 
@@ -365,31 +563,30 @@ app.registerExtension({
       tabsGroup.className = "ds-notes-view-tabs";
 
       const tabEdit = document.createElement("button");
-      tabEdit.className = "ds-notes-tab-btn is-active";
-      tabEdit.textContent = "Editor";
+      tabEdit.className = "ds-ui-btn is-active";
+      tabEdit.innerHTML = `${DSIconMarkup("edit", { size: 13 })} <span>Editor</span>`;
       tabEdit.addEventListener("click", () => this._dsSwitchModalTab("edit"));
 
       const tabCode = document.createElement("button");
-      tabCode.className = "ds-notes-tab-btn";
-      tabCode.textContent = "Code View";
+      tabCode.className = "ds-ui-btn";
+      tabCode.innerHTML = `${DSIconMarkup("code", { size: 13 })} <span>Code View</span>`;
       tabCode.addEventListener("click", () => this._dsSwitchModalTab("code"));
 
       const tabPreview = document.createElement("button");
-      tabPreview.className = "ds-notes-tab-btn";
-      tabPreview.textContent = "Live Preview";
+      tabPreview.className = "ds-ui-btn";
+      tabPreview.innerHTML = `${DSIconMarkup("eye", { size: 13 })} <span>Live Preview</span>`;
       tabPreview.addEventListener("click", () => this._dsSwitchModalTab("preview"));
 
       tabsGroup.append(tabEdit, tabCode, tabPreview);
       this._dsModalTabs = { tabEdit, tabCode, tabPreview };
 
-      const closeBtn = document.createElement("button");
-      closeBtn.className = "ds-notes-btn ds-notes-btn-icon";
-      closeBtn.type = "button";
-      closeBtn.title = "Close Editor";
-      closeBtn.innerHTML = ICONS.close;
-      closeBtn.addEventListener("click", () => this._dsRequestCancel());
+      const closeBtn = Button({
+        icon: "x",
+        tooltip: "Close Editor",
+        onClick: () => this._dsRequestCancel(),
+      });
 
-      topbar.append(titleWrap, tabsGroup, closeBtn);
+      topbar.append(titleWrap, tabsGroup, closeBtn.root);
       modal.appendChild(topbar);
 
       // Toolbar (Strict uniform 28px height on every button)
@@ -420,7 +617,12 @@ app.registerExtension({
       // Ensure trailing paragraph cushion so user can always click below to type
       this._dsEnsureTrailingParagraph(editor);
 
+      // Clean normalized baseline: document is completely unmodified on open
+      this._dsNormalizedBaselineHtml = editor.innerHTML;
+      this._dsIsDirty = false;
+
       editor.addEventListener("input", () => {
+        this._dsIsDirty = true;
         this._dsDraftDoc.html = editor.innerHTML;
         this._dsPushHistory();
         this._dsUpdateStats();
@@ -460,6 +662,7 @@ app.registerExtension({
           if (block) {
             block.remove();
             this._dsEnsureTrailingParagraph(editor);
+            this._dsIsDirty = true;
             this._dsDraftDoc.html = editor.innerHTML;
             this._dsPushHistory();
             this._dsUpdateStats();
@@ -511,6 +714,7 @@ app.registerExtension({
       codeTextarea.style.display = "none";
       codeTextarea.value = this._dsDraftDoc.html || "";
       codeTextarea.addEventListener("input", () => {
+        this._dsIsDirty = true;
         this._dsDraftDoc.html = codeTextarea.value;
         this._dsUpdateStats();
       });
@@ -529,32 +733,32 @@ app.registerExtension({
 
       modal.appendChild(bodyContainer);
 
-      // Bottom Bar (Stats, Cancel, Save)
+      // Bottom Bar (Stats via DS StatusBar, Cancel, Save)
       const bottombar = document.createElement("div");
       bottombar.className = "ds-notes-bottombar";
 
-      const statsEl = document.createElement("div");
-      statsEl.className = "ds-notes-bottom-stats";
-      this._dsModalStatsEl = statsEl;
+      const statusBar = StatusBar({ text: "Ready", state: "idle" });
+      statusBar.root.className += " ds-notes-bottom-stats";
+      this._dsModalStatsEl = statusBar.root;
+      this._dsModalStatusBar = statusBar;
 
       const actions = document.createElement("div");
-      actions.style.display = "flex";
-      actions.style.gap = "8px";
+      actions.style.cssText = "display:flex;gap:8px;align-items:center;flex-shrink:0;";
 
-      const cancelBtn = document.createElement("button");
-      cancelBtn.className = "ds-notes-btn";
-      cancelBtn.type = "button";
-      cancelBtn.textContent = "Cancel";
-      cancelBtn.addEventListener("click", () => this._dsRequestCancel());
+      const cancelBtn = Button({
+        label: "Cancel",
+        onClick: () => this._dsRequestCancel(),
+      });
 
-      const saveBtn = document.createElement("button");
-      saveBtn.className = "ds-notes-btn ds-notes-btn-save";
-      saveBtn.type = "button";
-      saveBtn.textContent = "Save Changes";
-      saveBtn.addEventListener("click", () => this._dsCommitSave());
+      const saveBtn = Button({
+        label: "Save Changes",
+        icon: "save",
+        variant: "primary",
+        onClick: () => this._dsCommitSave(),
+      });
 
-      actions.append(cancelBtn, saveBtn);
-      bottombar.append(statsEl, actions);
+      actions.append(cancelBtn.root, saveBtn.root);
+      bottombar.append(statusBar.root, actions);
       modal.appendChild(bottombar);
 
       // Modal keyboard shortcuts
@@ -618,10 +822,10 @@ app.registerExtension({
       const tb = document.createElement("div");
       tb.className = "ds-notes-toolbar";
 
-      const makeToolBtn = (iconSvg, title, onClick, extraClass = "") => {
+      const makeToolBtn = (iconSvg, title, onClick) => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = `ds-notes-btn ds-notes-btn-icon ${extraClass}`.trim();
+        btn.className = "ds-ui-btn ds-ui-btn-icon-only";
         btn.title = title;
         btn.innerHTML = iconSvg;
         btn.addEventListener("mousedown", (e) => e.preventDefault());
@@ -633,10 +837,10 @@ app.registerExtension({
         return btn;
       };
 
-      const makeTextBtn = (label, title, onClick, extraClass = "") => {
+      const makeTextBtn = (label, title, onClick) => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = `ds-notes-btn ${extraClass}`.trim();
+        btn.className = "ds-ui-btn";
         btn.title = title;
         btn.innerHTML = label;
         btn.addEventListener("mousedown", (e) => e.preventDefault());
@@ -654,7 +858,39 @@ app.registerExtension({
         return d;
       };
 
-      // 1. Text Style
+      // 1. Font Family picker
+      const gFont = document.createElement("div");
+      gFont.className = "ds-notes-tool-group";
+      const fontLabel = this._dsLastFont
+        ? FONT_FAMILIES.find((f) => f.id === this._dsLastFont)?.label || "Font"
+        : "Font";
+      const fontTrigger = makeTextBtn(
+        `${ICONS.type} <span class="ds-notes-font-label">${fontLabel}</span> <span>▾</span>`,
+        "Change Font Family",
+        (e, b) => this._dsOpenFontMenu(b)
+      );
+      this._dsFontTrigger = fontTrigger;
+      gFont.appendChild(fontTrigger);
+      tb.appendChild(gFont);
+      tb.appendChild(makeDivider());
+
+      // 2. Font Size picker
+      const gSize = document.createElement("div");
+      gSize.className = "ds-notes-tool-group";
+      const sizePx = this._dsLastFontSize
+        ? FONT_SIZES.find((s) => s.id === this._dsLastFontSize)?.label || "Size"
+        : "Size";
+      const sizeTrigger = makeTextBtn(
+        `<span class="ds-notes-size-label">${sizePx}</span> <span>▾</span>`,
+        "Change Font Size",
+        (e, b) => this._dsOpenFontSizeMenu(b)
+      );
+      this._dsSizeTrigger = sizeTrigger;
+      gSize.appendChild(sizeTrigger);
+      tb.appendChild(gSize);
+      tb.appendChild(makeDivider());
+
+      // 3. Text Style
       const gStyle = document.createElement("div");
       gStyle.className = "ds-notes-tool-group";
       gStyle.append(
@@ -667,7 +903,7 @@ app.registerExtension({
       tb.appendChild(gStyle);
       tb.appendChild(makeDivider());
 
-      // 2. Headings (Strictly 28px height)
+      // 4. Headings (Strictly 28px height)
       const gHead = document.createElement("div");
       gHead.className = "ds-notes-tool-group";
       gHead.append(
@@ -684,7 +920,7 @@ app.registerExtension({
 
       const dotColor = this._dsLastTextColor || "#67e8f9";
       const colorBtn = makeTextBtn(
-        `<span class="ds-notes-color-swatch-dot" style="background:${dotColor}"></span> <span>Color ▾</span>`,
+        `${DSIconMarkup("palette", { size: 13 })} <span class="ds-notes-color-swatch-dot" style="background:${dotColor}"></span> <span>Color ▾</span>`,
         "Text, Highlight & Page Background Colors",
         (e, btn) => this._dsOpenColorPopover(btn)
       );
@@ -693,7 +929,7 @@ app.registerExtension({
       tb.appendChild(gColors);
       tb.appendChild(makeDivider());
 
-      // 4. Lists
+      // 5. Lists
       const gLists = document.createElement("div");
       gLists.className = "ds-notes-tool-group";
       gLists.append(
@@ -703,11 +939,11 @@ app.registerExtension({
       tb.appendChild(gLists);
       tb.appendChild(makeDivider());
 
-      // 5. Variety: Separator Dropdown
+      // 6. Variety: Separator Dropdown
       const gSep = document.createElement("div");
       gSep.className = "ds-notes-tool-group";
       const sepTrigger = makeTextBtn(
-        `<span style="font-weight:bold;font-size:13px;line-height:1;">—</span> <span>Sep ▾</span>`,
+        `${DSIconMarkup("minus", { size: 13 })} <span>Sep ▾</span>`,
         "Insert Decorative Separator",
         (e, b) => this._dsOpenSeparatorMenu(b)
       );
@@ -733,7 +969,7 @@ app.registerExtension({
       gComponents.className = "ds-notes-tool-group";
 
       const btnMenuTrigger = makeTextBtn(
-        `<span>Button ▾</span>`,
+        `${DSIconMarkup("square", { size: 12 })} <span>Button ▾</span>`,
         "Insert Styled Button",
         (e, b) => this._dsOpenButtonMenu(b)
       );
@@ -742,7 +978,7 @@ app.registerExtension({
       const ytBtn = makeToolBtn(ICONS.youtube, "Insert YouTube Video / Embed", () => this._dsPromptYouTube());
 
       const discordMenuTrigger = makeTextBtn(
-        `<span>Discord ▾</span>`,
+        `${DSIconMarkup("discord", { size: 13 })} <span>Discord ▾</span>`,
         "Insert Discord Card",
         (e, b) => this._dsOpenDiscordMenu(b)
       );
@@ -761,6 +997,144 @@ app.registerExtension({
       tb.appendChild(gHistory);
 
       return tb;
+    };
+
+    // -------------------------------------------------------------
+    // FONT FAMILY MENU
+    // -------------------------------------------------------------
+    nodeType.prototype._dsOpenFontMenu = function (anchor) {
+      closeAllPopups();
+      this._dsSavedRange = saveSelection(this._dsModalEditorEl);
+
+      const menu = document.createElement("div");
+      menu.className = "ds-notes-menu-popup ds-notes-font-menu";
+
+      FONT_FAMILIES.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "ds-notes-menu-item ds-notes-font-menu-item";
+        row.innerHTML = `
+          <span class="ds-notes-font-sample" style="font-family:${item.id}">${item.sample}</span>
+          <span class="ds-notes-font-name">${item.label}</span>
+          ${this._dsLastFont === item.id ? `<span class="ds-notes-font-check">${DSIconMarkup("check", { size: 12 })}</span>` : ""}
+        `;
+        row.addEventListener("click", (e) => {
+          e.preventDefault();
+          menu.remove();
+          this._dsLastFont = item.id;
+          this._dsExecFont(item.id);
+          const lbl = this._dsFontTrigger?.querySelector(".ds-notes-font-label");
+          if (lbl) lbl.textContent = item.label;
+        });
+        menu.appendChild(row);
+      });
+
+      document.body.appendChild(menu);
+      const rect = anchor.getBoundingClientRect();
+      menu.style.left = `${Math.max(10, Math.min(window.innerWidth - 240, rect.left))}px`;
+      menu.style.top = `${rect.bottom + 6}px`;
+
+      setTimeout(() => {
+        const onOutside = (e) => {
+          if (!menu.contains(e.target) && !anchor.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener("pointerdown", onOutside, true);
+          }
+        };
+        document.addEventListener("pointerdown", onOutside, true);
+      }, 0);
+    };
+
+    // -------------------------------------------------------------
+    // FONT SIZE MENU
+    // -------------------------------------------------------------
+    nodeType.prototype._dsOpenFontSizeMenu = function (anchor) {
+      closeAllPopups();
+      this._dsSavedRange = saveSelection(this._dsModalEditorEl);
+
+      const menu = document.createElement("div");
+      menu.className = "ds-notes-menu-popup ds-notes-fontsize-menu";
+
+      FONT_SIZES.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "ds-notes-menu-item ds-notes-fontsize-menu-item";
+        row.innerHTML = `
+          <span class="ds-notes-fontsize-preview" style="font-size:${item.px}px">${item.label}</span>
+          ${this._dsLastFontSize === item.id ? `<span class="ds-notes-font-check">${DSIconMarkup("check", { size: 12 })}</span>` : ""}
+        `;
+        row.addEventListener("click", (e) => {
+          e.preventDefault();
+          menu.remove();
+          this._dsLastFontSize = item.id;
+          this._dsExecFontSize(item.id);
+          const lbl = this._dsSizeTrigger?.querySelector(".ds-notes-size-label");
+          if (lbl) lbl.textContent = item.label;
+        });
+        menu.appendChild(row);
+      });
+
+      document.body.appendChild(menu);
+      const rect = anchor.getBoundingClientRect();
+      menu.style.left = `${Math.max(10, Math.min(window.innerWidth - 200, rect.left))}px`;
+      menu.style.top = `${rect.bottom + 6}px`;
+
+      setTimeout(() => {
+        const onOutside = (e) => {
+          if (!menu.contains(e.target) && !anchor.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener("pointerdown", onOutside, true);
+          }
+        };
+        document.addEventListener("pointerdown", onOutside, true);
+      }, 0);
+    };
+
+    // -------------------------------------------------------------
+    // FONT EXEC HELPERS
+    // -------------------------------------------------------------
+    nodeType.prototype._dsExecFont = function (fontFamily) {
+      if (!this._dsModalEditorEl) return;
+      this._dsIsDirty = true;
+      this._dsModalEditorEl.focus();
+      restoreSelection(this._dsSavedRange);
+
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount && !sel.isCollapsed) {
+        // Wrap selected text in a span with the font-family
+        const range = sel.getRangeAt(0);
+        const span = document.createElement("span");
+        span.style.fontFamily = fontFamily;
+        try {
+          range.surroundContents(span);
+        } catch (_) {
+          // If surroundContents fails (partial nodes), extract and wrap
+          const fragment = range.extractContents();
+          span.appendChild(fragment);
+          range.insertNode(span);
+        }
+        range.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      } else {
+        // No selection — apply to the contenteditable element as a whole style hint
+        this._dsModalEditorEl.style.fontFamily = fontFamily;
+      }
+
+      this._dsSavedRange = saveSelection(this._dsModalEditorEl);
+      this._dsDraftDoc.html = this._dsModalEditorEl.innerHTML;
+      this._dsPushHistory();
+      this._dsUpdateStats();
+    };
+
+    nodeType.prototype._dsExecFontSize = function (sizeId) {
+      if (!this._dsModalEditorEl) return;
+      this._dsIsDirty = true;
+      this._dsModalEditorEl.focus();
+      restoreSelection(this._dsSavedRange);
+      document.execCommand("fontSize", false, sizeId);
+      this._dsSavedRange = saveSelection(this._dsModalEditorEl);
+      this._dsDraftDoc.html = this._dsModalEditorEl.innerHTML;
+      this._dsPushHistory();
+      this._dsUpdateStats();
     };
 
     // -------------------------------------------------------------
@@ -823,42 +1197,46 @@ app.registerExtension({
     };
 
     // -------------------------------------------------------------
-    // STATS COUNTER
+    // STATS COUNTER (uses DS StatusBar component)
     // -------------------------------------------------------------
     nodeType.prototype._dsUpdateStats = function () {
-      if (!this._dsModalStatsEl) return;
+      if (!this._dsModalStatusBar) return;
       const text = this._dsModalEditorEl?.innerText || "";
       const words = text.trim() ? text.trim().split(/\s+/).length : 0;
       const chars = text.length;
       const readingTime = Math.max(1, Math.ceil(words / 200));
-      this._dsModalStatsEl.textContent = `${words} words · ${chars} chars · ~${readingTime} min read`;
+      this._dsModalStatusBar.setStatus(`${words} words · ${chars} chars · ~${readingTime} min read`, "idle");
     };
 
     // -------------------------------------------------------------
     // CANCEL & SAVE LOGIC (WITH ACCIDENTAL LOSS WARNING!)
     // -------------------------------------------------------------
     nodeType.prototype._dsRequestCancel = function () {
-      if (this._dsEditorTab === "edit" && this._dsModalEditorEl) {
-        this._dsDraftDoc.html = this._dsModalEditorEl.innerHTML;
-      } else if (this._dsEditorTab === "code" && this._dsModalCodeEl) {
-        this._dsDraftDoc.html = this._dsModalCodeEl.value;
-      }
-
-      const isModified = JSON.stringify(this._dsDraftDoc) !== this._dsSavedSnapshot;
-
-      if (isModified) {
-        this._dsOpenConfirmDialog({
-          title: "Discard Unsaved Changes?",
-          message: "You have made changes to this note that will be permanently lost if you cancel.",
-          confirmText: "Discard Changes",
-          cancelText: "Keep Editing",
-          onConfirm: () => {
-            this._dsCloseEditorModal(false);
-          },
-        });
-      } else {
+      // If user never touched anything, close immediately without prompting
+      if (!this._dsIsDirty) {
         this._dsCloseEditorModal(false);
+        return;
       }
+
+      const currentHtml = this._dsEditorTab === "code" && this._dsModalCodeEl
+        ? this._dsModalCodeEl.value
+        : (this._dsModalEditorEl?.innerHTML || "");
+
+      // If current HTML matches the initial normalized baseline, close immediately
+      if (currentHtml === this._dsNormalizedBaselineHtml || currentHtml.trim() === this._dsInitialHtml) {
+        this._dsCloseEditorModal(false);
+        return;
+      }
+
+      this._dsOpenConfirmDialog({
+        title: "Discard Unsaved Changes?",
+        message: "You have unsaved changes in this note. Are you sure you want to discard them?",
+        confirmText: "Discard Changes",
+        cancelText: "Keep Editing",
+        onConfirm: () => {
+          this._dsCloseEditorModal(false);
+        },
+      });
     };
 
     nodeType.prototype._dsCommitSave = function () {
@@ -871,6 +1249,7 @@ app.registerExtension({
       this._dsDoc = JSON.parse(JSON.stringify(this._dsDraftDoc));
       this.properties = this.properties || {};
       this.properties.ds_notes_data = JSON.parse(JSON.stringify(this._dsDoc));
+      this._dsIsDirty = false;
 
       this._dsRenderCanvasPreview();
       this.setDirtyCanvas(true, true);
@@ -888,36 +1267,51 @@ app.registerExtension({
     };
 
     // -------------------------------------------------------------
-    // ACCIDENTAL CANCEL CONFIRMATION DIALOG
+    // ACCIDENTAL CANCEL CONFIRMATION DIALOG (DS UIElements Card)
     // -------------------------------------------------------------
     nodeType.prototype._dsOpenConfirmDialog = function ({ title, message, confirmText, cancelText, onConfirm }) {
       const overlay = document.createElement("div");
       overlay.className = "ds-notes-dialog-overlay";
 
-      const card = document.createElement("div");
-      card.className = "ds-notes-dialog-card ds-notes-confirm-modal";
+      // Build card using DS UIElements Card
+      const dlgCard = Card({
+        title,
+        icon: "alert-triangle",
+        className: "ds-notes-confirm-modal",
+      });
+      dlgCard.root.style.cssText = "--ds-ui-card-title-color: var(--ds-color-danger,#f87171);min-width:360px;max-width:520px;";
 
-      card.innerHTML = `
-        <div class="ds-notes-dialog-head" style="color:#f87171;">
-          <span>${title}</span>
-        </div>
-        <div class="ds-notes-dialog-body">
-          <p class="ds-notes-confirm-msg">${message}</p>
-        </div>
-        <div class="ds-notes-dialog-foot">
-          <button type="button" class="ds-notes-btn" data-confirm-cancel>${cancelText || "Cancel"}</button>
-          <button type="button" class="ds-notes-btn ds-notes-btn-danger" data-confirm-ok>${confirmText || "Confirm"}</button>
-        </div>
-      `;
+      const msgEl = document.createElement("p");
+      msgEl.className = "ds-notes-confirm-msg";
+      msgEl.textContent = message;
+      dlgCard.append(msgEl);
+
+      const foot = document.createElement("div");
+      foot.className = "ds-notes-dialog-foot";
 
       const close = () => overlay.remove();
-      card.querySelector("[data-confirm-cancel]").addEventListener("click", close);
-      card.querySelector("[data-confirm-ok]").addEventListener("click", () => {
-        close();
-        onConfirm();
+
+      const cancelBtn = Button({
+        label: cancelText || "Keep Editing",
+        onClick: close,
       });
 
-      overlay.appendChild(card);
+      const confirmBtn = Button({
+        label: confirmText || "Discard Changes",
+        variant: "danger",
+        onClick: () => {
+          close();
+          onConfirm();
+        },
+      });
+
+      foot.append(cancelBtn.root, confirmBtn.root);
+      dlgCard.body.appendChild(foot);
+
+      overlay.appendChild(dlgCard.root);
+      overlay.addEventListener("pointerdown", (e) => {
+        if (e.target === overlay) close();
+      });
       document.body.appendChild(overlay);
     };
 
@@ -926,6 +1320,7 @@ app.registerExtension({
     // -------------------------------------------------------------
     nodeType.prototype._dsExec = function (cmd, val = null) {
       if (!this._dsModalEditorEl) return;
+      this._dsIsDirty = true;
       this._dsModalEditorEl.focus();
       restoreSelection(this._dsSavedRange);
       document.execCommand(cmd, false, val);
@@ -937,6 +1332,7 @@ app.registerExtension({
 
     nodeType.prototype._dsExecFormatBlock = function (tag) {
       if (!this._dsModalEditorEl) return;
+      this._dsIsDirty = true;
       this._dsModalEditorEl.focus();
       restoreSelection(this._dsSavedRange);
       document.execCommand("formatBlock", false, tag);
@@ -948,6 +1344,7 @@ app.registerExtension({
 
     nodeType.prototype._dsInsertHTML = function (html) {
       if (!this._dsModalEditorEl) return;
+      this._dsIsDirty = true;
       this._dsModalEditorEl.focus();
       restoreSelection(this._dsSavedRange);
 
@@ -976,7 +1373,7 @@ app.registerExtension({
     };
 
     // -------------------------------------------------------------
-    // MODAL INNER DIALOG HELPER
+    // MODAL INNER DIALOG HELPER (DS UIElements Card + Field + Button)
     // -------------------------------------------------------------
     nodeType.prototype._dsOpenInnerDialog = function ({ title, bodyContent, confirmText = "Insert", onConfirm }) {
       closeAllPopups();
@@ -985,39 +1382,69 @@ app.registerExtension({
       const overlay = document.createElement("div");
       overlay.className = "ds-notes-dialog-overlay";
 
-      const card = document.createElement("div");
-      card.className = "ds-notes-dialog-card";
-
-      card.innerHTML = `
-        <div class="ds-notes-dialog-head">
-          <span>${title}</span>
-          <button type="button" class="ds-notes-btn ds-notes-btn-icon" data-dialog-close>
-            ${ICONS.close}
-          </button>
-        </div>
-        <div class="ds-notes-dialog-body"></div>
-        <div class="ds-notes-dialog-foot">
-          <button type="button" class="ds-notes-btn" data-dialog-cancel>Cancel</button>
-          <button type="button" class="ds-notes-btn ds-notes-btn-save" data-dialog-confirm>${confirmText}</button>
-        </div>
-      `;
-
-      const bodyEl = card.querySelector(".ds-notes-dialog-body");
-      if (typeof bodyContent === "string") {
-        bodyEl.innerHTML = bodyContent;
-      } else if (bodyContent instanceof HTMLElement) {
-        bodyEl.appendChild(bodyContent);
-      }
-
-      const close = () => overlay.remove();
-      card.querySelector("[data-dialog-close]").addEventListener("click", close);
-      card.querySelector("[data-dialog-cancel]").addEventListener("click", close);
-      card.querySelector("[data-dialog-confirm]").addEventListener("click", () => {
-        const ok = onConfirm(card);
-        if (ok !== false) close();
+      // Modal card using DS UIElements Card
+      const dlgCard = Card({
+        title,
+        icon: "plus",
+        className: "ds-notes-dialog-card",
       });
 
-      overlay.appendChild(card);
+      const bodyEl = document.createElement("div");
+      bodyEl.className = "ds-notes-dialog-body";
+      if (typeof bodyContent === "string") {
+        const tmpDiv = document.createElement("div");
+        tmpDiv.style.cssText = "display:flex;flex-direction:column;gap:12px;width:100%;box-sizing:border-box;";
+        tmpDiv.innerHTML = bodyContent;
+        tmpDiv.querySelectorAll(".ds-notes-form-label").forEach((el) => {
+          el.classList.add("ds-ui-field-label");
+        });
+        tmpDiv.querySelectorAll(".ds-notes-form-input").forEach((el) => {
+          el.classList.add("ds-ui-input");
+        });
+        tmpDiv.querySelectorAll(".ds-notes-form-row").forEach((el) => {
+          el.classList.add("ds-ui-field");
+        });
+        bodyEl.appendChild(tmpDiv);
+      } else if (bodyContent instanceof HTMLElement) {
+        bodyContent.querySelectorAll?.(".ds-notes-form-label").forEach((el) => el.classList.add("ds-ui-field-label"));
+        bodyContent.querySelectorAll?.(".ds-notes-form-input").forEach((el) => el.classList.add("ds-ui-input"));
+        bodyContent.querySelectorAll?.(".ds-notes-form-row").forEach((el) => el.classList.add("ds-ui-field"));
+        bodyEl.appendChild(bodyContent);
+      }
+      dlgCard.body.appendChild(bodyEl);
+
+      const foot = document.createElement("div");
+      foot.className = "ds-notes-dialog-foot";
+
+      const close = () => overlay.remove();
+
+      const cancelBtn = Button({
+        label: "Cancel",
+        onClick: close,
+      });
+
+      const confirmBtn = Button({
+        label: confirmText,
+        variant: "primary",
+        icon: "check",
+        onClick: () => {
+          const ok = onConfirm(bodyEl);
+          if (ok !== false) close();
+        },
+      });
+
+      const closeHeaderBtn = Button({
+        icon: "x",
+        compact: true,
+        tooltip: "Close",
+        onClick: close,
+      });
+      if (dlgCard.head) dlgCard.head.querySelector(".ds-ui-card-actions")?.appendChild(closeHeaderBtn.root);
+
+      foot.append(cancelBtn.root, confirmBtn.root);
+      dlgCard.body.appendChild(foot);
+
+      overlay.appendChild(dlgCard.root);
       overlay.addEventListener("pointerdown", (e) => {
         if (e.target === overlay) close();
       });
@@ -1025,7 +1452,7 @@ app.registerExtension({
       document.body.appendChild(overlay);
 
       setTimeout(() => {
-        const firstInput = card.querySelector("input");
+        const firstInput = overlay.querySelector("input");
         if (firstInput) firstInput.focus();
       }, 40);
     };
@@ -1042,7 +1469,11 @@ app.registerExtension({
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = `ds-notes-chip-btn ${opt.id === activeVal ? "is-active" : ""}`;
-        btn.textContent = opt.label;
+        if (opt.icon) {
+          btn.innerHTML = `<span class="ds-notes-menu-icon" style="display:inline-flex;align-items:center;margin-right:6px;">${opt.icon}</span><span>${opt.label}</span>`;
+        } else {
+          btn.textContent = opt.label;
+        }
         btn.addEventListener("click", (e) => {
           e.preventDefault();
           group.querySelectorAll(".ds-notes-chip-btn").forEach((b) => b.classList.remove("is-active"));
@@ -1080,12 +1511,10 @@ app.registerExtension({
       // Header
       const head = document.createElement("div");
       head.className = "ds-notes-color-popover-head";
-      head.innerHTML = `
-        <span class="ds-notes-color-popover-title">Color Palette</span>
-        <button type="button" class="ds-notes-btn ds-notes-btn-icon" style="width:20px;height:20px;min-width:20px;line-height:18px;" data-color-close>
-          ${ICONS.close}
-        </button>
-      `;
+      head.innerHTML = `<span class="ds-notes-color-popover-title">Color Palette</span>`;
+      const closeColorBtn = Button({ icon: "x", compact: true, tooltip: "Close" });
+      closeColorBtn.root.setAttribute("data-color-close", "");
+      head.appendChild(closeColorBtn.root);
 
       // Tabs
       const tabs = document.createElement("div");
@@ -1172,33 +1601,31 @@ app.registerExtension({
       bottomRow.append(activeSwatch, hexInput);
 
       if (window.EyeDropper) {
-        const eyeBtn = document.createElement("button");
-        eyeBtn.type = "button";
-        eyeBtn.className = "ds-notes-btn ds-notes-btn-icon";
-        eyeBtn.title = "Pick color from screen";
-        eyeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 2 6 6-1.5 1.5-6-6Z"/><path d="m9 7-7 7 4 4 7-7"/><path d="m17 11 3 3"/><path d="m11 17 3 3"/><path d="m2 22 3-3"/></svg>`;
-        eyeBtn.addEventListener("click", async () => {
+        const eyeBtn = Button({
+          icon: "pipette",
+          className: "ds-notes-color-eyedropper-btn",
+          tooltip: "Pick color from screen",
+        });
+        eyeBtn.root.addEventListener("click", async () => {
           try {
             const dropper = new window.EyeDropper();
             const res = await dropper.open();
             if (res?.sRGBHex) colorEngine.setColor(res.sRGBHex, true);
-          } catch (_) {}
+          } catch (_) { }
         });
-        bottomRow.appendChild(eyeBtn);
+        bottomRow.appendChild(eyeBtn.root);
       }
 
-      const resetBtn = document.createElement("button");
-      resetBtn.type = "button";
-      resetBtn.className = "ds-notes-btn";
-      resetBtn.textContent = "Reset";
-      resetBtn.style.padding = "0 8px";
-      resetBtn.style.fontSize = "11px";
-      resetBtn.title = "Reset to default for this tab";
-      resetBtn.addEventListener("click", () => {
+      const resetBtn = Button({
+        label: "Reset",
+        className: "ds-notes-color-reset-btn",
+        tooltip: "Reset to default for this tab",
+      });
+      resetBtn.root.addEventListener("click", () => {
         const defaults = { text: "#67e8f9", highlight: "#facc15", bg: "#0b0f17" };
         colorEngine.setColor(defaults[currentTab], true);
       });
-      bottomRow.appendChild(resetBtn);
+      bottomRow.appendChild(resetBtn.root);
 
       popover.append(head, tabs, satValBox, hueStrip, swatchesGrid, bottomRow);
 
@@ -1295,7 +1722,7 @@ app.registerExtension({
       });
       const endSatVal = (e) => {
         isDraggingSatVal = false;
-        try { satValBox.releasePointerCapture(e.pointerId); } catch (_) {}
+        try { satValBox.releasePointerCapture(e.pointerId); } catch (_) { }
       };
       satValBox.addEventListener("pointerup", endSatVal);
       satValBox.addEventListener("pointercancel", endSatVal);
@@ -1321,7 +1748,7 @@ app.registerExtension({
       });
       const endHue = (e) => {
         isDraggingHue = false;
-        try { hueStrip.releasePointerCapture(e.pointerId); } catch (_) {}
+        try { hueStrip.releasePointerCapture(e.pointerId); } catch (_) { }
       };
       hueStrip.addEventListener("pointerup", endHue);
       hueStrip.addEventListener("pointercancel", endHue);
@@ -1376,21 +1803,24 @@ app.registerExtension({
       menu.style.width = "230px";
 
       const sepTypes = [
-        { label: "── Solid Line", html: `<hr class="ds-notes-sep ds-notes-sep-solid"><p><br></p>` },
-        { label: "- - Dashed Line", html: `<hr class="ds-notes-sep ds-notes-sep-dashed"><p><br></p>` },
-        { label: "··· Dotted Line", html: `<hr class="ds-notes-sep ds-notes-sep-dotted"><p><br></p>` },
-        { label: "✨ Gradient Glow Line", html: `<hr class="ds-notes-sep ds-notes-sep-glow"><p><br></p>` },
-        { label: "══ Double Line", html: `<hr class="ds-notes-sep ds-notes-sep-double"><p><br></p>` },
+        { label: "Solid Line", icon: DSIconMarkup("minus", { size: 14 }), html: `<hr class="ds-notes-sep ds-notes-sep-solid"><p><br></p>` },
+        { label: "Dashed Line", icon: DSIconMarkup("minus", { size: 14 }), html: `<hr class="ds-notes-sep ds-notes-sep-dashed"><p><br></p>` },
+        { label: "Dotted Line", icon: DSIconMarkup("minus", { size: 14 }), html: `<hr class="ds-notes-sep ds-notes-sep-dotted"><p><br></p>` },
+        { label: "Gradient Glow Line", icon: DSIconMarkup("sparkles", { size: 14 }), html: `<hr class="ds-notes-sep ds-notes-sep-glow"><p><br></p>` },
+        { label: "Double Line", icon: DSIconMarkup("minus", { size: 14 }), html: `<hr class="ds-notes-sep ds-notes-sep-double"><p><br></p>` },
         {
-          label: "⭐ Star Center Divider",
-          html: `<div class="ds-notes-sep-icon-wrap" contenteditable="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">${ICONS.star}</svg></div><p><br></p>`,
+          label: "Star Center Divider",
+          icon: DSIconMarkup("star", { size: 14 }),
+          html: `<div class="ds-notes-sep-icon-wrap" contenteditable="false">${DSIconMarkup("star", { size: 18 })}</div><p><br></p>`,
         },
         {
-          label: "⚡ Zap Center Divider",
-          html: `<div class="ds-notes-sep-icon-wrap" contenteditable="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">${ICONS.zap}</svg></div><p><br></p>`,
+          label: "Zap Center Divider",
+          icon: DSIconMarkup("zap", { size: 14 }),
+          html: `<div class="ds-notes-sep-icon-wrap" contenteditable="false">${DSIconMarkup("zap", { size: 18 })}</div><p><br></p>`,
         },
         {
-          label: "🏷️ Section Text Divider...",
+          label: "Section Text Divider...",
+          icon: DSIconMarkup("tag", { size: 14 }),
           isCustomText: true,
         },
       ];
@@ -1398,7 +1828,7 @@ app.registerExtension({
       sepTypes.forEach((item) => {
         const row = document.createElement("div");
         row.className = "ds-notes-menu-item";
-        row.textContent = item.label;
+        row.innerHTML = `<span class="ds-notes-menu-icon">${item.icon}</span> <span>${item.label}</span>`;
         row.addEventListener("click", (e) => {
           e.preventDefault();
           menu.remove();
@@ -1429,9 +1859,9 @@ app.registerExtension({
 
     nodeType.prototype._dsPromptTextDivider = function () {
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Divider Section Text</span>
-          <input type="text" class="ds-notes-form-input" data-div-text value="SECTION OVERVIEW">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Divider Section Text</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-div-text value="SECTION OVERVIEW">
         </div>
       `;
       this._dsOpenInnerDialog({
@@ -1446,7 +1876,7 @@ app.registerExtension({
     };
 
     // -------------------------------------------------------------
-    // VARIETY: CALLOUT / ALERT BOXES (With Delete [×] and editable text)
+    // VARIETY: CALLOUT / ALERT BOXES (With Delete [x] and editable text)
     // -------------------------------------------------------------
     nodeType.prototype._dsOpenCalloutMenu = function (anchor) {
       closeAllPopups();
@@ -1457,17 +1887,17 @@ app.registerExtension({
       menu.style.width = "200px";
 
       const callouts = [
-        { type: "tip", label: "💡 Tip / Hint", title: "PRO TIP", icon: ICONS.info },
-        { type: "note", label: "📌 Note / Reference", title: "NOTE", icon: ICONS.notes },
-        { type: "warning", label: "⚠️ Warning / Heads Up", title: "WARNING", icon: ICONS.alert },
-        { type: "danger", label: "🚨 Caution / Danger", title: "CAUTION", icon: ICONS.flame },
-        { type: "success", label: "✅ Important / Success", title: "IMPORTANT", icon: ICONS.check },
+        { type: "tip", label: "Tip / Hint", title: "PRO TIP", icon: DSIconMarkup("lightbulb", { size: 16 }), menuIcon: DSIconMarkup("lightbulb", { size: 14 }) },
+        { type: "note", label: "Note / Reference", title: "NOTE", icon: DSIconMarkup("notes", { size: 16 }), menuIcon: DSIconMarkup("notes", { size: 14 }) },
+        { type: "warning", label: "Warning / Heads Up", title: "WARNING", icon: DSIconMarkup("alert-triangle", { size: 16 }), menuIcon: DSIconMarkup("alert-triangle", { size: 14 }) },
+        { type: "danger", label: "Caution / Danger", title: "CAUTION", icon: DSIconMarkup("flame", { size: 16 }), menuIcon: DSIconMarkup("flame", { size: 14 }) },
+        { type: "success", label: "Important / Success", title: "IMPORTANT", icon: DSIconMarkup("check-circle", { size: 16 }), menuIcon: DSIconMarkup("check-circle", { size: 14 }) },
       ];
 
       callouts.forEach((item) => {
         const row = document.createElement("div");
         row.className = "ds-notes-menu-item";
-        row.textContent = item.label;
+        row.innerHTML = `<span class="ds-notes-menu-icon">${item.menuIcon}</span> <span>${item.label}</span>`;
         row.addEventListener("click", (e) => {
           e.preventDefault();
           menu.remove();
@@ -1478,7 +1908,7 @@ app.registerExtension({
     <div class="ds-notes-callout-title">${item.title}</div>
     <div class="ds-notes-callout-body" contenteditable="true">Write your note, instructions, or caveats here...</div>
   </div>
-  <button type="button" class="ds-notes-block-delete-btn" title="Delete block">×</button>
+  <button type="button" class="ds-notes-block-delete-btn" title="Delete block">${DSIconMarkup("x", { size: 12 })}</button>
 </div><p><br></p>`;
           this._dsInsertHTML(html);
         });
@@ -1535,8 +1965,8 @@ app.registerExtension({
   <div class="ds-notes-code-header">
     <span class="ds-notes-code-lang">${lang}</span>
     <div style="display:flex;align-items:center;gap:6px;">
-      <button type="button" class="ds-notes-btn" style="height:22px;padding:0 8px;font-size:11px;" data-copy-code>Copy</button>
-      <button type="button" class="ds-notes-block-delete-btn" style="opacity:1;" title="Delete code block">×</button>
+      <button type="button" class="ds-notes-copy-code-btn" data-copy-code>${DSIconMarkup("copy", { size: 12 })} <span>Copy</span></button>
+      <button type="button" class="ds-notes-block-delete-btn" style="opacity:1;" title="Delete code block">${DSIconMarkup("x", { size: 12 })}</button>
     </div>
   </div>
   <pre class="ds-notes-code-pre" contenteditable="true"><code># Paste or write your ${lang} code here...</code></pre>
@@ -1601,7 +2031,7 @@ app.registerExtension({
         title: "Insert Table / Grid",
         bodyContent: container,
         onConfirm: () => {
-          let tableHtml = '<div class="ds-notes-table-wrap" contenteditable="false"><button type="button" class="ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete table">×</button><table class="ds-notes-table"><thead><tr>';
+          let tableHtml = `<div class="ds-notes-table-wrap" contenteditable="false"><button type="button" class="ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete table">${DSIconMarkup("x", { size: 12 })}</button><table class="ds-notes-table"><thead><tr>`;
           for (let c = 1; c <= selCols; c++) {
             tableHtml += `<th contenteditable="true">Header ${c}</th>`;
           }
@@ -1628,17 +2058,17 @@ app.registerExtension({
       container.style.cssText = "display:flex;flex-direction:column;gap:12px;";
 
       container.innerHTML = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">YouTube URL</span>
-          <input type="text" class="ds-notes-form-input" data-yt-url placeholder="https://www.youtube.com/watch?v=...">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">YouTube URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-yt-url placeholder="https://www.youtube.com/watch?v=...">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Video Title</span>
-          <input type="text" class="ds-notes-form-input" data-yt-title value="Featured Video">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Video Title</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-yt-title value="Featured Video">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Subtitle / Description</span>
-          <input type="text" class="ds-notes-form-input" data-yt-desc value="Click to watch video">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Subtitle / Description</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-yt-desc value="Click to watch video">
         </div>
       `;
 
@@ -1650,8 +2080,8 @@ app.registerExtension({
       formatRow.appendChild(formatLabel);
 
       const formatModes = [
-        { id: "card", label: "🎴 Video Card (External Tab)" },
-        { id: "embed", label: "📺 Embedded Player (Watch In-Note)" },
+        { id: "card", label: "Video Card", icon: DSIconMarkup("external-link", { size: 13 }) },
+        { id: "embed", label: "Embedded Player", icon: DSIconMarkup("film", { size: 13 }) },
       ];
       const formatChips = this._dsCreateChipSelector(formatModes, "card");
       formatRow.appendChild(formatChips.element);
@@ -1675,16 +2105,16 @@ app.registerExtension({
           if (mode === "embed" && videoId) {
             const embedHtml = `
 <div class="ds-notes-youtube-embed-wrap" contenteditable="false">
-  <button type="button" class="ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete embed">×</button>
+  <button type="button" class="ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete embed">${DSIconMarkup("x", { size: 12 })}</button>
   <iframe src="https://www.youtube-nocookie.com/embed/${videoId}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div><p><br></p>`;
             this._dsInsertHTML(embedHtml);
           } else {
             const cardHtml = `
 <a href="${url}" target="_blank" rel="noopener noreferrer" class="ds-notes-youtube-card" contenteditable="false">
-  <div class="ds-notes-youtube-header">${ICONS.youtube} <span>YouTube Video</span> <button type="button" class="ds-notes-block-delete-btn" title="Delete card">×</button></div>
+  <div class="ds-notes-youtube-header">${DSIconMarkup("youtube", { size: 14 })} <span>YouTube Video</span> <button type="button" class="ds-notes-block-delete-btn" title="Delete card">${DSIconMarkup("x", { size: 12 })}</button></div>
   <div class="ds-notes-youtube-body">
-    <div class="ds-notes-youtube-play">▶</div>
+    <div class="ds-notes-youtube-play">${DSIconMarkup("play", { size: 14 })}</div>
     <div class="ds-notes-youtube-info">
       <div class="ds-notes-youtube-title">${title}</div>
       ${desc ? `<div class="ds-notes-youtube-desc">${desc}</div>` : ""}
@@ -1711,18 +2141,18 @@ app.registerExtension({
       menu.style.width = "210px";
 
       const btnStyles = [
-        { type: "download", label: "📥 Download Model/File", def: "Download Model" },
-        { type: "view", label: "🌐 View Page Button", def: "View Page" },
-        { type: "read", label: "📖 Read More (CTA)", def: "Read More" },
-        { type: "github", label: "🐙 GitHub Repository", def: "View on GitHub" },
-        { type: "sponsor", label: "💖 Sponsor / Donate", def: "Support Project" },
-        { type: "plain", label: "⏹ Plain Standard Button", def: "Click Here" },
+        { type: "download", label: "Download File", icon: DSIconMarkup("download", { size: 14 }), def: "Download Model" },
+        { type: "view", label: "View Page", icon: DSIconMarkup("external-link", { size: 14 }), def: "View Page" },
+        { type: "read", label: "Read More (CTA)", icon: DSIconMarkup("book-open", { size: 14 }), def: "Read More" },
+        { type: "github", label: "GitHub Repository", icon: DSIconMarkup("github", { size: 14 }), def: "View on GitHub" },
+        { type: "sponsor", label: "Sponsor / Donate", icon: DSIconMarkup("heart", { size: 14 }), def: "Support Project" },
+        { type: "plain", label: "Standard Button", icon: DSIconMarkup("square", { size: 14 }), def: "Click Here" },
       ];
 
       btnStyles.forEach((item) => {
         const row = document.createElement("div");
         row.className = "ds-notes-menu-item";
-        row.textContent = item.label;
+        row.innerHTML = `<span class="ds-notes-menu-icon">${item.icon}</span> <span>${item.label}</span>`;
         row.addEventListener("click", (e) => {
           e.preventDefault();
           menu.remove();
@@ -1749,13 +2179,13 @@ app.registerExtension({
 
     nodeType.prototype._dsPromptButtonConfig = function (type, defaultLabel) {
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Button Text</span>
-          <input type="text" class="ds-notes-form-input" data-btn-text value="${defaultLabel}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Button Text</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-btn-text value="${defaultLabel}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Destination URL</span>
-          <input type="text" class="ds-notes-form-input" data-btn-url placeholder="https://example.com">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Destination URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-btn-url placeholder="https://example.com">
         </div>
       `;
 
@@ -1767,10 +2197,13 @@ app.registerExtension({
           const rawUrl = card.querySelector("[data-btn-url]").value.trim() || "#";
           const href = rawUrl === "#" || /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
 
-          let icon = ICONS.link;
-          if (type === "download") icon = ICONS.download;
-          else if (type === "view" || type === "github") icon = ICONS.externalLink;
-          else if (type === "sponsor") icon = ICONS.heart;
+          let icon = DSIconMarkup("link", { size: 13 });
+          if (type === "download") icon = DSIconMarkup("download", { size: 13 });
+          else if (type === "view") icon = DSIconMarkup("external-link", { size: 13 });
+          else if (type === "read") icon = DSIconMarkup("book-open", { size: 13 });
+          else if (type === "github") icon = DSIconMarkup("github", { size: 13 });
+          else if (type === "sponsor") icon = DSIconMarkup("heart", { size: 13 });
+          else if (type === "plain") icon = DSIconMarkup("square", { size: 13 });
 
           const btnHtml = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="ds-notes-doc-btn ds-notes-doc-btn-${type}" contenteditable="false">${icon} <span>${text}</span></a>&nbsp;`;
           this._dsInsertHTML(btnHtml);
@@ -1784,13 +2217,13 @@ app.registerExtension({
     // -------------------------------------------------------------
     nodeType.prototype._dsPromptFolderHint = function () {
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Root Folder</span>
-          <input type="text" class="ds-notes-form-input" data-folder-root value="ComfyUI/models/checkpoints">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Root Folder</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-folder-root value="ComfyUI/models/checkpoints">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Target File / Tree Path</span>
-          <input type="text" class="ds-notes-form-input" data-folder-file value="v1-5-pruned-emaonly.safetensors">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Target File / Tree Path</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-folder-file value="v1-5-pruned-emaonly.safetensors">
         </div>
       `;
 
@@ -1804,8 +2237,8 @@ app.registerExtension({
           const hintHtml = `
 <div class="ds-notes-folder-hint" contenteditable="false">
   <div class="ds-notes-folder-hint-title">
-    <span>📁 ${rootDir}</span>
-    <button type="button" class="ds-notes-block-delete-btn" title="Delete folder hint">×</button>
+    <span class="ds-notes-folder-hint-title-text">${DSIconMarkup("folder", { size: 14 })} <span>${rootDir}</span></span>
+    <button type="button" class="ds-notes-block-delete-btn" title="Delete folder hint">${DSIconMarkup("x", { size: 12 })}</button>
   </div>
   <div class="ds-notes-folder-hint-tree">   └── ${file}</div>
 </div><p><br></p>`;
@@ -1827,15 +2260,15 @@ app.registerExtension({
       menu.style.width = "200px";
 
       const items = [
-        { type: "server", label: "💬 Discord Server", title: "Discord Server" },
-        { type: "channel", label: "📢 Discord Channel", title: "Discord Channel" },
-        { type: "invite", label: "✉️ Discord Invite", title: "Discord Invite" },
+        { type: "server", label: "Discord Server", icon: DSIconMarkup("users", { size: 14 }), title: "Discord Server" },
+        { type: "channel", label: "Discord Channel", icon: DSIconMarkup("hash", { size: 14 }), title: "Discord Channel" },
+        { type: "invite", label: "Discord Invite", icon: DSIconMarkup("mail", { size: 14 }), title: "Discord Invite" },
       ];
 
       items.forEach((item) => {
         const row = document.createElement("div");
         row.className = "ds-notes-menu-item";
-        row.textContent = item.label;
+        row.innerHTML = `<span class="ds-notes-menu-icon">${item.icon}</span> <span>${item.label}</span>`;
         row.addEventListener("click", (e) => {
           e.preventDefault();
           menu.remove();
@@ -1862,17 +2295,17 @@ app.registerExtension({
 
     nodeType.prototype._dsPromptDiscordConfig = function (badgeLabel) {
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Community / Server Name</span>
-          <input type="text" class="ds-notes-form-input" data-discord-name value="Deathshot Arsenal Community">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Community / Server Name</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-discord-name value="Deathshot Arsenal Community">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Description / Subtitle</span>
-          <input type="text" class="ds-notes-form-input" data-discord-desc value="Join for workflows, support, and updates">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Description / Subtitle</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-discord-desc value="Join for workflows, support, and updates">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Invite URL</span>
-          <input type="text" class="ds-notes-form-input" data-discord-url placeholder="https://discord.gg/...">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Invite URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-discord-url placeholder="https://discord.gg/...">
         </div>
       `;
 
@@ -1888,8 +2321,8 @@ app.registerExtension({
           const discordHtml = `
 <a href="${href}" target="_blank" rel="noopener noreferrer" class="ds-notes-discord-card" contenteditable="false">
   <div class="ds-notes-discord-top">
-    <div style="display:flex;align-items:center;gap:6px;">${ICONS.discord} <span>${badgeLabel}</span></div>
-    <button type="button" class="ds-notes-block-delete-btn" title="Delete card">×</button>
+    <div style="display:flex;align-items:center;gap:6px;">${DSIconMarkup("discord", { size: 14 })} <span>${badgeLabel}</span></div>
+    <button type="button" class="ds-notes-block-delete-btn" title="Delete card">${DSIconMarkup("x", { size: 12 })}</button>
   </div>
   <div class="ds-notes-discord-content">
     <div class="ds-notes-discord-info">
@@ -1911,13 +2344,13 @@ app.registerExtension({
     nodeType.prototype._dsPromptInsertLink = function () {
       const selectedText = window.getSelection()?.toString() || "";
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Display Text</span>
-          <input type="text" class="ds-notes-form-input" data-link-text value="${selectedText}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Display Text</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-link-text value="${selectedText}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Target URL</span>
-          <input type="text" class="ds-notes-form-input" data-link-url placeholder="https://example.com">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Target URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-link-url placeholder="https://example.com">
         </div>
       `;
 
@@ -1936,35 +2369,49 @@ app.registerExtension({
     };
 
     nodeType.prototype._dsPromptInsertIcon = function () {
-      const iconsList = [
-        { id: "info", svg: ICONS.info, label: "Info" },
-        { id: "alert", svg: ICONS.alert, label: "Alert" },
-        { id: "star", svg: ICONS.star, label: "Star" },
-        { id: "check", svg: ICONS.check, label: "Check" },
-        { id: "flame", svg: ICONS.flame, label: "Flame" },
-        { id: "heart", svg: ICONS.heart, label: "Heart" },
-        { id: "zap", svg: ICONS.zap, label: "Zap" },
-        { id: "code", svg: ICONS.code, label: "Code" },
-        { id: "notes", svg: ICONS.notes, label: "Document" },
-        { id: "folder", svg: ICONS.folder, label: "Folder" },
-        { id: "download", svg: ICONS.download, label: "Download" },
-        { id: "link", svg: ICONS.link, label: "Link" },
-        { id: "youtube", svg: ICONS.youtube, label: "YouTube" },
-        { id: "discord", svg: ICONS.discord, label: "Discord" },
+      const iconNames = [
+        { id: "notes", label: "Note" },
+        { id: "info", label: "Info" },
+        { id: "alert-triangle", label: "Alert" },
+        { id: "star", label: "Star" },
+        { id: "check", label: "Check" },
+        { id: "flame", label: "Flame" },
+        { id: "heart", label: "Heart" },
+        { id: "zap", label: "Zap" },
+        { id: "code", label: "Code" },
+        { id: "folder", label: "Folder" },
+        { id: "download", label: "Download" },
+        { id: "external-link", label: "Link" },
+        { id: "youtube", label: "YouTube" },
+        { id: "discord", label: "Discord" },
+        { id: "globe", label: "Globe" },
+        { id: "book-open", label: "Book" },
+        { id: "github", label: "GitHub" },
+        { id: "lightbulb", label: "Lightbulb" },
+        { id: "pin", label: "Pin" },
+        { id: "tag", label: "Tag" },
+        { id: "palette", label: "Palette" },
       ];
 
+      const iconsList = iconNames.map((item) => ({
+        id: item.id,
+        label: item.label,
+        svg: DSIconMarkup(item.id, { size: 16 }),
+      }));
+
       const container = document.createElement("div");
-      container.style.cssText = "display:grid;grid-template-columns:repeat(7,1fr);gap:6px;";
+      container.style.cssText = "display:grid;grid-template-columns:repeat(7,36px);gap:8px;justify-content:center;padding:4px 0;";
 
       let selectedSvg = iconsList[0].svg;
 
       iconsList.forEach((item, index) => {
-        const tile = document.createElement("div");
-        tile.className = `ds-notes-btn ds-notes-btn-icon ${index === 0 ? "is-active" : ""}`;
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = `ds-ui-btn ds-ui-btn-icon-only ${index === 0 ? "is-active" : ""}`;
         tile.title = item.label;
         tile.innerHTML = item.svg;
         tile.addEventListener("click", () => {
-          container.querySelectorAll(".ds-notes-btn").forEach((t) => t.classList.remove("is-active"));
+          container.querySelectorAll(".ds-ui-btn").forEach((t) => t.classList.remove("is-active"));
           tile.classList.add("is-active");
           selectedSvg = item.svg;
         });
@@ -1975,7 +2422,7 @@ app.registerExtension({
         title: "Select Document Icon",
         bodyContent: container,
         onConfirm: () => {
-          this._dsInsertHTML(`<span style="display:inline-flex;vertical-align:middle;width:16px;height:16px;margin:0 3px;" contenteditable="false">${selectedSvg}</span>&nbsp;`);
+          this._dsInsertHTML(`<span class="ds-notes-inline-icon" contenteditable="false">${selectedSvg}</span>&nbsp;`);
           return true;
         },
       });
@@ -1989,13 +2436,13 @@ app.registerExtension({
       const curUrl = linkEl.getAttribute("href") || "";
 
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Display Text</span>
-          <input type="text" class="ds-notes-form-input" data-link-text value="${curText}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Display Text</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-link-text value="${curText}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Target URL</span>
-          <input type="text" class="ds-notes-form-input" data-link-url value="${curUrl}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Target URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-link-url value="${curUrl}">
         </div>
       `;
 
@@ -2027,13 +2474,13 @@ app.registerExtension({
       const curUrl = btnEl.getAttribute("href") || "";
 
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Button Text</span>
-          <input type="text" class="ds-notes-form-input" data-btn-text value="${curText}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Button Text</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-btn-text value="${curText}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Destination URL</span>
-          <input type="text" class="ds-notes-form-input" data-btn-url value="${curUrl}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Destination URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-btn-url value="${curUrl}">
         </div>
       `;
 
@@ -2057,19 +2504,19 @@ app.registerExtension({
     };
 
     nodeType.prototype._dsPromptEditFolderHint = function (folderEl) {
-      const titleEl = folderEl.querySelector(".ds-notes-folder-hint-title span");
+      const titleSpan = folderEl.querySelector(".ds-notes-folder-hint-title-text span") || folderEl.querySelector(".ds-notes-folder-hint-title span");
       const treeEl = folderEl.querySelector(".ds-notes-folder-hint-tree");
-      const curRoot = titleEl ? titleEl.textContent.replace("📁", "").trim() : "models";
-      const curFile = treeEl ? treeEl.textContent.replace("└──", "").trim() : "file.ext";
+      const curRoot = titleSpan ? titleSpan.textContent.replace(/^[\uD83D\uDCC1\s]+/, "").trim() : "models";
+      const curFile = treeEl ? treeEl.textContent.replace(/^[└─\s]+/, "").trim() : "file.ext";
 
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Root Directory</span>
-          <input type="text" class="ds-notes-form-input" data-folder-root value="${curRoot}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Root Directory</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-folder-root value="${curRoot}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Target File or Path</span>
-          <input type="text" class="ds-notes-form-input" data-folder-file value="${curFile}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Target File or Path</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-folder-file value="${curFile}">
         </div>
       `;
 
@@ -2080,7 +2527,13 @@ app.registerExtension({
         onConfirm: (card) => {
           const rootDir = card.querySelector("[data-folder-root]").value.trim() || curRoot;
           const file = card.querySelector("[data-folder-file]").value.trim() || curFile;
-          if (titleEl) titleEl.textContent = `📁 ${rootDir}`;
+          const titleContainer = folderEl.querySelector(".ds-notes-folder-hint-title");
+          if (titleContainer) {
+            titleContainer.innerHTML = `
+              <span class="ds-notes-folder-hint-title-text">${DSIconMarkup("folder", { size: 14 })} <span>${rootDir}</span></span>
+              <button type="button" class="ds-notes-block-delete-btn" title="Delete folder hint">${DSIconMarkup("x", { size: 12 })}</button>
+            `;
+          }
           if (treeEl) treeEl.textContent = `   └── ${file}`;
           this._dsDraftDoc.html = this._dsModalEditorEl.innerHTML;
           this._dsPushHistory();
@@ -2098,17 +2551,17 @@ app.registerExtension({
       const curDesc = descEl ? descEl.textContent : "";
 
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">YouTube URL</span>
-          <input type="text" class="ds-notes-form-input" data-yt-url value="${curUrl}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">YouTube URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-yt-url value="${curUrl}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Video Title</span>
-          <input type="text" class="ds-notes-form-input" data-yt-title value="${curTitle}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Video Title</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-yt-title value="${curTitle}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Subtitle / Description</span>
-          <input type="text" class="ds-notes-form-input" data-yt-desc value="${curDesc}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Subtitle / Description</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-yt-desc value="${curDesc}">
         </div>
       `;
 
@@ -2144,17 +2597,17 @@ app.registerExtension({
       const curUrl = discordEl.getAttribute("href") || "";
 
       const body = `
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Server / Community Name</span>
-          <input type="text" class="ds-notes-form-input" data-discord-name value="${curName}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Server / Community Name</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-discord-name value="${curName}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Description / Subtitle</span>
-          <input type="text" class="ds-notes-form-input" data-discord-desc value="${curDesc}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Description / Subtitle</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-discord-desc value="${curDesc}">
         </div>
-        <div class="ds-notes-form-row">
-          <span class="ds-notes-form-label">Invite URL</span>
-          <input type="text" class="ds-notes-form-input" data-discord-url value="${curUrl}">
+        <div class="ds-ui-field ds-notes-form-row">
+          <span class="ds-ui-field-label ds-notes-form-label">Invite URL</span>
+          <input type="text" class="ds-ui-input ds-notes-form-input" data-discord-url value="${curUrl}">
         </div>
       `;
 
@@ -2186,6 +2639,7 @@ app.registerExtension({
     nodeType.prototype._dsPushHistory = function () {
       const current = this._dsDraftDoc.html || "";
       if (this._dsHistory[this._dsHistoryIndex] === current) return;
+      this._dsIsDirty = true;
       this._dsHistory = this._dsHistory.slice(0, this._dsHistoryIndex + 1);
       this._dsHistory.push(current);
       if (this._dsHistory.length > 50) this._dsHistory.shift();
@@ -2197,6 +2651,7 @@ app.registerExtension({
         this._dsHistoryIndex--;
         const html = this._dsHistory[this._dsHistoryIndex];
         this._dsDraftDoc.html = html;
+        this._dsIsDirty = true;
         if (this._dsModalEditorEl) {
           this._dsModalEditorEl.innerHTML = html;
           this._dsEnsureTrailingParagraph(this._dsModalEditorEl);
@@ -2211,6 +2666,7 @@ app.registerExtension({
         this._dsHistoryIndex++;
         const html = this._dsHistory[this._dsHistoryIndex];
         this._dsDraftDoc.html = html;
+        this._dsIsDirty = true;
         if (this._dsModalEditorEl) {
           this._dsModalEditorEl.innerHTML = html;
           this._dsEnsureTrailingParagraph(this._dsModalEditorEl);

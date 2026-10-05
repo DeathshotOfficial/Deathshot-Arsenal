@@ -1,6 +1,18 @@
 // Deathshot Arsenal — DS Generation Hub Frontend
 import { app } from "/scripts/app.js";
-import { protectDSResizeCorners, normalizeDSWidgetHost } from "../Shared/ds_ui_system.js";
+import {
+  Card,
+  Stepper,
+  Toggle,
+  Button,
+  Dropdown,
+  protectDSResizeCorners,
+  normalizeDSWidgetHost,
+  installDSUI,
+} from "../UIElements/index.js";
+import { DSIcon, DSIconMarkup } from "../Icons/index.js";
+
+installDSUI?.();
 
 const NODE_TYPE = "DS_GenerationHub";
 const DEFAULT_W = 390;
@@ -609,6 +621,9 @@ if (app.canvas?.canvas) {
 // ---------------------------------------------------------------------------
 function applyNodeThemeToElement(sourceEl, targetEl) {
   if (!targetEl) return;
+  if (window.DSGlobalTheme?.applyToElement) {
+    try { window.DSGlobalTheme.applyToElement(targetEl); } catch (_) { }
+  }
   if (sourceEl) {
     try {
       const parentThemed = sourceEl.closest?.(".ds-hub-container") ||
@@ -624,7 +639,10 @@ function applyNodeThemeToElement(sourceEl, targetEl) {
           "--ds-input-bg", "--ds-hover", "--ds-active", "--ds-btn-bg",
           "--ds-btn-hover", "--ds-ui-border", "--ds-font", "--ds-font-family",
           "--ds-font-size", "--ds-scrollbar", "--ds-scrollbar-thumb",
-          "--ds-error", "--ds-selection", "--ds-on-accent"
+          "--ds-error", "--ds-selection", "--ds-on-accent",
+          "--ds-color-card", "--ds-color-card-border", "--ds-color-accent",
+          "--ds-color-text", "--ds-color-muted-text", "--ds-color-border",
+          "--ds-color-on-accent", "--ds-radius-card", "--ds-transition"
         ];
         for (const v of vars) {
           const val = cs.getPropertyValue(v)?.trim();
@@ -685,211 +703,63 @@ function isolateInputKeys(el, allowQueueShortcut = false) {
 // ---------------------------------------------------------------------------
 // Custom Dropdown Builder
 // ---------------------------------------------------------------------------
-function createCustomDropdown({ value, options, placeholder = "Select...", onSelect, renderItem, isCategorized = false }) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "ds-hub-select-btn";
-
-  const textSpan = document.createElement("span");
-  textSpan.className = "ds-hub-select-text";
-  textSpan.textContent = value || placeholder;
-
-  const arrow = document.createElement("span");
-  arrow.className = "ds-hub-select-arrow";
-  arrow.innerHTML = "&#9662;";
-
-  btn.append(textSpan, arrow);
-
-  let menu = null;
-  let outsideHandler = null;
-
-  const closeMenu = () => {
-    if (menu) {
-      menu.remove();
-      menu = null;
-      btn.classList.remove("is-open");
-    }
-    if (outsideHandler) {
-      document.removeEventListener("pointerdown", outsideHandler, true);
-      outsideHandler = null;
-    }
-  };
-
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (menu) {
-      closeMenu();
-      return;
-    }
-
-    btn.classList.add("is-open");
-    menu = document.createElement("div");
-    menu.className = "ds-hub-dropdown-menu";
-    applyNodeThemeToElement(btn, menu);
-
-    const searchInput = document.createElement("input");
-    searchInput.className = "ds-hub-dropdown-search";
-    searchInput.placeholder = "Search presets...";
-    isolateInputKeys(searchInput);
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        closeMenu();
-      }
-    });
-
-    const optList = document.createElement("div");
-    optList.className = "ds-hub-dropdown-options";
-
-    const renderCategorizedOpts = (query = "") => {
-      optList.textContent = "";
-      const q = query.trim().toLowerCase();
-
-      for (const group of options) {
-        const filteredItems = (group.items || []).filter(item => {
-          return item.label.toLowerCase().includes(q) || group.category.toLowerCase().includes(q);
+function createCustomDropdown({ value, options, placeholder = "Select...", onSelect, isCategorized = false }) {
+  let flattened = [];
+  if (isCategorized && Array.isArray(options) && options[0]?.category) {
+    for (let c = 0; c < options.length; c++) {
+      const group = options[c];
+      if (c > 0) flattened.push({ separator: true });
+      for (const it of (group.items || [])) {
+        flattened.push({
+          id: it.label || `${it.w}x${it.h}`,
+          label: it.label || `${it.w}x${it.h}`,
+          ...it,
         });
-        if (!filteredItems.length) continue;
-
-        const catHdr = document.createElement("div");
-        catHdr.className = "ds-hub-dropdown-category";
-        catHdr.textContent = group.category;
-        optList.appendChild(catHdr);
-
-        for (const item of filteredItems) {
-          const isSel = item.label === value;
-          const optBtn = document.createElement("button");
-          optBtn.type = "button";
-          optBtn.className = "ds-hub-dropdown-opt" + (isSel ? " is-selected" : "");
-          optBtn.textContent = item.label;
-
-          if (isSel) {
-            const check = document.createElement("span");
-            check.textContent = "✓";
-            check.style.color = "var(--ds-accent)";
-            optBtn.appendChild(check);
-          }
-
-          optBtn.addEventListener("click", (ev) => {
-            ev.stopPropagation();
-            value = item.label;
-            textSpan.textContent = item.label;
-            closeMenu();
-            onSelect?.(item.label, item);
-          });
-          optList.appendChild(optBtn);
-        }
       }
-    };
-
-    const renderFlatOpts = (query = "") => {
-      optList.textContent = "";
-      const q = query.trim().toLowerCase();
-      const filtered = (options || []).filter(o => {
-        const str = typeof o === "object" ? (o.label || o.name || "") : String(o);
-        return str.toLowerCase().includes(q);
-      });
-
-      if (!filtered.length) {
-        const empty = document.createElement("div");
-        empty.style.padding = "6px 8px";
-        empty.style.fontSize = "11px";
-        empty.style.color = "var(--ds-text-muted)";
-        empty.textContent = "No matches";
-        optList.appendChild(empty);
-        return;
+    }
+  } else {
+    flattened = (options || []).map((opt) => {
+      if (opt == null) return null;
+      if (typeof opt === "string" || typeof opt === "number") {
+        return { id: String(opt), label: String(opt) };
       }
+      return {
+        id: String(opt.id ?? opt.name ?? opt.value ?? opt.label ?? ""),
+        label: String(opt.label ?? opt.name ?? opt.id ?? opt.value ?? ""),
+        ...opt,
+      };
+    }).filter(Boolean);
+  }
 
-      for (const opt of filtered) {
-        const optVal = typeof opt === "object" ? (opt.value || opt.name) : opt;
-        const optLabel = typeof opt === "object" ? (opt.label || opt.name) : opt;
-        const isSel = optVal === value;
-
-        const optBtn = document.createElement("button");
-        optBtn.type = "button";
-        optBtn.className = "ds-hub-dropdown-opt" + (isSel ? " is-selected" : "");
-        if (renderItem) {
-          renderItem(opt, optBtn);
-        } else {
-          optBtn.textContent = optLabel;
-          if (isSel) {
-            const check = document.createElement("span");
-            check.textContent = "✓";
-            check.style.color = "var(--ds-accent)";
-            optBtn.appendChild(check);
-          }
-        }
-
-        optBtn.addEventListener("click", (ev) => {
-          ev.stopPropagation();
-          value = optVal;
-          textSpan.textContent = optLabel;
-          closeMenu();
-          onSelect?.(optVal, opt);
-        });
-        optList.appendChild(optBtn);
-      }
-    };
-
-    const renderAll = (q = "") => {
-      if (isCategorized) renderCategorizedOpts(q);
-      else renderFlatOpts(q);
-    };
-
-    menu.append(searchInput, optList);
-    document.body.appendChild(menu);
-
-    const positionMenu = () => {
-      const rect = btn.getBoundingClientRect();
-      const menuW = Math.max(rect.width, 240);
-      menu.style.width = `${menuW}px`;
-
-      const menuH = menu.offsetHeight || menu.scrollHeight || 160;
-      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - 10);
-      const spaceAbove = Math.max(0, rect.top - 10);
-
-      let top = rect.bottom + 4;
-      if (menuH > spaceBelow && spaceAbove > spaceBelow) {
-        top = Math.max(10, rect.top - menuH - 4);
-        menu.style.maxHeight = `${Math.min(320, spaceAbove)}px`;
-      } else {
-        top = rect.bottom + 4;
-        menu.style.maxHeight = `${Math.min(320, Math.max(120, spaceBelow))}px`;
-      }
-
-      let left = rect.left;
-      if (left + menuW > window.innerWidth - 10) {
-        left = Math.max(10, window.innerWidth - menuW - 10);
-      }
-      menu.style.left = `${Math.round(left)}px`;
-      menu.style.top = `${Math.round(top)}px`;
-    };
-
-    renderAll();
-    positionMenu();
-
-    searchInput.addEventListener("input", () => {
-      renderAll(searchInput.value);
-      positionMenu();
-    });
-
-    setTimeout(() => searchInput.focus(), 20);
-
-    outsideHandler = (ev) => {
-      if (!menu.contains(ev.target) && !btn.contains(ev.target)) {
-        closeMenu();
-      }
-    };
-    setTimeout(() => document.addEventListener("pointerdown", outsideHandler, true), 10);
+  const dd = Dropdown({
+    value: String(value ?? ""),
+    options: flattened,
+    placeholder,
+    onChange: (val, item, api) => {
+      onSelect?.(val, item);
+    },
   });
 
   return {
-    el: btn,
+    root: dd.root,
+    el: dd.root,
+    trigger: dd.trigger,
+    getValue: dd.getValue,
     setValue: (newVal, newLabel) => {
-      value = newVal;
-      textSpan.textContent = newLabel || newVal || placeholder;
+      dd.setValue(newVal, false);
+      if (newLabel && dd.trigger?.querySelector(".ds-ui-dropdown-label")) {
+        dd.trigger.querySelector(".ds-ui-dropdown-label").textContent = newLabel;
+      }
     },
-    destroy: closeMenu,
+    setOptions: (newOpts) => {
+      const newFlat = (newOpts || []).map((opt) => {
+        if (typeof opt === "string" || typeof opt === "number") return { id: String(opt), label: String(opt) };
+        return { id: String(opt.id ?? opt.name ?? opt.value ?? opt.label ?? ""), label: String(opt.label ?? opt.name ?? opt.id ?? opt.value ?? ""), ...opt };
+      });
+      dd.setOptions(newFlat);
+    },
+    setDisabled: dd.setDisabled,
+    destroy: dd.destroy,
   };
 }
 
@@ -964,9 +834,9 @@ async function openCivitAIModal(node, loraRow, anchorEl) {
   title.textContent = loraRow.name || "LoRA Metadata";
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
-  closeBtn.className = "ds-hub-icon-btn";
-  closeBtn.innerHTML = "×";
-  closeBtn.style.fontSize = "16px";
+  closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
+  closeBtn.title = "Close";
+  closeBtn.appendChild(DSIcon("x", { size: 14 }));
 
   let outsideHandler = null;
   const closeModal = () => {
@@ -998,7 +868,7 @@ async function openCivitAIModal(node, loraRow, anchorEl) {
   retrieveBtn.type = "button";
   retrieveBtn.className = "ds-hub-btn-civitai";
   retrieveBtn.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    ${DSIconMarkup("download", { size: 13 })}
     <span>Retrieve from CivitAI</span>
   `;
 
@@ -1065,21 +935,23 @@ async function openCivitAIModal(node, loraRow, anchorEl) {
 
     for (const tag of availableTags) {
       const isSel = triggers.includes(tag);
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "ds-hub-chip" + (isSel ? " is-active" : "");
-      chip.textContent = (isSel ? "✓ " : "") + tag;
-      chip.onclick = () => {
-        if (triggers.includes(tag)) {
-          triggers = triggers.filter(t => t !== tag);
-        } else {
-          triggers.push(tag);
-        }
-        loraRow.selectedTriggers = triggers;
-        saveState(node);
-        renderTags(availableTags);
-      };
-      tagsContainer.appendChild(chip);
+      const chip = Button({
+        label: (isSel ? "✓ " : "") + tag,
+        compact: true,
+        active: isSel,
+        className: "ds-hub-mp-btn",
+        onClick: () => {
+          if (triggers.includes(tag)) {
+            triggers = triggers.filter(t => t !== tag);
+          } else {
+            triggers.push(tag);
+          }
+          loraRow.selectedTriggers = triggers;
+          saveState(node);
+          renderTags(availableTags);
+        },
+      });
+      tagsContainer.appendChild(chip.root);
     }
     if (!initialPositionSet) positionSideToNode();
   };
@@ -1088,18 +960,18 @@ async function openCivitAIModal(node, loraRow, anchorEl) {
 
   const foot = document.createElement("div");
   foot.className = "ds-hub-modal-foot";
-  const doneBtn = document.createElement("button");
-  doneBtn.type = "button";
-  doneBtn.className = "ds-hub-chip is-active";
-  doneBtn.style.padding = "0 14px";
-  doneBtn.textContent = "Done";
-  doneBtn.onclick = () => {
-    loraRow.selectedTriggers = triggers;
-    saveState(node);
-    node._renderUI?.();
-    closeModal();
-  };
-  foot.appendChild(doneBtn);
+  const doneBtn = Button({
+    label: "Done",
+    compact: true,
+    variant: "primary",
+    onClick: () => {
+      loraRow.selectedTriggers = triggers;
+      saveState(node);
+      node._renderUI?.();
+      closeModal();
+    },
+  });
+  foot.appendChild(doneBtn.root);
 
   modal.append(head, body, foot);
   document.body.appendChild(modal);
@@ -1169,7 +1041,7 @@ async function openCivitAIModal(node, loraRow, anchorEl) {
       if (forceOnline) {
         retrieveBtn.disabled = false;
         retrieveBtn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ${DSIconMarkup("download", { size: 13 })}
           <span>Retrieve from CivitAI</span>
         `;
       }
@@ -1186,8 +1058,22 @@ async function openCivitAIModal(node, loraRow, anchorEl) {
 // ---------------------------------------------------------------------------
 function buildRoot(node) {
   const root = document.createElement("div");
-  root.className = "ds-hub-container";
+  root.className = "ds-hub-container ds-hub-root";
   root.dataset.dsThemed = "true";
+  root.dataset.dsUiHost = "true";
+
+  const applyTheme = () => {
+    if (window.DSGlobalTheme?.applyToElement) {
+      try { window.DSGlobalTheme.applyToElement(root); } catch (_) { }
+    }
+  };
+  applyTheme();
+
+  node._themeListener = () => {
+    applyTheme();
+    scheduleAlign(node);
+  };
+  window.addEventListener("ds-theme-changed", node._themeListener);
 
   node._anchorEls = {};
 
@@ -1209,35 +1095,35 @@ function buildRoot(node) {
     }
 
     node._dsSyncHubHeight?.();
+    applyTheme();
     scheduleAlign(node);
   };
+
+  root.addEventListener("scroll", () => {
+    scheduleAlign(node);
+  }, { passive: true });
 
   return root;
 }
 
-// 1. Models Section
+// 1. Models Section (Card 1)
 function buildModelsSection(node) {
   const s = getState(node);
-  const sec = document.createElement("div");
-  sec.className = "ds-hub-section";
+  const card = Card({
+    title: "MODELS",
+    icon: "cpu",
+    className: "ds-hub-card ds-hub-models-card",
+  });
 
   const family = detectModelFamily(s.model);
   const familyDetails = getModelFamilyDetails(family);
   const clipDetails = getClipFamilyDetails(s.clip, family);
   const detectedAttn = detectAttentionType(family, node._catalog);
 
-  const head = document.createElement("div");
-  head.className = "ds-hub-section-head";
-  const title = document.createElement("span");
-  title.className = "ds-hub-section-title";
-  title.textContent = "MODELS";
-
   const modelBadge = document.createElement("span");
   modelBadge.className = "ds-hub-detect-badge";
   modelBadge.textContent = familyDetails;
-
-  head.append(title, modelBadge);
-  sec.appendChild(head);
+  card.head.querySelector(".ds-ui-card-title-group")?.appendChild(modelBadge);
 
   // Model Row (Slot 0)
   const modelRow = document.createElement("div");
@@ -1270,7 +1156,6 @@ function buildModelsSection(node) {
 
   node._anchorEls[0] = modelRow;
   modelRow.append(modelLabel, modelDropdown.el);
-  sec.appendChild(modelRow);
 
   // Clip Row (Slot 1)
   const clipRow = document.createElement("div");
@@ -1290,14 +1175,14 @@ function buildModelsSection(node) {
       node._renderUI?.();
     },
     renderItem: (opt, optEl) => {
-      optEl.textContent = opt;
-      if (opt === s.clip) optEl.classList.add("is-selected");
+      const text = typeof opt === "object" ? (opt.label || opt.id) : opt;
+      optEl.textContent = text;
+      if (text === s.clip) optEl.classList.add("is-selected");
     },
   });
 
   node._anchorEls[1] = clipRow;
   clipRow.append(clipLabel, clipDropdown.el);
-  sec.appendChild(clipRow);
 
   // VAE Row (Slot 2)
   const vaeRow = document.createElement("div");
@@ -1316,14 +1201,14 @@ function buildModelsSection(node) {
       saveState(node);
     },
     renderItem: (opt, optEl) => {
-      optEl.textContent = opt;
-      if (opt === s.vae) optEl.classList.add("is-selected");
+      const text = typeof opt === "object" ? (opt.label || opt.id) : opt;
+      optEl.textContent = text;
+      if (text === s.vae) optEl.classList.add("is-selected");
     },
   });
 
   node._anchorEls[2] = vaeRow;
   vaeRow.append(vaeLabel, vaeDropdown.el);
-  sec.appendChild(vaeRow);
 
   // Attention Row
   const attRow = document.createElement("div");
@@ -1346,51 +1231,45 @@ function buildModelsSection(node) {
   });
 
   attRow.append(attLabel, attDropdown.el);
-  sec.appendChild(attRow);
 
   const attBadgeRow = document.createElement("div");
   attBadgeRow.className = "ds-hub-badge-row";
   const activeAttnLabel = s.attention === "Auto-Detect" ? `Active: ${detectedAttn}` : `Active: ${s.attention}`;
   attBadgeRow.innerHTML = `<span class="ds-hub-detect-badge is-subtle">⚙ ${activeAttnLabel}</span>`;
-  sec.appendChild(attBadgeRow);
 
-  return sec;
+  card.body.append(modelRow, clipRow, vaeRow, attRow, attBadgeRow);
+  return card.root;
 }
 
-// 2. Image Settings Section
+// 2. Image Settings Section (Card 2)
 function buildImageSettingsSection(node) {
   const s = getState(node);
-  const sec = document.createElement("div");
-  sec.className = "ds-hub-section";
-
-  const head = document.createElement("div");
-  head.className = "ds-hub-section-head";
-  const title = document.createElement("span");
-  title.className = "ds-hub-section-title";
-  title.textContent = "Image Settings";
-
   const arPresets = getARPresets();
   const resPresets = getResPresets();
   const mpPresets = getMPPresets();
 
-  const swapBtn = document.createElement("button");
-  swapBtn.type = "button";
-  swapBtn.className = "ds-hub-icon-btn";
-  swapBtn.title = "Swap Width & Height";
-  swapBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left-right preview-icon"><path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/></svg>`;
-  swapBtn.onclick = () => {
-    const curW = s.width || 1024;
-    const curH = s.height || 1024;
-    s.width = curH;
-    s.height = curW;
-    s.aspect_ratio = findClosestAR(s.width, s.height, arPresets);
-    s.resolution_preset = getResolutionDisplayLabel(s.width, s.height, resPresets);
-    saveState(node);
-    node._renderUI?.();
-  };
-
-  head.append(title, swapBtn);
-  sec.appendChild(head);
+  const card = Card({
+    title: "IMAGE SETTINGS",
+    icon: "image",
+    className: "ds-hub-card ds-hub-img-settings-card",
+    actions: [
+      {
+        icon: "arrow-left-right",
+        tooltip: "Swap Width & Height",
+        onClick: (e) => {
+          e.stopPropagation();
+          const curW = s.width || 1024;
+          const curH = s.height || 1024;
+          s.width = curH;
+          s.height = curW;
+          s.aspect_ratio = findClosestAR(s.width, s.height, arPresets);
+          s.resolution_preset = getResolutionDisplayLabel(s.width, s.height, resPresets);
+          saveState(node);
+          node._renderUI?.();
+        },
+      },
+    ],
+  });
 
   s.resolution_preset = getResolutionDisplayLabel(s.width, s.height, resPresets);
 
@@ -1414,7 +1293,6 @@ function buildImageSettingsSection(node) {
   });
 
   arRow.append(arLabel, arDropdown.el);
-  sec.appendChild(arRow);
 
   // 2. Resolution Presets
   const resRow = document.createElement("div");
@@ -1429,7 +1307,7 @@ function buildImageSettingsSection(node) {
     isCategorized: true,
     placeholder: "Choose Resolution Preset...",
     onSelect: (val, item) => {
-      s.resolution_preset = item.label;
+      s.resolution_preset = item.label || val;
       s.width = item.w;
       s.height = item.h;
       if (item.ar) s.aspect_ratio = item.ar;
@@ -1441,7 +1319,6 @@ function buildImageSettingsSection(node) {
   });
 
   resRow.append(resLabel, resDropdown.el);
-  sec.appendChild(resRow);
 
   // 3. Megapixel Presets & Custom MP Input
   const mpGroup = document.createElement("div");
@@ -1483,19 +1360,19 @@ function buildImageSettingsSection(node) {
 
   for (const m of mpPresets) {
     const isAct = Math.abs((s.mp || 1.0) - m.mp) < 0.05;
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "ds-hub-chip" + (isAct ? " is-active" : "");
-    chip.textContent = m.name;
-    chip.onclick = () => {
-      s.mp_preset = m.name;
-      recalculateFromMP(node, m.mp);
-      node._renderUI?.();
-    };
-    mpChips.appendChild(chip);
+    const chipBtn = Button({
+      label: m.name,
+      compact: true,
+      active: isAct,
+      onClick: () => {
+        s.mp_preset = m.name;
+        recalculateFromMP(node, m.mp);
+        node._renderUI?.();
+      },
+    });
+    mpChips.appendChild(chipBtn.root);
   }
   mpGroup.appendChild(mpChips);
-  sec.appendChild(mpGroup);
 
   // Width Row (Slot 3)
   const widthRow = document.createElement("div");
@@ -1521,7 +1398,6 @@ function buildImageSettingsSection(node) {
 
   node._anchorEls[3] = widthRow;
   widthRow.append(wLabel, wInput);
-  sec.appendChild(widthRow);
 
   // Height Row (Slot 4)
   const heightRow = document.createElement("div");
@@ -1547,24 +1423,19 @@ function buildImageSettingsSection(node) {
 
   node._anchorEls[4] = heightRow;
   heightRow.append(hLabel, hInput);
-  sec.appendChild(heightRow);
 
-  return sec;
+  card.body.append(arRow, resRow, mpGroup, widthRow, heightRow);
+  return card.root;
 }
 
-// 3. LoRA Section
+// 3. LoRA Section (Card 3)
 function buildLoRASection(node) {
   const s = getState(node);
-  const sec = document.createElement("div");
-  sec.className = "ds-hub-section";
-
-  const head = document.createElement("div");
-  head.className = "ds-hub-section-head";
-  const title = document.createElement("span");
-  title.className = "ds-hub-section-title";
-  title.textContent = `LoRA (${(s.loras || []).length})`;
-  head.appendChild(title);
-  sec.appendChild(head);
+  const card = Card({
+    title: `LORA (${(s.loras || []).length})`,
+    icon: "layers",
+    className: "ds-hub-card ds-hub-lora-card",
+  });
 
   const lorasList = document.createElement("div");
   lorasList.className = "ds-hub-loras-list";
@@ -1578,7 +1449,8 @@ function buildLoRASection(node) {
 
     const dragHandle = document.createElement("span");
     dragHandle.className = "ds-hub-drag-handle";
-    dragHandle.textContent = "≡";
+    dragHandle.title = "Drag to reorder";
+    dragHandle.appendChild(DSIcon("grip-vertical", { size: 14 }));
 
     const loraSelect = createCustomDropdown({
       value: row.name,
@@ -1592,93 +1464,50 @@ function buildLoRASection(node) {
       },
     });
 
-    const stepperShell = document.createElement("div");
-    stepperShell.className = "ds-hub-stepper-shell";
+    const curStr = Number.isFinite(row.strength) ? Math.max(0.0, Number(row.strength)) : 1.0;
+    const stepper = Stepper({
+      min: 0.0,
+      max: 10.0,
+      step: 0.1,
+      value: curStr,
+      className: "ds-hub-lora-stepper",
+      onChange: (val) => {
+        row.strength = Math.max(0.0, Math.round(val * 10) / 10);
+        saveState(node);
+      },
+    });
+    isolateInputKeys(stepper.input);
 
-    const strengthInp = document.createElement("input");
-    strengthInp.type = "text";
-    strengthInp.inputMode = "decimal";
-    strengthInp.className = "ds-hub-stepper-input";
-    const curStr = Number.isFinite(row.strength) ? Number(row.strength) : 1.0;
-    strengthInp.value = curStr.toFixed(1);
-    isolateInputKeys(strengthInp);
+    const infoBtn = Button({
+      icon: "info",
+      compact: true,
+      tooltip: "View CivitAI Trigger Words & Metadata",
+      onClick: (e) => {
+        e.stopPropagation();
+        openCivitAIModal(node, row, infoBtn.root);
+      },
+    });
 
-    const updateStrength = (newVal) => {
-      const clamped = Math.round(Math.min(10.0, Math.max(-10.0, newVal)) * 10) / 10;
-      row.strength = clamped;
-      strengthInp.value = clamped.toFixed(1);
-      saveState(node);
-    };
+    const toggle = Toggle({
+      checked: Boolean(row.enabled),
+      onChange: (checked) => {
+        row.enabled = checked;
+        loraRow.classList.toggle("is-off", !checked);
+        saveState(node);
+      },
+    });
 
-    strengthInp.onchange = () => {
-      const val = parseFloat(strengthInp.value);
-      updateStrength(Number.isFinite(val) ? val : 1.0);
-    };
-
-    const stepperBtns = document.createElement("div");
-    stepperBtns.className = "ds-hub-stepper";
-
-    const upBtn = document.createElement("span");
-    upBtn.className = "ds-hub-step";
-    upBtn.setAttribute("role", "button");
-    upBtn.setAttribute("tabindex", "-1");
-    upBtn.innerHTML = "&#9650;";
-    upBtn.title = "+0.1";
-    upBtn.style.setProperty("background", "transparent", "important");
-    upBtn.style.setProperty("border", "none", "important");
-    upBtn.onclick = (e) => {
-      e.stopPropagation();
-      const current = parseFloat(strengthInp.value) || 0;
-      updateStrength(current + 0.1);
-    };
-
-    const downBtn = document.createElement("span");
-    downBtn.className = "ds-hub-step";
-    downBtn.setAttribute("role", "button");
-    downBtn.setAttribute("tabindex", "-1");
-    downBtn.innerHTML = "&#9660;";
-    downBtn.title = "-0.1";
-    downBtn.style.setProperty("background", "transparent", "important");
-    downBtn.style.setProperty("border", "none", "important");
-    downBtn.onclick = (e) => {
-      e.stopPropagation();
-      const current = parseFloat(strengthInp.value) || 0;
-      updateStrength(current - 0.1);
-    };
-
-    stepperBtns.append(upBtn, downBtn);
-    stepperShell.append(strengthInp, stepperBtns);
-
-    const infoBtn = document.createElement("button");
-    infoBtn.type = "button";
-    infoBtn.className = "ds-hub-icon-btn";
-    infoBtn.textContent = "i";
-    infoBtn.title = "View CivitAI Trigger Words & Metadata";
-    infoBtn.onclick = (e) => {
-      e.stopPropagation();
-      openCivitAIModal(node, row, infoBtn);
-    };
-
-    const toggleBtn = document.createElement("button");
-    toggleBtn.type = "button";
-    toggleBtn.className = "ds-hub-toggle-btn" + (row.enabled ? " is-on" : "");
-    toggleBtn.textContent = row.enabled ? "ON" : "OFF";
-    toggleBtn.onclick = () => {
-      row.enabled = !row.enabled;
-      saveState(node);
-      node._renderUI?.();
-    };
-
-    const delBtn = document.createElement("button");
-    delBtn.type = "button";
-    delBtn.className = "ds-hub-icon-btn";
-    delBtn.innerHTML = "×";
-    delBtn.title = "Delete LoRA";
-    delBtn.onclick = () => {
-      s.loras.splice(idx, 1);
-      saveState(node);
-      node._renderUI?.();
-    };
+    const delBtn = Button({
+      icon: "trash-2",
+      compact: true,
+      tooltip: "Delete LoRA",
+      onClick: (e) => {
+        e.stopPropagation();
+        s.loras.splice(idx, 1);
+        saveState(node);
+        node._renderUI?.();
+      },
+    });
 
     loraRow.ondragstart = (e) => {
       draggedLoraIdx = idx;
@@ -1726,98 +1555,30 @@ function buildLoRASection(node) {
       lorasList.querySelectorAll(".ds-hub-lora-row").forEach(r => r.classList.remove("is-dragover"));
     };
 
-    loraRow.append(dragHandle, loraSelect.el, stepperShell, infoBtn, toggleBtn, delBtn);
+    loraRow.append(dragHandle, loraSelect.el, stepper.root, infoBtn.root, toggle.root, delBtn.root);
     lorasList.appendChild(loraRow);
   });
 
-  sec.appendChild(lorasList);
+  card.body.appendChild(lorasList);
 
-  const addBtn = document.createElement("button");
-  addBtn.type = "button";
-  addBtn.className = "ds-hub-add-btn";
-  addBtn.innerHTML = "+ ADD LORA";
-  addBtn.onclick = () => {
-    s.loras = s.loras || [];
-    s.loras.push({ name: "", strength: 1.0, enabled: true, selectedTriggers: [] });
-    saveState(node);
-    node._renderUI?.();
-  };
-  sec.appendChild(addBtn);
+  const addBtn = Button({
+    label: "+ ADD LORA",
+    className: "ds-hub-add-btn",
+    onClick: () => {
+      s.loras = s.loras || [];
+      s.loras.push({ name: "", strength: 1.0, enabled: true, selectedTriggers: [] });
+      saveState(node);
+      node._renderUI?.();
+    },
+  });
+  card.body.appendChild(addBtn.root);
 
-  return sec;
+  return card.root;
 }
 
-// 4. Prompt Section
+// 4. Prompt Section (Card 4)
 function buildPromptSection(node) {
   const s = getState(node);
-  const sec = document.createElement("div");
-  sec.className = "ds-hub-section is-prompt-section";
-
-  const head = document.createElement("div");
-  head.className = "ds-hub-section-head has-socket";
-  head.style.position = "relative";
-
-  const leftWrap = document.createElement("div");
-  leftWrap.style.display = "flex";
-  leftWrap.style.alignItems = "center";
-  leftWrap.style.gap = "6px";
-
-  const title = document.createElement("span");
-  title.className = "ds-hub-section-title";
-  title.textContent = "Prompt";
-
-  let activeTriggersCount = 0;
-  for (const lora of s.loras || []) {
-    if (lora.enabled && lora.selectedTriggers?.length) {
-      activeTriggersCount += lora.selectedTriggers.length;
-    }
-  }
-
-  leftWrap.appendChild(title);
-  if (activeTriggersCount > 0) {
-    const badge = document.createElement("span");
-    badge.className = "ds-hub-triggers-badge";
-    badge.textContent = `+${activeTriggersCount} trigger${activeTriggersCount > 1 ? "s" : ""}`;
-    leftWrap.appendChild(badge);
-  }
-
-  const actions = document.createElement("div");
-  actions.className = "ds-hub-prompt-actions";
-
-  const copyBtn = document.createElement("button");
-  copyBtn.type = "button";
-  copyBtn.className = "ds-hub-icon-btn";
-  copyBtn.title = "Copy Prompt";
-  copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy preview-icon"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
-  copyBtn.onclick = () => {
-    navigator.clipboard?.writeText(s.prompt || "");
-  };
-
-  const replaceBtn = document.createElement("button");
-  replaceBtn.type = "button";
-  replaceBtn.className = "ds-hub-icon-btn";
-  replaceBtn.title = "Replace Prompt with Clipboard Text";
-  replaceBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-ccw preview-icon"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>`;
-  replaceBtn.onclick = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (typeof text === "string") {
-        s.prompt = text;
-        ta.value = text;
-        saveState(node);
-      }
-    } catch (err) {
-      console.warn("[DS Generation Hub] Failed to read clipboard:", err);
-    }
-  };
-
-  actions.append(copyBtn, replaceBtn);
-
-  // Prompt Socket Anchor (Slot 5)
-  node._anchorEls[5] = head;
-
-  head.append(leftWrap, actions);
-  sec.appendChild(head);
 
   const ta = document.createElement("textarea");
   ta.className = "ds-hub-prompt-ta";
@@ -1829,11 +1590,60 @@ function buildPromptSection(node) {
     s.prompt = ta.value;
     saveState(node);
   };
-
   isolateInputKeys(ta, true);
 
-  sec.appendChild(ta);
-  return sec;
+  const card = Card({
+    title: "PROMPT",
+    icon: "sparkles",
+    className: "ds-hub-card ds-hub-prompt-card is-prompt-card",
+    actions: [
+      {
+        icon: "copy",
+        tooltip: "Copy Prompt",
+        onClick: (e) => {
+          e.stopPropagation();
+          navigator.clipboard?.writeText(s.prompt || "");
+        },
+      },
+      {
+        icon: "refresh-cw",
+        tooltip: "Replace Prompt with Clipboard Text",
+        onClick: async (e) => {
+          e.stopPropagation();
+          try {
+            const text = await navigator.clipboard.readText();
+            if (typeof text === "string") {
+              s.prompt = text;
+              ta.value = text;
+              saveState(node);
+            }
+          } catch (err) {
+            console.warn("[DS Generation Hub] Failed to read clipboard:", err);
+          }
+        },
+      },
+    ],
+  });
+
+  let activeTriggersCount = 0;
+  for (const lora of s.loras || []) {
+    if (lora.enabled && lora.selectedTriggers?.length) {
+      activeTriggersCount += lora.selectedTriggers.length;
+    }
+  }
+
+  if (activeTriggersCount > 0) {
+    const badge = document.createElement("span");
+    badge.className = "ds-hub-triggers-badge";
+    badge.textContent = `+${activeTriggersCount} trigger${activeTriggersCount > 1 ? "s" : ""}`;
+    card.head.querySelector(".ds-ui-card-title-group")?.appendChild(badge);
+  }
+
+  // Prompt Socket Anchor (Slot 5)
+  node._anchorEls[5] = card.head;
+  card.body.appendChild(ta);
+
+  return card.root;
 }
 
 // ---------------------------------------------------------------------------
@@ -1860,8 +1670,9 @@ function openGearPopover(node, anchorEl) {
   head.innerHTML = `<span>Generation Hub Settings</span>`;
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
-  closeBtn.className = "ds-hub-icon-btn";
-  closeBtn.innerHTML = "×";
+  closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
+  closeBtn.title = "Close";
+  closeBtn.appendChild(DSIcon("x", { size: 14 }));
   let outsideHandler = null;
   const closePopover = () => {
     if (_activeGearPopover === popover) {
@@ -1908,7 +1719,7 @@ function openGearPopover(node, anchorEl) {
       card.className = "ds-hub-order-card";
       card.draggable = true;
       card.dataset.orderIdx = String(idx);
-      card.innerHTML = `<span class="ds-hub-drag-handle">☰</span><span>${sectionLabels[key] || key}</span>`;
+      card.innerHTML = `<span class="ds-hub-drag-handle">${DSIconMarkup("grip-vertical", { size: 14 })}</span><span>${sectionLabels[key] || key}</span>`;
 
       // 1. Native HTML5 Drag and Drop
       card.ondragstart = (e) => {
@@ -2534,6 +2345,8 @@ app.registerExtension({
       hw.draw = () => { };
 
       const root = buildRoot(this);
+      this.dom = root;
+      this.rootEl = root;
       this._domRoot = root;
 
       this._dsSyncHubHeight = () => {
@@ -2543,7 +2356,7 @@ app.registerExtension({
           ? this._hubWidget.y
           : 30;
         const nodeH = this.size?.[1] || DEFAULT_H;
-        const widgetH = Math.max(100, nodeH - topY - 12);
+        const widgetH = Math.max(100, nodeH - topY - 16);
         rootEl.style.boxSizing = "border-box";
         rootEl.style.width = "100%";
         rootEl.style.height = `${widgetH}px`;
@@ -2551,6 +2364,7 @@ app.registerExtension({
         if (rootEl.parentElement) {
           rootEl.parentElement.style.height = `${widgetH}px`;
           rootEl.parentElement.style.maxHeight = `${widgetH}px`;
+          rootEl.parentElement.style.overflow = "hidden";
         }
       };
 
@@ -2566,7 +2380,7 @@ app.registerExtension({
           ? this._hubWidget.y
           : 30;
         const nodeH = this.size?.[1] || DEFAULT_H;
-        const widgetH = Math.max(100, nodeH - topY - 12);
+        const widgetH = Math.max(100, nodeH - topY - 16);
         this._dsSyncHubHeight?.();
         return [
           this.size?.[0] || DEFAULT_W,
@@ -2600,6 +2414,17 @@ app.registerExtension({
         window.DSGlobalTheme?.applyNodeBase?.(this);
       } catch (_) { }
 
+      requestAnimationFrame(() => {
+        try {
+          if (window.DSGlobalTheme && this.dom) {
+            window.DSGlobalTheme.bindNode(this.dom, this);
+            window.DSGlobalTheme.applyToElement(this.dom);
+          }
+        } catch (e) {
+          console.warn("[DS_GenerationHub] bindNode error:", e);
+        }
+      });
+
       fetchCatalog().then((catalog) => {
         this._catalog = catalog;
         const s = getState(this);
@@ -2630,6 +2455,8 @@ app.registerExtension({
       this._dsInitialized = true;
       origConfigure?.apply(this, arguments);
       this._dsConfigured = true;
+      this.dom = this._domRoot;
+      this.rootEl = this._domRoot;
       this.widgets_start_y = 2;
       this._hubState = null;
       if (info?.properties?.hub_state) {
@@ -2646,6 +2473,12 @@ app.registerExtension({
           this.size = [savedW, Math.max(MIN_H, savedH)];
           this._dsUserResized = true;
         }
+      }
+      if (window.DSGlobalTheme && this.dom) {
+        try {
+          window.DSGlobalTheme.bindNode(this.dom, this);
+          window.DSGlobalTheme.applyToElement(this.dom);
+        } catch (_) { }
       }
       this._renderUI?.();
       this._dsSyncHubHeight?.();
@@ -2675,6 +2508,9 @@ app.registerExtension({
     const origRemoved = nodeType.prototype.onRemoved;
     nodeType.prototype.onRemoved = function () {
       this._dsRemoved = true;
+      if (this._themeListener) {
+        window.removeEventListener("ds-theme-changed", this._themeListener);
+      }
       unwatchAlign(this);
       origRemoved?.apply(this, arguments);
     };

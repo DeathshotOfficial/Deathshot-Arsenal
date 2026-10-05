@@ -1,7 +1,263 @@
 :root {
-  --ds-compare-accent: var(--ds-accent, #38bdf8);
-  --ds-compare-panel: var(--ds-panel-2, rgba(0, 0, 0, 0.42));
-  --ds-compare-border: var(--ds-border, rgba(255, 255, 255, 0.12));
-  --ds-compare-text: var(--ds-text, #f8fafc);
-  --ds-compare-muted: var(--ds-text-muted, rgba(248, 250, 252, 0.58));
+  --ds-compare-accent: var(--ds-color-accent, var(--ds-accent, #67e8f9));
+  --ds-compare-panel: var(--ds-color-panel-2, var(--ds-panel-2, #161a23));
+  --ds-compare-border: var(--ds-color-border, var(--ds-border, #242a36));
+  --ds-compare-text: var(--ds-color-text, var(--ds-text, #e5e7eb));
+  --ds-compare-muted: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af));
+}
+
+.ds-ui-compare-toolbar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-gap-xs, 4px);
+  width: 100%;
+  min-width: 0;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.ds-ui-compare-group {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-xs, 4px);
+  min-width: 0;
+}
+
+/* Preview Frame matching DS Image Preview container */
+.ds-ui-compare-viewport {
+  position: relative;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 80px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--ds-color-card-border, var(--ds-border, #242a36));
+  border-radius: var(--ds-radius-card, 8px);
+  background: var(--ds-color-base, var(--ds-bg, #0b0d12));
+  user-select: none;
+  touch-action: none;
+  cursor: ew-resize;
+}
+
+/* Aspect-fit stage container holding the comparison elements */
+.ds-compare-stage {
+  position: absolute;
+  overflow: visible;
+  isolation: isolate;
+  background: #000000;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Screen container that strictly clips the images to stage boundaries */
+.ds-compare-screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+/* Native hardware-accelerated image elements rendered at native resolution */
+.ds-compare-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  display: block;
+  image-rendering: auto;
+  transform: translateZ(0);
+}
+
+.ds-compare-img-a {
+  z-index: 2;
+  will-change: clip-path;
+}
+
+.ds-compare-img-b {
+  z-index: 1;
+}
+
+/* Split divider line and interactive handle */
+.ds-compare-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.ds-compare-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: var(--ds-compare-accent, #67e8f9);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+.ds-compare-puck {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--ds-compare-panel, #161a23);
+  border: 2px solid var(--ds-compare-accent, #67e8f9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  display: block;
+  line-height: 0;
+  font-size: 0;
+  user-select: none;
+  pointer-events: auto;
+  cursor: ew-resize;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  color: var(--ds-compare-accent, #67e8f9);
+}
+
+.ds-compare-puck.is-hovered,
+.ds-compare-puck:hover,
+.ds-compare-divider.is-dragging .ds-compare-puck {
+  transform: translate(-50%, -50%) scale(1.12);
+  box-shadow: 0 0 12px var(--ds-compare-accent, rgba(103, 232, 249, 0.65));
+}
+
+.ds-compare-puck-icon {
+  position: absolute;
+  /* puck is 24px with a 2px border -> padding box is 20px; centre of it = 10px */
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  /* optical correction: measured ink sat ~0.2px high and ~0.2px left of true centre */
+  transform: translate(0.2px, 0.2px);
+  padding: 0;
+  display: block;
+  overflow: visible;
+  stroke: currentColor;
+  pointer-events: none;
+}
+
+.ds-compare-tip {
+  position: absolute;
+  bottom: calc(50% + 18px);
+  left: 0;
+  transform: translateX(-50%);
+  background: rgba(10, 14, 22, 0.92);
+  border: 1px solid var(--ds-compare-accent, #67e8f9);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: #ffffff;
+  font-family: var(--ds-font, Inter, monospace, sans-serif);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 12;
+}
+
+.ds-compare-divider.is-dragging .ds-compare-tip {
+  opacity: 1;
+}
+
+/* Crisp overlay badges */
+.ds-compare-badge {
+  position: absolute;
+  top: 8px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(15, 18, 26, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 5;
+  transition: opacity 0.1s ease;
+}
+
+.ds-compare-badge-a {
+  left: 8px;
+}
+
+.ds-compare-badge-b {
+  right: 8px;
+}
+
+.ds-compare-badge-diff {
+  left: 8px;
+}
+
+.ds-compare-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ds-compare-accent, #67e8f9);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.ds-compare-badge-text {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Sharp HTML placeholder typography matching DS Image Preview */
+.ds-compare-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px;
+  text-align: center;
+  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af));
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  font-size: 10px;
+  line-height: 1.4;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ds-compare-placeholder[hidden] {
+  display: none !important;
+}
+
+.ds-compare-placeholder strong {
+  display: block;
+  color: var(--ds-color-text, var(--ds-text, #e5e7eb));
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }

@@ -49,8 +49,8 @@ class DS_ImageCompare:
             filename = f"{prefix}{rand_id}.webp"
             filepath = os.path.join(temp_dir, filename)
 
-            # Fast native WebP encoding (< 15ms)
-            img.save(filepath, format="WEBP", quality=92, method=2)
+            # Ultra-high fidelity WebP encoding (< 20ms)
+            img.save(filepath, format="WEBP", quality=96, method=4)
 
             return {
                 "filename": filename,

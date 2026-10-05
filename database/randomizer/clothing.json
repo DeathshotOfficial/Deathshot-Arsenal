@@ -15,14 +15,288 @@
         "\\b((still )?wearing|dressed in|clad in)\\s+([\\w\\s-]+)?(blazer|sweater|jacket|dress|shirt|suit|hoodie|coat|panties|lingerie|bra|underwear|top|pants|trousers|skirt|jeans|swimsuit|bikini)\\b"
       ],
       "entries": [
-        {"text": "wearing a tailored charcoal-gray wool blazer over a crisp white t-shirt", "tags": ["smart_casual"]},
-        {"text": "wearing an oversized chunky ribbed-knit cashmere sweater in cream beige", "tags": ["cozy", "knit"]},
-        {"text": "wearing a distressed black leather motorcycle jacket with brushed silver zippers", "tags": ["leather", "edgy"]},
-        {"text": "wearing a flowing emerald-green silk slip dress with delicate straps", "tags": ["elegant", "dress"]},
-        {"text": "wearing a minimalist relaxed-fit linen button-down shirt left slightly unbuttoned", "tags": ["linen", "casual"]},
-        {"text": "wearing a technical cyberpunk streetwear trench coat with utility buckles", "tags": ["techwear", "cyberpunk"]},
-        {"text": "wearing a classic double-breasted camel trench coat with belted waist", "tags": ["trench", "classic"]},
-        {"text": "wearing a relaxed vintage denim trucker jacket over a dark crewneck", "tags": ["denim", "vintage"]}
+        {
+          "text": "wearing a tailored charcoal-gray wool blazer over a crisp white t-shirt",
+          "tags": [
+            "smart_casual"
+          ]
+        },
+        {
+          "text": "wearing an oversized chunky ribbed-knit cashmere sweater in cream beige",
+          "tags": [
+            "cozy",
+            "knit"
+          ]
+        },
+        {
+          "text": "wearing a distressed black leather motorcycle jacket with brushed silver zippers",
+          "tags": [
+            "leather",
+            "edgy"
+          ]
+        },
+        {
+          "text": "wearing a flowing emerald-green silk slip dress with delicate straps",
+          "tags": [
+            "elegant",
+            "dress"
+          ]
+        },
+        {
+          "text": "wearing a minimalist relaxed-fit linen button-down shirt left slightly unbuttoned",
+          "tags": [
+            "linen",
+            "casual"
+          ]
+        },
+        {
+          "text": "wearing a technical cyberpunk streetwear trench coat with utility buckles",
+          "tags": [
+            "techwear",
+            "cyberpunk"
+          ]
+        },
+        {
+          "text": "wearing a classic double-breasted camel trench coat with belted waist",
+          "tags": [
+            "trench",
+            "classic"
+          ]
+        },
+        {
+          "text": "wearing a relaxed vintage denim trucker jacket over a dark crewneck",
+          "tags": [
+            "denim",
+            "vintage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "female_clothing",
+      "name": "Woman's Attire / State",
+      "insertion_zone": "female_clothing",
+      "detection_terms": [
+        "\\b(?:wearing only bright red high heels|wearing only (?:[\\w\\s-]+ )?high heels|wearing only heels|wearing only (?:a |an )?[\\w\\s-]+|dressed in (?:a |an )?[\\w\\s-]+(?:dress|bikini|lingerie|babydoll|robe|gown|skirt|top)|her (?:dress|bikini|lingerie|robe|skirt|heels))\\b",
+        "\\b(?:she is )?(?:completely naked|fully nude|topless|bottomless|naked except for [\\w\\s-]+)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\bwearing only (?:bright red high heels|high heels|heels|[\\w\\s-]+heels)\\b",
+        "\\bwearing (?:a |an )?(?:dress|bikini|lingerie|babydoll|robe|outfit|heels)\\b",
+        "\\b(?:completely naked|fully nude|topless|bottomless)\\b"
+      ],
+      "entries": [
+        {
+          "text": "wearing only bright red high heels with fabric-free naked skin",
+          "tags": [
+            "nude",
+            "heels",
+            "erotic"
+          ]
+        },
+        {
+          "text": "wearing only glossy black patent leather stiletto pumps, completely nude body",
+          "tags": [
+            "nude",
+            "heels"
+          ]
+        },
+        {
+          "text": "wearing a sheer black lace babydoll draped open over her torso",
+          "tags": [
+            "lingerie",
+            "sheer"
+          ]
+        },
+        {
+          "text": "wearing an emerald-green silk slip dress hitched up around her waist",
+          "tags": [
+            "dress",
+            "sensual"
+          ]
+        },
+        {
+          "text": "wearing a skimpy red satin lingerie set with delicate lace trim",
+          "tags": [
+            "lingerie"
+          ]
+        },
+        {
+          "text": "wearing an unbuttoned oversized white dress shirt slipping off her shoulders",
+          "tags": [
+            "shirt",
+            "casual"
+          ]
+        },
+        {
+          "text": "wearing a micro triangle bikini in vibrant turquoise",
+          "tags": [
+            "bikini",
+            "swimwear"
+          ]
+        },
+        {
+          "text": "wearing a snug ribbed knit crop top and distressed denim micro shorts",
+          "tags": [
+            "casual",
+            "streetwear"
+          ]
+        },
+        {
+          "text": "wearing a backless burgundy velvet cocktail dress hitched above the thighs",
+          "tags": [
+            "dress",
+            "elegant"
+          ]
+        },
+        {
+          "text": "completely nude with warm natural skin textures and no clothing",
+          "tags": [
+            "nude",
+            "bare"
+          ]
+        },
+        {
+          "text": "wearing only strappy metallic gold stiletto heels and delicate gold jewelry",
+          "tags": [
+            "nude",
+            "heels",
+            "luxury"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "male_clothing",
+      "name": "Man's Attire / State",
+      "insertion_zone": "male_clothing",
+      "detection_terms": [
+        "\\b(?:he is )?(?:wearing (?:a |an )?[\\w\\s-]+(?:suit|shirt|jacket|jeans|pants|shorts|trousers|boxers)|shirtless|his (?:jeans|pants|trousers|shirt)|unbuttoned (?:jeans|pants|shirt))\\b",
+        "\\b(?:he is )?(?:completely naked|fully nude|shirtless with jeans)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(?:he is )?(?:wearing (?:a |an )?[\\w\\s-]+(?:suit|shirt|jacket|jeans|pants|shorts|trousers|boxers)|shirtless)\\b",
+        "\\b(?:his )?(?:jeans|pants|trousers) (?:unbuttoned|pulled down|unzipped)\\b"
+      ],
+      "entries": [
+        {
+          "text": "shirtless with distressed blue denim jeans unbuttoned and pushed down past his thighs",
+          "tags": [
+            "jeans",
+            "shirtless",
+            "open"
+          ]
+        },
+        {
+          "text": "wearing an open unbuttoned white linen shirt, trousers unfastened and pulled low",
+          "tags": [
+            "linen",
+            "open"
+          ]
+        },
+        {
+          "text": "wearing a fitted black crewneck tee and dark jeans unzipped at the waist",
+          "tags": [
+            "casual",
+            "open"
+          ]
+        },
+        {
+          "text": "wearing a crisp tailored navy suit with shirt unbuttoned wide and tie loosened",
+          "tags": [
+            "suit",
+            "formal"
+          ]
+        },
+        {
+          "text": "shirtless with black boxer briefs pulled down around his upper thighs",
+          "tags": [
+            "underwear",
+            "shirtless"
+          ]
+        },
+        {
+          "text": "wearing a distressed black leather biker jacket over a bare muscular chest and dark jeans",
+          "tags": [
+            "leather",
+            "edgy"
+          ]
+        },
+        {
+          "text": "completely nude with muscular athletic build and bare skin",
+          "tags": [
+            "nude",
+            "bare"
+          ]
+        },
+        {
+          "text": "wearing gray athletic sweatpants pulled down to his knees",
+          "tags": [
+            "athletic",
+            "open"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clothing_state",
+      "name": "Clothing Intimacy State",
+      "insertion_zone": "clothing",
+      "detection_terms": [
+        "\\b(?:fabric-free skin textures?|unzipped|unbuttoned and pulled down|hitched up around her waist|skirt pulled up|pants unzipped|clothes unbuttoned|partially undressed|completely nude|bare skin)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(?:fabric-free skin textures?|unbuttoned and pulled down|hitched up around her waist|skirt pulled up|pants unzipped)\\b"
+      ],
+      "entries": [
+        {
+          "text": "fabric-free skin textures with clothing completely absent",
+          "tags": [
+            "nude",
+            "bare"
+          ]
+        },
+        {
+          "text": "clothes unzipped and pulled aside, exposing bare skin and intimate contact",
+          "tags": [
+            "open",
+            "disheveled"
+          ]
+        },
+        {
+          "text": "dress hitched up high above her hips, lower body completely bare",
+          "tags": [
+            "hitched",
+            "female"
+          ]
+        },
+        {
+          "text": "trousers unfastened and pushed down around the knees, thighs completely exposed",
+          "tags": [
+            "open",
+            "male"
+          ]
+        },
+        {
+          "text": "panties pulled to the side, lingerie unhooked and parted open",
+          "tags": [
+            "lingerie",
+            "open"
+          ]
+        },
+        {
+          "text": "shirt unbuttoned wide down to the navel, disheveled and passionate",
+          "tags": [
+            "disheveled"
+          ]
+        },
+        {
+          "text": "wearing only high heels, body completely naked and exposed",
+          "tags": [
+            "nude",
+            "heels"
+          ]
+        }
       ]
     },
     {
@@ -36,11 +310,38 @@
         "\\b(haute couture ensemble|formal black-tie attire|smart-casual outfit|streetwear aesthetic|athleisure set|minimalist loungewear|bohemian layered ensemble)\\b"
       ],
       "entries": [
-        {"text": "in a sophisticated haute couture evening ensemble", "tags": ["couture", "formal"]},
-        {"text": "in an effortless smart-casual city outfit", "tags": ["smart_casual"]},
-        {"text": "in a contemporary high-end urban streetwear outfit", "tags": ["streetwear"]},
-        {"text": "in sleek minimalist designer athleisure wear", "tags": ["athleisure"]},
-        {"text": "in an understated quiet-luxury monochrome outfit", "tags": ["luxury", "minimal"]}
+        {
+          "text": "in a sophisticated haute couture evening ensemble",
+          "tags": [
+            "couture",
+            "formal"
+          ]
+        },
+        {
+          "text": "in an effortless smart-casual city outfit",
+          "tags": [
+            "smart_casual"
+          ]
+        },
+        {
+          "text": "in a contemporary high-end urban streetwear outfit",
+          "tags": [
+            "streetwear"
+          ]
+        },
+        {
+          "text": "in sleek minimalist designer athleisure wear",
+          "tags": [
+            "athleisure"
+          ]
+        },
+        {
+          "text": "in an understated quiet-luxury monochrome outfit",
+          "tags": [
+            "luxury",
+            "minimal"
+          ]
+        }
       ]
     },
     {
@@ -54,11 +355,37 @@
         "\\b(silk camisole|fitted turtleneck top|boxy cropped tee|corset top|ribbed tank top|chambray button-up|oversized pullover|linen blouse)\\b"
       ],
       "entries": [
-        {"text": "a fitted black turtleneck top accentuating the neck", "tags": ["turtleneck"]},
-        {"text": "a lustrous ivory silk camisole with lace trim", "tags": ["camisole", "silk"]},
-        {"text": "a boxy heavyweight cotton t-shirt with clean drop shoulders", "tags": ["tshirt"]},
-        {"text": "a finely structured boned corset top", "tags": ["corset"]},
-        {"text": "an airy, unbuttoned breezy linen button-up shirt", "tags": ["linen"]}
+        {
+          "text": "a fitted black turtleneck top accentuating the neck",
+          "tags": [
+            "turtleneck"
+          ]
+        },
+        {
+          "text": "a lustrous ivory silk camisole with lace trim",
+          "tags": [
+            "camisole",
+            "silk"
+          ]
+        },
+        {
+          "text": "a boxy heavyweight cotton t-shirt with clean drop shoulders",
+          "tags": [
+            "tshirt"
+          ]
+        },
+        {
+          "text": "a finely structured boned corset top",
+          "tags": [
+            "corset"
+          ]
+        },
+        {
+          "text": "an airy, unbuttoned breezy linen button-up shirt",
+          "tags": [
+            "linen"
+          ]
+        }
       ]
     },
     {
@@ -72,11 +399,39 @@
         "\\b(wide-leg pleated trousers|high-waisted tailored pants|straight-leg raw denim jeans|pleated mini skirt|flowing midi skirt|cargo pants with straps)\\b"
       ],
       "entries": [
-        {"text": "high-waisted wide-leg tailored trousers falling in clean pleats", "tags": ["trousers"]},
-        {"text": "vintage straight-leg washed blue denim jeans with natural fading", "tags": ["jeans", "denim"]},
-        {"text": "a flowing asymmetrical pleated midi skirt", "tags": ["skirt"]},
-        {"text": "sleek black leather straight-cut pants with a subtle sheen", "tags": ["leather", "pants"]},
-        {"text": "modern utilitarian cargo trousers with discrete zippered pockets", "tags": ["cargo", "utilitarian"]}
+        {
+          "text": "high-waisted wide-leg tailored trousers falling in clean pleats",
+          "tags": [
+            "trousers"
+          ]
+        },
+        {
+          "text": "vintage straight-leg washed blue denim jeans with natural fading",
+          "tags": [
+            "jeans",
+            "denim"
+          ]
+        },
+        {
+          "text": "a flowing asymmetrical pleated midi skirt",
+          "tags": [
+            "skirt"
+          ]
+        },
+        {
+          "text": "sleek black leather straight-cut pants with a subtle sheen",
+          "tags": [
+            "leather",
+            "pants"
+          ]
+        },
+        {
+          "text": "modern utilitarian cargo trousers with discrete zippered pockets",
+          "tags": [
+            "cargo",
+            "utilitarian"
+          ]
+        }
       ]
     },
     {
@@ -84,17 +439,88 @@
       "name": "Footwear",
       "insertion_zone": "clothing",
       "detection_terms": [
-        "\\b((chunky leather combat boots|minimalist white leather sneakers|pointed-toe stiletto pumps|strappy heel sandals|classic chelsea boots|loafers with horsebit hardware)\\b)"
+        "\\b(?:bright red high heels|red high heels|stiletto high heels|stiletto pumps|high heels|red heels|strappy sandals|leather combat boots|white sneakers|chelsea boots|barefoot)\\b"
       ],
       "cleanup_patterns": [
         "\\b(leather combat boots|white leather sneakers|pointed-toe stiletto pumps|strappy heel sandals|classic chelsea boots|loafers)\\b"
       ],
       "entries": [
-        {"text": "pointed-toe stiletto pumps with slender heels", "tags": ["heels", "formal"]},
-        {"text": "rugged black leather lace-up combat boots with lug soles", "tags": ["boots", "edgy"]},
-        {"text": "crisp minimalist low-top white leather sneakers", "tags": ["sneakers", "clean"]},
-        {"text": "burnished leather Chelsea boots with elastic side gussets", "tags": ["chelsea", "classic"]},
-        {"text": "polished black leather loafers with subtle gold hardware", "tags": ["loafers", "smart"]}
+        {
+          "text": "pointed-toe stiletto pumps with slender heels",
+          "tags": [
+            "heels",
+            "formal"
+          ]
+        },
+        {
+          "text": "rugged black leather lace-up combat boots with lug soles",
+          "tags": [
+            "boots",
+            "edgy"
+          ]
+        },
+        {
+          "text": "crisp minimalist low-top white leather sneakers",
+          "tags": [
+            "sneakers",
+            "clean"
+          ]
+        },
+        {
+          "text": "burnished leather Chelsea boots with elastic side gussets",
+          "tags": [
+            "chelsea",
+            "classic"
+          ]
+        },
+        {
+          "text": "polished black leather loafers with subtle gold hardware",
+          "tags": [
+            "loafers",
+            "smart"
+          ]
+        },
+        {
+          "text": "pointed-toe bright red stiletto high heels catching the light",
+          "tags": [
+            "heels",
+            "red"
+          ]
+        },
+        {
+          "text": "sleek black patent leather stiletto pumps with slender four-inch heels",
+          "tags": [
+            "heels",
+            "black"
+          ]
+        },
+        {
+          "text": "strappy metallic gold stiletto sandals wrapping delicately around the ankles",
+          "tags": [
+            "heels",
+            "gold"
+          ]
+        },
+        {
+          "text": "barefoot with neat crimson-red pedicured toenails",
+          "tags": [
+            "barefoot"
+          ]
+        },
+        {
+          "text": "rugged black leather lace-up combat boots with chunky lug soles",
+          "tags": [
+            "boots",
+            "edgy"
+          ]
+        },
+        {
+          "text": "burnished dark brown leather Chelsea boots",
+          "tags": [
+            "boots",
+            "classic"
+          ]
+        }
       ]
     },
     {
@@ -108,10 +534,31 @@
         "\\b(leather belt with brass buckle|cashmere scarf|wide-brim fedora hat|knit beanie|crossbody leather bag|silk neck scarf)\\b"
       ],
       "entries": [
-        {"text": "paired with a slim black leather belt featuring a matte gold buckle", "tags": ["belt"]},
-        {"text": "complemented by an oversized heather-gray cashmere scarf casually wrapped", "tags": ["scarf"]},
-        {"text": "accented with a structured leather crossbody saddle bag", "tags": ["bag"]},
-        {"text": "accessorized with a playful printed silk neck twilly scarf", "tags": ["scarf", "silk"]}
+        {
+          "text": "paired with a slim black leather belt featuring a matte gold buckle",
+          "tags": [
+            "belt"
+          ]
+        },
+        {
+          "text": "complemented by an oversized heather-gray cashmere scarf casually wrapped",
+          "tags": [
+            "scarf"
+          ]
+        },
+        {
+          "text": "accented with a structured leather crossbody saddle bag",
+          "tags": [
+            "bag"
+          ]
+        },
+        {
+          "text": "accessorized with a playful printed silk neck twilly scarf",
+          "tags": [
+            "scarf",
+            "silk"
+          ]
+        }
       ]
     },
     {
@@ -125,11 +572,41 @@
         "\\b(wool blend|mulberry silk|washed linen|lambskin leather|cotton jersey|crushed velvet|structured denim)\\b"
       ],
       "entries": [
-        {"text": "crafted from luxurious heavy mulberry silk that drapes fluidly", "tags": ["silk", "luxury"]},
-        {"text": "cut from premium heavyweight Italian wool blend", "tags": ["wool", "structured"]},
-        {"text": "made of soft washed Belgian linen with natural textured wrinkles", "tags": ["linen", "natural"]},
-        {"text": "fashioned from buttery soft lambskin leather with a subtle satin luster", "tags": ["leather", "premium"]},
-        {"text": "tailored in deep plush crushed velvet catching the ambient light", "tags": ["velvet", "rich"]}
+        {
+          "text": "crafted from luxurious heavy mulberry silk that drapes fluidly",
+          "tags": [
+            "silk",
+            "luxury"
+          ]
+        },
+        {
+          "text": "cut from premium heavyweight Italian wool blend",
+          "tags": [
+            "wool",
+            "structured"
+          ]
+        },
+        {
+          "text": "made of soft washed Belgian linen with natural textured wrinkles",
+          "tags": [
+            "linen",
+            "natural"
+          ]
+        },
+        {
+          "text": "fashioned from buttery soft lambskin leather with a subtle satin luster",
+          "tags": [
+            "leather",
+            "premium"
+          ]
+        },
+        {
+          "text": "tailored in deep plush crushed velvet catching the ambient light",
+          "tags": [
+            "velvet",
+            "rich"
+          ]
+        }
       ]
     },
     {
@@ -137,18 +614,54 @@
       "name": "Color",
       "insertion_zone": "clothing",
       "detection_terms": [
-        "\\b(monochrome jet black|crisp pure white|deep midnight navy|earthy olive green|rich burgundy wine|warm camel tan|charcoal heather gray)\\b"
+        "\\b(monochrome jet black|monochrome jet-black|crisp pure white|deep midnight navy|earthy olive green|rich burgundy wine|warm camel tan|charcoal heather gray)\\b",
+        "\\b(black|white|navy blue|navy|burgundy|olive green|olive|camel tan|tan|beige|charcoal gray|gray|red|blue|green|yellow|pink|purple)\\b(?=[\\s,]+(?:dress|skirt|jacket|blazer|coat|sweater|shirt|hoodie|pants|trousers|jeans|top|suit|lingerie|bikini)\\b)",
+        "\\bin\\s+(monochrome jet[- ]black|crisp pure white|deep midnight navy|earthy olive green|rich burgundy wine|warm camel tan|charcoal heather gray|black|white|navy|burgundy|olive|tan|red|blue|green)\\b"
       ],
       "cleanup_patterns": [
-        "\\b(monochrome jet black|crisp pure white|deep midnight navy|earthy olive green|rich burgundy wine|warm camel tan|charcoal heather gray)\\b"
+        "\\b(monochrome jet black|monochrome jet-black|crisp pure white|deep midnight navy|earthy olive green|rich burgundy wine|warm camel tan|charcoal heather gray)\\b"
       ],
       "entries": [
-        {"text": "in timeless monochrome jet-black", "tags": ["black", "monochrome"]},
-        {"text": "in pristine crisp optic white", "tags": ["white"]},
-        {"text": "in sophisticated deep midnight navy blue", "tags": ["navy"]},
-        {"text": "in rich opulent burgundy wine red", "tags": ["burgundy", "red"]},
-        {"text": "in muted earthy olive drab green", "tags": ["olive", "earthy"]},
-        {"text": "in warm neutral camel tan and oatmeal tones", "tags": ["camel", "neutral"]}
+        {
+          "text": "in timeless monochrome jet-black",
+          "tags": [
+            "black",
+            "monochrome"
+          ]
+        },
+        {
+          "text": "in pristine crisp optic white",
+          "tags": [
+            "white"
+          ]
+        },
+        {
+          "text": "in sophisticated deep midnight navy blue",
+          "tags": [
+            "navy"
+          ]
+        },
+        {
+          "text": "in rich opulent burgundy wine red",
+          "tags": [
+            "burgundy",
+            "red"
+          ]
+        },
+        {
+          "text": "in muted earthy olive drab green",
+          "tags": [
+            "olive",
+            "earthy"
+          ]
+        },
+        {
+          "text": "in warm neutral camel tan and oatmeal tones",
+          "tags": [
+            "camel",
+            "neutral"
+          ]
+        }
       ]
     },
     {
@@ -162,11 +675,38 @@
         "\\b(minimalist scandinavian style|cyberpunk techwear|dark academia|vintage retro 90s|quiet luxury|boho chic|grungy alt)\\b"
       ],
       "entries": [
-        {"text": "styled with an understated quiet-luxury aesthetic and clean lines", "tags": ["quiet_luxury"]},
-        {"text": "exuding a sharp, modern cyberpunk techwear aesthetic", "tags": ["techwear", "cyberpunk"]},
-        {"text": "curated in a scholarly dark academia aesthetic with vintage textures", "tags": ["dark_academia"]},
-        {"text": "styled with an authentic 1990s vintage grunge sensibility", "tags": ["grunge", "vintage"]},
-        {"text": "styled in clean, timeless Scandinavian minimalism", "tags": ["minimalism"]}
+        {
+          "text": "styled with an understated quiet-luxury aesthetic and clean lines",
+          "tags": [
+            "quiet_luxury"
+          ]
+        },
+        {
+          "text": "exuding a sharp, modern cyberpunk techwear aesthetic",
+          "tags": [
+            "techwear",
+            "cyberpunk"
+          ]
+        },
+        {
+          "text": "curated in a scholarly dark academia aesthetic with vintage textures",
+          "tags": [
+            "dark_academia"
+          ]
+        },
+        {
+          "text": "styled with an authentic 1990s vintage grunge sensibility",
+          "tags": [
+            "grunge",
+            "vintage"
+          ]
+        },
+        {
+          "text": "styled in clean, timeless Scandinavian minimalism",
+          "tags": [
+            "minimalism"
+          ]
+        }
       ]
     }
   ]

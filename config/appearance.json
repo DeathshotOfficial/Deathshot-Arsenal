@@ -1,7 +1,29 @@
 {
-  "theme": "midnight_blue",
+  "theme": "cyberpunk",
   "font": "Inter",
   "fontSize": 14,
   "downloadedFonts": [],
-  "custom": {}
+  "custom": {
+    "--ds-accent": "#fcee0a",
+    "--ds-panel": "#14101a",
+    "--ds-panel-2": "#1c1524",
+    "--ds-bg": "#0c0a0f",
+    "--ds-border": "#ff003c",
+    "--ds-border-active": "#fcee0a",
+    "--ds-btn-bg": "#1a1224",
+    "--ds-btn-hover": "#241a32",
+    "--ds-text": "#fcee0a",
+    "--ds-text-muted": "#8a7a50",
+    "--ds-color-accent": "#fcee0a",
+    "--ds-color-card": "#14101a",
+    "--ds-color-card-border": "#ff003c",
+    "--ds-color-panel-2": "#1c1524",
+    "--ds-color-base": "#0c0a0f",
+    "--ds-color-border": "#ff003c",
+    "--ds-color-border-hover": "#fcee0a",
+    "--ds-color-text": "#fcee0a",
+    "--ds-color-muted-text": "#8a7a50",
+    "--ds-color-on-accent": "#0a0c10",
+    "--ds-color-on-accent-shadow": "0 1px 0 rgba(255, 255, 255, 0.35)"
+  }
 }

@@ -193,11 +193,13 @@ def _download_google_font(font_name):
 # API ROUTES
 # ------------------------------------------------------------------
 @server.PromptServer.instance.routes.get("/ds/theme/config")
+@server.PromptServer.instance.routes.get("/api/ds/theme/config")
 async def theme_get_config(_request):
     return web.json_response({"config": load_appearance()})
 
 
 @server.PromptServer.instance.routes.post("/ds/theme/config")
+@server.PromptServer.instance.routes.post("/api/ds/theme/config")
 async def theme_save_config(request):
     try:
         payload = await request.json()
@@ -213,6 +215,7 @@ async def theme_save_config(request):
 
 
 @server.PromptServer.instance.routes.get("/ds/theme/themes")
+@server.PromptServer.instance.routes.get("/api/ds/theme/themes")
 async def theme_get_themes(_request):
     themes = _load_json(THEMES_FILE, {"themes": {}})
     return web.json_response(themes)

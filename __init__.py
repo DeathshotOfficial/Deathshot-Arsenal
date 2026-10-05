@@ -32,7 +32,7 @@ try:
 
     @routes.post("/ds_debug_log")
     async def _ds_debug_log(request):
-        """Mirror Control Panel browser diagnostics to the ComfyUI terminal."""
+        """Mirror browser diagnostics to the ComfyUI terminal."""
         try:
             payload = await request.json()
         except Exception:
@@ -47,9 +47,9 @@ try:
                 detail_text = " " + json.dumps(details, ensure_ascii=False, default=str)[:4000] if details else ""
             except Exception:
                 detail_text = " " + str(details)[:4000] if details else ""
-            print(f"[DeathshotArsenal][ControlPanel][BROWSER] {event}: {message}{detail_text}", flush=True)
+            print(f"[DeathshotArsenal][DEBUG][BROWSER] {event}: {message}{detail_text}", flush=True)
         except Exception as e:
-            print(f"[DeathshotArsenal][ControlPanel][BROWSER] logger failed: {e}", flush=True)
+            print(f"[DeathshotArsenal][DEBUG][BROWSER] logger failed: {e}", flush=True)
         return web.json_response({"ok": True})
 
     @routes.get(DS_EXTENSIONS_URL)
@@ -132,13 +132,19 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_RunTimer: {e}", flush=True)
     DS_RunTimer = None
 
-# DS Reminder
+# DS Reminder Backend Routes (Global Extension)
 try:
-    _mod = _load_node_pkg("reminder", "Reminder")
-    DS_Reminder = _mod.DS_Reminder
+    _load_node_pkg("reminder", "Reminder")
 except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_Reminder: {e}", flush=True)
-    DS_Reminder = None
+    print(f"[DeathshotArsenal] Failed to load Reminder backend routes: {e}", flush=True)
+
+# DS Controller
+try:
+    _mod = _load_node_pkg("controller", "Controller")
+    DS_Controller = _mod.DS_Controller
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_Controller: {e}", flush=True)
+    DS_Controller = None
 
 
 # DS Prompt Scanner
@@ -149,13 +155,6 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_PromptScanner: {e}", flush=True)
     DS_PromptScanner = None
 
-# DS HUD
-try:
-    _mod = _load_node_pkg("hud", "HUD")
-    DS_FuturisticHUD = _mod.DS_FuturisticHUD
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_FuturisticHUD: {e}", flush=True)
-    DS_FuturisticHUD = None
 
 # DS Image Save Advance
 try:
@@ -323,37 +322,6 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_LoRaLoader: {e}", flush=True)
     DS_LoRaLoader = None
 
-# DS Control Panel
-try:
-    _mod = _load_node_pkg("control_panel", "Control Panel")
-    DS_ControlPanel = _mod.DS_ControlPanel
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_ControlPanel: {e}", flush=True)
-    DS_ControlPanel = None
-
-# DS System Monitor
-try:
-    _mod = _load_node_pkg("system_monitor", "System Monitor")
-    DS_SystemMonitor = _mod.DS_SystemMonitor
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_SystemMonitor: {e}", flush=True)
-    DS_SystemMonitor = None
-
-# DS Image Loader
-try:
-    _mod = _load_node_pkg("image_loader", "Image Loader")
-    DS_ImageLoader = _mod.DS_ImageLoader
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_ImageLoader: {e}", flush=True)
-    DS_ImageLoader = None
-
-# DS Quick Save
-try:
-    _mod = _load_node_pkg("quick_save", "Quick Save")
-    DS_QuickSave = _mod.DS_QuickSave
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_QuickSave: {e}", flush=True)
-    DS_QuickSave = None
 
 # DS Load Images From Folder
 try:
@@ -454,6 +422,15 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_ThePurger: {e}", flush=True)
     DS_ThePurger = None
 
+# DS Dev Spawner (Development tool)
+try:
+    _mod = _load_node_pkg("dev_spawner", "Dev Spawner")
+    DS_DevSpawner = _mod.DS_DevSpawner
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_DevSpawner: {e}", flush=True)
+    DS_DevSpawner = None
+
+
 
 
 
@@ -496,259 +473,6 @@ def get_gpu_driver_version():
         return output.decode("utf-8").strip()
     except:
         return "Unknown"
-
-def _run_hidden_cmd(cmd, timeout=2.5):
-    try:
-        if platform.system() == "Windows":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-            output = subprocess.check_output(
-                cmd, startupinfo=startupinfo, timeout=timeout, stderr=subprocess.DEVNULL
-            )
-        else:
-            output = subprocess.check_output(cmd, timeout=timeout, stderr=subprocess.DEVNULL)
-        return output.decode("utf-8", errors="ignore").strip()
-    except Exception:
-        return None
-
-def _query_nvidia_smi(fields):
-    out = _run_hidden_cmd(
-        ["nvidia-smi", f"--query-gpu={fields}", "--format=csv,noheader,nounits"]
-    )
-    if not out:
-        return None
-    line = out.split("\n")[0].strip()
-    if line in ("", "[N/A]", "N/A"):
-        return None
-    return line
-
-def get_nvidia_gpu_stats():
-    util_raw = _query_nvidia_smi("utilization.gpu")
-    temp_raw = _query_nvidia_smi("temperature.gpu")
-    clock_raw = _query_nvidia_smi("clocks.current.graphics")
-    power_raw = _query_nvidia_smi("power.draw")
-    stats = {}
-    try:
-        if util_raw is not None:
-            stats["gpu"] = int(float(util_raw))
-    except (ValueError, TypeError):
-        pass
-    try:
-        if temp_raw is not None:
-            stats["gpu_temp"] = int(float(temp_raw))
-    except (ValueError, TypeError):
-        pass
-    try:
-        if clock_raw is not None:
-            stats["gpu_clock"] = int(float(clock_raw))
-    except (ValueError, TypeError):
-        pass
-    try:
-        if power_raw is not None:
-            stats["gpu_power"] = round(float(power_raw), 1)
-    except (ValueError, TypeError):
-        pass
-    return stats
-
-def get_amd_gpu_stats():
-    out = _run_hidden_cmd(["rocm-smi", "--showuse"])
-    if not out:
-        return {}
-    stats = {}
-    for line in out.splitlines():
-        if "GPU use" in line or "GPU%" in line:
-            parts = re.findall(r"(\d+(?:\.\d+)?)\s*%", line)
-            if parts:
-                try:
-                    stats["gpu"] = int(float(parts[0]))
-                except (ValueError, TypeError):
-                    pass
-                break
-    temp_out = _run_hidden_cmd(["rocm-smi", "--showtemp"])
-    if temp_out:
-        for line in temp_out.splitlines():
-            if "Temperature" in line or "Edge" in line:
-                parts = re.findall(r"(\d+(?:\.\d+)?)", line)
-                if parts:
-                    try:
-                        stats["gpu_temp"] = int(float(parts[-1]))
-                    except (ValueError, TypeError):
-                        pass
-                    break
-    return stats
-
-def get_pynvml_gpu_stats():
-    global HAS_PYNVML
-    try:
-        import pynvml
-        if not HAS_PYNVML:
-            pynvml.nvmlInit()
-            HAS_PYNVML = True
-        handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-        util = pynvml.nvmlDeviceGetUtilizationRates(handle)
-        stats = {"gpu": util.gpu}
-        try:
-            stats["gpu_temp"] = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
-        except Exception:
-            pass
-        try:
-            stats["gpu_clock"] = pynvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_GRAPHICS)
-        except Exception:
-            pass
-        try:
-            stats["gpu_power"] = round(pynvml.nvmlDeviceGetPowerUsage(handle) / 1000, 1)
-        except Exception:
-            pass
-        return stats
-    except Exception:
-        return {}
-
-# --- SYSTEM MONITOR THREAD ---
-class SystemMonitor(threading.Thread):
-    def __init__(self):
-        super().__init__()
-        self.daemon = True
-        self.stop_event = threading.Event()
-        self.last_net_io = psutil.net_io_counters()
-        self.last_time = time.time()
-
-    def run(self):
-        while not self.stop_event.is_set():
-            try:
-                stats = self.get_stats()
-                server.PromptServer.instance.send_sync("ds_system_stats", stats)
-            except Exception:
-                pass
-            time.sleep(1.0)
-
-    def get_stats(self):
-        cpu_percent = psutil.cpu_percent()
-        cpu_freq = None
-        cpu_temp = None
-        try:
-            freq = psutil.cpu_freq()
-            if freq and freq.current:
-                cpu_freq = round(freq.current, 0)
-        except Exception:
-            pass
-        try:
-            temps = psutil.sensors_temperatures()
-            if temps:
-                for entries in temps.values():
-                    for entry in entries:
-                        if entry.current is not None:
-                            cpu_temp = round(entry.current, 1)
-                            break
-                    if cpu_temp is not None:
-                        break
-        except Exception:
-            pass
-
-        mem = psutil.virtual_memory()
-        ram_percent = mem.percent
-        ram_used_gb = mem.used / (1024 ** 3)
-        ram_free_gb = mem.available / (1024 ** 3)
-        ram_total_gb = mem.total / (1024 ** 3)
-
-        gpu_util = None
-        gpu_clock = None
-        gpu_power = None
-        vram_percent = 0
-        vram_used_gb = 0
-        vram_total_gb = 0
-        vram_free_gb = 0
-        gpu_temp = None
-        gpu_vendor = None
-        gpu_available = False
-
-        if torch.cuda.is_available():
-            gpu_available = True
-            gpu_vendor = "nvidia"
-            try:
-                mem_used = torch.cuda.memory_allocated()
-                mem_reserved = torch.cuda.memory_reserved()
-                props = torch.cuda.get_device_properties(0)
-                mem_total = props.total_memory
-
-                vram_percent = (mem_used / mem_total) * 100 if mem_total else 0
-                vram_used_gb = mem_used / (1024 ** 3)
-                vram_total_gb = mem_total / (1024 ** 3)
-                vram_free_gb = max(0, (mem_total - mem_reserved) / (1024 ** 3))
-            except Exception:
-                pass
-
-        gpu_stats = get_pynvml_gpu_stats()
-        if not gpu_stats:
-            gpu_stats = get_nvidia_gpu_stats()
-        if not gpu_stats:
-            gpu_stats = get_amd_gpu_stats()
-            if gpu_stats:
-                gpu_available = True
-                gpu_vendor = gpu_vendor or "amd"
-
-        if gpu_stats:
-            gpu_available = True
-            gpu_util = gpu_stats.get("gpu")
-            gpu_temp = gpu_stats.get("gpu_temp", gpu_temp)
-            gpu_clock = gpu_stats.get("gpu_clock", gpu_clock)
-            gpu_power = gpu_stats.get("gpu_power", gpu_power)
-
-        if not gpu_available and _query_nvidia_smi("name"):
-            gpu_available = True
-            gpu_vendor = "nvidia"
-            if gpu_util is None:
-                smi = get_nvidia_gpu_stats()
-                gpu_util = smi.get("gpu")
-                gpu_temp = smi.get("gpu_temp", gpu_temp)
-                gpu_clock = smi.get("gpu_clock", gpu_clock)
-                gpu_power = smi.get("gpu_power", gpu_power)
-
-        try:
-            disk = psutil.disk_usage(folder_paths.base_path).percent
-        except Exception:
-            disk = 0
-
-        current_net_io = psutil.net_io_counters()
-        current_time = time.time()
-
-        sent_delta = current_net_io.bytes_sent - self.last_net_io.bytes_sent
-        recv_delta = current_net_io.bytes_recv - self.last_net_io.bytes_recv
-        time_delta = current_time - self.last_time
-        if time_delta <= 0:
-            time_delta = 1.0
-
-        mbps_sent = (sent_delta * 8) / (1024 * 1024) / time_delta
-        mbps_recv = (recv_delta * 8) / (1024 * 1024) / time_delta
-        total_mbps = mbps_sent + mbps_recv
-
-        self.last_net_io = current_net_io
-        self.last_time = current_time
-
-        return {
-            "cpu": cpu_percent,
-            "cpu_freq": cpu_freq,
-            "cpu_temp": cpu_temp,
-            "ram": ram_percent,
-            "ram_used_gb": round(ram_used_gb, 2),
-            "ram_free_gb": round(ram_free_gb, 2),
-            "ram_total_gb": round(ram_total_gb, 2),
-            "gpu": gpu_util,
-            "gpu_clock": gpu_clock,
-            "gpu_power": gpu_power,
-            "gpu_temp": gpu_temp,
-            "gpu_available": gpu_available,
-            "gpu_vendor": gpu_vendor,
-            "vram": vram_percent,
-            "vram_used_gb": round(vram_used_gb, 2),
-            "vram_free_gb": round(vram_free_gb, 2),
-            "vram_total_gb": round(vram_total_gb, 2),
-            "temp": gpu_temp,
-            "disk": disk,
-            "net": total_mbps,
-        }
-
-monitor = SystemMonitor()
-monitor.start()
 
 # --- API ROUTES ---
 @server.PromptServer.instance.routes.post("/ds/browse")
@@ -960,7 +684,6 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_Label": DS_Label} if DS_Label is not None else {}),
     **({"DS_RunTimer": DS_RunTimer} if DS_RunTimer is not None else {}),
     **({"DS_PromptScanner": DS_PromptScanner} if DS_PromptScanner is not None else {}),
-    **({"DS_FuturisticHUD": DS_FuturisticHUD} if DS_FuturisticHUD is not None else {}),
     **({"DS_ImageSaveAdvance": DS_ImageSaveAdvance} if DS_ImageSaveAdvance is not None else {}),
     **({"DS_PipeIn": DS_PipeIn} if DS_PipeIn is not None else {}),
     **({"DS_PipeOut": DS_PipeOut} if DS_PipeOut is not None else {}),
@@ -980,11 +703,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_VideoTiming": DS_VideoTiming} if DS_VideoTiming is not None else {}),
     **({"DS_PromptCards": DS_PromptCards} if DS_PromptCards is not None else {}),
     **({"DS_GroupSwitch": DS_GroupSwitch} if DS_GroupSwitch is not None else {}),
-    **({"DS_ControlPanel": DS_ControlPanel} if DS_ControlPanel is not None else {}),
     **({"DS_LoRaLoader": DS_LoRaLoader} if DS_LoRaLoader is not None else {}),
-    **({"DS_SystemMonitor": DS_SystemMonitor} if DS_SystemMonitor is not None else {}),
-    **({"DS_ImageLoader": DS_ImageLoader} if DS_ImageLoader is not None else {}),
-    **({"DS_QuickSave": DS_QuickSave} if DS_QuickSave is not None else {}),
     **({"DS_LoadImagesFromFolder": DS_LoadImagesFromFolder} if DS_LoadImagesFromFolder is not None else {}),
     **({"DS_VersionCheck": DS_VersionCheck} if DS_VersionCheck is not None else {}),
     **({"DS_VideoSave": DS_VideoSave} if DS_VideoSave is not None else {}),
@@ -996,16 +715,16 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_AIPromptSensei": DS_AIPromptSensei} if DS_AIPromptSensei is not None else {}),
     **({"DS_GenerationHub": DS_GenerationHub} if DS_GenerationHub is not None else {}),
     **({"DS_Randomizer": DS_Randomizer} if DS_Randomizer is not None else {}),
-    **({"DS_Reminder": DS_Reminder} if DS_Reminder is not None else {}),
     **({"DS_FilmGrain": DS_FilmGrain} if DS_FilmGrain is not None else {}),
     **({"DS_ThePurger": DS_ThePurger} if DS_ThePurger is not None else {}),
+    **({"DS_DevSpawner": DS_DevSpawner} if DS_DevSpawner is not None else {}),
+    **({"DS_Controller": DS_Controller} if DS_Controller is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_Label": "DS Label"} if DS_Label is not None else {}),
     **({"DS_RunTimer": "DS Run Timer"} if DS_RunTimer is not None else {}),
     **({"DS_PromptScanner": "DS Prompt Scanner"} if DS_PromptScanner is not None else {}),
-    **({"DS_FuturisticHUD": "DS Futuristic HUD"} if DS_FuturisticHUD is not None else {}),
     **({"DS_ImageSaveAdvance": "DS Image Save Advance"} if DS_ImageSaveAdvance is not None else {}),
     **({"DS_PipeIn": "DS Pipe In (Universal)"} if DS_PipeIn is not None else {}),
     **({"DS_PipeOut": "DS Pipe Out (Universal)"} if DS_PipeOut is not None else {}),
@@ -1025,11 +744,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_VideoTiming": "DS Video Timing"} if DS_VideoTiming is not None else {}),
     **({"DS_PromptCards": "DS Prompt Cards"} if DS_PromptCards is not None else {}),
     **({"DS_GroupSwitch": "DS Group Switch"} if DS_GroupSwitch is not None else {}),
-    **({"DS_ControlPanel": "DS Control Panel"} if DS_ControlPanel is not None else {}),
     **({"DS_LoRaLoader": "DS LoRa Loader"} if DS_LoRaLoader is not None else {}),
-    **({"DS_SystemMonitor": "DS System Monitor"} if DS_SystemMonitor is not None else {}),
-    **({"DS_ImageLoader": "DS Image Loader"} if DS_ImageLoader is not None else {}),
-    **({"DS_QuickSave": "DS Quick Save"} if DS_QuickSave is not None else {}),
     **({"DS_LoadImagesFromFolder": "DS Load Images From Folder"} if DS_LoadImagesFromFolder is not None else {}),
     **({"DS_VersionCheck": "DS Version Check"} if DS_VersionCheck is not None else {}),
     **({"DS_VideoSave": "DS Video Save"} if DS_VideoSave is not None else {}),
@@ -1041,9 +756,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_AIPromptSensei": "DS AI Prompt Sensei"} if DS_AIPromptSensei is not None else {}),
     **({"DS_GenerationHub": "DS Generation Hub"} if DS_GenerationHub is not None else {}),
     **({"DS_Randomizer": "DS Randomizer"} if DS_Randomizer is not None else {}),
-    **({"DS_Reminder": "DS Reminder"} if DS_Reminder is not None else {}),
     **({"DS_FilmGrain": "DS Film Grain"} if DS_FilmGrain is not None else {}),
     **({"DS_ThePurger": "DS The Purger"} if DS_ThePurger is not None else {}),
+    **({"DS_DevSpawner": "DS Dev Spawner"} if DS_DevSpawner is not None else {}),
+    **({"DS_Controller": "DS Controller"} if DS_Controller is not None else {}),
 }
 
 WEB_DIRECTORY = "js"

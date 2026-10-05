@@ -48,25 +48,6 @@ def _save_reminders(data):
         return False
 
 
-class DS_Reminder:
-    """DS Reminder utility node for Deathshot Arsenal.
-    Frontend-only persistent timer and reminder interface.
-    """
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {}}
-
-    RETURN_TYPES = ()
-    RETURN_NAMES = ()
-    FUNCTION = "noop"
-    CATEGORY = "☠️ Deathshot Arsenal/🛠️ Utility"
-    OUTPUT_NODE = False
-
-    def noop(self):
-        return ()
-
-
 # Register Server API Routes for Global Persistence
 def register_reminder_routes():
     if getattr(server.PromptServer, "_ds_reminder_routes_registered", False):
@@ -106,6 +87,6 @@ try:
 except Exception:
     pass
 
-NODE_CLASS_MAPPINGS = {"DS_Reminder": DS_Reminder}
-NODE_DISPLAY_NAME_MAPPINGS = {"DS_Reminder": "DS Reminder"}
+NODE_CLASS_MAPPINGS = {}
+NODE_DISPLAY_NAME_MAPPINGS = {}
 

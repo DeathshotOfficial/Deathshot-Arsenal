@@ -99,6 +99,42 @@ class DSGearRegistry {
         onClick: (n, canvas, ev) => (n._togglePurgerGearPopover || n._openPurgerGearPopover).call(n, ev?.currentTarget || ev?.target),
       };
     }
+    if (typeof node._toggleOutpaintGearPopover === "function" || typeof node._openOutpaintGearPopover === "function") {
+      return {
+        tooltip: "Outpaint Settings",
+        onClick: (n, canvas, ev) => (n._toggleOutpaintGearPopover || n._openOutpaintGearPopover).call(n, ev?.currentTarget || ev?.target),
+      };
+    }
+    if (typeof node._toggleImageSaveAdvanceGearPopover === "function" || typeof node._openImageSaveAdvanceGearPopover === "function") {
+      return {
+        tooltip: "DS Image Save Advance Settings",
+        onClick: (n, canvas, ev) => (n._toggleImageSaveAdvanceGearPopover || n._openImageSaveAdvanceGearPopover).call(n, ev?.currentTarget || ev?.target),
+      };
+    }
+    if (
+      node.type === "DS_Controller" ||
+      node.comfyClass === "DS_Controller" ||
+      node.title === "DS Controller" ||
+      (typeof node.type === "string" && (node.type.toLowerCase().includes("ds_controller") || node.type.includes("Controller"))) ||
+      (typeof node.comfyClass === "string" && node.comfyClass.includes("Controller")) ||
+      typeof node._toggleControllerGearPopover === "function" ||
+      typeof node._openControllerGearPopover === "function" ||
+      (typeof node.openSettings === "function" && (node.type === "DS_Controller" || node.comfyClass === "DS_Controller" || node.type?.includes?.("Controller")))
+    ) {
+      return {
+        tooltip: "DS Controller Settings",
+        onClick: (n, canvas, ev) => {
+          const anchor = ev?.currentTarget || ev?.target;
+          if (typeof n._toggleControllerGearPopover === "function") {
+            n._toggleControllerGearPopover(anchor);
+          } else if (typeof n._openControllerGearPopover === "function") {
+            n._openControllerGearPopover(anchor);
+          } else if (typeof n.openSettings === "function") {
+            n.openSettings(anchor);
+          }
+        },
+      };
+    }
     return null;
   }
 
@@ -844,5 +880,9 @@ app.registerExtension({
     return [];
   },
 });
+
+if (typeof window !== "undefined") {
+  window.DSGearMenu = gearRegistry;
+}
 
 export { gearRegistry as DSGearMenu };

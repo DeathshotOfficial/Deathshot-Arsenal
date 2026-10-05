@@ -43,3 +43,11 @@ If you are an AI agent, READ this first!!.md
 README.txt
 **/MIGRATION.md
 js/**/README.md
+
+# Overhaul documentation & Guide templates (local only)
+UI_OVERHAUL_PRD_UPDATED.txt
+*overhaul*.txt
+*overhual*.txt
+Guide-ComfyUI_Card_Layout_Template/
+Guide-*/
+guide/

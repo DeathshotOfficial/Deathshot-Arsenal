@@ -253,45 +253,9 @@ class DS_FilmGrain:
     def IS_CHANGED(cls, **kwargs):
         return float("NaN")
 
-    def _save_temp_preview(self, tensor, prefix="film_grain_"):
-        """Save a fast temp WebP image for the frontend WebGL / DOM preview."""
-        if tensor is None:
-            return None
-        try:
-            if tensor.ndim == 4:
-                first_frame = tensor[0]
-            else:
-                first_frame = tensor
-
-            arr = 255.0 * first_frame.detach().cpu().numpy()
-            arr = np.clip(arr, 0, 255).astype(np.uint8)
-            if arr.shape[-1] == 1:
-                arr = np.repeat(arr, 3, axis=-1)
-            elif arr.shape[-1] > 3:
-                arr = arr[..., :3]
-
-            img = Image.fromarray(arr)
-            temp_dir = folder_paths.get_temp_directory()
-            rand_id = random.randint(100000, 999999)
-            filename = f"{prefix}{rand_id}.webp"
-            filepath = os.path.join(temp_dir, filename)
-
-            img.save(filepath, format="WEBP", quality=92, method=2)
-
-            return {
-                "filename": filename,
-                "subfolder": "",
-                "type": "temp"
-            }
-        except Exception as e:
-            logging.error(f"{LOG} Fast temp preview save failed: {e}")
-            return None
-
     def _render_with_glsl(self, image_tensor, amount, size, color, shadow, mode_int):
         """Renders image batch using ComfyUI's GPU GLSL pipeline."""
         b, h, w, c = image_tensor.shape
-        # Prepare numpy batch [B][1][H, W, 4]
-        # GLSL expects RGBA float32 [0, 1]
         np_images = image_tensor.detach().cpu().numpy().astype(np.float32)
 
         image_batches = []
@@ -315,7 +279,6 @@ class DS_FilmGrain:
             ints=[int(mode_int)]
         )
 
-        # outputs: list of batch outputs, each output is list of images (H, W, 4)
         out_frames = []
         for b_out in outputs:
             img_rgba = b_out[0]
@@ -337,13 +300,11 @@ class DS_FilmGrain:
         lum_weight = (1.0 - shadow) + shadow * (1.0 - luma)
         strength = amount * 0.15
 
-        # Spatial grid based on size
         inv_size = 1.0 / max(size, 0.01)
         grid_h = max(2, int(h * inv_size))
         grid_w = max(2, int(w * inv_size))
 
         if mode_int == 1:
-            # Grainy mode: crisp Gaussian noise
             raw_g = torch.randn((b, h, w, 1), device=device) * 0.7
             if color > 0.001:
                 raw_rgb = torch.randn((b, h, w, 3), device=device) * 0.7
@@ -351,7 +312,6 @@ class DS_FilmGrain:
             else:
                 grain_color = raw_g
         else:
-            # Smooth mode: interpolated noise
             g_low = torch.randn((b, 1, grid_h, grid_w), device=device) * 0.7
             g_up = torch.nn.functional.interpolate(g_low, size=(h, w), mode="bicubic", align_corners=False).permute(0, 2, 3, 1)
             if color > 0.001:
@@ -384,23 +344,10 @@ class DS_FilmGrain:
             shadow = _clamp(shadow_focus, 0.0, 1.0, 0.00)
             is_grainy = str(grain_mode).strip().lower() == "grainy"
             mode_int = 1 if is_grainy else 0
-            mode_str = "Grainy" if is_grainy else "Smooth"
 
             # Passthrough if amount is 0
             if amount <= 0.0001:
-                img_info = self._save_temp_preview(image)
-                ui_data = {
-                    "film_grain": [{
-                        "preview": img_info or {"filename": "", "type": "temp", "subfolder": ""},
-                        "dims": [int(image.shape[2]), int(image.shape[1])],
-                        "amount": amount,
-                        "size": size,
-                        "color": color,
-                        "shadow": shadow,
-                        "mode": mode_str,
-                    }]
-                }
-                return {"ui": ui_data, "result": (image.clone(),)}
+                return (image.clone(),)
 
             # Run GLSL GPU shader via comfy_extras if available
             if _glsl_renderer is not None:
@@ -412,23 +359,9 @@ class DS_FilmGrain:
             else:
                 out = self._render_with_torch_fallback(image, amount, size, color, shadow, mode_int)
 
-            # Generate preview WebP for node UI
-            img_info = self._save_temp_preview(out)
-            ui_data = {
-                "film_grain": [{
-                    "preview": img_info or {"filename": "", "type": "temp", "subfolder": ""},
-                    "dims": [int(image.shape[2]), int(image.shape[1])],
-                    "amount": amount,
-                    "size": size,
-                    "color": color,
-                    "shadow": shadow,
-                    "mode": mode_str,
-                }]
-            }
-
-            return {"ui": ui_data, "result": (out,)}
+            return (out,)
 
         except Exception as e:
             logging.error(f"{LOG} apply_grain fatal error: {e}", exc_info=True)
             fallback = image if (image is not None and torch.is_tensor(image)) else torch.zeros((1, 64, 64, 3), dtype=torch.float32)
-            return {"ui": {"film_grain": [{"error": str(e)}]}, "result": (fallback,)}
+            return (fallback,)

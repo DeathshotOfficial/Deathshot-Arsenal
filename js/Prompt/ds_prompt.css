@@ -1,361 +1,276 @@
-/* ============================================================
-   DS Prompt - DeathshotArsenal
-   Themed DOM prompt editor
-   ============================================================ */
-
-.ds-prompt-root {
-  --ds-bg: var(--comfy-input-bg-color, #17191d);
-  --ds-panel: var(--comfy-menu-bg, #1d1f23);
-  --ds-panel-2: var(--comfy-input-bg-color, #202328);
-  --ds-accent: var(--ds-theme-accent, #67e8f9);
-  --ds-text: var(--comfy-text-color, #e5e7eb);
-  --ds-text-muted: var(--comfy-text-secondary, #9ca3af);
-  --ds-border: var(--comfy-input-border-color, #353940);
-  --ds-radius: 6px;
-  --ds-radius-sm: 4px;
-  --ds-font: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-
+.ds-prompt-card {
+  box-sizing: border-box !important;
   width: 100% !important;
   height: 100% !important;
-  min-height: 0;
-  max-height: none;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: var(--ds-card-padding, 10px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--ds-gap-sm, 6px) !important;
+  pointer-events: none !important;
+  background: var(--ds-color-card, #12151c) !important;
+  border: 1px solid var(--ds-color-card-border, #242a36) !important;
+  border-radius: var(--ds-radius-card, 8px);
+  color: var(--ds-color-text, #e5e7eb);
+  box-shadow: none !important;
+  filter: none !important;
+  transition: border-color var(--ds-transition, 120ms ease);
+  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
+}
+
+.ds-prompt-card * {
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 7px;
-  overflow: hidden;
-  border-radius: var(--ds-radius);
-  background: var(--ds-bg);
-  color: var(--ds-text);
-  font-family: var(--ds-font);
-  font-size: 12px;
-  user-select: none;
-  /* Full-bleed DOM overlay: let clicks on empty background/padding/gaps fall
-     through to the canvas underneath so LiteGraph's native resize-corner and
-     node-drag hit-testing still work (this is the same pattern every other
-     resizable DS DOM-widget node uses). Only the actual interactive controls
-     below opt back in with pointer-events: auto. */
-  pointer-events: none;
-  position: relative;
 }
 
-.ds-prompt-textarea,
-.ds-prompt-preview-text,
+.ds-prompt-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: var(--ds-gap-xs, 4px) !important;
+  height: 24px !important;
+  flex: 0 0 24px !important;
+  min-height: 24px !important;
+  min-width: 0 !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+
+.ds-prompt-actions,
 .ds-prompt-trigger-control,
-.ds-prompt-icon-btn,
-.ds-prompt-btn,
-.ds-prompt-resize-handle {
-  pointer-events: auto;
+.ds-prompt-seg {
+  pointer-events: auto !important;
 }
 
-.ds-prompt-root * { box-sizing: border-box; }
-
-/* The DOM widget root is sized by LiteGraph; flex distributes that height
-   through the editor and into the textarea without a second fixed pixel box. */
-.ds-prompt-root .ds-prompt-editor { flex: 1 1 0; min-height: 0; min-width: 0; }
-.ds-prompt-root .ds-prompt-textarea { height: 100%; min-height: 0; max-height: none; flex: 1 1 0; }
-
-.ds-prompt-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex: 0 0 24px;
-  min-height: 24px;
-}
-
-.ds-prompt-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-right: auto;
-  min-width: 0;
-  color: var(--ds-text);
-  font-weight: 700;
-  font-size: 12px;
+.ds-prompt-title-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--ds-gap-xs, 4px) !important;
+  min-width: 0 !important;
+  flex: 0 1 auto !important;
 }
 
 .ds-prompt-title-icon {
-  width: 15px;
-  height: 15px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
-  color: var(--ds-accent);
+  flex-shrink: 0;
+  color: var(--ds-color-accent, #67e8f9);
 }
 
-.ds-prompt-title-icon svg,
-.ds-prompt-icon-btn svg {
-  width: 14px;
-  height: 14px;
-  stroke: currentColor;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
+.ds-prompt-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.ds-prompt-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-color-accent, #67e8f9);
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent, #67e8f9) 30%, transparent);
+  border-radius: var(--ds-radius-badge, 4px);
+  padding: 1px 6px;
+  line-height: 1.2;
+  opacity: 0;
+  transform: translateY(-1px);
+  transition: opacity 150ms ease, transform 150ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.ds-prompt-status-badge.is-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .ds-prompt-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  flex: 0 0 auto;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  flex: 0 0 auto !important;
 }
 
-.ds-prompt-icon-btn {
-  appearance: none;
-  border: 1px solid var(--ds-border, #353940);
-  background: var(--ds-panel-2, #202328);
-  color: var(--ds-text, #e5e7eb);
-  border-radius: var(--ds-ui-control-radius, 5px) !important;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  padding: 0;
-  margin: 0;
-  line-height: 1;
-  flex: 0 0 24px;
-  transition: border-color 100ms ease, background 100ms ease, color 100ms ease;
-}
-
-.ds-prompt-icon-btn:hover {
-  border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
-  background: var(--ds-panel, #1d1f23);
-}
-
-.ds-prompt-icon-btn.active {
-  color: var(--ds-accent, #67e8f9);
-  border-color: var(--ds-accent, #67e8f9);
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 12%, var(--ds-panel-2, #202328));
-}
-
-.ds-prompt-icon-btn.is-success {
-  border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-prompt-icon-btn.is-error {
-  border-color: var(--ds-error, #ef4444);
-  color: var(--ds-error, #ef4444);
-}
-
-.ds-prompt-editor {
-  flex: 1 1 0;
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius);
-  overflow: hidden;
-  background: var(--ds-panel-2);
-}
-
-.ds-prompt-textarea {
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 0;
-  display: block;
-  resize: none;
-  border: 0;
-  outline: 0;
-  margin: 0;
-  padding: 6px 10px;
-  background: transparent;
-  color: var(--ds-text);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.42;
-  user-select: text;
-  overflow: auto;
-}
-
-.ds-prompt-textarea::placeholder { color: var(--ds-text-muted); opacity: .72; }
-.ds-prompt-textarea:focus { box-shadow: inset 0 0 0 1px var(--ds-accent); }
-
-.ds-prompt-preview {
-  display: none;
-  flex: 0 0 44%;
-  min-height: 0;
-  max-height: 55%;
-  border-top: 1px solid var(--ds-border);
-  background: var(--ds-bg);
-  flex-direction: column;
-}
-
-.ds-prompt-root.is-expanded .ds-prompt-preview { display: flex; }
-
-.ds-prompt-preview-head {
-  height: 26px;
-  flex: 0 0 26px;
-  display: flex;
-  align-items: center;
-  padding: 0 9px;
-  border-bottom: 1px solid var(--ds-border);
-  color: var(--ds-text-muted);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .25px;
-  text-transform: uppercase;
-}
-
-.ds-prompt-preview-text {
-  flex: 1 1 0;
-  min-height: 0;
-  padding: 8px 9px;
-  color: var(--ds-text);
-  font-size: 11px;
-  line-height: 1.42;
-  white-space: pre-wrap;
-  overflow: auto;
-  user-select: text;
-}
-
-.ds-prompt-resize-handle {
-  position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  color: var(--ds-text-muted);
-  cursor: nwse-resize;
-  z-index: 5;
-  touch-action: none;
-  transition: color 100ms ease, background 100ms ease;
-}
-
-.ds-prompt-resize-handle svg {
-  width: 13px;
-  height: 13px;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-
-.ds-prompt-resize-handle:hover,
-.ds-prompt-resize-handle.is-active {
-  color: var(--ds-accent);
-  background: color-mix(in srgb, var(--ds-accent) 14%, transparent);
-}
-
-.ds-prompt-status {
-  min-width: 0;
-  max-width: 80px;
-  color: var(--ds-text-muted);
-  font-size: 9.5px;
-  line-height: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 120ms ease;
-  pointer-events: none;
-}
-
-.ds-prompt-status.is-visible {
-  opacity: 1;
-}
-
-.ds-prompt-root ::-webkit-scrollbar { width: 6px; height: 6px; }
-.ds-prompt-root ::-webkit-scrollbar-track { background: transparent; }
-.ds-prompt-root ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--ds-text-muted) 35%, transparent);
-  border-radius: 3px;
-}
-.ds-prompt-root ::-webkit-scrollbar-thumb:hover { background: var(--ds-accent); }
-
-@media (max-width: 360px) {
-  .ds-prompt-title { font-size: 11px; }
-  .ds-prompt-status { display: none; }
-}
-
-/* Trigger placement control */
 .ds-prompt-trigger-control {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  height: 24px;
-  padding: 2px;
-  border: 1px solid var(--ds-border, #353940);
-  border-radius: var(--ds-ui-control-radius, 5px);
-  background: var(--ds-panel-2, #202328);
-  flex: 0 0 auto;
+  height: 22px;
+  padding: 1px;
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  flex-shrink: 0;
+  pointer-events: auto;
 }
 
 .ds-prompt-trigger-label {
-  padding: 0 6px;
-  color: var(--ds-text-muted, #9ca3af);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
+  color: var(--ds-color-muted-text, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 5px;
   user-select: none;
 }
 
-.ds-prompt-segment {
+.ds-prompt-seg {
   appearance: none;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--ds-text-muted, #9ca3af);
+  border: 1px solid transparent !important;
+  border-radius: calc(var(--ds-radius-control, 5px) - 2px) !important;
+  background: transparent !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
   cursor: pointer;
-  font: inherit;
-  font-size: 9.5px;
-  font-weight: 600;
-  height: 20px;
-  min-width: 44px;
-  padding: 0 8px;
-  line-height: 18px;
-  box-shadow: none !important;
-  transition: all var(--ds-ui-transition, 120ms ease);
+  font-family: inherit;
+  font-size: 9.5px !important;
+  font-weight: 600 !important;
+  height: 18px !important;
+  min-width: 40px !important;
+  padding: 0 6px !important;
+  line-height: 16px !important;
+  transition: all var(--ds-transition, 120ms ease);
 }
 
-.ds-prompt-segment:hover {
-  color: var(--ds-text, #e5e7eb);
-  background: var(--ds-btn-hover, #1c2130);
+.ds-prompt-seg:hover {
+  color: var(--ds-color-text, #e5e7eb) !important;
+  background: var(--ds-btn-hover, #1e2433) !important;
 }
 
-.ds-prompt-segment.active {
-  background: var(--ds-panel, var(--ds-panel-2, #21252d));
-  color: var(--ds-accent, #67e8f9);
-  border-color: var(--ds-border, #343a44);
-  box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9) !important;
-  font-weight: 700;
+.ds-prompt-seg.is-active,
+.ds-prompt-seg[aria-pressed="true"] {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  font-weight: 700 !important;
+  text-shadow: var(--ds-color-on-accent-shadow, none);
 }
 
-.ds-prompt-segment.active:hover {
-  background: var(--ds-panel-3, #2b303a);
-  color: var(--ds-accent, #67e8f9);
+.ds-prompt-action-btn {
+  pointer-events: auto !important;
 }
 
-@media (max-width: 430px) {
-  .ds-prompt-trigger-label { display: none; }
-  .ds-prompt-segment { padding: 0 5px; }
+.ds-prompt-action-btn.is-active,
+.ds-prompt-action-btn[aria-pressed="true"] {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
 }
 
-/* Central DS geometry owns the node-face inset. Keep Prompt-specific rules
-   limited to its layout/content rather than inventing another shell. */
-.ds-prompt-root {
-  gap: var(--ds-ui-gap-sm) !important;
-  padding: var(--ds-ui-shell-inset) !important;
+.ds-prompt-body {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--ds-gap-sm, 6px) !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  pointer-events: none !important;
 }
-.ds-prompt-icon-btn {
-  height: 24px !important;
-  width: 24px !important;
-  min-width: 24px !important;
-  border-radius: var(--ds-ui-control-radius, 5px) !important;
+
+.ds-prompt-textarea {
+  box-sizing: border-box !important;
+  align-self: stretch !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: 1 1 0 !important;
+  margin: 0 !important;
+  padding: 8px 10px !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  resize: none !important;
+  outline: none !important;
+  user-select: text !important;
+  pointer-events: auto !important;
+  transition: border-color var(--ds-transition, 120ms ease), box-shadow var(--ds-transition, 120ms ease) !important;
+}
+
+.ds-prompt-textarea::placeholder {
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  opacity: 0.6 !important;
+}
+
+.ds-prompt-textarea:focus {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  box-shadow: 0 0 0 1px var(--ds-color-focus-ring) !important;
+}
+
+.ds-prompt-preview-wrap {
+  display: none;
+  flex: 0 0 45% !important;
+  min-height: 50px !important;
+  max-height: 50% !important;
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-color-base, #0b0d12);
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.ds-prompt-card.is-expanded .ds-prompt-preview-wrap {
+  display: flex !important;
+}
+
+.ds-prompt-preview-head {
+  height: 22px !important;
+  flex: 0 0 22px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 8px !important;
+  background: var(--ds-color-panel-2, #161a23);
+  border-bottom: 1px solid var(--ds-color-border, #242a36);
+  user-select: none;
+}
+
+.ds-prompt-preview-title {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+.ds-prompt-preview-subtitle {
+  font-size: 8.5px !important;
+  color: var(--ds-color-muted-text, #9ca3af);
+  opacity: 0.7;
+}
+
+.ds-prompt-preview-content {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  padding: 6px 8px !important;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  font-family: monospace, var(--ds-font, Inter, sans-serif) !important;
+  white-space: pre-wrap !important;
+  overflow-y: auto !important;
+  user-select: text !important;
+}
+
+@media (max-width: 400px) {
+  .ds-prompt-trigger-label {
+    display: none;
+  }
+  .ds-prompt-preview-subtitle {
+    display: none;
+  }
 }

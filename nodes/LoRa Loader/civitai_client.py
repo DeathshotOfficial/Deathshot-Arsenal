@@ -145,45 +145,198 @@ def _api_get(url, api_key=None, timeout=8):
         return json.loads(r.read().decode("utf-8"))
 
 
-def _extract_api_data(payload):
+def _clean_word_list(value):
+    """Normalize the different trigger-word containers returned by Civitai."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        # Civitai normally returns a list, but some cached/legacy payloads can
+        # contain a comma-separated string.
+        return [x.strip() for x in value.split(",") if x.strip()]
+    if isinstance(value, (list, tuple, set)):
+        return [str(x).strip() for x in value if str(x).strip()]
+    return []
+
+
+def _extract_triggers_from_text(text):
+    """Regex parser to detect trigger/activation words mentioned in HTML descriptions."""
+    if not text or not isinstance(text, str):
+        return []
+    import re
+    # Remove HTML tags while preserving spaces
+    clean = re.sub(r"<[^>]+>", " ", text)
+    patterns = [
+        r"(?:trigger\s*words?|trigger\s*word|activation\s*words?|activation\s*tag|activation\s*keyword|triggers?)\s*[:=\-–—]\s*([a-zA-Z0-9_\-,\s/]+)",
+        r"(?:use\s*keyword|activation\s*phrase)\s*[:=\-–—]\s*([a-zA-Z0-9_\-,\s/]+)",
+    ]
+    found = []
+    for pat in patterns:
+        for match in re.findall(pat, clean, re.IGNORECASE):
+            parts = re.split(r"[,/\n]", match)
+            for p in parts:
+                item = p.strip()
+                if item and len(item) < 50 and not any(bad in item.lower() for bad in ["http", "patreon", "civitai", "model", "download"]):
+                    found.append(item)
+    return found
+
+
+def _fetch_parent_model_triggers(model_id, primary_host="https://civitai.com", api_key=None):
+    """Fetch parent model to recover triggers from other versions, descriptions, or tags."""
+    if not model_id:
+        return {"trainedWords": [], "images": []}
+    words = []
+    images = []
+    urls = [
+        f"{primary_host}/api/v1/models/{model_id}",
+    ]
+    alt_host = "https://civitai.red" if "civitai.com" in primary_host else "https://civitai.com"
+    urls.append(f"{alt_host}/api/v1/models/{model_id}")
+
+    for url in urls:
+        try:
+            model_data = _api_get(url, api_key=api_key, timeout=8)
+            if not isinstance(model_data, dict):
+                continue
+
+            # 1. Search all model versions (many creators only set triggers on v1.0)
+            versions = model_data.get("modelVersions")
+            if isinstance(versions, list):
+                for v in versions:
+                    if isinstance(v, dict):
+                        tw = v.get("trainedWords")
+                        words.extend(_clean_word_list(tw))
+                        # Also collect sample images if available
+                        if not images and isinstance(v.get("images"), list):
+                            for img in v["images"]:
+                                if isinstance(img, dict) and img.get("url"):
+                                    images.append(img["url"])
+
+            # 2. Check model description and version descriptions for trigger regex
+            if not words:
+                desc = model_data.get("description", "")
+                words.extend(_extract_triggers_from_text(desc))
+                if isinstance(versions, list):
+                    for v in versions:
+                        if isinstance(v, dict):
+                            words.extend(_extract_triggers_from_text(v.get("description", "")))
+
+            # 3. Fallback to tags if triggers are still empty
+            if not words and isinstance(model_data.get("tags"), list):
+                tags = [str(t).strip() for t in model_data["tags"] if str(t).strip()]
+                # Keep top 12 relevant tags as fallback prompt words
+                words.extend(tags[:12])
+
+            if words or images:
+                break
+        except Exception:
+            pass
+
+    # Deduplicate preserving order
+    seen = set()
+    trained_words = []
+    for w in words:
+        k = w.casefold()
+        if k not in seen:
+            seen.add(k)
+            trained_words.append(w)
+
+    return {"trainedWords": trained_words, "images": images}
+
+
+def _extract_api_data(payload, primary_host="https://civitai.com", api_key=None):
     if not isinstance(payload, dict):
         return {"trainedWords": [], "images": []}
+
+    words = []
+
+    def add(value):
+        words.extend(_clean_word_list(value))
+
+    # Current Civitai model-version responses expose trainedWords at the top level
+    add(payload.get("trainedWords"))
+
+    # Check nested version collections
+    for key in ("modelVersions", "versions"):
+        versions = payload.get(key)
+        if isinstance(versions, list):
+            for version in versions:
+                if isinstance(version, dict):
+                    add(version.get("trainedWords"))
+
+    model = payload.get("model")
+    if isinstance(model, dict):
+        add(model.get("trainedWords"))
+
+    model_id = payload.get("modelId")
+    images = [
+        img.get("url")
+        for img in payload.get("images", [])
+        if isinstance(img, dict) and img.get("url")
+    ]
+
+    # If the version has no trainedWords, query parent model on CivitAI
+    if not words and model_id:
+        parent_meta = _fetch_parent_model_triggers(model_id, primary_host=primary_host, api_key=api_key)
+        words.extend(parent_meta["trainedWords"])
+        if not images:
+            images.extend(parent_meta["images"])
+
+    # Deduplicate while preserving Civitai order.
+    seen = set()
+    trained_words = []
+    for word in words:
+        k = word.casefold()
+        if k not in seen:
+            seen.add(k)
+            trained_words.append(word)
+
     return {
-        "trainedWords": [str(x) for x in payload.get("trainedWords", []) if str(x).strip()],
-        "images": [
-            img.get("url")
-            for img in payload.get("images", [])
-            if isinstance(img, dict) and img.get("url")
-        ],
-        "modelId": payload.get("modelId"),
+        "trainedWords": trained_words,
+        "images": images,
+        "modelId": model_id,
         "modelVersionId": payload.get("id"),
         "raw": payload,
     }
 
 
 def inspect_lora_metadata(name, api_key=None, force_online=False, allow_nsfw=True, site_mode="Standard"):
+    import urllib.parse
+    import re
     path = get_lora_full_path(name)
     if not path:
         return {"ok": False, "error": "LoRA file not found.", "name": name, "trainedWords": [], "source": "missing"}
 
-    # Local cache first.
+    embedded = _inspect_safetensors_header(path)
+    embedded_words = _extract_local_trigger_words(embedded)
+
+    # Local cache check
     if not force_online:
         for candidate in _cache_candidates(path):
             data = _read_json(candidate)
             if data:
                 words = _extract_local_trigger_words(data)
-                return {
-                    "ok": True,
-                    "name": name,
-                    "path": path,
-                    "trainedWords": words,
-                    "images": data.get("images", []) if isinstance(data.get("images"), list) else [],
-                    "source": "cache",
-                    "cachedAt": os.path.getmtime(candidate),
-                }
+                # If cache has trigger words, return immediately
+                if words:
+                    return {
+                        "ok": True,
+                        "name": name,
+                        "path": path,
+                        "trainedWords": words,
+                        "images": data.get("images", []) if isinstance(data.get("images"), list) else [],
+                        "source": "cache",
+                        "cachedAt": os.path.getmtime(candidate),
+                    }
+                # If cache has no trigger words, but embedded safetensors does, use embedded
+                if embedded_words:
+                    return {
+                        "ok": True,
+                        "name": name,
+                        "path": path,
+                        "trainedWords": embedded_words,
+                        "images": data.get("images", []) if isinstance(data.get("images"), list) else [],
+                        "source": "safetensors",
+                    }
 
-    embedded = _inspect_safetensors_header(path)
-    embedded_words = _extract_local_trigger_words(embedded)
     if embedded_words and not force_online:
         return {
             "ok": True,
@@ -214,32 +367,69 @@ def inspect_lora_metadata(name, api_key=None, force_online=False, allow_nsfw=Tru
         urls.append(f"{backup_host}/api/v1/model-versions/by-hash/{hv}")
 
     last_error = None
+    parsed = None
     for url in urls:
         try:
             payload = _api_get(url, api_key=api_key)
-            parsed = _extract_api_data(payload)
-            if not allow_nsfw and isinstance(parsed.get("raw"), dict):
-                parsed["images"] = []
-            cache_data = {
-                "trainedWords": parsed["trainedWords"],
-                "images": parsed["images"],
-                "modelId": parsed.get("modelId"),
-                "modelVersionId": parsed.get("modelVersionId"),
-                "sourceUrl": url,
-            }
-            cache_path = Path(path).with_suffix(".civitai.info")
-            _write_json(cache_path, cache_data)
-            return {
-                "ok": True,
-                "name": name,
-                "path": path,
-                "trainedWords": parsed["trainedWords"],
-                "images": parsed["images"],
-                "source": "civitai",
-                "sourceUrl": url,
-            }
+            parsed = _extract_api_data(payload, primary_host=primary_host, api_key=api_key)
+            if parsed:
+                break
         except Exception as exc:
             last_error = str(exc)
+
+    # Search Fallback: If hash lookup failed (e.g. pruned/re-saved model), search by model stem name
+    if not parsed or (not parsed.get("trainedWords") and not parsed.get("modelId")):
+        stem = Path(path).stem
+        clean_query = re.sub(r"([_\-\.]v\d+.*|\.safetensors$|\.pt$|[-_])", " ", stem).strip()
+        if clean_query and len(clean_query) >= 3:
+            search_urls = [
+                f"{primary_host}/api/v1/models?query={urllib.parse.quote(clean_query)}&types=LORA&limit=3",
+                f"{backup_host}/api/v1/models?query={urllib.parse.quote(clean_query)}&types=LORA&limit=3",
+            ]
+            for s_url in search_urls:
+                try:
+                    s_data = _api_get(s_url, api_key=api_key, timeout=6)
+                    items = s_data.get("items", []) if isinstance(s_data, dict) else []
+                    if items and isinstance(items[0], dict):
+                        best_model = items[0]
+                        m_id = best_model.get("id")
+                        if m_id:
+                            parent_meta = _fetch_parent_model_triggers(m_id, primary_host=primary_host, api_key=api_key)
+                            parsed = {
+                                "trainedWords": parent_meta["trainedWords"],
+                                "images": parent_meta["images"],
+                                "modelId": m_id,
+                                "modelVersionId": None,
+                                "raw": best_model,
+                            }
+                            break
+                except Exception as exc:
+                    last_error = str(exc)
+
+    if parsed:
+        if not parsed["trainedWords"] and embedded_words:
+            parsed["trainedWords"] = list(embedded_words)
+
+        if not allow_nsfw and isinstance(parsed.get("raw"), dict):
+            parsed["images"] = []
+        cache_data = {
+            "trainedWords": parsed["trainedWords"],
+            "images": parsed["images"],
+            "modelId": parsed.get("modelId"),
+            "modelVersionId": parsed.get("modelVersionId"),
+            "sourceUrl": urls[0] if urls else "",
+        }
+        cache_path = Path(path).with_suffix(".civitai.info")
+        _write_json(cache_path, cache_data)
+        return {
+            "ok": True,
+            "name": name,
+            "path": path,
+            "trainedWords": parsed["trainedWords"],
+            "images": parsed["images"],
+            "source": "civitai",
+            "modelId": parsed.get("modelId"),
+        }
 
     # Graceful offline fallback.
     return {

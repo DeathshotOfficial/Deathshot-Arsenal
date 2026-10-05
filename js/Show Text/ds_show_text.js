@@ -1,13 +1,16 @@
 /* ============================================================
    DS Show Text - DeathshotArsenal
    Read-only STRING preview with persistent native source widget.
-
-   The copy icon is the Lucide "Copy" icon path, embedded locally so the
-   node has no CDN/runtime package dependency.
+   Built with DeathshotArsenal UIElements design system.
    ============================================================ */
 
 import { app } from "/scripts/app.js";
-import { protectDSResizeCorners } from "../Shared/ds_ui_system.js";
+import {
+  Card,
+  DSIcon,
+  normalizeDSWidgetHost,
+  protectDSResizeCorners,
+} from "../UIElements/index.js";
 
 const cssId = "ds-show-text-css";
 if (!document.getElementById(cssId)) {
@@ -17,12 +20,6 @@ if (!document.getElementById(cssId)) {
   cssLink.href = "/extensions/DeathshotArsenal/Show Text/ds_show_text.css";
   document.head.appendChild(cssLink);
 }
-
-const ICONS = {
-  text: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 6v12M17 6v12M5 18h4M15 18h4"/></svg>`,
-  // Lucide Copy icon.
-  copy: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2v2"/></svg>`,
-};
 
 function getWidget(node, name) {
   return (node.widgets || []).find((widget) => widget?.name === name) || null;
@@ -71,54 +68,6 @@ function setPreview(node, value) {
   node._dsShowTextValue = text;
   if (node._dsShowTextPreview) {
     node._dsShowTextPreview.value = text;
-    node._dsShowTextPreview.dataset.empty = text.length ? "false" : "true";
-  }
-}
-
-function makeRoot(node) {
-  const root = document.createElement("div");
-  root.className = "ds-show-text-root";
-  root.dataset.dsThemed = "true";
-  root.innerHTML = `
-    <div class="ds-show-text-header">
-      <div class="ds-show-text-title">
-        <span class="ds-show-text-title-icon">${ICONS.text}</span>
-        <span>Show Text</span>
-      </div>
-      <span class="ds-show-text-status" data-status aria-live="polite"></span>
-      <button class="ds-show-text-copy ds-ui-button ds-ui-icon-button" type="button"
-              data-copy title="Copy text" aria-label="Copy text">
-        ${ICONS.copy}
-      </button>
-    </div>
-    <div class="ds-show-text-body">
-      <textarea class="ds-show-text-preview" data-preview readonly spellcheck="false"
-                aria-label="Text preview" placeholder="Nothing to display"></textarea>
-    </div>
-  `;
-
-  node._dsShowTextRoot = root;
-  node._dsShowTextPreview = root.querySelector("[data-preview]");
-  node._dsShowTextStatus = root.querySelector("[data-status]");
-  node._dsShowTextCopy = root.querySelector("[data-copy]");
-
-  node._dsShowTextCopy.addEventListener("click", async (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    await node._dsShowTextCopyValue?.();
-  });
-
-  return root;
-}
-
-function setStatus(node, message, kind = "") {
-  const status = node._dsShowTextStatus;
-  const button = node._dsShowTextCopy;
-  if (status) status.textContent = message || "";
-  if (button) {
-    button.classList.remove("is-success", "is-error");
-    if (kind === "success") button.classList.add("is-success");
-    if (kind === "error") button.classList.add("is-error");
   }
 }
 
@@ -130,7 +79,7 @@ async function copyText(text) {
       return true;
     }
   } catch (_) {
-    // Fall through to the compatibility path below.
+    // Fallback for non-secure contexts
   }
 
   try {
@@ -149,6 +98,53 @@ async function copyText(text) {
   } catch (_) {
     return false;
   }
+}
+
+function buildShowTextUI(node) {
+  const card = Card({
+    title: "Show Text",
+    icon: "terminal",
+    className: "ds-show-text-card",
+  });
+
+  const actionsGroup = card.head?.querySelector(".ds-ui-card-actions");
+
+  const statusEl = document.createElement("span");
+  statusEl.className = "ds-show-text-status";
+  statusEl.setAttribute("aria-live", "polite");
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-show-text-copy-btn";
+  copyBtn.title = "Copy text";
+  copyBtn.setAttribute("aria-label", "Copy text");
+  copyBtn.appendChild(DSIcon("copy", { size: 12 }));
+
+  if (actionsGroup) {
+    actionsGroup.appendChild(statusEl);
+    actionsGroup.appendChild(copyBtn);
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.className = "ds-show-text-area";
+  textarea.readOnly = true;
+  textarea.spellcheck = false;
+  textarea.placeholder = "Nothing to display";
+  textarea.setAttribute("aria-label", "Text preview");
+  card.body.appendChild(textarea);
+
+  node._dsShowTextCard = card;
+  node._dsShowTextPreview = textarea;
+  node._dsShowTextStatus = statusEl;
+  node._dsShowTextCopy = copyBtn;
+
+  copyBtn.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    await node._dsShowTextCopyValue?.();
+  });
+
+  return card;
 }
 
 app.registerExtension({
@@ -179,21 +175,38 @@ app.registerExtension({
       const current = Array.isArray(this.size) ? this.size : [360, 220];
       this.size = [
         Math.max(Number(current[0]) || 360, 300),
-        Math.max(Number(current[1]) || 220, 170),
+        Math.max(Number(current[1]) || 220, 160),
       ];
 
-      const root = makeRoot(this);
-      this._dsShowTextWidget = this.addDOMWidget("ds_show_text_ui", "div", root, {
+      const card = buildShowTextUI(this);
+
+      const CARD_MARGIN = 5;
+      const MIN_CARD_HEIGHT = 120;
+      const MIN_WIDGET_HEIGHT = MIN_CARD_HEIGHT + (CARD_MARGIN * 2);
+
+      const domWidget = this.addDOMWidget("ds_show_text_ui", "custom", card.root, {
         serialize: false,
-        hideOnZoom: false,
-        getMinHeight: () => 170 - 30,
-        getHeight: () => Math.max(1, (Number(this.size?.[1]) || 220) - 30),
+        margin: CARD_MARGIN,
+        getMinHeight: () => MIN_WIDGET_HEIGHT,
+        getMaxHeight: () => {
+          const widgetY = Number(domWidget?.y ?? this._getWidgetY?.() ?? 0);
+          const nodeHeight = Number(this.size?.[1] ?? 0);
+          return Math.max(MIN_WIDGET_HEIGHT, nodeHeight - widgetY);
+        },
+        getHeight: () => {
+          const widgetY = Number(domWidget?.y ?? this._getWidgetY?.() ?? 0);
+          const nodeHeight = Number(this.size?.[1] ?? 0);
+          return Math.max(MIN_WIDGET_HEIGHT, nodeHeight - widgetY);
+        },
       });
+
+      this._dsShowTextWidget = domWidget;
+      normalizeDSWidgetHost(card.root, this, { shell: false });
 
       const initial = readNativeText(this);
       setPreview(this, initial);
 
-      this._dsShowTextUnsubscribe = window.DSGlobalTheme?.bindNode?.(root, this);
+      this._dsShowTextUnsubscribe = window.DSGlobalTheme?.bindNode?.(card.root, this);
       if (window.DSGlobalTheme) {
         window.DSGlobalTheme.applyNodeBase?.(this);
       }
@@ -201,13 +214,41 @@ app.registerExtension({
       this._dsShowTextCopyValue = async () => {
         const value = normalizePreviewValue(this._dsShowTextPreview?.value ?? readNativeText(this));
         const ok = await copyText(value);
+        const status = this._dsShowTextStatus;
+        const button = this._dsShowTextCopy;
+
         if (ok) {
-          setStatus(this, value ? "Copied" : "Copied empty text", "success");
+          if (status) {
+            status.textContent = value ? "Copied" : "Copied empty text";
+            status.classList.remove("is-error");
+            status.classList.add("is-success");
+          }
+          if (button) {
+            button.replaceChildren(DSIcon("check", { size: 12, color: "var(--ds-color-success, #34d399)" }));
+            button.classList.add("is-success");
+          }
         } else {
-          setStatus(this, "Copy failed", "error");
+          if (status) {
+            status.textContent = "Copy failed";
+            status.classList.remove("is-success");
+            status.classList.add("is-error");
+          }
+          if (button) {
+            button.classList.add("is-error");
+          }
         }
+
         window.clearTimeout(this._dsShowTextStatusTimer);
-        this._dsShowTextStatusTimer = window.setTimeout(() => setStatus(this, ""), 1400);
+        this._dsShowTextStatusTimer = window.setTimeout(() => {
+          if (status) {
+            status.textContent = "";
+            status.classList.remove("is-success", "is-error");
+          }
+          if (button) {
+            button.replaceChildren(DSIcon("copy", { size: 12 }));
+            button.classList.remove("is-success", "is-error");
+          }
+        }, 1400);
       };
 
       return result;
@@ -241,7 +282,6 @@ app.registerExtension({
         }
       } catch (_) {
         setPreview(this, readNativeText(this));
-        setStatus(this, "Preview update failed", "error");
       }
       return result;
     };
@@ -282,16 +322,12 @@ app.registerExtension({
     nodeType.prototype.onResize = function (size) {
       if (size) {
         size[0] = Math.max(Number(size[0]) || 0, 300);
-        size[1] = Math.max(Number(size[1]) || 0, 170);
+        size[1] = Math.max(Number(size[1]) || 0, 160);
       }
       const result = originalResize
         ? originalResize.apply(this, arguments)
         : undefined;
-      if (this._dsShowTextRoot && size) {
-        const height = Math.max(1, size[1] - 30);
-        this._dsShowTextRoot.style.height = `${height}px`;
-      }
-      this.setDirtyCanvas(true, true);
+      this.setDirtyCanvas?.(true, true);
       return result;
     };
 

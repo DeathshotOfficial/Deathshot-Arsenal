@@ -1,12 +1,13 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
+import { DSIcon, normalizeDSWidgetHost, protectDSResizeCorners } from "../UIElements/index.js";
 
 const TYPE = "DS_ImagePreview";
 const EXT = "DeathshotArsenal.DSImagePreview";
 const MODE_PROP = "ds_image_preview_mode";
 const DEFAULT_SIZE = [620, 650];
-const MIN_SIZE = [440, 430];
-const CSS_ID = "ds-image-preview-css-v2";
+const MIN_SIZE = [400, 360];
+const CSS_ID = "ds-image-preview-css-v7";
 
 function log(...args) { console.log("[DS Image Preview]", ...args); }
 function error(...args) { console.error("[DS Image Preview]", ...args); }
@@ -20,7 +21,7 @@ function loadCss() {
     const link = document.createElement("link");
     link.id = CSS_ID;
     link.rel = "stylesheet";
-    link.href = "/extensions/DeathshotArsenal/Image Preview/ds_image_preview.css?v=2";
+    link.href = "/extensions/DeathshotArsenal/Image Preview/ds_image_preview.css?v=7";
     link.onload = resolve;
     link.onerror = resolve;
     document.head.appendChild(link);
@@ -74,7 +75,39 @@ function cleanupNode(node) {
 function persist(node) {
   node.properties ??= {};
   node.properties[MODE_PROP] = state(node).mode;
-  node.properties.ds_image_preview_version = 2;
+  node.properties.ds_image_preview_version = 3;
+}
+
+function getModeHelper(mode) {
+  return mode === "save"
+    ? "SAVE · Every queued image is written as a separate PNG."
+    : "PREVIEW · Inspect the image without creating output files.";
+}
+
+function updatePlaceholder(node, isError = false) {
+  const s = state(node);
+  const root = node._dsImagePreviewRoot;
+  if (!root) return;
+  const ph = root.querySelector(".ds-ip-placeholder");
+  if (!ph) return;
+
+  const strong = ph.querySelector("strong");
+  const span = ph.querySelector("span");
+
+  if (isError) {
+    if (strong) strong.textContent = "PREVIEW UNAVAILABLE";
+    if (span) span.textContent = s.mode === "save"
+      ? "Run the workflow to save and preview the image."
+      : "Run the workflow to preview the image here.";
+    return;
+  }
+
+  if (strong) strong.textContent = "READY";
+  if (span) {
+    span.textContent = s.mode === "save"
+      ? "Run the workflow to save and preview the image here."
+      : "Run the workflow to preview the image here.";
+  }
 }
 
 function toast(node, text) {
@@ -90,17 +123,23 @@ function toast(node, text) {
 function renderMode(node) {
   const s = state(node), root = node._dsImagePreviewRoot;
   if (!root) return;
-  root.querySelectorAll(".ds-ip-mode").forEach((b) => b.classList.toggle("active", b.dataset.mode === s.mode));
-  const note = root.querySelector(".ds-ip-mode-note");
-  if (note) note.textContent = s.mode === "save"
-    ? "SAVE · preview shown and every queued image is written as a separate PNG."
-    : "PREVIEW · inspect the image without creating output files.";
+  root.querySelectorAll(".ds-ip-tab-btn").forEach((b) => {
+    const isActive = b.dataset.mode === s.mode;
+    b.classList.toggle("active", isActive);
+    b.classList.toggle("is-active", isActive);
+    b.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  if (!s.saveConfirmTimer) {
+    const note = root.querySelector(".ds-ip-helper");
+    if (note) note.textContent = getModeHelper(s.mode);
+  }
 }
 
 function setMode(node, mode) {
   state(node).mode = mode === "save" ? "save" : "preview";
   persist(node);
   renderMode(node);
+  updatePlaceholder(node);
   node.setDirtyCanvas?.(true, true);
   log("mode", state(node).mode, "node", node.id);
 }
@@ -122,12 +161,17 @@ function setImage(node, info) {
   if (dims) dims.textContent = `${s.width} × ${s.height}${s.count > 1 ? ` · ${s.count} images` : ""}`;
   if (img) {
     img.onload = () => { img.hidden = false; if (ph) ph.hidden = true; };
-    img.onerror = () => { img.hidden = true; if (ph) { ph.hidden = false; ph.querySelector("strong").textContent = "PREVIEW UNAVAILABLE"; } };
+    img.onerror = () => {
+      img.hidden = true;
+      if (ph) {
+        ph.hidden = false;
+        updatePlaceholder(node, true);
+      }
+    };
     img.src = url(`/ds/image_preview/preview?file=${encodeURIComponent(s.file)}&t=${Date.now()}`);
   }
-  if (ph) {
-    ph.querySelector("strong").textContent = "READY";
-    ph.querySelector("span").textContent = s.mode === "save" ? "Image saved and ready to inspect." : "Run the workflow to preview the image here.";
+  if (ph && img.hidden) {
+    updatePlaceholder(node);
   }
   if (s.mode === "save" && info.saved?.length) {
     showSaveConfirmation(node, {
@@ -140,48 +184,35 @@ function setImage(node, info) {
 }
 
 function showSaveConfirmation(node, { ok, filename, path, error: errMsg }) {
-  const root = node._dsImagePreviewRoot; if (!root) return;
-  const container = root.querySelector(".ds-ip-actions"); if (!container) return;
+  const root = node._dsImagePreviewRoot;
+  if (!root) return;
+  const container = root.querySelector(".ds-ip-info-message");
+  if (!container) return;
   const s = state(node);
+
   if (s.saveConfirmTimer) {
     clearTimeout(s.saveConfirmTimer);
     s.saveConfirmTimer = null;
   }
-  const old = container.querySelector(".ds-save-confirm");
-  if (old) old.remove();
-
-  const overlay = document.createElement("div");
-  overlay.className = `ds-save-confirm ${ok ? "ds-save-confirm-success" : "ds-save-confirm-error"}`;
-  try { window.DSGlobalTheme?.applyToElement?.(overlay); } catch (_) {}
 
   const safeFile = filename ? String(filename) : (ok ? "image.png" : "file");
   const safePath = path ? String(path) : "";
   const safeErr = errMsg ? String(errMsg) : "Could not save file";
 
-  if (ok) {
-    overlay.title = safePath ? `${safeFile} → ${safePath}` : safeFile;
-    overlay.innerHTML = `
-      <span class="ds-save-confirm-icon">✓</span>
-      <span class="ds-save-confirm-title">Saved</span>
-      <span class="ds-save-confirm-sep">·</span>
-      <span class="ds-save-confirm-name" title="${safeFile}">${safeFile}</span>
-      ${safePath ? `<span class="ds-save-confirm-sep">·</span><span class="ds-save-confirm-path" title="${safePath}">${safePath}</span>` : ""}
-    `;
-  } else {
-    overlay.title = safeErr;
-    overlay.innerHTML = `
-      <span class="ds-save-confirm-icon">✕</span>
-      <span class="ds-save-confirm-title">Save failed</span>
-      <span class="ds-save-confirm-sep">·</span>
-      <span class="ds-save-confirm-name" title="${safeErr}">${safeErr}</span>
-    `;
-  }
+  container.innerHTML = `
+    <div class="ds-ip-save-confirm ${ok ? "is-success" : "is-error"}" title="${ok ? (safePath ? `${safeFile} → ${safePath}` : safeFile) : safeErr}">
+      <span class="ds-ip-save-confirm-icon">${ok ? "✓" : "✕"}</span>
+      <span class="ds-ip-save-confirm-title">${ok ? "Saved" : "Save failed"}</span>
+      <span>·</span>
+      <span class="ds-ip-save-confirm-name">${ok ? safeFile : safeErr}</span>
+      ${ok && safePath ? `<span>·</span><span class="ds-ip-save-confirm-path">${safePath}</span>` : ""}
+    </div>
+  `;
 
-  container.appendChild(overlay);
   s.saveConfirmTimer = setTimeout(() => {
-    overlay.remove();
     s.saveConfirmTimer = null;
-  }, 2000);
+    container.innerHTML = `<span class="ds-ip-helper">${getModeHelper(s.mode)}</span>`;
+  }, 2500);
 }
 
 async function copyImage(node) {
@@ -214,7 +245,8 @@ async function saveImage(node) {
   const saveBtn = root?.querySelector(".ds-ip-save");
   if (saveBtn) {
     saveBtn.disabled = true;
-    saveBtn.textContent = "SAVING…";
+    saveBtn.classList.add("is-saving");
+    saveBtn.replaceChildren(DSIcon("refresh-cw", { size: 14 }));
   }
   try {
     const r = await api.fetchApi("/ds/image_preview/save", {
@@ -231,46 +263,67 @@ async function saveImage(node) {
     showSaveConfirmation(node, { ok: false, error: e.message || "Save failed", filename: s.file });
   } finally {
     if (saveBtn) {
+      saveBtn.classList.remove("is-saving");
+      saveBtn.replaceChildren(DSIcon("save", { size: 14 }));
       saveBtn.disabled = !s.file;
-      saveBtn.textContent = "SAVE OUTPUT";
     }
   }
 }
 
 function buildUI(node) {
-  const root = document.createElement("div");
-  root.className = "ds-ip-root";
-  root.dataset.dsThemed = "true";
-  root.innerHTML = `
-    <div class="ds-ip-top">
-      <div class="ds-ip-heading">
-        <span class="ds-ip-mark">DS</span>
-        <strong>IMAGE PREVIEW</strong>
+  const card = document.createElement("div");
+  card.className = "ds-ui-card ds-ip-card";
+  card.dataset.dsThemed = "true";
+
+  card.innerHTML = `
+    <div class="ds-ip-options-row">
+      <div class="ds-ip-tab-group" role="tablist">
+        <button type="button" class="ds-ip-tab-btn active is-active" data-mode="preview" role="tab" aria-selected="true" title="Preview mode · Inspect without saving"></button>
+        <button type="button" class="ds-ip-tab-btn" data-mode="save" role="tab" aria-selected="false" title="Save mode · Write every queued image to disk"></button>
       </div>
-      <div class="ds-ip-status"><span class="ds-ip-dot"></span><span class="ds-ip-status-text">READY</span></div>
+      <button type="button" class="ds-ip-btn ds-ip-copy" title="Copy image to clipboard"></button>
+      <button type="button" class="ds-ip-btn ds-ip-open" title="Open image in new window"></button>
+      <button type="button" class="ds-ip-btn ds-ip-save" title="Save output"></button>
     </div>
-    <div class="ds-ip-modebar">
-      <button class="ds-ip-mode active" data-mode="preview">PREVIEW</button>
-      <button class="ds-ip-mode" data-mode="save">SAVE</button>
-    </div>
-    <div class="ds-ip-mode-note">PREVIEW · inspect the image without creating output files.</div>
-    <div class="ds-ip-actions">
-      <button class="ds-ip-action ds-ip-copy">COPY</button>
-      <button class="ds-ip-action ds-ip-open">OPEN</button>
-      <button class="ds-ip-action ds-ip-save">SAVE OUTPUT</button>
+    <div class="ds-ip-info-row">
+      <div class="ds-ip-info-message">
+        <span class="ds-ip-helper">PREVIEW · Inspect the image without creating output files.</span>
+      </div>
+      <div class="ds-ip-info-meta">
+        <span class="ds-ip-dims"></span>
+        <div class="ds-ip-status"><span class="ds-ip-dot"></span><span class="ds-ip-status-text">READY</span></div>
+      </div>
     </div>
     <div class="ds-ip-preview">
       <img class="ds-ip-image" alt="Image preview" hidden draggable="false">
       <div class="ds-ip-placeholder"><strong>READY</strong><span>Run the workflow to preview the image here.</span></div>
-      <div class="ds-ip-meta"><span class="ds-ip-dims"></span></div>
       <div class="ds-ip-toast"></div>
     </div>
   `;
-  root.querySelectorAll(".ds-ip-mode").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); setMode(node, b.dataset.mode); }));
-  root.querySelector(".ds-ip-copy").addEventListener("click", (e) => { e.stopPropagation(); copyImage(node); });
-  root.querySelector(".ds-ip-open").addEventListener("click", (e) => { e.stopPropagation(); openImage(node); });
-  root.querySelector(".ds-ip-save").addEventListener("click", (e) => { e.stopPropagation(); saveImage(node); });
-  return root;
+
+  // Attach DSIcons
+  const prevBtn = card.querySelector('.ds-ip-tab-btn[data-mode="preview"]');
+  if (prevBtn) prevBtn.appendChild(DSIcon("eye", { size: 13 }));
+
+  const saveTabBtn = card.querySelector('.ds-ip-tab-btn[data-mode="save"]');
+  if (saveTabBtn) saveTabBtn.appendChild(DSIcon("download", { size: 13 }));
+
+  const copyBtn = card.querySelector(".ds-ip-copy");
+  if (copyBtn) copyBtn.appendChild(DSIcon("copy", { size: 14 }));
+
+  const openBtn = card.querySelector(".ds-ip-open");
+  if (openBtn) openBtn.appendChild(DSIcon("square-arrow-out-up-right", { size: 14 }));
+
+  const saveBtn = card.querySelector(".ds-ip-save");
+  if (saveBtn) saveBtn.appendChild(DSIcon("save", { size: 14 }));
+
+  // Event handlers
+  card.querySelectorAll(".ds-ip-tab-btn").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); setMode(node, b.dataset.mode); }));
+  copyBtn.addEventListener("click", (e) => { e.stopPropagation(); copyImage(node); });
+  openBtn.addEventListener("click", (e) => { e.stopPropagation(); openImage(node); });
+  saveBtn.addEventListener("click", (e) => { e.stopPropagation(); saveImage(node); });
+
+  return card;
 }
 
 function install(node) {
@@ -278,22 +331,32 @@ function install(node) {
   node._dsImagePreviewInstalled = true;
   node.resizable = true;
   node.properties ??= {};
-  if (!Array.isArray(node.size) || node.size[0] < MIN_SIZE[0] || node.size[1] < MIN_SIZE[1]) node.size = [...DEFAULT_SIZE];
+
+  if (!Array.isArray(node.size) || node.size[0] < MIN_SIZE[0] || node.size[1] < MIN_SIZE[1]) {
+    node.size = [...DEFAULT_SIZE];
+  }
   state(node).mode = node.properties[MODE_PROP] === "save" ? "save" : "preview";
 
   cleanupNode(node);
+  protectDSResizeCorners(node);
 
-  const root = buildUI(node);
-  node._dsImagePreviewRoot = root;
-  window.DSGlobalTheme?.bindNode?.(root, node);
+  const card = buildUI(node);
+  node._dsImagePreviewRoot = card;
+  normalizeDSWidgetHost(card, node, { shell: false });
+  window.DSGlobalTheme?.bindNode?.(card, node);
 
+  const CARD_MARGIN = 5;
   if (typeof node.addDOMWidget === "function") {
-    node._dsImagePreviewWidget = node.addDOMWidget("ds_image_preview_ui", "div", root, {
+    node._dsImagePreviewWidget = node.addDOMWidget("ds_image_preview_ui", "custom", card, {
       serialize: false,
       hideOnZoom: false,
-      margin: 4,
-      getMinHeight: () => MIN_SIZE[1] - 42,
-      getHeight: () => Math.max(1, (Number(node.size?.[1]) || DEFAULT_SIZE[1]) - 42),
+      margin: CARD_MARGIN,
+      getMinHeight: () => MIN_SIZE[1] - (node._dsImagePreviewWidget?.y || 42) - CARD_MARGIN,
+      getHeight: () => {
+        const widgetY = Number(node._dsImagePreviewWidget?.y ?? 42);
+        const nodeHeight = Number(node.size?.[1] ?? DEFAULT_SIZE[1]);
+        return Math.max(80, nodeHeight - widgetY - CARD_MARGIN);
+      },
     });
   }
   cleanupNode(node);

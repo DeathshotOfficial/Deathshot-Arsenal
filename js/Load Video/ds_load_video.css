@@ -1,217 +1,229 @@
-/* DS Load Video - Deathshot Arsenal Stylesheet */
+/* DS Load Video - Unified UI Elements & Player Stylesheet */
+/* Deathshot Arsenal / DS Node Pack */
 
-.ds-lv-root {
+.ds-lv-card {
   box-sizing: border-box !important;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 4px 6px 6px 6px;
-  gap: 5px;
-  color: var(--ds-text, #f8fafc);
-  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
-  font-size: 11px;
-  user-select: none;
-  overflow: hidden;
-  position: relative;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: var(--ds-card-padding, 10px) !important;
+  margin: 0 !important;
+  background: var(--ds-color-card, var(--ds-panel, #12151c)) !important;
+  border: 1px solid var(--ds-color-card-border, var(--ds-border, #242a36)) !important;
+  border-radius: var(--ds-radius-card, 8px) !important;
+  color: var(--ds-color-text, var(--ds-text, #f8fafc)) !important;
+  font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif) !important;
+  font-size: 11px !important;
+  user-select: none !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.ds-lv-card .ds-ui-card-body {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* ------------------------------------------------------------------------- */
-/* Section 4: Full-Width Upload Button                                       */
+/* 1. Upload Video Button (Full Width, Primary)                              */
 /* ------------------------------------------------------------------------- */
 .ds-lv-upload-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  height: 28px;
-  min-height: 28px;
-  background: var(--ds-panel-2, #141822);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 5px;
-  color: var(--ds-text, #f8fafc);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-  box-sizing: border-box;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-  flex-shrink: 0;
-}
-
-.ds-lv-upload-btn:hover {
-  background: var(--ds-btn-hover, rgba(255, 255, 255, 0.08));
-  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.28));
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-lv-upload-btn svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
+  width: 100% !important;
+  height: var(--ds-control-h, 28px) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
 }
 
 /* ------------------------------------------------------------------------- */
-/* Section 5 & 6: File Browser Row [ ← ] [ filename.mp4 ] [ → ]              */
+/* 2. Dropdown & Navigation Row: [ < ] [ Video Dropdown Selector ] [ > ]     */
 /* ------------------------------------------------------------------------- */
-.ds-lv-file-row {
+.ds-lv-file-section {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.ds-lv-nav-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  gap: 4px;
   align-items: center;
-  gap: 5px;
   width: 100%;
   height: 28px;
-  min-height: 28px;
   box-sizing: border-box;
-  flex-shrink: 0;
 }
 
 .ds-lv-nav-btn {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ds-panel-2, #141822);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 5px;
-  color: var(--ds-text, #f8fafc);
-  cursor: pointer;
-  outline: none;
-  padding: 0;
-  box-sizing: border-box;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.ds-lv-nav-btn:hover:not(:disabled) {
-  background: var(--ds-btn-hover, rgba(255, 255, 255, 0.08));
-  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.28));
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-lv-nav-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  pointer-events: none;
+  box-sizing: border-box !important;
+  width: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  flex-shrink: 0 !important;
 }
 
 .ds-lv-nav-btn svg {
-  width: 13px;
-  height: 13px;
-  fill: currentColor;
+  width: 13px !important;
+  height: 13px !important;
 }
 
-.ds-lv-filename-box {
-  flex: 1 1 0;
-  min-width: 0;
-  height: 28px;
+.ds-lv-file-dropdown {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 28px !important;
+}
+
+.ds-lv-file-dropdown .ds-ui-dropdown-trigger {
+  width: 100% !important;
+  height: 28px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* 3. Collapsible Video Options (ROUNDED, NO SCROLLBAR, NARROW INPUTS)        */
+/* ------------------------------------------------------------------------- */
+.ds-lv-collapse-section {
   display: flex;
-  align-items: center;
-  background: var(--ds-input-bg, #0e1016);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 5px;
-  padding: 0 8px;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.ds-lv-filename-text {
-  font-size: 11px;
-  font-weight: 600;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: var(--ds-text, #f8fafc);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex-direction: column;
+  gap: 4px;
   width: 100%;
-}
-
-.ds-lv-file-count-badge {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.55));
-  margin-left: 6px;
-  white-space: nowrap;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Section 9: Collapsible Options Menu                                       */
-/* ------------------------------------------------------------------------- */
 .ds-lv-collapse-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 2px 2px;
-  cursor: pointer;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--ds-text, #f8fafc);
-  box-sizing: border-box;
-  flex-shrink: 0;
-  border: none;
-  transition: color 0.15s ease;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: 26px !important;
+  padding: 0 8px !important;
+  cursor: pointer !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  color: var(--ds-color-text, #f8fafc) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  background: var(--ds-color-panel-2, var(--ds-panel-2, #141822)) !important;
+  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
+  border-radius: 6px !important;
+  outline: none !important;
+  transition: all 0.15s ease !important;
 }
 
 .ds-lv-collapse-header:hover {
-  color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-lv-collapse-header.is-open {
+  border-radius: 6px 6px 0 0 !important;
+  border-bottom: 1px solid transparent !important;
 }
 
 .ds-lv-collapse-left {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
 .ds-lv-collapse-icon {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.18s ease;
+  color: var(--ds-color-accent, #67e8f9);
 }
 
 .ds-lv-collapse-header.is-open .ds-lv-collapse-icon {
   transform: rotate(90deg);
 }
 
-.ds-lv-collapse-icon svg {
-  width: 9px;
-  height: 9px;
-  fill: currentColor;
+.ds-lv-collapse-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  background: rgba(103, 232, 249, 0.1);
+  border: 1px solid rgba(103, 232, 249, 0.25);
+  border-radius: 10px;
+  color: var(--ds-color-accent, #67e8f9);
 }
 
-/* ------------------------------------------------------------------------- */
-/* Section 10: Two-Options-Per-Row Space-Efficient Layout (Big Enclosed Box) */
-/* ------------------------------------------------------------------------- */
+/* Options Panel - STRICTLY NO SCROLLBAR, all options visible */
 .ds-lv-options-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  background: var(--ds-panel, #12151c);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 6px;
-  padding: 8px 10px;
-  box-sizing: border-box;
-  flex-shrink: 0;
-  overflow: hidden;
-  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, padding 0.25s ease, margin 0.25s ease;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  padding: 6px 8px !important;
+  background: var(--ds-color-panel-2, var(--ds-panel-2, #141822)) !important;
+  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
+  border-top: none !important;
+  border-radius: 0 0 6px 6px !important;
 }
 
 .ds-lv-options-panel.is-collapsed {
   display: none !important;
 }
 
+/* Format row */
+.ds-lv-format-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.ds-lv-format-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--ds-color-muted-text, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.ds-lv-format-dropdown-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 2-Column Options Grid */
 .ds-lv-options-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 5px 8px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -221,6 +233,8 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .ds-lv-option-label-row {
@@ -231,435 +245,327 @@
 }
 
 .ds-lv-option-label {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
+  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ds-lv-stepper-box {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  height: 28px;
-  background: var(--ds-input-bg, #0e1016);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 5px;
-  overflow: hidden;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease;
-}
-
-.ds-lv-stepper-box:focus-within {
-  border-color: var(--ds-accent, #67e8f9);
-}
-
-.ds-lv-num-input {
-  flex: 1 1 0;
-  min-width: 0;
-  height: 100%;
-  background: transparent;
-  border: none;
-  color: var(--ds-text, #f8fafc);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 0 6px;
-  outline: none;
-  font-variant-numeric: tabular-nums;
-  box-sizing: border-box;
-}
-
-.ds-lv-num-input::-webkit-inner-spin-button,
-.ds-lv-num-input::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.ds-lv-stepper-actions {
-  display: flex;
-  flex-direction: column;
-  width: 18px;
-  height: 100%;
-  border-left: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
-  flex-shrink: 0;
-}
-
-.ds-lv-stepper-btn {
-  flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.5));
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.12s, background 0.12s;
-  outline: none;
-}
-
-.ds-lv-stepper-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-lv-stepper-btn svg {
-  width: 7px;
-  height: 7px;
-  fill: currentColor;
 }
 
 .ds-lv-detected-hint {
-  font-size: 8.5px;
-  font-weight: 500;
-  color: var(--ds-accent, #67e8f9);
+  font-size: 8px;
+  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.45));
+  font-style: italic;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-left: 1px;
-  min-height: 12px;
+}
+
+/* Stepper Sizing in Load Video - Ultra-Compact & Narrow Inputs */
+.ds-lv-options-panel .ds-ui-stepper {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 22px !important;
+}
+
+.ds-lv-options-panel .ds-ui-stepper-btn {
+  box-sizing: border-box !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 3px !important;
+  background: var(--ds-input-bg, #0e1016) !important;
+}
+
+.ds-lv-options-panel .ds-ui-stepper-btn svg {
+  width: 9px !important;
+  height: 9px !important;
+}
+
+.ds-lv-options-panel .ds-ui-stepper-value {
+  box-sizing: border-box !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 22px !important;
+  padding: 0 3px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  border-radius: 3px !important;
+  background: var(--ds-input-bg, #0e1016) !important;
 }
 
 /* ------------------------------------------------------------------------- */
-/* Section 18 & 19: Full-Width Format Dropdown                               */
+/* 4. Video Preview Area (FLEXIBLE HEIGHT, VIDEO TOUCHES EDGES)              */
 /* ------------------------------------------------------------------------- */
-.ds-lv-format-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  margin-top: 1px;
+.ds-lv-preview-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0 !important;
+  min-height: 120px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  position: relative !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
+  background: #000 !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-.ds-lv-format-header {
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
-}
-
-.ds-lv-format-trigger {
-  width: 100%;
-  height: 28px;
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  background: var(--ds-input-bg, #0e1016);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 5px;
-  color: var(--ds-text, #f8fafc);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.ds-lv-format-trigger:hover {
-  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.28));
-  background: var(--ds-btn-hover, rgba(255, 255, 255, 0.08));
-}
-
-.ds-lv-format-trigger svg {
-  width: 10px;
-  height: 10px;
-  fill: currentColor;
-  transition: transform 0.15s ease;
-}
-
-.ds-lv-format-trigger.is-active svg {
-  transform: rotate(180deg);
-}
-
-.ds-lv-format-dropdown {
-  position: absolute;
-  z-index: 9999;
-  background: #11141c;
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.2));
-  border-radius: 5px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  max-height: 220px;
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-
-.ds-lv-format-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 8px;
-  border-radius: 4px;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--ds-text, #f8fafc);
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.ds-lv-format-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-lv-format-item.is-selected {
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 20%, transparent);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-lv-format-item svg {
-  width: 12px;
-  height: 12px;
-  fill: currentColor;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Section 21 - 25: Large Video Preview Area & Custom Player                */
-/* ------------------------------------------------------------------------- */
-.ds-lv-preview-container {
-  flex: 1 1 0;
-  min-height: 160px;
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: #000;
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 6px;
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
+/* Metadata Bar at top of Preview Area */
 .ds-lv-meta-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 20px;
-  min-height: 20px;
-  padding: 0 8px;
-  background: rgba(10, 12, 16, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  height: 18px !important;
+  padding: 0 6px !important;
+  background: rgba(18, 21, 28, 0.9) !important;
+  border-bottom: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af)) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+  transition: color 0.15s ease !important;
+  z-index: 2 !important;
 }
 
-.ds-lv-meta-bar span {
-  color: var(--ds-text, #f8fafc);
+.ds-lv-meta-bar:hover {
+  color: var(--ds-color-text, #f8fafc) !important;
 }
 
+.ds-lv-meta-item {
+  white-space: nowrap !important;
+}
+
+.ds-lv-meta-accent {
+  color: var(--ds-color-accent, #67e8f9) !important;
+  font-weight: 700 !important;
+}
+
+/* Video Viewport: Zero padding, zero margin, video touches edge */
 .ds-lv-viewport {
-  flex: 1 1 0;
-  width: 100%;
-  height: 100%;
-  min-height: 110px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  background: #040507;
-  cursor: pointer;
-  overflow: hidden;
+  position: relative !important;
+  flex: 1 1 0 !important;
+  min-height: 70px !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: #000 !important;
 }
 
 .ds-lv-video {
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
-/* Empty / Loading / Error Overlay */
+/* Status Overlay */
 .ds-lv-status-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: rgba(4, 5, 7, 0.95);
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
-  text-align: center;
-  padding: 16px;
-  box-sizing: border-box;
-  z-index: 10;
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(14, 16, 22, 0.94) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 12px !important;
+  text-align: center !important;
+  color: var(--ds-color-text, #f8fafc) !important;
+  z-index: 5 !important;
+  transition: opacity 0.2s ease !important;
 }
 
 .ds-lv-status-overlay.is-hidden {
-  display: none;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
-.ds-lv-status-overlay svg {
-  width: 32px;
-  height: 32px;
-  fill: currentColor;
-  opacity: 0.5;
+.ds-lv-status-icon {
+  width: 24px !important;
+  height: 24px !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
 }
 
 .ds-lv-status-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ds-text, #f8fafc);
+  font-size: 11px !important;
+  font-weight: 700 !important;
 }
 
 .ds-lv-status-hint {
-  font-size: 9px;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.5));
+  font-size: 9.5px !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  max-width: 220px !important;
 }
 
 .ds-lv-status-btn {
-  margin-top: 4px;
-  padding: 4px 12px;
-  background: var(--ds-panel-2, #141822);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  border-radius: 4px;
-  color: var(--ds-text, #f8fafc);
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.ds-lv-status-btn:hover {
-  border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
+  margin-top: 4px !important;
 }
 
 /* ------------------------------------------------------------------------- */
-/* Section 23 & 36: Custom Video Player Controls Bar                         */
+/* 5. Video Player Controls (DOCKED INSIDE BOTTOM OF PREVIEW AREA)           */
 /* ------------------------------------------------------------------------- */
 .ds-lv-controls-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  min-height: 28px;
-  padding: 0 8px;
-  background: rgba(10, 12, 16, 0.85);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  box-sizing: border-box;
-  flex-shrink: 0;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  width: 100% !important;
+  height: 26px !important;
+  background: rgba(18, 21, 28, 0.94) !important;
+  border-top: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
+  padding: 0 6px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  z-index: 2 !important;
 }
 
 .ds-lv-ctrl-btn {
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ds-text, #f8fafc);
-  cursor: pointer;
-  border-radius: 4px;
-  outline: none;
-  transition: color 0.12s ease, background 0.12s ease;
-  flex-shrink: 0;
+  box-sizing: border-box !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 3px !important;
+  color: var(--ds-color-text, #f8fafc) !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: all 0.12s ease !important;
+  flex-shrink: 0 !important;
 }
 
 .ds-lv-ctrl-btn:hover {
-  color: var(--ds-accent, #67e8f9);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--ds-btn-hover, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
 }
 
-.ds-lv-ctrl-btn svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
+.ds-lv-ctrl-btn.is-active {
+  color: var(--ds-color-accent, #67e8f9) !important;
+  background: rgba(103, 232, 249, 0.12) !important;
 }
 
+/* Progress Seekbar */
 .ds-lv-progress-wrap {
-  flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  height: 100%;
-  cursor: pointer;
-  padding: 0 4px;
-  min-width: 40px;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  position: relative !important;
 }
 
 .ds-lv-progress-track {
-  width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.18);
-  position: relative;
-  overflow: hidden;
-  transition: height 0.1s ease;
+  width: 100% !important;
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 2px !important;
+  position: relative !important;
+  overflow: visible !important;
+  transition: height 0.12s ease !important;
 }
 
 .ds-lv-progress-wrap:hover .ds-lv-progress-track {
-  height: 6px;
+  height: 5px !important;
 }
 
 .ds-lv-progress-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 0%;
-  background: var(--ds-accent, #67e8f9);
-  border-radius: 2px;
+  height: 100% !important;
+  width: 0% !important;
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-radius: 2px !important;
+  position: relative !important;
+  transition: width 0.05s linear !important;
 }
 
-.ds-lv-time {
-  font-size: 9.5px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.55));
-  white-space: nowrap;
-  flex-shrink: 0;
+.ds-lv-progress-thumb {
+  position: absolute !important;
+  right: -4px !important;
+  top: 50% !important;
+  transform: translateY(-50%) scale(0) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.6) !important;
+  transition: transform 0.12s ease !important;
+}
+
+.ds-lv-progress-wrap:hover .ds-lv-progress-thumb {
+  transform: translateY(-50%) scale(1) !important;
+}
+
+.ds-lv-time-text {
+  font-size: 9px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af)) !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .ds-lv-time-cur {
-  color: var(--ds-text, #f8fafc);
+  color: var(--ds-color-text, #f8fafc) !important;
 }
 
 .ds-lv-audio-pill {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  font-size: 8.5px;
-  font-weight: 600;
-  color: var(--ds-text-muted, rgba(248, 250, 252, 0.6));
-  cursor: pointer;
-  transition: all 0.12s ease;
-  flex-shrink: 0;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  height: 18px !important;
+  padding: 0 4px !important;
+  background: transparent !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: 3px !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  font-size: 8.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.12s ease !important;
+  flex-shrink: 0 !important;
 }
 
-.ds-lv-audio-pill:hover,
+.ds-lv-audio-pill:hover {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+}
+
 .ds-lv-audio-pill.is-active {
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 20%, transparent);
-  border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-lv-audio-pill svg {
-  width: 10px;
-  height: 10px;
-  fill: currentColor;
+  background: rgba(103, 232, 249, 0.12) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
 }

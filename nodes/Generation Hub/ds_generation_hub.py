@@ -9,19 +9,28 @@ import comfy.utils
 
 logger = logging.getLogger("DeathshotArsenal.GenerationHub")
 
-_CACHED_MODELS = {}
+
+def _get_lora_cache_loader():
+    try:
+        import sys
+        lora_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "LoRa Loader"))
+        if lora_dir not in sys.path:
+            sys.path.append(lora_dir)
+        import lora_weight_cache
+        return lora_weight_cache.load_cached_lora_weights
+    except Exception:
+        return lambda path: comfy.utils.load_torch_file(path, safe_load=True, return_metadata=True)
+
 
 def _clean_str(val):
     if val is None:
         return ""
     return str(val).strip()
 
-def _get_or_load_checkpoint(ckpt_name):
+
+def _get_or_load_checkpoint(ckpt_name, need_clip=True, need_vae=True):
     if not ckpt_name or ckpt_name == "None" or ckpt_name == "[None]":
         return None, None, None
-    cache_key = f"ckpt_{ckpt_name}"
-    if cache_key in _CACHED_MODELS:
-        return _CACHED_MODELS[cache_key]
 
     ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
     if not ckpt_path:
@@ -33,14 +42,13 @@ def _get_or_load_checkpoint(ckpt_name):
     try:
         out = comfy.sd.load_checkpoint_guess_config(
             ckpt_path,
-            output_vae=True,
-            output_clip=True,
+            output_vae=need_vae,
+            output_clip=need_clip,
             embedding_directory=folder_paths.get_folder_paths("embeddings"),
         )
-        model, clip, vae = out[:3]
-        if len(_CACHED_MODELS) > 4:
-            _CACHED_MODELS.clear()
-        _CACHED_MODELS[cache_key] = (model, clip, vae)
+        model = out[0] if len(out) > 0 else None
+        clip = out[1] if (len(out) > 1 and need_clip) else None
+        vae = out[2] if (len(out) > 2 and need_vae) else None
         return model, clip, vae
     except Exception:
         pass
@@ -49,14 +57,12 @@ def _get_or_load_checkpoint(ckpt_name):
     try:
         if hasattr(comfy.sd, "load_diffusion_model"):
             model = comfy.sd.load_diffusion_model(ckpt_path)
-            if len(_CACHED_MODELS) > 4:
-                _CACHED_MODELS.clear()
-            _CACHED_MODELS[cache_key] = (model, None, None)
             return model, None, None
     except Exception as e:
         logger.warning(f"[DS Generation Hub] Could not load model '{ckpt_name}': {e}")
 
     return None, None, None
+
 
 def _detect_clip_type(clip_name, model_name=None):
     low = (clip_name or "").lower()
@@ -85,12 +91,10 @@ def _detect_clip_type(clip_name, model_name=None):
         return getattr(comfy.sd.CLIPType, "LUMINA2", None)
     return getattr(comfy.sd.CLIPType, "STABLE_DIFFUSION", None)
 
+
 def _get_or_load_clip(clip_name, model_name=None):
-    if not clip_name or clip_name == "None" or clip_name == "[None]":
+    if not clip_name or clip_name in ("None", "[None]", "Auto", "Auto-Detect"):
         return None
-    cache_key = f"clip_{clip_name}_{model_name}"
-    if cache_key in _CACHED_MODELS:
-        return _CACHED_MODELS[cache_key]
 
     clip_path = folder_paths.get_full_path("clip", clip_name)
     if not clip_path:
@@ -120,7 +124,6 @@ def _get_or_load_clip(clip_name, model_name=None):
                 embedding_directory=folder_paths.get_folder_paths("embeddings"),
                 clip_type=ctype,
             )
-            _CACHED_MODELS[cache_key] = clip
             return clip
         except Exception:
             continue
@@ -128,12 +131,10 @@ def _get_or_load_clip(clip_name, model_name=None):
     logger.warning(f"[DS Generation Hub] Could not load Text Encoder '{clip_name}'")
     return None
 
+
 def _get_or_load_vae(vae_name):
-    if not vae_name or vae_name == "None" or vae_name == "[None]":
+    if not vae_name or vae_name in ("None", "[None]", "Auto"):
         return None
-    cache_key = f"vae_{vae_name}"
-    if cache_key in _CACHED_MODELS:
-        return _CACHED_MODELS[cache_key]
 
     vae_path = folder_paths.get_full_path("vae", vae_name)
     if not vae_path:
@@ -155,14 +156,14 @@ def _get_or_load_vae(vae_name):
                 vae.patcher.cached_patcher_init = (comfy.sd.load_vae_patcher, (vae_path, metadata, None))
             except Exception:
                 pass
-        _CACHED_MODELS[cache_key] = vae
         return vae
     except Exception as e:
         logger.warning(f"[DS Generation Hub] Could not load VAE '{vae_name}': {e}")
         return None
 
+
 def _apply_loras(model, clip, loras_list):
-    """Sequentially apply ordered LoRAs to model and clip."""
+    """Sequentially apply ordered LoRAs to model and clip using cached weight tensors."""
     if not loras_list or not isinstance(loras_list, list):
         return model, clip
 
@@ -210,10 +211,12 @@ def _apply_loras(model, clip, loras_list):
             continue
 
         try:
-            lora_data, lora_meta = comfy.utils.load_torch_file(lora_path, safe_load=True, return_metadata=True)
-            current_model, current_clip = comfy.sd.load_lora_for_models(
-                current_model, current_clip, lora_data, strength_m, strength_c, lora_metadata=lora_meta
-            )
+            lora_loader_fn = _get_lora_cache_loader()
+            lora_data, lora_meta = lora_loader_fn(lora_path)
+            if lora_data is not None:
+                current_model, current_clip = comfy.sd.load_lora_for_models(
+                    current_model, current_clip, lora_data, strength_m, strength_c, lora_metadata=lora_meta
+                )
         except Exception as e:
             logger.warning(f"[DS Generation Hub] Failed to apply LoRA '{name}': {e}")
 
@@ -316,26 +319,38 @@ class DS_GenerationHub:
         width = max(64, min(16384, width))
         height = max(64, min(16384, height))
 
-        # 1. Base Model & embedded loaders
-        ckpt_model, ckpt_clip, ckpt_vae = _get_or_load_checkpoint(model_name)
-
-        # 2. Standalone CLIP or fallback to checkpoint CLIP
+        # 1. Resolve external CLIP if requested
         final_clip = None
+        need_ckpt_clip = True
         if clip_name and clip_name not in ("None", "[None]", "Auto", "Auto-Detect"):
             final_clip = _get_or_load_clip(clip_name, model_name=model_name)
+            if final_clip is not None:
+                need_ckpt_clip = False
         elif clip_name in ("Auto", "Auto-Detect", None, ""):
             if "krea" in (model_name or "").lower():
                 all_clips = folder_paths.get_filename_list("text_encoders") or folder_paths.get_filename_list("clip") or []
                 krea_clips = [c for c in all_clips if "krea" in c.lower() or "qwen3vl" in c.lower()]
                 if krea_clips:
                     final_clip = _get_or_load_clip(krea_clips[0], model_name=model_name)
-        if final_clip is None:
-            final_clip = ckpt_clip
+                    if final_clip is not None:
+                        need_ckpt_clip = False
 
-        # 3. Standalone VAE or fallback to checkpoint VAE
+        # 2. Resolve external VAE if requested
         final_vae = None
+        need_ckpt_vae = True
         if vae_name and vae_name not in ("None", "[None]", "Auto"):
             final_vae = _get_or_load_vae(vae_name)
+            if final_vae is not None:
+                need_ckpt_vae = False
+
+        # 3. Base Model & embedded loaders (only materialize checkpoint CLIP/VAE if needed)
+        ckpt_model, ckpt_clip, ckpt_vae = _get_or_load_checkpoint(
+            model_name, need_clip=need_ckpt_clip, need_vae=need_ckpt_vae
+        )
+
+        # Fallback to checkpoint CLIP/VAE if external ones were not provided or failed
+        if final_clip is None:
+            final_clip = ckpt_clip
         if final_vae is None:
             final_vae = ckpt_vae
 

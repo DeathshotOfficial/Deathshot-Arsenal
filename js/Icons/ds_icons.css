@@ -1,0 +1,19 @@
+/**
+ * DeathshotArsenal Icon Styles
+ */
+
+.ds-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.ds-icon-spin {
+  animation: ds-icon-spin 1s linear infinite;
+}
+
+@keyframes ds-icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

@@ -6,24 +6,16 @@ import comfy.utils
 import comfy.sd
 from .civitai_client import inspect_lora_metadata, get_lora_full_path
 from .memory_manager import clear_lora_caches
+from .lora_weight_cache import load_cached_lora_weights, clear_cached_lora_weights
 
 MAX_LORAS = 32
 
-_LORA_CACHE = {}
-
 def _load_lora_file(path):
-    global _LORA_CACHE
-    if path in _LORA_CACHE:
-        return _LORA_CACHE[path]
-    lora = comfy.utils.load_torch_file(path, safe_load=True)
-    if len(_LORA_CACHE) > 8:
-        _LORA_CACHE.pop(next(iter(_LORA_CACHE)))
-    _LORA_CACHE[path] = lora
-    return lora
+    data, _ = load_cached_lora_weights(path)
+    return data
 
 def clear_local_cache():
-    global _LORA_CACHE
-    _LORA_CACHE.clear()
+    clear_cached_lora_weights()
 
 def _as_bool(v, default=True):
     return bool(default if v is None else v)

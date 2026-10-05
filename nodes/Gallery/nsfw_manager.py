@@ -525,12 +525,16 @@ class NSFWManager:
         """
         return self.get_score(file_path_or_image) >= threshold
 
-    def blur_image(self, image: Image.Image, strength: int = 25) -> Image.Image:
-        """Applies Gaussian blur to image."""
-        return image.filter(ImageFilter.GaussianBlur(radius=strength))
+    def unload_model(self):
+        """Releases the ONNX inference session and resources from memory."""
+        self.session = None
+        self.input_name = None
+        self.available = False
+        return {"unloaded": True}
 
     def clear_cache(self):
         self.cache.clear()
+        self.unload_model()
         if os.path.exists(CACHE_FILE):
             try:
                 os.remove(CACHE_FILE)

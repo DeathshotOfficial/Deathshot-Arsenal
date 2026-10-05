@@ -9,15 +9,31 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 
-// Ensure CSS is loaded
+// Ensure CSS is loaded — version stamp forces browser to fetch fresh CSS on each ComfyUI restart
+const DS_TM_BUILD = "20260926_04";
+
+const DS_UI_CSS_ID = "ds-ui-system-css";
+const _existingUiCss = document.getElementById(DS_UI_CSS_ID);
+if (!_existingUiCss || !_existingUiCss.href.includes(DS_TM_BUILD)) {
+  if (_existingUiCss) _existingUiCss.remove();
+  const link = document.createElement("link");
+  link.id = DS_UI_CSS_ID;
+  link.rel = "stylesheet";
+  link.href = `/extensions/DeathshotArsenal/UIElements/Theme/ds_ui.css?v=${DS_TM_BUILD}`;
+  document.head.appendChild(link);
+}
+
 const CSS_ID = "ds-theme-manager-css";
-if (!document.getElementById(CSS_ID)) {
+const _existingTmCss = document.getElementById(CSS_ID);
+if (!_existingTmCss || !_existingTmCss.href.includes(DS_TM_BUILD)) {
+  if (_existingTmCss) _existingTmCss.remove();
   const link = document.createElement("link");
   link.id = CSS_ID;
   link.rel = "stylesheet";
-  link.href = "/extensions/DeathshotArsenal/Theme%20Manager/ds_theme_manager.css";
+  link.href = `/extensions/DeathshotArsenal/Theme%20Manager/ds_theme_manager.css?v=${DS_TM_BUILD}`;
   document.head.appendChild(link);
 }
+
 
 // ---------------------------------------------------------------------------
 // Storage Keys & Constants
@@ -27,6 +43,24 @@ const STORAGE_DS_SLOTS = "DS_THEME_DS_SLOTS";
 const STORAGE_TYPOGRAPHY = "DS_TYPOGRAPHY_CONFIG";
 const STORAGE_GRAPH_DEFAULTS = "DS_GRAPH_COLOR_DEFAULTS";
 const STORAGE_CLIPBOARD = "DS_CLIPBOARD_NODE_THEME";
+const STORAGE_GLOBAL_CONFIG = "DS_THEME_GLOBAL_CONFIG";
+
+// Load the shared DS slider lazily so a slider-module problem can never
+// prevent the Theme Manager extension itself from registering.
+let DSThemeSlider = null;
+let DSThemeSliderPromise = null;
+function loadDSThemeSlider() {
+  if (DSThemeSlider) return Promise.resolve(DSThemeSlider);
+  if (!DSThemeSliderPromise) {
+    DSThemeSliderPromise = import("../UIElements/Controls/Slider.js")
+      .then(mod => {
+        if (typeof mod?.Slider !== "function") throw new Error("Slider export not found");
+        DSThemeSlider = mod.Slider;
+        return DSThemeSlider;
+      });
+  }
+  return DSThemeSliderPromise;
+}
 
 const SVG_ICONS = {
   check: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
@@ -217,6 +251,77 @@ function safeSave(key, val) {
   try {
     localStorage.setItem(key, JSON.stringify(val));
   } catch (_) {}
+}
+
+function getSmartContrastVars(accentHex, cardHex, bgHex) {
+  const accentLum = getLuminance(accentHex || "#67e8f9");
+  const cardLum = getLuminance(cardHex || "#12151c");
+
+  const isBrightAccent = accentLum > 0.40;
+  const onAccent = isBrightAccent ? "#0a0c10" : "#ffffff";
+  const onAccentMuted = isBrightAccent ? "rgba(10, 12, 16, 0.72)" : "rgba(255, 255, 255, 0.75)";
+  const onAccentShadow = isBrightAccent ? "0 1px 0 rgba(255, 255, 255, 0.35)" : "0 1px 2px rgba(0, 0, 0, 0.70)";
+
+  const isLightCard = cardLum > 0.45;
+  const textColor = isLightCard ? "#0f172a" : "#f1f5f9";
+  const textMuted = isLightCard ? "#64748b" : "#94a3b8";
+
+  return {
+    onAccent,
+    onAccentMuted,
+    onAccentShadow,
+    textColor,
+    textMuted,
+  };
+}
+
+function applyThemeVariables(target, tokens) {
+  if (!target || !tokens) return;
+  const style = target.style || target;
+  if (!style || typeof style.setProperty !== "function") return;
+
+  const smart = getSmartContrastVars(tokens.accent, tokens.surface, tokens.headerBg);
+  const text = tokens.text || smart.textColor;
+  const textMuted = tokens.textMuted || smart.textMuted;
+  const btnBg = tokens.btnBg || tokens.surface2 || "#161a23";
+  const btnHover = tokens.btnHover || "#1c2130";
+
+  // Modern overhaul design system tokens
+  style.setProperty("--ds-color-base", tokens.headerBg);
+  style.setProperty("--ds-color-card", tokens.surface);
+  style.setProperty("--ds-color-card-border", tokens.border);
+  style.setProperty("--ds-color-panel-2", tokens.surface2);
+  style.setProperty("--ds-color-accent", tokens.accent);
+  style.setProperty("--ds-color-accent-hover", tokens.accent);
+  style.setProperty("--ds-color-accent-active", tokens.accent);
+  style.setProperty("--ds-color-focus-ring", `color-mix(in srgb, ${tokens.accent} 25%, transparent)`);
+  style.setProperty("--ds-color-text", text);
+  style.setProperty("--ds-color-muted-text", textMuted);
+  style.setProperty("--ds-color-on-accent", smart.onAccent);
+  style.setProperty("--ds-color-on-accent-shadow", smart.onAccentShadow);
+  style.setProperty("--ds-color-on-panel", smart.textColor);
+  style.setProperty("--ds-color-border", tokens.border);
+  style.setProperty("--ds-color-border-hover", tokens.borderActive || tokens.accent);
+  style.setProperty("--ds-btn-bg", btnBg);
+  style.setProperty("--ds-btn-hover", btnHover);
+  style.setProperty("--ds-btn-text", text);
+  style.setProperty("--ds-btn-border", tokens.border);
+  style.setProperty("--ds-input-bg", tokens.surface2);
+
+  // Backward-compatible legacy tokens
+  style.setProperty("--ds-bg", tokens.headerBg);
+  style.setProperty("--ds-panel", tokens.surface);
+  style.setProperty("--ds-panel-2", tokens.surface2);
+  style.setProperty("--ds-border", tokens.border);
+  style.setProperty("--ds-border-active", tokens.borderActive || tokens.accent);
+  style.setProperty("--ds-accent", tokens.accent);
+  style.setProperty("--ds-cp-accent", tokens.accent);
+  style.setProperty("--ds-text", text);
+  style.setProperty("--ds-text-muted", textMuted);
+  style.setProperty("--ds-on-accent", smart.onAccent);
+  style.setProperty("--ds-on-accent-shadow", smart.onAccentShadow);
+  if (tokens.socketFill) style.setProperty("--ds-socket-fill", tokens.socketFill);
+  if (tokens.wireAccent) style.setProperty("--ds-wire-accent", tokens.wireAccent);
 }
 
 // ---------------------------------------------------------------------------
@@ -515,18 +620,45 @@ class DSThemeManagerDashboard {
       wireAccent: "#67e8f9",
     };
 
+    // Rehydrate the Theme Manager from the same persisted global configuration
+    // used by DSGlobalTheme. This prevents the manager UI from showing defaults
+    // after a browser refresh when DS_THEME_ACTIVE_TOKENS is missing/stale.
+    const savedGlobalConfig = safeLoad(STORAGE_GLOBAL_CONFIG, null);
+    const persistedTheme = window.DSGlobalTheme?.getTheme?.(savedGlobalConfig?.theme);
+    const persistedVars = {
+      ...(persistedTheme?.vars || {}),
+      ...(savedGlobalConfig?.custom || {}),
+    };
+    this.dsTokens.accent       = persistedVars["--ds-color-accent"] || persistedVars["--ds-accent"] || this.dsTokens.accent;
+    this.dsTokens.surface      = persistedVars["--ds-color-card"] || persistedVars["--ds-panel"] || this.dsTokens.surface;
+    this.dsTokens.surface2     = persistedVars["--ds-color-panel-2"] || persistedVars["--ds-panel-2"] || this.dsTokens.surface2;
+    this.dsTokens.headerBg     = persistedVars["--ds-color-base"] || persistedVars["--ds-bg"] || this.dsTokens.headerBg;
+    this.dsTokens.btnBg        = persistedVars["--ds-btn-bg"] || this.dsTokens.surface2;
+    this.dsTokens.btnHover     = persistedVars["--ds-btn-hover"] || this.dsTokens.btnHover;
+    this.dsTokens.border       = persistedVars["--ds-color-border"] || persistedVars["--ds-border"] || this.dsTokens.border;
+    this.dsTokens.borderActive = persistedVars["--ds-color-border-hover"] || persistedVars["--ds-border-active"] || this.dsTokens.accent;
+    this.dsTokens.text         = persistedVars["--ds-color-text"] || persistedVars["--ds-text"] || this.dsTokens.text;
+    this.dsTokens.textMuted    = persistedVars["--ds-color-muted-text"] || persistedVars["--ds-text-muted"] || this.dsTokens.textMuted;
+    this.dsTokens.socketFill   = persistedVars["--ds-socket-fill"] || this.dsTokens.socketFill;
+    this.dsTokens.wireAccent   = persistedVars["--ds-wire-accent"] || this.dsTokens.accent;
+
+    const savedActiveTokens = safeLoad("DS_THEME_ACTIVE_TOKENS", null);
+    if (savedActiveTokens) {
+      this.dsTokens = { ...this.dsTokens, ...savedActiveTokens };
+    }
+
+    const savedTypoConfig = savedGlobalConfig || {};
+    this.typoState = {
+      font: savedTypoConfig.font || "Inter",
+      fontSize: Number(savedTypoConfig.fontSize) || 14,
+      fontWeight: savedTypoConfig.fontWeight || "500",
+      tracking: savedTypoConfig.tracking || "0px",
+      fallback: "Inter, system-ui, sans-serif"
+    };
+
     // rAF token for color-picker drag throttle
     this._pickerRafPending = false;
     this._pickerRafToken = null;
-
-    // Typography State
-    this.typoState = {
-      font: "Inter",
-      fontSize: 14,
-      fontWeight: "500",
-      tracking: "0px",
-      fallback: "Inter, system-ui, sans-serif"
-    };
 
     // Saved slots
     this.customSlots = safeLoad(STORAGE_CUSTOM_SLOTS, new Array(20).fill(null));
@@ -542,6 +674,7 @@ class DSThemeManagerDashboard {
 
     this.overlay = document.createElement("div");
     this.overlay.className = "ds-tm-modal-overlay";
+    this.overlay.dataset.dsThemed = "true";
 
     this.overlay.innerHTML = `
       <div class="ds-tm-window" data-el="window">
@@ -741,7 +874,7 @@ class DSThemeManagerDashboard {
                       <span class="ds-tm-cyber-slider-val-pill" data-el="fontSizeVal">14px</span>
                     </div>
                     <div class="ds-tm-cyber-slider-row">
-                      <input type="range" class="ds-tm-cyber-range" data-el="fontSizeSlider" min="10" max="24" step="1" value="14" />
+                      <div class="ds-tm-slider-host" data-el="fontSizeSlider"></div>
                       <div class="ds-tm-cyber-stepper">
                         <button type="button" class="ds-tm-cyber-step-btn" data-step="down" data-for="fontSize" title="Decrease font size">${SVG_ICONS.chevronSmallDown}</button>
                         <input type="number" data-el="fontSizeInput" value="14" min="10" max="24" />
@@ -780,7 +913,7 @@ class DSThemeManagerDashboard {
                       <span class="ds-tm-cyber-slider-val-pill" data-el="trackingVal">0px</span>
                     </div>
                     <div class="ds-tm-cyber-slider-row">
-                      <input type="range" class="ds-tm-cyber-range" data-el="trackingSlider" min="-1" max="3" step="0.2" value="0" />
+                      <div class="ds-tm-slider-host" data-el="trackingSlider"></div>
                       <div class="ds-tm-cyber-stepper">
                         <button type="button" class="ds-tm-cyber-step-btn" data-step="down" data-for="tracking" title="Tighten letter spacing">${SVG_ICONS.chevronSmallDown}</button>
                         <input type="text" data-el="trackingInput" value="0.0" style="width:38px; text-align:center;" readonly />
@@ -1184,19 +1317,25 @@ class DSThemeManagerDashboard {
       this.el.mockBody.style.backgroundColor = this.bodyColor;
     }
 
+    const smart = getSmartContrastVars(this.dsTokens.accent, this.dsTokens.surface, this.dsTokens.headerBg);
+
     // Sync DS Mock Card
     if (this.el.dsMockCard) {
       this.el.dsMockCard.style.backgroundColor = this.dsTokens.surface;
       this.el.dsMockCard.style.borderColor = this.dsTokens.border;
-      this.el.dsMockCard.style.color = this.dsTokens.text;
+      this.el.dsMockCard.style.color = this.dsTokens.text || smart.textColor;
     }
     if (this.el.dsMockBadge) {
       this.el.dsMockBadge.style.backgroundColor = this.dsTokens.accent;
+      this.el.dsMockBadge.style.color = smart.onAccent;
+      this.el.dsMockBadge.style.textShadow = smart.onAccentShadow;
     }
     if (this.el.dsMockBtnActive) {
+      this.el.dsMockBtnActive.style.backgroundColor = this.dsTokens.accent;
       this.el.dsMockBtnActive.style.borderColor = this.dsTokens.accent;
-      this.el.dsMockBtnActive.style.color = this.dsTokens.accent;
-      this.el.dsMockBtnActive.style.boxShadow = `inset 0 -2px 0 ${this.dsTokens.accent}`;
+      this.el.dsMockBtnActive.style.color = smart.onAccent;
+      this.el.dsMockBtnActive.style.textShadow = smart.onAccentShadow;
+      this.el.dsMockBtnActive.style.boxShadow = "none";
     }
     if (this.el.dsMockSlider) {
       this.el.dsMockSlider.style.backgroundColor = this.dsTokens.accent;
@@ -1278,50 +1417,76 @@ class DSThemeManagerDashboard {
         </div>
       `;
 
-      row.addEventListener("click", () => {
+      row.addEventListener("click", async () => {
         container.querySelectorAll(".ds-tm-theme-chip-row").forEach(r => r.classList.remove("active"));
         row.classList.add("active");
 
-        // Populate micro-tokens from theme
-        this.dsTokens.accent       = v["--ds-accent"]       || "#67e8f9";
-        this.dsTokens.surface      = v["--ds-panel"]        || "#12151c";
-        this.dsTokens.surface2     = v["--ds-panel-2"]      || "#161a23";
-        this.dsTokens.headerBg     = v["--ds-bg"]           || "#0b0d12";
-        this.dsTokens.btnBg        = v["--ds-btn-bg"]       || v["--ds-panel-2"] || "#161a23";
+        // Populate micro-tokens from theme (supporting modern and legacy variables)
+        this.dsTokens.accent       = v["--ds-color-accent"] || v["--ds-accent"]       || "#67e8f9";
+        this.dsTokens.surface      = v["--ds-color-card"]   || v["--ds-panel"]        || "#12151c";
+        this.dsTokens.surface2     = v["--ds-color-panel-2"]|| v["--ds-panel-2"]      || "#161a23";
+        this.dsTokens.headerBg     = v["--ds-color-base"]   || v["--ds-bg"]           || "#0b0d12";
+        this.dsTokens.btnBg        = v["--ds-btn-bg"]       || v["--ds-color-panel-2"]|| v["--ds-panel-2"] || "#161a23";
         this.dsTokens.btnHover     = v["--ds-btn-hover"]    || "#1c2130";
-        this.dsTokens.border       = v["--ds-border"]       || "#242a36";
-        this.dsTokens.borderActive = v["--ds-border-active"]|| this.dsTokens.accent;
-        this.dsTokens.text         = v["--ds-text"]         || "#e5e7eb";
-        this.dsTokens.textMuted    = v["--ds-text-muted"]   || "#9ca3af";
+        this.dsTokens.border       = v["--ds-color-border"] || v["--ds-color-card-border"] || v["--ds-border"] || "#242a36";
+        this.dsTokens.borderActive = v["--ds-color-border-hover"] || v["--ds-border-active"] || this.dsTokens.accent;
+        this.dsTokens.text         = v["--ds-color-text"]   || v["--ds-text"]         || "#e5e7eb";
+        this.dsTokens.textMuted    = v["--ds-color-muted-text"] || v["--ds-text-muted"] || "#9ca3af";
         this.dsTokens.socketFill   = v["--ds-socket-fill"]  || this.dsTokens.socketFill;
         this.dsTokens.wireAccent   = v["--ds-wire-accent"]  || this.dsTokens.accent;
 
         this._renderMicroElementRows();
         this._syncMockPreviews();
 
-        // Apply CSS vars to :root instantly so UI refreshes immediately,
-        // then defer the heavier per-node DOM work to the next frame.
-        const rootStyle = document.documentElement.style;
-        rootStyle.setProperty("--ds-accent",        this.dsTokens.accent);
-        rootStyle.setProperty("--ds-panel",         this.dsTokens.surface);
-        rootStyle.setProperty("--ds-panel-2",       this.dsTokens.surface2);
-        rootStyle.setProperty("--ds-bg",            this.dsTokens.headerBg);
-        rootStyle.setProperty("--ds-border",        this.dsTokens.border);
-        rootStyle.setProperty("--ds-border-active", this.dsTokens.borderActive);
-        rootStyle.setProperty("--ds-cp-accent",     this.dsTokens.accent);
-        if (this.dsTokens.btnBg)     rootStyle.setProperty("--ds-btn-bg",    this.dsTokens.btnBg);
-        if (this.dsTokens.btnHover)  rootStyle.setProperty("--ds-btn-hover", this.dsTokens.btnHover);
-        if (this.dsTokens.text)      rootStyle.setProperty("--ds-text",      this.dsTokens.text);
-        if (this.dsTokens.textMuted) rootStyle.setProperty("--ds-text-muted",this.dsTokens.textMuted);
+        // Apply both modern and legacy variables to :root instantly
+        applyThemeVariables(document.documentElement, this.dsTokens);
 
+        // Persist through the global theme engine first, then mirror the exact
+        // resulting config locally. The old code fired this async save and then
+        // immediately overwrote localStorage with a reduced object, which caused
+        // the saved custom theme values to disappear on the next browser reload.
+        let persistedConfig = null;
         if (window.DSGlobalTheme) {
-          window.DSGlobalTheme.apply({ theme: id }, { save: true });
+          const currentConfig = window.DSGlobalTheme.getConfig?.() || {};
+          const result = await window.DSGlobalTheme.apply(
+            {
+              theme: id,
+              font: this.typoState.font,
+              fontSize: this.typoState.fontSize,
+              custom: currentConfig.custom || {},
+            },
+            { save: true }
+          );
+          persistedConfig = result?.config || window.DSGlobalTheme.getConfig?.() || null;
         }
+        if (persistedConfig) {
+          safeSave(STORAGE_GLOBAL_CONFIG, persistedConfig);
+        } else {
+          const existingCfg = safeLoad(STORAGE_GLOBAL_CONFIG, {});
+          safeSave(STORAGE_GLOBAL_CONFIG, {
+            ...existingCfg,
+            theme: id,
+            font: this.typoState.font,
+            fontSize: this.typoState.fontSize,
+          });
+        }
+        safeSave("DS_THEME_ACTIVE_ID", id);
+        safeSave("DS_THEME_ACTIVE_TOKENS", this.dsTokens);
 
-        // Defer the heavy per-node iteration so the UI isn't blocked
-        requestAnimationFrame(() => {
-          this._applyDSTokensToSelection(true);
-        });
+        // Apply immediately to ALL DS nodes currently on canvas so none are left behind
+        if (app.graph?._nodes) {
+          app.graph._nodes.filter(isDSNode).forEach(n => {
+            const domRoot = n._dsSeedRoot || n.domWidget?.element || n.rootEl || (n.widgets && n.widgets.find(w => w?.element)?.element);
+            if (domRoot) {
+              applyThemeVariables(domRoot, this.dsTokens);
+            }
+            n.bgcolor = this.dsTokens.surface;
+            n.boxcolor = this.dsTokens.border;
+            n.color = this.dsTokens.surface || this.dsTokens.headerBg;
+            n.setDirtyCanvas?.(true, true);
+          });
+        }
+        dirtyCanvas();
 
         this.showToast(`Applied DS Theme: ${t.name || id}`, "success");
       });
@@ -1336,18 +1501,18 @@ class DSThemeManagerDashboard {
     container.innerHTML = "";
 
     const elements = [
-      { id: "accent",       title: "Primary Accent Color",       desc: "Active buttons, sliders, focus rings, badges",            color: this.dsTokens.accent },
-      { id: "surface",      title: "Card Surface Background",     desc: "Inner modules, container panels, trays",                 color: this.dsTokens.surface },
-      { id: "surface2",     title: "Secondary Surface / Trays",   desc: "Sub-panels, button surfaces, input backdrops",           color: this.dsTokens.surface2 },
-      { id: "headerBg",     title: "Header & Base Frame",         desc: "Node title bar background, outer canvas base",          color: this.dsTokens.headerBg },
-      { id: "border",       title: "Borders & Section Dividers",  desc: "Outer node border stroke, interior lines",              color: this.dsTokens.border },
-      { id: "borderActive", title: "Active Border / Focus Ring",  desc: "Highlighted border on active/focused elements",         color: this.dsTokens.borderActive },
-      { id: "text",         title: "Primary Text Color",          desc: "Main body text, labels, node content",                 color: this.dsTokens.text },
-      { id: "textMuted",    title: "Muted / Secondary Text",      desc: "Descriptions, placeholders, disabled labels",          color: this.dsTokens.textMuted },
-      { id: "btnBg",        title: "Button Background",           desc: "Idle button fill, chip backgrounds",                   color: this.dsTokens.btnBg },
-      { id: "btnHover",     title: "Button Hover Background",     desc: "Interactive hover state for buttons and chips",        color: this.dsTokens.btnHover },
-      { id: "socketFill",   title: "Socket & Pin Highlights",     desc: "Port accents, data type highlights, connection points", color: this.dsTokens.socketFill },
-      { id: "wireAccent",   title: "Wire / Link Accent",          desc: "Node connection wire colour",                         color: this.dsTokens.wireAccent },
+      { id: "accent",       title: "Accent Color (--ds-color-accent)",           desc: "Active buttons, sliders, focus rings, badges",            color: this.dsTokens.accent },
+      { id: "surface",      title: "Card Surface (--ds-color-card)",             desc: "Inner modules, card container panels, widgets",          color: this.dsTokens.surface },
+      { id: "surface2",     title: "Secondary Surface (--ds-color-panel-2)",     desc: "Sub-panels, button surfaces, input backdrops",           color: this.dsTokens.surface2 },
+      { id: "headerBg",     title: "Base & Header (--ds-color-base)",            desc: "Node title bar background, outer canvas base",           color: this.dsTokens.headerBg },
+      { id: "border",       title: "Borders (--ds-color-border)",                desc: "Outer node border stroke, card borders, dividers",       color: this.dsTokens.border },
+      { id: "borderActive", title: "Active Border (--ds-color-border-hover)",    desc: "Highlighted border on active/focused elements",          color: this.dsTokens.borderActive },
+      { id: "text",         title: "Primary Text (--ds-color-text)",             desc: "Main body text, labels, node content",                  color: this.dsTokens.text },
+      { id: "textMuted",    title: "Muted Text (--ds-color-muted-text)",         desc: "Descriptions, placeholders, secondary labels",           color: this.dsTokens.textMuted },
+      { id: "btnBg",        title: "Button Background (--ds-btn-bg)",            desc: "Idle button fill, chip backgrounds",                    color: this.dsTokens.btnBg },
+      { id: "btnHover",     title: "Button Hover (--ds-btn-hover)",              desc: "Interactive hover state for buttons and chips",         color: this.dsTokens.btnHover },
+      { id: "socketFill",   title: "Socket & Pin Highlights",                    desc: "Port accents, data type highlights, connection points",  color: this.dsTokens.socketFill },
+      { id: "wireAccent",   title: "Wire / Link Accent",                         desc: "Node connection wire colour",                          color: this.dsTokens.wireAccent },
     ];
 
     elements.forEach(elem => {
@@ -1382,9 +1547,9 @@ class DSThemeManagerDashboard {
     popover.style.cssText = `
       position: fixed;
       z-index: 100030;
-      background: var(--ds-panel, #12151c);
-      border: 1px solid var(--ds-border, #242a36);
-      border-radius: 6px;
+      background: var(--ds-color-card, var(--ds-panel, #12151c));
+      border: 1px solid var(--ds-color-border, var(--ds-border, #242a36));
+      border-radius: var(--ds-radius-card, 6px);
       padding: 10px;
       box-shadow: 0 16px 40px rgba(0,0,0,0.8);
     `;
@@ -1457,18 +1622,7 @@ class DSThemeManagerDashboard {
         // Apply CSS custom properties directly to DOM widget root
         const domRoot = node._dsSeedRoot || node.domWidget?.element || node.rootEl || (node.widgets && node.widgets.find(w => w?.element)?.element);
         if (domRoot) {
-          domRoot.style.setProperty("--ds-accent", this.dsTokens.accent);
-          domRoot.style.setProperty("--ds-panel", this.dsTokens.surface);
-          domRoot.style.setProperty("--ds-panel-2", this.dsTokens.surface2);
-          domRoot.style.setProperty("--ds-bg", this.dsTokens.headerBg);
-          domRoot.style.setProperty("--ds-border", this.dsTokens.border);
-          domRoot.style.setProperty("--ds-border-active", this.dsTokens.borderActive);
-          domRoot.style.setProperty("--ds-cp-accent", this.dsTokens.accent);
-          if (this.dsTokens.btnBg)       domRoot.style.setProperty("--ds-btn-bg",     this.dsTokens.btnBg);
-          if (this.dsTokens.btnHover)    domRoot.style.setProperty("--ds-btn-hover",  this.dsTokens.btnHover);
-          if (this.dsTokens.text)        domRoot.style.setProperty("--ds-text",       this.dsTokens.text);
-          if (this.dsTokens.textMuted)   domRoot.style.setProperty("--ds-text-muted", this.dsTokens.textMuted);
-          if (this.dsTokens.wireAccent)  domRoot.style.setProperty("--ds-wire-accent",this.dsTokens.wireAccent);
+          applyThemeVariables(domRoot, this.dsTokens);
         }
 
         node.setDirtyCanvas?.(true, true);
@@ -1476,19 +1630,7 @@ class DSThemeManagerDashboard {
     });
 
     // Update global document :root CSS variables so all DS nodes across canvas update in real time
-    const rootStyle = document.documentElement.style;
-    rootStyle.setProperty("--ds-accent",        this.dsTokens.accent);
-    rootStyle.setProperty("--ds-panel",         this.dsTokens.surface);
-    rootStyle.setProperty("--ds-panel-2",       this.dsTokens.surface2);
-    rootStyle.setProperty("--ds-bg",            this.dsTokens.headerBg);
-    rootStyle.setProperty("--ds-border",        this.dsTokens.border);
-    rootStyle.setProperty("--ds-border-active", this.dsTokens.borderActive);
-    rootStyle.setProperty("--ds-cp-accent",     this.dsTokens.accent);
-    if (this.dsTokens.btnBg)      rootStyle.setProperty("--ds-btn-bg",     this.dsTokens.btnBg);
-    if (this.dsTokens.btnHover)   rootStyle.setProperty("--ds-btn-hover",  this.dsTokens.btnHover);
-    if (this.dsTokens.text)       rootStyle.setProperty("--ds-text",       this.dsTokens.text);
-    if (this.dsTokens.textMuted)  rootStyle.setProperty("--ds-text-muted", this.dsTokens.textMuted);
-    if (this.dsTokens.wireAccent) rootStyle.setProperty("--ds-wire-accent",this.dsTokens.wireAccent);
+    applyThemeVariables(document.documentElement, this.dsTokens);
 
     dirtyCanvas();
   }
@@ -1599,19 +1741,18 @@ class DSThemeManagerDashboard {
     this._setupFontDropdown();
     this._setupFontWeightDropdown();
 
-    // Cyber-Tactical Font Size Slider & Stepper
-    const sizeSlider = this.el.fontSizeSlider;
+    // Typography sliders use the same DS UI Slider component as every node UI.
+    const sizeHost = this.el.fontSizeSlider;
     const sizeInput = this.el.fontSizeInput;
     const sizeVal = this.el.fontSizeVal;
+    const trackingHost = this.el.trackingSlider;
+    const trackingInput = this.el.trackingInput;
+    const trackingVal = this.el.trackingVal;
 
-    const setSize = (sz) => {
-      sz = clamp(sz, 10, 24);
+    const setSize = (sz, source = "program") => {
+      sz = clamp(Number(sz), 10, 24);
       this.typoState.fontSize = sz;
-      if (sizeSlider) {
-        sizeSlider.value = sz;
-        const pct = ((sz - 10) / (24 - 10)) * 100;
-        sizeSlider.style.setProperty("--ds-slider-pct", `${pct}%`);
-      }
+      this.fontSizeSlider?.setValue(sz, false);
       if (sizeInput) sizeInput.value = sz;
       if (sizeVal) sizeVal.textContent = `${sz}px`;
 
@@ -1622,38 +1763,11 @@ class DSThemeManagerDashboard {
       this._updateTypoPreview();
     };
 
-    if (sizeSlider) sizeSlider.addEventListener("input", () => setSize(parseInt(sizeSlider.value, 10)));
-    if (sizeInput) sizeInput.addEventListener("change", () => setSize(parseInt(sizeInput.value, 10)));
-
-    this.overlay.querySelectorAll('[data-for="fontSize"]').forEach(btn => {
-      btn.addEventListener("click", () => {
-        const delta = btn.dataset.step === "up" ? 1 : -1;
-        setSize(this.typoState.fontSize + delta);
-      });
-    });
-
-    this.el.fontSizeQuickChips?.querySelectorAll(".ds-tm-cyber-chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        const sz = parseInt(chip.dataset.size, 10);
-        if (!isNaN(sz)) setSize(sz);
-      });
-    });
-
-    // Cyber-Tactical Letter Spacing / Tracking Slider & Stepper
-    const trackingSlider = this.el.trackingSlider;
-    const trackingInput = this.el.trackingInput;
-    const trackingVal = this.el.trackingVal;
-
-    const setTracking = (val) => {
-      val = clamp(Math.round(val * 10) / 10, -1, 3);
+    const setTracking = (value) => {
+      const val = clamp(Math.round(Number(value) * 10) / 10, -1, 3);
       const trStr = `${val >= 0 ? "+" : ""}${val.toFixed(1)}px`;
       this.typoState.tracking = trStr;
-
-      if (trackingSlider) {
-        trackingSlider.value = val;
-        const pct = ((val - (-1)) / (3 - (-1))) * 100;
-        trackingSlider.style.setProperty("--ds-slider-pct", `${pct}%`);
-      }
+      this.trackingSlider?.setValue(val, false);
       if (trackingInput) trackingInput.value = `${val >= 0 ? "+" : ""}${val.toFixed(1)}`;
       if (trackingVal) trackingVal.textContent = trStr;
 
@@ -1665,11 +1779,61 @@ class DSThemeManagerDashboard {
       this._updateTypoPreview();
     };
 
-    if (trackingSlider) trackingSlider.addEventListener("input", () => setTracking(parseFloat(trackingSlider.value) || 0));
+    // Build the actual DS sliders asynchronously. The Theme Manager modal
+    // itself is allowed to open even if the shared control takes a moment to load.
+    loadDSThemeSlider().then(Slider => {
+      if (sizeHost && sizeHost.isConnected) {
+        this.fontSizeSlider = Slider({
+          min: 10,
+          max: 24,
+          step: 1,
+          value: this.typoState.fontSize || 14,
+          label: "FONT SIZE",
+          showNumber: false,
+          onChange: value => setSize(value, "slider"),
+          className: "ds-tm-embedded-slider",
+        });
+        sizeHost.replaceWith(this.fontSizeSlider.root);
+        this.el.fontSizeSlider = this.fontSizeSlider;
+      }
+
+      if (trackingHost && trackingHost.isConnected) {
+        this.trackingSlider = Slider({
+          min: -1,
+          max: 3,
+          step: 0.2,
+          value: parseFloat(this.typoState.tracking) || 0,
+          label: "LETTER SPACING",
+          showNumber: false,
+          onChange: value => setTracking(value),
+          className: "ds-tm-embedded-slider",
+        });
+        trackingHost.replaceWith(this.trackingSlider.root);
+        this.el.trackingSlider = this.trackingSlider;
+      }
+    }).catch(error => {
+      console.error("[DeathshotArsenal] Theme Manager Slider failed to load:", error);
+    });
+
+    if (sizeInput) sizeInput.addEventListener("change", () => setSize(parseInt(sizeInput.value, 10)));
+
+    this.overlay.querySelectorAll('[data-for="fontSize"]').forEach(btn => {
+      btn.addEventListener("click", () => {
+        const delta = btn.dataset.step === "up" ? 1 : -1;
+        setSize(this.fontSizeSlider?.getValue?.() + delta, "stepper");
+      });
+    });
+
+    this.el.fontSizeQuickChips?.querySelectorAll(".ds-tm-cyber-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const sz = parseInt(chip.dataset.size, 10);
+        if (!isNaN(sz)) setSize(sz, "chip");
+      });
+    });
 
     this.overlay.querySelectorAll('[data-for="tracking"]').forEach(btn => {
       btn.addEventListener("click", () => {
-        const cur = parseFloat(this.el.trackingSlider?.value) || 0;
+        const cur = this.trackingSlider?.getValue?.() ?? 0;
         const delta = btn.dataset.step === "up" ? 0.2 : -0.2;
         setTracking(cur + delta);
       });
@@ -1683,8 +1847,8 @@ class DSThemeManagerDashboard {
     });
 
     // Web Font Download / Loader
-    this.el.loadWebFontBtn.addEventListener("click", () => this._loadWebFont());
-    this.el.webFontInput.addEventListener("keydown", (e) => {
+    this.el.loadWebFontBtn?.addEventListener("click", () => this._loadWebFont());
+    this.el.webFontInput?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") this._loadWebFont();
     });
 
@@ -1694,7 +1858,7 @@ class DSThemeManagerDashboard {
     }
 
     setSize(this.typoState.fontSize || 14);
-    setTracking(0);
+    setTracking(parseFloat(this.typoState.tracking) || 0);
     this._updateTypoPreview();
   }
 
@@ -1718,21 +1882,17 @@ class DSThemeManagerDashboard {
 
         const sz = p.size || 14;
         const tr = parseFloat(p.tracking) || 0;
-        if (this.el.fontSizeSlider) {
+        if (this.fontSizeSlider) {
           this.typoState.fontSize = sz;
-          this.el.fontSizeSlider.value = sz;
+          this.fontSizeSlider.setValue(sz, false);
           this.el.fontSizeInput.value = sz;
           this.el.fontSizeVal.textContent = `${sz}px`;
-          const pct = ((sz - 10) / (24 - 10)) * 100;
-          this.el.fontSizeSlider.style.setProperty("--ds-slider-pct", `${pct}%`);
         }
-        if (this.el.trackingSlider) {
+        if (this.trackingSlider) {
           this.typoState.tracking = p.tracking;
-          this.el.trackingSlider.value = tr;
+          this.trackingSlider.setValue(tr, false);
           if (this.el.trackingInput) this.el.trackingInput.value = `${tr >= 0 ? "+" : ""}${tr.toFixed(1)}`;
           this.el.trackingVal.textContent = p.tracking;
-          const pct = ((tr - (-1)) / (3 - (-1))) * 100;
-          this.el.trackingSlider.style.setProperty("--ds-slider-pct", `${pct}%`);
         }
 
         this._updateTypoPreview();
@@ -1888,19 +2048,18 @@ class DSThemeManagerDashboard {
     const selected = getSelectedNodes();
 
     if (this.activeTab === "themes") {
-      // In DS Themes tab: apply tokens to selected DS nodes,
-      // or — when nothing is selected — apply to ALL DS nodes on the canvas.
       const isGlobal = selected.length === 0;
       requestAnimationFrame(() => {
-        this._applyDSTokensToSelection(isGlobal);
+        this._applyDSTokensToSelection(true);
       });
+      this.applyToGlobalDefault();
       const count = isGlobal
         ? (app.graph?._nodes?.filter(isDSNode).length ?? 0)
         : selected.length;
       this.showToast(
         isGlobal
-          ? `Applied DS theme to all ${count} DS node(s) on canvas`
-          : `Applied DS theme to ${count} selected DS node(s)`,
+          ? `Applied DS theme to all ${count} DS node(s) on canvas & saved globally`
+          : `Applied DS theme to ${count} selected DS node(s) & saved globally`,
         "success"
       );
       return;
@@ -1936,13 +2095,54 @@ class DSThemeManagerDashboard {
     this.showToast(`Applied customization to ${selected.length} node(s)`, "success");
   }
 
-  applyToGlobalDefault() {
-    // If DS Global theme engine is available, update it
+  async applyToGlobalDefault() {
+    const smart = getSmartContrastVars(this.dsTokens.accent, this.dsTokens.surface, this.dsTokens.headerBg);
+    const customVars = {
+      "--ds-accent": this.dsTokens.accent,
+      "--ds-panel": this.dsTokens.surface,
+      "--ds-panel-2": this.dsTokens.surface2,
+      "--ds-bg": this.dsTokens.headerBg,
+      "--ds-border": this.dsTokens.border,
+      "--ds-border-active": this.dsTokens.borderActive,
+      "--ds-btn-bg": this.dsTokens.btnBg,
+      "--ds-btn-hover": this.dsTokens.btnHover,
+      "--ds-text": this.dsTokens.text || smart.textColor,
+      "--ds-text-muted": this.dsTokens.textMuted || smart.textMuted,
+      "--ds-color-accent": this.dsTokens.accent,
+      "--ds-color-card": this.dsTokens.surface,
+      "--ds-color-card-border": this.dsTokens.border,
+      "--ds-color-panel-2": this.dsTokens.surface2,
+      "--ds-color-base": this.dsTokens.headerBg,
+      "--ds-color-border": this.dsTokens.border,
+      "--ds-color-border-hover": this.dsTokens.borderActive,
+      "--ds-color-text": this.dsTokens.text || smart.textColor,
+      "--ds-color-muted-text": this.dsTokens.textMuted || smart.textMuted,
+      "--ds-color-on-accent": smart.onAccent,
+      "--ds-color-on-accent-shadow": smart.onAccentShadow,
+    };
+
+    const currentConfig = window.DSGlobalTheme?.getConfig?.() || safeLoad(STORAGE_GLOBAL_CONFIG, {});
+    const existingCustom = currentConfig?.custom || {};
+    const fullConfig = {
+      ...currentConfig,
+      theme: currentConfig.theme || "deathshot_dark",
+      font: this.typoState.font,
+      fontSize: this.typoState.fontSize,
+      fontWeight: this.typoState.fontWeight,
+      tracking: this.typoState.tracking,
+      custom: this.activeTab === "themes"
+        ? { ...existingCustom, ...customVars }
+        : existingCustom,
+    };
+
+    safeSave(STORAGE_GLOBAL_CONFIG, fullConfig);
+    safeSave("DS_THEME_ACTIVE_TOKENS", this.dsTokens);
+
+    applyThemeVariables(document.documentElement, this.dsTokens);
+
     if (window.DSGlobalTheme) {
-      window.DSGlobalTheme.apply({
-        font: this.typoState.font,
-        fontSize: this.typoState.fontSize
-      }, { save: true });
+      const result = await window.DSGlobalTheme.apply(fullConfig, { save: true });
+      if (result?.config) safeSave(STORAGE_GLOBAL_CONFIG, result.config);
     }
 
     this.showToast("Saved as extension global defaults", "success");
@@ -1974,11 +2174,11 @@ class DSThemeManagerDashboard {
       this.typoState.fontWeight = "500";
       this.typoState.tracking = "0px";
       this.el.fontDropdownVal.textContent = "Inter";
-      this.el.fontSizeSlider.value = 14;
+      this.fontSizeSlider?.setValue(14, false);
       this.el.fontSizeInput.value = 14;
       this.el.fontSizeVal.textContent = "14px";
       this.el.fontWeightVal.textContent = "500 (Medium)";
-      this.el.trackingSlider.value = 0;
+      this.trackingSlider?.setValue(0, false);
       this.el.trackingVal.textContent = "0px";
       this._updateTypoPreview();
       this.showToast("Reset Typography tab to defaults");
@@ -1993,21 +2193,60 @@ let memoryClipboard = safeLoad(STORAGE_CLIPBOARD, null);
 
 function captureNodeColors(node) {
   if (!node) return null;
+  const domRoot = node._dsSeedRoot || node.domWidget?.element || node.rootEl || (node.widgets && node.widgets.find(w => w?.element)?.element);
+  const domStyle = domRoot && typeof window !== "undefined" ? window.getComputedStyle(domRoot) : null;
+  const readVar = (name, fallback) => {
+    if (domRoot?.style?.getPropertyValue(name)) {
+      return domRoot.style.getPropertyValue(name).trim();
+    }
+    if (domStyle?.getPropertyValue(name)) {
+      return domStyle.getPropertyValue(name).trim();
+    }
+    return fallback;
+  };
+
+  const accent = readVar("--ds-color-accent", readVar("--ds-accent", node.properties?.ds_cp_accent || "#67e8f9"));
+  const surface = readVar("--ds-color-card", readVar("--ds-panel", node.properties?.ds_bg_color || node.bgcolor || "#12151c"));
+  const surface2 = readVar("--ds-color-panel-2", readVar("--ds-panel-2", "#161a23"));
+  const headerBg = readVar("--ds-color-base", readVar("--ds-bg", node.properties?.ds_title_color || node.color || "#0b0d12"));
+  const border = readVar("--ds-color-border", readVar("--ds-border", node.boxcolor || "#242a36"));
+  const borderActive = readVar("--ds-color-border-hover", readVar("--ds-border-active", accent));
+  const text = readVar("--ds-color-text", readVar("--ds-text", node.title_text_color || "#e5e7eb"));
+  const textMuted = readVar("--ds-color-muted-text", readVar("--ds-text-muted", "#9ca3af"));
+  const btnBg = readVar("--ds-btn-bg", surface2);
+  const btnHover = readVar("--ds-btn-hover", "#1c2130");
+  const socketFill = readVar("--ds-socket-fill", "#a3e635");
+  const wireAccent = readVar("--ds-wire-accent", accent);
+
   const payload = {
     source: "DeathshotArsenal",
-    version: "2.0.0",
+    version: "2.1.0",
     type: "node_color_payload",
     timestamp: Date.now(),
     data: {
-      title_color: node.color || "#1e293b",
-      title_text_color: node.title_text_color || "#ffffff",
-      body_color: node.bgcolor || "#0f172a",
-      stroke_color: node.boxcolor || "#334155",
-      ds_specific: isDSNode(node) ? {
-        accent: node.properties?.ds_cp_accent || "#67e8f9",
-        surface: node.properties?.ds_bg_color || "#12151c",
-        title_bg: node.properties?.ds_title_color || "#0b0d12"
-      } : null
+      title_color: node.color || headerBg,
+      title_text_color: node.title_text_color || text,
+      body_color: node.bgcolor || surface,
+      stroke_color: node.boxcolor || border,
+      tokens: {
+        accent,
+        surface,
+        surface2,
+        headerBg,
+        border,
+        borderActive,
+        text,
+        textMuted,
+        btnBg,
+        btnHover,
+        socketFill,
+        wireAccent
+      },
+      ds_specific: {
+        accent,
+        surface,
+        title_bg: headerBg
+      }
     }
   };
   memoryClipboard = payload;
@@ -2018,33 +2257,43 @@ function captureNodeColors(node) {
 function pasteNodeColors(targets) {
   if (!memoryClipboard?.data || !targets || targets.length === 0) return false;
   const d = memoryClipboard.data;
+  const tokens = d.tokens || {
+    accent: d.ds_specific?.accent || "#67e8f9",
+    surface: d.ds_specific?.surface || d.body_color || "#12151c",
+    surface2: "#161a23",
+    headerBg: d.ds_specific?.title_bg || d.title_color || "#0b0d12",
+    border: d.stroke_color || "#242a36",
+    borderActive: d.ds_specific?.accent || "#67e8f9",
+    text: d.title_text_color || "#e5e7eb",
+    textMuted: "#9ca3af",
+    btnBg: "#161a23",
+    btnHover: "#1c2130",
+  };
 
   targets.forEach(node => {
     // Write standard LiteGraph color properties
-    if (d.title_color) node.color = d.title_color;
+    node.color = d.title_color || tokens.headerBg;
     delete node.title_color;
     if (node.constructor) {
       delete node.constructor.title_color;
       delete node.constructor.title_text_color;
     }
-    if (d.body_color) node.bgcolor = d.body_color;
-    if (d.stroke_color) node.boxcolor = d.stroke_color;
+    node.bgcolor = d.body_color || tokens.surface;
+    node.boxcolor = d.stroke_color || tokens.border;
     if (d.title_text_color) {
       node.title_text_color = d.title_text_color;
     }
 
-    // Write DS proprietary properties if target is a DS node
-    if (isDSNode(node) && d.ds_specific) {
+    // Write full tokens if target is a DS node
+    if (isDSNode(node)) {
       node.properties = node.properties || {};
-      if (d.ds_specific.accent) node.properties.ds_cp_accent = d.ds_specific.accent;
-      if (d.ds_specific.surface) node.properties.ds_bg_color = d.ds_specific.surface;
-      if (d.ds_specific.title_bg) node.properties.ds_title_color = d.ds_specific.title_bg;
+      node.properties.ds_cp_accent = tokens.accent;
+      node.properties.ds_bg_color = tokens.surface;
+      node.properties.ds_title_color = tokens.headerBg;
 
       const domRoot = node._dsSeedRoot || node.domWidget?.element || node.rootEl || (node.widgets && node.widgets.find(w => w?.element)?.element);
       if (domRoot) {
-        if (d.ds_specific.accent) domRoot.style.setProperty("--ds-accent", d.ds_specific.accent);
-        if (d.ds_specific.surface) domRoot.style.setProperty("--ds-panel", d.ds_specific.surface);
-        if (d.ds_specific.title_bg) domRoot.style.setProperty("--ds-bg", d.ds_specific.title_bg);
+        applyThemeVariables(domRoot, tokens);
       }
     }
 
@@ -2095,8 +2344,93 @@ function getDashboard() {
   return dashboardInstance;
 }
 
+const DS_THEME_MANAGER_COMMAND_ID = "DeathshotArsenal.ThemeManager.Open";
+
+function openThemeManager() {
+  getDashboard().open();
+}
+
+function installLegacyCanvasMenuFallback() {
+  const canvasProto = globalThis.LiteGraph?.LGraphCanvas?.prototype;
+  if (!canvasProto || canvasProto.__dsaThemeManagerLegacyMenuInstalled) return false;
+
+  const originalCanvasMenu = canvasProto.getCanvasMenuOptions;
+  if (typeof originalCanvasMenu === "function") {
+    canvasProto.getCanvasMenuOptions = function(...args) {
+      const options = originalCanvasMenu.apply(this, args);
+      if (!Array.isArray(options)) return options;
+
+      const alreadyPresent = options.some(item =>
+        item && typeof item === "object" &&
+        String(item.content || "").includes("DS Theme Manager")
+      );
+
+      if (!alreadyPresent) {
+        options.push(null, {
+          content: "🎨 DS Theme Manager",
+          callback: openThemeManager,
+        });
+      }
+
+      return options;
+    };
+  }
+
+  const originalNodeMenu = canvasProto.getNodeMenuOptions;
+  if (typeof originalNodeMenu === "function") {
+    canvasProto.getNodeMenuOptions = function(...args) {
+      const options = originalNodeMenu.apply(this, args);
+      if (!Array.isArray(options)) return options;
+
+      const alreadyPresent = options.some(item =>
+        item && typeof item === "object" &&
+        String(item.content || "").includes("DS Theme Manager")
+      );
+
+      if (!alreadyPresent) {
+        options.unshift(
+          null,
+          {
+            content: "🎨 DS Theme Manager",
+            callback: openThemeManager,
+          }
+        );
+      }
+
+      return options;
+    };
+  }
+
+  canvasProto.__dsaThemeManagerLegacyMenuInstalled = true;
+  return true;
+}
+
+function scheduleLegacyCanvasMenuFallback() {
+  if (installLegacyCanvasMenuFallback()) return;
+  for (const delay of [0, 100, 400, 1000, 2500]) {
+    setTimeout(() => {
+      installLegacyCanvasMenuFallback();
+    }, delay);
+  }
+}
+
 app.registerExtension({
   name: "DeathshotArsenal.ThemeManager",
+
+  commands: [
+    {
+      id: DS_THEME_MANAGER_COMMAND_ID,
+      label: "DS Theme Manager",
+      function: openThemeManager,
+    },
+  ],
+
+  menuCommands: [
+    {
+      path: ["DeathshotArsenal"],
+      commands: [DS_THEME_MANAGER_COMMAND_ID],
+    },
+  ],
 
   async setup() {
     // Keyboard Shortcut: Alt + T
@@ -2111,6 +2445,13 @@ app.registerExtension({
         }
       }
     });
+
+    // Keep the manager reachable on both the modern extension-menu path and
+    // the legacy LiteGraph canvas menu used by older/current ComfyUI builds.
+    scheduleLegacyCanvasMenuFallback();
+
+    window.DSThemeManager = window.DSThemeManager || {};
+    window.DSThemeManager.open = openThemeManager;
   },
 
   // Extension Context Menu Hooks (New ComfyUI Architecture)

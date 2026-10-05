@@ -29,8 +29,9 @@ from .rife_arch import IFNet, clear_warp_cache
 
 logger = logging.getLogger("DeathshotArsenal.Interpolation")
 
-# Module-level model cache: (ckpt_name, dtype_str, torch_compile) -> IFNet instance
-_MODEL_CACHE: Dict[Tuple[str, str, bool], torch.nn.Module] = {}
+# Single-entry CPU model cache: (ckpt_name, dtype_str) -> CPU IFNet instance
+# Keeps at most one model in system RAM on CPU; moved to GPU only during active execution.
+_MODEL_CACHE: Dict[Tuple[str, str], torch.nn.Module] = {}
 
 DTYPE_MAP = {
     "float32": torch.float32,
@@ -289,11 +290,15 @@ class DS_Interpolation:
 
         model_path = ensure_model(ckpt_name)
 
-        cache_key = (ckpt_name, str(torch_dtype), bool(torch_compile))
+        cache_key = (ckpt_name, str(torch_dtype))
         if cache_key in _MODEL_CACHE:
             model = _MODEL_CACHE[cache_key]
         else:
-            logger.info(f"[DS Interpolation] Loading model '{ckpt_name}' (arch={arch_ver}, dtype={torch_dtype}, compile={torch_compile})...")
+            # Evict previous CPU model if any to keep RAM bounded
+            _MODEL_CACHE.clear()
+            gc.collect()
+
+            logger.info(f"[DS Interpolation] Loading model '{ckpt_name}' (arch={arch_ver}, dtype={torch_dtype})...")
             model = IFNet(arch_ver=arch_ver)
             sd = torch.load(model_path, map_location="cpu", weights_only=False)
 
@@ -306,14 +311,7 @@ class DS_Interpolation:
 
             if torch_dtype != torch.float32:
                 model = model.to(dtype=torch_dtype)
-            model = model.eval().to(device=device)
-
-            if torch_compile:
-                try:
-                    logger.info("[DS Interpolation] Applying torch.compile() to model graph...")
-                    model = torch.compile(model)
-                except Exception as comp_err:
-                    logger.warning(f"[DS Interpolation] torch.compile() failed: {comp_err}. Falling back to standard execution.")
+            model = model.eval().to(device="cpu")
 
             _MODEL_CACHE[cache_key] = model
 
@@ -395,6 +393,17 @@ class DS_Interpolation:
         # -------------------------------------------------------------
         pos = 0
         try:
+            # Move model to execution accelerator only for the duration of inference
+            model.to(device=device)
+            active_model = model
+            if torch_compile:
+                try:
+                    logger.info("[DS Interpolation] Applying torch.compile() to model graph...")
+                    active_model = torch.compile(model)
+                except Exception as comp_err:
+                    logger.warning(f"[DS Interpolation] torch.compile() failed: {comp_err}. Falling back to standard execution.")
+                    active_model = model
+
             with torch.inference_mode():
                 while pos < total_tasks:
                     batch_tasks = tasks[pos : pos + batch_size]
@@ -413,7 +422,7 @@ class DS_Interpolation:
                     frame1_batch = torch.cat(f1_list, dim=0).to(device=device, dtype=torch_dtype, non_blocking=True)
                     timestep_tensor = torch.tensor(ts_list, dtype=torch_dtype, device=device).view(-1, 1, 1, 1)
 
-                    middle_frames = model(
+                    middle_frames = active_model(
                         frame0_batch,
                         frame1_batch,
                         timestep_tensor,
@@ -444,9 +453,6 @@ class DS_Interpolation:
         except (torch.cuda.OutOfMemoryError, RuntimeError) as err:
             err_str = str(err).lower()
             if "out of memory" in err_str or isinstance(err, torch.cuda.OutOfMemoryError):
-                comfy.model_management.soft_empty_cache()
-                clear_warp_cache()
-                gc.collect()
                 h, w = frames.shape[1:3]
                 raise RuntimeError(
                     f"[DS Interpolation] GPU Out Of Memory error during interpolation of {w}x{h} frames. "
@@ -454,6 +460,15 @@ class DS_Interpolation:
                     f"Recommendation: Reduce batch_size to 1, set dtype to 'float16', or lower scale_factor."
                 ) from err
             raise err
+        finally:
+            # Ensure model is offloaded back to CPU so GPU VRAM is completely released
+            try:
+                model.to(device="cpu")
+            except Exception:
+                pass
+            clear_warp_cache()
+            comfy.model_management.soft_empty_cache()
+            gc.collect()
 
         # -------------------------------------------------------------
         # 7. Assemble Output Sequence & Maintain Temporal Duration
@@ -461,10 +476,6 @@ class DS_Interpolation:
         for idx in range(total_target_frames):
             if output_slots[idx] is None:
                 output_slots[idx] = frames[-1:].to(device="cpu", dtype=torch.float32)
-
-        comfy.model_management.soft_empty_cache()
-        clear_warp_cache()
-        gc.collect()
 
         final_images = torch.cat(output_slots, dim=0)
 

@@ -14,7 +14,7 @@
   max-width: calc(100vw - 32px);
   max-height: 85vh;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--ds-panel, #0f1219);
   border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);

@@ -32,7 +32,7 @@ def load_persisted_state() -> Dict[str, Any]:
                 return json.load(f)
         except Exception as e:
             logger.debug(f"Failed to read state cache: {e}")
-    return {"nodes": {}, "last_video": ""}
+    return {"nodes": {}, "last_video": "", "last_collapsed": True}
 
 
 def save_persisted_state(data: Dict[str, Any]):
@@ -359,17 +359,16 @@ class DS_LoadVideo:
                 if evaluated_idx % select_every_nth != 0:
                     continue
 
+                # Resize in BGR first if target dimensions differ (faster and saves memory)
+                if (target_w, target_h) != (orig_w, orig_h):
+                    interpolation = cv2.INTER_AREA if (target_w < orig_w and target_h < orig_h) else cv2.INTER_LANCZOS4
+                    frame_bgr = cv2.resize(frame_bgr, (target_w, target_h), interpolation=interpolation)
+
                 # Convert BGR to RGB
                 frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
-                # Resize if target dimensions differ
-                if (target_w, target_h) != (orig_w, orig_h):
-                    interpolation = cv2.INTER_AREA if (target_w < orig_w and target_h < orig_h) else cv2.INTER_LANCZOS4
-                    frame_rgb = cv2.resize(frame_rgb, (target_w, target_h), interpolation=interpolation)
-
-                # Normalize to float32 [0.0, 1.0]
-                arr = np.ascontiguousarray(frame_rgb, dtype=np.float32) / 255.0
-                frames.append(torch.from_numpy(arr))
+                # Store compact uint8 tensor (1 byte/val instead of 4 bytes/val) to minimize RAM consumption
+                frames.append(torch.from_numpy(np.ascontiguousarray(frame_rgb)))
 
                 if frame_load_cap > 0 and len(frames) >= frame_load_cap:
                     break
@@ -389,7 +388,25 @@ class DS_LoadVideo:
                 frames = frames[:valid_count]
 
         loaded_frame_count = len(frames)
-        images = torch.stack(frames, dim=0)
+
+        # Memory footprint calculation and explicit diagnostic logging
+        mem_mb = (loaded_frame_count * target_w * target_h * 3 * 4) / (1024 * 1024)
+        if mem_mb > 3000:
+            logger.warning(
+                f"[DS Load Video] Large video memory footprint: {loaded_frame_count} frames "
+                f"at {target_w}x{target_h} will require ~{mem_mb / 1024:.2f} GB RAM. "
+                f"Consider setting 'frame_load_cap' or resizing if memory is constrained."
+            )
+        else:
+            logger.debug(f"[DS Load Video] Loaded {loaded_frame_count} frames ({target_w}x{target_h}), ~{mem_mb:.1f} MB in RAM")
+
+        # Stack uint8 frames (takes 1/4 the memory of float32), then free individual frame tensors immediately
+        images_u8 = torch.stack(frames, dim=0)
+        del frames
+
+        # Convert contiguous uint8 tensor to float32 [0.0, 1.0] expected by ComfyUI
+        images = images_u8.to(dtype=torch.float32).div_(255.0)
+        del images_u8
 
         # Calculate effective loaded frame rate and duration
         effective_step = target_frame_time * select_every_nth
@@ -443,6 +460,29 @@ def register_api_routes():
                 pass
             return False
 
+        if not _is_registered("GET", "/ds/load_video/list"):
+            @routes.get("/ds/load_video/list")
+            async def load_video_list(request):
+                input_dir = folder_paths.get_input_directory()
+                videos = []
+                if os.path.isdir(input_dir):
+                    try:
+                        for root_dir, _, filenames in os.walk(input_dir):
+                            for fn in filenames:
+                                ext = os.path.splitext(fn)[1].lower()
+                                if ext in SUPPORTED_VIDEO_EXTENSIONS and not fn.startswith("."):
+                                    full_p = os.path.join(root_dir, fn)
+                                    rel_p = os.path.relpath(full_p, input_dir).replace("\\", "/")
+                                    videos.append({
+                                        "filename": fn,
+                                        "rel_path": rel_p,
+                                        "full_path": full_p,
+                                    })
+                    except Exception as e:
+                        logger.warning(f"Error scanning input directory: {e}")
+                videos.sort(key=lambda x: natural_sort_key(x["rel_path"]))
+                return web.json_response({"ok": True, "videos": videos})
+
         if not _is_registered("POST", "/ds/load_video/query"):
             @routes.post("/ds/load_video/query")
             async def load_video_query(request):
@@ -454,46 +494,73 @@ def register_api_routes():
                 raw_path = payload.get("path", "")
                 resolved = resolve_video_path(raw_path)
 
+                input_dir = folder_paths.get_input_directory()
+
+                # If no path provided or invalid, scan ComfyUI input folder for fallback
+                if not resolved or not os.path.isfile(resolved):
+                    if os.path.isdir(input_dir):
+                        for root_dir, _, filenames in os.walk(input_dir):
+                            for fn in sorted(filenames, key=natural_sort_key):
+                                if os.path.splitext(fn)[1].lower() in SUPPORTED_VIDEO_EXTENSIONS and not fn.startswith("."):
+                                    resolved = os.path.join(root_dir, fn)
+                                    raw_path = os.path.relpath(resolved, input_dir).replace("\\", "/")
+                                    break
+                            if resolved:
+                                break
+
                 if not resolved or not os.path.isfile(resolved):
                     return web.json_response({
                         "ok": False,
                         "error": "Video unavailable",
                         "path": raw_path,
+                        "files": [],
                     })
 
                 directory = os.path.dirname(resolved)
                 filename = os.path.basename(resolved)
 
                 # Scan directory for supported video files
-                supported_files: List[str] = []
+                supported_files: List[Dict[str, Any]] = []
                 try:
                     with os.scandir(directory) as entries:
                         for entry in entries:
                             if entry.is_file() and not entry.name.startswith("."):
                                 ext = os.path.splitext(entry.name)[1].lower()
                                 if ext in SUPPORTED_VIDEO_EXTENSIONS:
-                                    supported_files.append(entry.name)
+                                    f_full = os.path.normpath(entry.path)
+                                    f_rel = entry.name
+                                    try:
+                                        if os.path.commonpath([f_full, input_dir]) == input_dir:
+                                            f_rel = os.path.relpath(f_full, input_dir).replace("\\", "/")
+                                    except Exception:
+                                        pass
+                                    supported_files.append({
+                                        "filename": entry.name,
+                                        "rel_path": f_rel,
+                                        "full_path": f_full,
+                                    })
                 except Exception as e:
                     logger.warning(f"Error reading directory '{directory}': {e}")
-                    supported_files = [filename]
+                    supported_files = [{"filename": filename, "rel_path": filename, "full_path": resolved}]
 
-                supported_files.sort(key=natural_sort_key)
+                supported_files.sort(key=lambda x: natural_sort_key(x["filename"]))
+                filenames_only = [f["filename"] for f in supported_files]
                 try:
-                    curr_index = supported_files.index(filename)
+                    curr_index = filenames_only.index(filename)
                 except ValueError:
-                    supported_files.insert(0, filename)
+                    supported_files.insert(0, {"filename": filename, "rel_path": filename, "full_path": resolved})
+                    filenames_only.insert(0, filename)
                     curr_index = 0
 
                 has_prev = (curr_index > 0)
                 has_next = (curr_index < len(supported_files) - 1)
-                prev_file = supported_files[curr_index - 1] if has_prev else None
-                next_file = supported_files[curr_index + 1] if has_next else None
+                prev_file = supported_files[curr_index - 1]["rel_path"] if has_prev else None
+                next_file = supported_files[curr_index + 1]["rel_path"] if has_next else None
 
                 loop = asyncio.get_event_loop()
                 metadata = await loop.run_in_executor(None, probe_video_metadata, resolved)
 
                 # Return path relative to ComfyUI input folder if located inside input dir
-                input_dir = folder_paths.get_input_directory()
                 rel_name = filename
                 try:
                     if os.path.commonpath([resolved, input_dir]) == input_dir:
@@ -565,6 +632,8 @@ def register_api_routes():
                     state["nodes"][node_id] = payload
                 if payload.get("video"):
                     state["last_video"] = payload.get("video")
+                if "collapsed" in payload:
+                    state["last_collapsed"] = bool(payload.get("collapsed"))
                 save_persisted_state(state)
                 return web.json_response({"ok": True})
 

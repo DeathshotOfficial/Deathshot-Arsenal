@@ -272,14 +272,38 @@ def register_routes():
                 return web.Response(status=404)
 
             ext = os.path.splitext(path)[1].lower()
-            content_type = mimetypes.guess_type(path)[0] or "application/octet-stream"
+            mime_map = {
+                ".mp4": "video/mp4",
+                ".webm": "video/webm",
+                ".mov": "video/quicktime",
+                ".mkv": "video/x-matroska",
+                ".avi": "video/x-msvideo",
+                ".wmv": "video/x-ms-wmv",
+                ".flv": "video/x-flv",
+                ".m4v": "video/mp4",
+                ".ogv": "video/ogg",
+                ".png": "image/png",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".webp": "image/webp",
+                ".gif": "image/gif",
+                ".bmp": "image/bmp",
+            }
+            content_type = mime_map.get(ext) or mimetypes.guess_type(path)[0] or "video/mp4"
             filename = os.path.basename(path).replace('"', '\\"')
             headers = {
                 "Content-Type": content_type,
                 "Content-Disposition": f'inline; filename="{filename}"',
                 "Accept-Ranges": "bytes",
+                "Cache-Control": "public, max-age=3600",
             }
-            return web.FileResponse(path, headers=headers)
+            try:
+                # 2MB chunks for high-throughput video streaming on Windows local disk
+                return web.FileResponse(path, chunk_size=2 * 1024 * 1024, headers=headers)
+            except (asyncio.CancelledError, ConnectionResetError):
+                raise
+            except Exception as e:
+                return web.Response(status=500, text=str(e))
 
         @routes.post("/ds/gallery/delete")
         async def api_gallery_delete(request):
@@ -338,8 +362,7 @@ def register_routes():
         print(f"[DeathshotArsenal] Failed to register DS Gallery routes: {e}", flush=True)
 
 
-# Automatically register routes and pre-warm detector when imported
+# Automatically register routes when imported (NSFW detector is loaded lazily on demand)
 register_routes()
-nsfw_manager.prewarm()
 
 __all__ = ["DS_Gallery", "scan_gallery_folder", "generate_thumbnail", "nsfw_manager"]

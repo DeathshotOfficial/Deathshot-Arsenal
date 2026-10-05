@@ -1,175 +1,103 @@
 /* ============================================================
    DS Show Text - DeathshotArsenal
-   Themed read-only STRING display
+   Themed read-only text preview component styling
    ============================================================ */
 
-.ds-show-text-root {
-  --ds-bg: var(--comfy-input-bg-color, #17191d);
-  --ds-panel: var(--comfy-menu-bg, #1d1f23);
-  --ds-panel-2: var(--comfy-input-bg-color, #202328);
-  --ds-accent: var(--ds-theme-accent, #67e8f9);
-  --ds-text: var(--comfy-text-color, #e5e7eb);
-  --ds-text-muted: var(--comfy-text-secondary, #9ca3af);
-  --ds-border: var(--comfy-input-border-color, #353940);
-  --ds-radius: 6px;
-  --ds-font: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-
+.ds-show-text-card {
   width: 100% !important;
   height: 100% !important;
   min-height: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--ds-ui-gap-sm, 5px);
-  padding: var(--ds-ui-shell-inset, 6px) !important;
+  pointer-events: auto;
   overflow: hidden;
-  border-radius: var(--ds-radius);
-  background: var(--ds-bg);
-  color: var(--ds-text);
-  font-family: var(--ds-font);
-  font-size: 12px;
-  user-select: none;
-  pointer-events: none;
-  position: relative;
 }
 
-.ds-show-text-root * { box-sizing: border-box; }
-.ds-show-text-preview,
-.ds-show-text-copy { pointer-events: auto; }
-
-.ds-show-text-header {
-  flex: 0 0 28px;
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ds-show-text-title {
-  min-width: 0;
-  margin-right: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ds-text);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.ds-show-text-title-icon {
-  width: 15px;
-  height: 15px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  color: var(--ds-accent);
-}
-
-.ds-show-text-title-icon svg,
-.ds-show-text-copy svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.ds-show-text-copy {
-  width: var(--ds-ui-control-h, 28px);
-  height: var(--ds-ui-control-h, 28px);
-  padding: 0;
-  margin: 0;
-  appearance: none;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-ui-control-radius, 5px);
-  background: var(--ds-panel-2);
-  color: var(--ds-text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font: inherit;
-  transition: border-color 100ms ease, background 100ms ease, color 100ms ease;
-}
-
-.ds-show-text-copy:hover {
-  border-color: var(--ds-border-active, var(--ds-accent));
-  background: var(--ds-btn-hover, var(--ds-panel));
-  color: var(--ds-accent);
-}
-
-.ds-show-text-copy:focus-visible {
-  outline: 1px solid var(--ds-accent);
-  outline-offset: 1px;
-}
-
-.ds-show-text-copy.is-success {
-  border-color: var(--ds-accent);
-  color: var(--ds-accent);
-}
-
-.ds-show-text-copy.is-error {
-  border-color: var(--ds-error, #ef4444);
-  color: var(--ds-error, #ef4444);
-}
-
-.ds-show-text-body {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-}
-
-.ds-show-text-preview {
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
+.ds-show-text-card .ds-ui-card-body {
   flex: 1 1 auto;
-  display: block;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow: hidden;
+}
+
+.ds-show-text-area {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   resize: none;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-ui-control-radius, 5px);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-color-panel-2, #161a23);
+  color: var(--ds-color-text, #e5e7eb);
+  font-family: var(--ds-font, Inter, monospace);
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 8px 10px;
   outline: none;
-  padding: 9px 10px;
-  background: var(--ds-panel-2);
-  color: var(--ds-text);
-  font: 12px/1.45 var(--ds-font);
   overflow: auto;
   user-select: text;
   cursor: text;
+  transition: border-color var(--ds-transition);
 }
 
-.ds-show-text-preview:focus {
-  border-color: var(--ds-accent);
-  box-shadow: inset 0 0 0 1px var(--ds-accent);
+.ds-show-text-area:focus {
+  border-color: var(--ds-color-accent, #67e8f9);
+  box-shadow: inset 0 0 0 1px var(--ds-color-accent, #67e8f9);
 }
 
-.ds-show-text-preview[data-empty="true"] {
-  color: var(--ds-text-muted);
+.ds-show-text-area::placeholder {
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+.ds-show-text-area::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ds-show-text-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ds-show-text-area::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ds-color-muted-text, #9ca3af) 35%, transparent);
+  border-radius: 3px;
+}
+
+.ds-show-text-area::-webkit-scrollbar-thumb:hover {
+  background: var(--ds-color-accent, #67e8f9);
 }
 
 .ds-show-text-status {
-  min-width: 0;
-  max-width: 55%;
+  font-size: 10px;
+  color: var(--ds-color-muted-text, #9ca3af);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ds-text-muted);
-  font-size: 9px;
+  max-width: 120px;
   line-height: 1;
+  user-select: none;
+  transition: color var(--ds-transition);
 }
 
-.ds-show-text-root ::-webkit-scrollbar { width: 6px; height: 6px; }
-.ds-show-text-root ::-webkit-scrollbar-track { background: transparent; }
-.ds-show-text-root ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--ds-text-muted) 35%, transparent);
-  border-radius: 3px;
+.ds-show-text-status.is-success {
+  color: var(--ds-color-success, #34d399);
 }
-.ds-show-text-root ::-webkit-scrollbar-thumb:hover { background: var(--ds-accent); }
 
-@media (max-width: 320px) {
-  .ds-show-text-title { font-size: 11px; }
-  .ds-show-text-status { display: none; }
+.ds-show-text-status.is-error {
+  color: var(--ds-color-danger, #f87171);
+}
+
+.ds-show-text-copy-btn.is-success {
+  border-color: var(--ds-color-success, #34d399);
+  color: var(--ds-color-success, #34d399);
+}
+
+.ds-show-text-copy-btn.is-error {
+  border-color: var(--ds-color-danger, #f87171);
+  color: var(--ds-color-danger, #f87171);
 }

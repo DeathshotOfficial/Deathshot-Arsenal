@@ -32,24 +32,14 @@ class DS_Randomizer:
     @classmethod
     def INPUT_TYPES(cls):
         return {
-            "required": {
-                "prompt": (
-                    "STRING",
-                    {
-                        "multiline": True,
-                        "default": "",
-                        "dynamicPrompts": False,
-                        "tooltip": "Source prompt template. Will be analyzed and randomized according to enabled categories.",
-                    },
-                ),
-            },
+            "required": {},
             "optional": {
                 "text": (
                     "STRING",
                     {
                         "forceInput": True,
                         "default": "",
-                        "tooltip": "Optional upstream text connection. When connected, incoming text takes precedence during execution.",
+                        "tooltip": "Optional upstream text connection. When connected, incoming text will be randomized according to enabled categories.",
                     },
                 ),
                 "seed": (
@@ -59,6 +49,15 @@ class DS_Randomizer:
                         "min": 0,
                         "max": 0xffffffffffffffff,
                         "tooltip": "Variation seed (0 = fresh random variation on every queue).",
+                    },
+                ),
+                "prompt": (
+                    "STRING",
+                    {
+                        "default": "",
+                        "multiline": True,
+                        "dynamicPrompts": False,
+                        "tooltip": "Optional template text for backward compatibility.",
                     },
                 ),
             },
@@ -83,11 +82,12 @@ class DS_Randomizer:
 
     @classmethod
     def IS_CHANGED(cls, prompt="", text=None, seed=0, randomizer_state="{}", unique_id=None, **kwargs):
-        # When seed is non-zero (or managed across queues), maintain deterministic stability across continue/upscale stages
-        if seed != 0:
-            return f"{unique_id or 'default'}:{seed}"
-        # Fallback if seed is 0: force re-run on fresh independent queue
-        return float("nan")
+        # Always return NaN when seed is 0 or None to force fresh variation on every queue / batch
+        if not seed:
+            return float("nan")
+        # When seed is non-zero, include seed, prompt, and state so modifications trigger execution
+        active = text if (text is not None and str(text).strip()) else prompt
+        return f"{unique_id or 'default'}:{seed}:{active}:{randomizer_state}"
 
     def randomize(
         self,
@@ -99,17 +99,6 @@ class DS_Randomizer:
         **kwargs,
     ):
         node_id = str(unique_id or "default_randomizer")
-
-        # 0. Check multi-stage cache: if this node was already executed for this seed (e.g. Continue/Upscale stage), return the identical prompt
-        if seed != 0 and node_id in _NODE_PROMPT_CACHE:
-            cached = _NODE_PROMPT_CACHE[node_id]
-            if cached.get("seed") == seed and cached.get("prompt"):
-                cached_prompt = cached["prompt"]
-                logger.info(f"[DS Randomizer] Multi-stage pass detected for node '{node_id}' (seed {seed}). Reusing active prompt to prevent upscale artifacts.")
-                return {
-                    "ui": {"prompt_preview": [cached_prompt]},
-                    "result": (cached_prompt,),
-                }
 
         # 1. Determine active prompt: wired input ('text' or legacy 'source_text') takes precedence over editor
         source_text = kwargs.get("source_text")
@@ -137,6 +126,22 @@ class DS_Randomizer:
         if not isinstance(category_options, dict):
             category_options = {}
 
+        # 0. Check multi-stage cache: only reuse if seed != 0 AND prompt and state match
+        if seed != 0 and node_id in _NODE_PROMPT_CACHE:
+            cached = _NODE_PROMPT_CACHE[node_id]
+            if (
+                cached.get("seed") == seed
+                and cached.get("prompt")
+                and cached.get("active_prompt") == active_prompt
+                and cached.get("state") == randomizer_state
+            ):
+                cached_prompt = cached["prompt"]
+                logger.info(f"[DS Randomizer] Multi-stage pass detected for node '{node_id}' (seed {seed}). Reusing active prompt to prevent upscale artifacts.")
+                return {
+                    "ui": {"prompt_preview": [cached_prompt]},
+                    "result": (cached_prompt,),
+                }
+
         logger.info(
             f"[DS Randomizer] Executing on node '{node_id}' with {len(enabled_categories)} enabled categories. "
             f"Active prompt length: {len(active_prompt)} chars (seed: {seed})."
@@ -154,7 +159,12 @@ class DS_Randomizer:
 
         # Save to cache so any downstream continue/upscale pass receives the exact same prompt
         if seed != 0:
-            _NODE_PROMPT_CACHE[node_id] = {"seed": seed, "prompt": final_prompt}
+            _NODE_PROMPT_CACHE[node_id] = {
+                "seed": seed,
+                "prompt": final_prompt,
+                "active_prompt": active_prompt,
+                "state": randomizer_state,
+            }
 
         return {
             "ui": {"prompt_preview": [final_prompt]},

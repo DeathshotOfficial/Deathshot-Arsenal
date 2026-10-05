@@ -1,5 +1,5 @@
 import { app } from "/scripts/app.js";
-import { openAccentPicker } from "../Control Panel/settings.mjs";
+import { ColorPicker } from "../UIElements/index.js";
 
 const DEFAULT_RATIOS = ["1:1", "4:5", "5:4", "3:4", "4:3", "2:3", "3:2", "1:2", "2:1", "9:16", "16:9", "21:9"];
 const DEFAULT_MP = [0, 1, 1.5, 2, 2.5, 3];
@@ -47,7 +47,7 @@ function close(node) {
 function chip(text, active, onClick, removable = false, onRemove = null) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = `ds-op-set-chip${active ? " is-active" : ""}`;
+  b.className = `ds-ui-btn ds-ui-btn-compact ds-op-set-chip${active ? " is-active" : ""}`;
   const label = document.createElement("span");
   label.textContent = text;
   b.append(label);
@@ -94,7 +94,7 @@ export function openSettings(node) {
 
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
-  closeBtn.className = "ds-op-settings-close";
+  closeBtn.className = "ds-ui-btn ds-ui-btn-compact ds-op-settings-close";
   closeBtn.textContent = "×";
   closeBtn.addEventListener("click", () => close(node));
   head.append(titleBox, closeBtn);
@@ -200,6 +200,7 @@ export function openSettings(node) {
 
   const add = document.createElement("button");
   add.type = "button";
+  add.className = "ds-ui-btn ds-ui-btn-compact";
   add.textContent = "Add";
 
   const addMP = () => {
@@ -229,7 +230,7 @@ export function openSettings(node) {
   // 4. Restore Defaults
   const restore = document.createElement("button");
   restore.type = "button";
-  restore.className = "ds-op-settings-restore";
+  restore.className = "ds-ui-btn ds-ui-btn-compact ds-op-settings-restore";
   restore.textContent = "Restore default presets";
   restore.addEventListener("click", () => {
     node._dsBeginChange?.();
@@ -248,30 +249,27 @@ export function openSettings(node) {
   body.append(restore);
 
   // 5. Padding Color Accent
-  const accentRow = document.createElement("div");
-  accentRow.className = "ds-op-settings-accent-row";
-  const accentLabel = document.createElement("span");
-  accentLabel.textContent = "PADDING COLOR";
-  const accent = document.createElement("button");
-  accent.type = "button";
-  accent.className = "ds-op-settings-accent";
-  accent.style.setProperty("background-color", String(s.fill_color), "important");
-  accent.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    node.properties.ds_cp_accent = String(s.fill_color).toLowerCase();
-    openAccentPicker(app, node, {
-      setAccent: (color) => {
-        node._dsBeginChange?.();
-        s.fill_color = String(color).toLowerCase();
-        node.properties.ds_cp_accent = s.fill_color;
-        node._dsCommit();
-        accent.style.setProperty("background-color", String(s.fill_color), "important");
-      },
-    });
+  const colorLabel = document.createElement("div");
+  colorLabel.className = "ds-op-settings-label";
+  const colorTitle = document.createElement("span");
+  colorTitle.textContent = "PADDING COLOR";
+  colorLabel.appendChild(colorTitle);
+  body.append(colorLabel);
+
+  const colorWrap = document.createElement("div");
+  colorWrap.className = "ds-op-settings-color-wrap";
+  const cp = ColorPicker({
+    node,
+    value: s.fill_color,
+    onChange: (color) => {
+      node._dsBeginChange?.();
+      s.fill_color = String(color).toLowerCase();
+      node.properties.ds_cp_accent = s.fill_color;
+      node._dsCommit?.();
+    },
   });
-  accentRow.append(accentLabel, accent);
-  body.append(accentRow);
+  colorWrap.append(cp.root);
+  body.append(colorWrap);
 
   popup.append(body);
   popup.addEventListener("pointerdown", (e) => e.stopPropagation());
@@ -285,6 +283,23 @@ export function openSettings(node) {
 
   position(node, popup);
   requestAnimationFrame(() => position(node, popup));
+  ensureFollow();
+}
+
+let followRaf = null;
+function ensureFollow() {
+  if (followRaf != null) return;
+  const loop = () => {
+    if (OPEN.size === 0) {
+      followRaf = null;
+      return;
+    }
+    for (const item of OPEN.values()) {
+      position(item.node, item.popup);
+    }
+    followRaf = requestAnimationFrame(loop);
+  };
+  followRaf = requestAnimationFrame(loop);
 }
 
 if (!window.__DS_OUTPAINT_SETTINGS_EVENTS__) {

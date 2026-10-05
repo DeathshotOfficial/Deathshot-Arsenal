@@ -1,138 +1,477 @@
-.ds-ic-root {
-  --ic-bg: var(--ds-panel, #171a20);
-  --ic-bg2: var(--ds-panel-2, #20242b);
-  --ic-surface: var(--ds-bg, #111419);
-  --ic-border: var(--ds-border, #343a45);
-  --ic-text: var(--ds-text, #edf1f7);
-  --ic-muted: var(--ds-text-muted, #9aa3af);
-  --ic-accent: var(--ds-accent, #67e8f9);
-  width:100%; height:100%; min-height:0; box-sizing:border-box;
-  display:grid;
-  grid-template-rows: 30px 36px 26px 40px 34px minmax(180px,1fr);
-  gap:7px; padding:8px;
-  color:var(--ic-text); font-family:var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif);
-  font-size:12px; user-select:none; overflow:hidden;
-}
-.ds-ic-root *{box-sizing:border-box}.ds-ic-root button{font:inherit}
-.ds-ic-header{display:flex;align-items:center;gap:8px;min-width:0}
-.ds-ic-brand{width:26px;height:24px;display:grid;place-items:center;border:1px solid var(--ic-accent);border-radius:6px;color:var(--ic-accent);font-size:8px;font-weight:900;flex:0 0 auto}
-.ds-ic-title{font-size:13px;font-weight:800;white-space:nowrap}.ds-ic-status{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--ic-border);border-radius:999px;color:var(--ic-muted);font-size:8px;font-weight:800;letter-spacing:.25px;white-space:nowrap}.ds-ic-status-dot{width:6px;height:6px;border-radius:50%;background:var(--ic-muted)}
-.ds-ic-status[data-state="paused"]{color:var(--ic-accent);border-color:color-mix(in srgb,var(--ic-accent) 45%,var(--ic-border))}.ds-ic-status[data-state="paused"] .ds-ic-status-dot{background:var(--ic-accent)}
-.ds-ic-status[data-state="busy"]{color:var(--ic-accent)}.ds-ic-status[data-state="busy"] .ds-ic-status-dot{background:var(--ic-accent);animation:dsicpulse 1s infinite}.ds-ic-status[data-state="stopped"] .ds-ic-status-dot{background:var(--ic-muted)}
-@keyframes dsicpulse{50%{opacity:.35}}
-.ds-ic-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:3px;background:var(--ic-surface);border:1px solid var(--ic-border);border-radius:7px}
-.ds-ic-tab{border:1px solid transparent;border-radius:5px;background:transparent;color:var(--ic-muted);font-size:9px;font-weight:850;cursor:pointer}.ds-ic-tab:hover{color:var(--ic-text);border-color:var(--ic-border)}.ds-ic-tab.active{color:var(--ic-text);background:var(--ic-bg2);border-color:var(--ic-accent);box-shadow:inset 0 -2px 0 var(--ic-accent)}
-.ds-ic-caption{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:0 3px;color:var(--ic-muted);font-size:9px}.ds-ic-helper{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-ic-dims{white-space:nowrap;opacity:.8}
-.ds-ic-controls{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ds-ic-btn,.ds-ic-action{min-width:0;border:1px solid var(--ic-border);border-radius:7px;background:var(--ic-bg2);color:var(--ic-text);font-size:9px;font-weight:850;cursor:pointer;transition:.12s ease}.ds-ic-btn:hover:not(:disabled),.ds-ic-action:hover:not(:disabled){border-color:var(--ic-accent);transform:translateY(-1px)}.ds-ic-btn:active:not(:disabled),.ds-ic-action:active:not(:disabled){transform:translateY(0)}.ds-ic-btn.primary{border-color:color-mix(in srgb,var(--ic-accent) 55%,var(--ic-border))}.ds-ic-btn:disabled,.ds-ic-action:disabled{opacity:.35;cursor:default;transform:none}
-.ds-ic-actions{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;min-height:34px}.ds-ic-action{background:var(--ic-surface);color:var(--ic-muted);font-size:8px}
+/* ========================================================================= */
+/* DS Image Checkpoint — Overhauled UI                                       */
+/* ========================================================================= */
 
-.ds-ic-root .ds-save-confirm {
-  position: absolute;
-  inset: 0;
-  z-index: 25;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px;
+.ds-ic-card {
+  --ic-bg: var(--ds-color-card, var(--ds-panel, #12151c));
+  --ic-bg2: var(--ds-color-panel-2, var(--ds-panel-2, #161a23));
+  --ic-surface: var(--ds-color-base, var(--ds-bg, #0b0d12));
+  --ic-border: var(--ds-color-card-border, var(--ds-border, #242a36));
+  --ic-text: var(--ds-color-text, var(--ds-text, #e5e7eb));
+  --ic-muted: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af));
+  --ic-accent: var(--ds-color-accent, var(--ds-accent, #67e8f9));
+  --ic-on-accent: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10));
+
+  box-sizing: border-box;
+  width: 100%;
   height: 100%;
-  min-height: 28px;
-  background: var(--ic-bg2, #20242b);
-  border: 1px solid var(--ic-accent, #67e8f9);
-  border-radius: 6px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
-  pointer-events: auto;
-  user-select: none;
-  animation: dssavefadein 0.15s ease-out;
-  overflow: hidden;
-  white-space: nowrap;
-}
-@keyframes dssavefadein {
-  from { opacity: 0; transform: scale(0.99); }
-  to { opacity: 1; transform: scale(1); }
-}
-.ds-ic-root .ds-save-confirm.ds-save-confirm-error {
-  border-color: #ef4444;
-}
-.ds-ic-root .ds-save-confirm-icon {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--ds-card-padding, 10px) !important;
+  background: var(--ic-bg);
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ds-radius-card, 8px);
+  color: var(--ic-text);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
   font-size: 11px;
-  font-weight: 900;
-  color: var(--ic-accent, #67e8f9);
-  flex-shrink: 0;
-}
-.ds-ic-root .ds-save-confirm.ds-save-confirm-error .ds-save-confirm-icon {
-  color: #ef4444;
-}
-.ds-ic-root .ds-save-confirm-title {
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: 0.03em;
-  color: var(--ic-text, #edf1f7);
-  flex-shrink: 0;
-}
-.ds-ic-root .ds-save-confirm.ds-save-confirm-error .ds-save-confirm-title {
-  color: #fca5a5;
-}
-.ds-ic-root .ds-save-confirm-sep {
-  color: var(--ic-muted, #9aa3af);
-  opacity: 0.6;
-  flex-shrink: 0;
-  font-size: 9px;
-}
-.ds-ic-root .ds-save-confirm-name {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: var(--ic-accent, #67e8f9);
+  user-select: none;
   overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 1;
-}
-.ds-ic-root .ds-save-confirm.ds-save-confirm-error .ds-save-confirm-name {
-  color: #fca5a5;
-}
-.ds-ic-root .ds-save-confirm-path {
-  font-size: 8.5px;
-  font-family: var(--ds-font-mono, Consolas, monospace, sans-serif);
-  color: var(--ic-muted, #9aa3af);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 2;
-  min-width: 60px;
+  pointer-events: auto;
 }
 
-.ds-ic-btn.is-stopping {
+.ds-ic-card * {
+  box-sizing: border-box;
+}
+
+/* ========================================================================= */
+/* 1. Single Options Row (All Buttons)                                       */
+/* ========================================================================= */
+.ds-ic-options-row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  height: var(--ds-btn-height, 28px);
+  min-height: var(--ds-btn-height, 28px);
+}
+
+/* Mode segmented tab group */
+.ds-ic-tab-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  background: var(--ds-color-panel-2, var(--ds-panel-2, #161a23));
+  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36));
+  border-radius: var(--ds-radius-control, 5px);
+  padding: 2px;
+  gap: 2px;
+  flex: 1.3 1 0;
+  min-width: 60px;
+  height: var(--ds-btn-height, 28px);
+  box-sizing: border-box;
+}
+
+.ds-ic-tab-btn {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent !important;
+  border-radius: calc(var(--ds-radius-control, 5px) - 2px);
+  background: transparent !important;
+  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af)) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1;
+  transition: all var(--ds-transition, 120ms ease);
+}
+
+.ds-ic-tab-btn:hover:not(.active):not(.is-active) {
+  color: var(--ds-color-text, var(--ds-text, #e5e7eb)) !important;
+  background: color-mix(in srgb, var(--ds-color-text, var(--ds-text, #fff)) 8%, transparent) !important;
+  border-color: transparent !important;
+}
+
+.ds-ic-tab-btn.active,
+.ds-ic-tab-btn.is-active,
+.ds-ic-tab-btn[aria-selected="true"] {
+  background: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
+  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
+  border-color: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ds-ic-tab-btn svg,
+.ds-ic-tab-btn .ds-icon {
+  display: block;
+  margin: auto;
+  stroke: currentColor !important;
+  fill: none !important;
+  pointer-events: none;
+}
+
+.ds-ic-tab-btn.active svg,
+.ds-ic-tab-btn.is-active svg,
+.ds-ic-tab-btn[aria-selected="true"] svg,
+.ds-ic-tab-btn.active .ds-icon,
+.ds-ic-tab-btn.is-active .ds-icon,
+.ds-ic-tab-btn[aria-selected="true"] .ds-icon {
+  stroke: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
+  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
+  fill: none !important;
+}
+
+/* Action buttons in options row */
+.ds-ic-btn {
+  flex: 1 1 0;
+  min-width: 30px;
+  height: var(--ds-btn-height, 28px);
+  padding: 0 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  border-color: #ef4444 !important;
-  color: #ffffff !important;
-  background: color-mix(in srgb, #ef4444 20%, var(--ic-bg2)) !important;
+  border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36));
+  border-radius: var(--ds-btn-radius, var(--ds-radius-control, 5px));
+  background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23));
+  color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb));
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  transition: all var(--ds-transition, 120ms ease);
 }
-.ds-ic-btn.is-stopping:hover {
-  border-color: #f87171 !important;
-  color: #ffffff !important;
-  background: color-mix(in srgb, #ef4444 32%, var(--ic-bg2)) !important;
-}
-.ds-stop-square {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  background: #ffffff;
-  border-radius: 3px;
-  flex-shrink: 0;
-  vertical-align: middle;
-}
-.ds-ic-preview{position:relative;min-width:0;min-height:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid var(--ic-border);border-radius:8px;background:var(--ic-surface)}
-.ds-ic-image{display:block;flex:0 0 auto;width:auto;height:auto;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;object-position:center center}
-.ds-ic-preview > .ds-ic-placeholder{position:absolute;inset:0}
-.ds-ic-placeholder{display:grid;place-items:center;text-align:center;color:var(--ic-muted);font-size:10px;line-height:1.45;padding:16px}.ds-ic-placeholder strong{display:block;color:var(--ic-text);font-size:12px;margin-bottom:4px}.ds-ic-toast{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);padding:6px 9px;border:1px solid var(--ic-border);border-radius:6px;background:var(--ic-bg2);color:var(--ic-text);font-size:8px;font-weight:750;opacity:0;transition:opacity .15s;pointer-events:none}.ds-ic-toast.show{opacity:1}
 
-/* Keep the preview image truly hidden until a real snapshot URL has loaded.
-   The component uses display:block, which otherwise overrides HTML's [hidden]. */
+.ds-ic-btn svg,
+.ds-ic-btn .ds-icon {
+  display: block;
+  margin: auto;
+  stroke: currentColor !important;
+  fill: none !important;
+  pointer-events: none;
+}
+
+.ds-ic-btn:hover:not(:disabled) {
+  background: var(--ds-btn-hover, #1e2433);
+  border-color: var(--ds-color-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
+  transform: translateY(-1px);
+}
+
+.ds-ic-btn:active:not(:disabled) {
+  background: var(--ds-btn-active, #253044);
+  transform: translateY(0);
+}
+
+.ds-ic-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+}
+
+/* Running / Busy State with active animation */
+@keyframes ds-ic-pulse-glow {
+  0%, 100% {
+    border-color: var(--ds-color-accent, #67e8f9);
+    box-shadow: 0 0 4px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 30%, transparent);
+    color: var(--ds-color-accent, #67e8f9);
+  }
+  50% {
+    border-color: var(--ds-color-accent-hover, #22d3ee);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 65%, transparent);
+    color: #ffffff;
+    background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 16%, var(--ds-btn-bg, #161a23));
+  }
+}
+
+@keyframes ds-ic-play-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18) translateX(1px); }
+}
+
+.ds-ic-btn.is-running {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  animation: ds-ic-pulse-glow 1.4s ease-in-out infinite !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+.ds-ic-btn.is-running.ds-ic-regenerate svg,
+.ds-ic-btn.is-running.ds-ic-regenerate .ds-icon {
+  animation: dsicspin 0.9s linear infinite !important;
+}
+
+.ds-ic-btn.is-running.ds-ic-continue svg,
+.ds-ic-btn.is-running.ds-ic-continue .ds-icon {
+  animation: ds-ic-play-bounce 0.9s ease-in-out infinite !important;
+}
+
+.ds-ic-btn.is-running:hover {
+  border-color: var(--ds-color-danger, #ef4444) !important;
+  color: #ffffff !important;
+  background: color-mix(in srgb, var(--ds-color-danger, #ef4444) 35%, var(--ds-btn-bg, var(--ic-bg2))) !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.45) !important;
+  animation: none !important;
+}
+
+.ds-ic-btn.is-running:hover svg,
+.ds-ic-btn.is-running:hover .ds-icon {
+  animation: none !important;
+}
+
+.ds-ic-btn.is-stopping {
+  border-color: var(--ds-color-danger, #ef4444) !important;
+  color: #ffffff !important;
+  background: color-mix(in srgb, var(--ds-color-danger, #ef4444) 25%, var(--ds-btn-bg, var(--ic-bg2))) !important;
+  animation: dsicpulse 1s infinite;
+}
+
+.ds-ic-btn.is-saving {
+  border-color: var(--ic-accent) !important;
+  color: var(--ic-accent) !important;
+}
+
+.ds-ic-btn.is-saving svg {
+  animation: dsicspin 1s linear infinite;
+}
+
+@keyframes dsicspin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dsicpulse {
+  50% { opacity: 0.6; }
+}
+
+/* ========================================================================= */
+/* 2. Info / Notification Row (Under Options Row)                            */
+/* ========================================================================= */
+.ds-ic-info-row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 20px;
+  padding: 0 2px;
+  font-size: 9.5px;
+  color: var(--ic-muted);
+}
+
+.ds-ic-info-message {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.ds-ic-helper {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ic-muted);
+}
+
+/* Save Confirmation banner within info row */
+.ds-ic-save-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  animation: dsicfadein 0.15s ease-out;
+}
+
+@keyframes dsicfadein {
+  from { opacity: 0; transform: translateY(-1px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ds-ic-save-confirm-icon {
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.ds-ic-save-confirm.is-success {
+  color: var(--ic-accent);
+}
+
+.ds-ic-save-confirm.is-success .ds-ic-save-confirm-icon {
+  color: var(--ds-color-success, #34d399);
+}
+
+.ds-ic-save-confirm.is-error {
+  color: var(--ds-color-danger, #ef4444);
+}
+
+.ds-ic-save-confirm.is-error .ds-ic-save-confirm-icon {
+  color: var(--ds-color-danger, #ef4444);
+}
+
+.ds-ic-save-confirm-title {
+  font-weight: 700;
+  color: var(--ic-text);
+  flex-shrink: 0;
+}
+
+.ds-ic-save-confirm-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ic-accent);
+}
+
+.ds-ic-save-confirm.is-error .ds-ic-save-confirm-name {
+  color: var(--ds-color-danger, #ef4444);
+}
+
+.ds-ic-save-confirm-path {
+  font-family: var(--ds-font-mono, Consolas, monospace, sans-serif);
+  font-size: 8.5px;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ds-ic-info-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-ic-dims {
+  font-variant-numeric: tabular-nums;
+  font-size: 8.5px;
+  color: var(--ic-muted);
+  opacity: 0.85;
+}
+
+.ds-ic-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ds-radius-badge, 4px);
+  color: var(--ic-muted);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.ds-ic-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ic-muted);
+}
+
+.ds-ic-status[data-state="paused"] {
+  color: var(--ic-accent);
+  border-color: color-mix(in srgb, var(--ic-accent) 45%, var(--ic-border));
+}
+
+.ds-ic-status[data-state="paused"] .ds-ic-status-dot {
+  background: var(--ic-accent);
+}
+
+.ds-ic-status[data-state="busy"] {
+  color: var(--ic-accent);
+  border-color: var(--ic-accent);
+}
+
+.ds-ic-status[data-state="busy"] .ds-ic-status-dot {
+  background: var(--ic-accent);
+  animation: dsicpulse 1s infinite;
+}
+
+/* ========================================================================= */
+/* 3. Preview Container (Maximized Area)                                     */
+/* ========================================================================= */
+.ds-ic-preview {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 80px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ds-radius-card, 8px);
+  background: var(--ic-surface);
+}
+
+.ds-ic-image {
+  display: block;
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
+}
+
 .ds-ic-image[hidden] {
   display: none !important;
 }
+
+.ds-ic-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px;
+  text-align: center;
+  color: var(--ic-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
 .ds-ic-placeholder[hidden] {
   display: none !important;
+}
+
+.ds-ic-placeholder strong {
+  display: block;
+  color: var(--ic-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.ds-ic-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  padding: 5px 10px;
+  border: 1px solid var(--ic-border);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-btn-bg, var(--ic-bg2));
+  color: var(--ds-btn-text, var(--ic-text));
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.ds-ic-toast.show {
+  opacity: 1;
 }

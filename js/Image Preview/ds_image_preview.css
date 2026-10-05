@@ -1,305 +1,395 @@
-.ds-ip-root {
-  --ip-bg: var(--ds-panel, #171a20);
-  --ip-bg2: var(--ds-panel-2, #20242b);
-  --ip-surface: var(--ds-bg, #111419);
-  --ip-border: var(--ds-border, #303642);
-  --ip-text: var(--ds-text, #edf1f7);
-  --ip-muted: var(--ds-text-muted, #9aa3af);
-  --ip-accent: var(--ds-accent, #67e8f9);
-  --ip-accent-rgb: var(--ds-accent-rgb, 103, 232, 249);
-  --ip-gap: 7px;
+/* ========================================================================= */
+/* DS Image Preview — Overhauled UI                                          */
+/* ========================================================================= */
+
+.ds-ip-card {
+  --ip-bg: var(--ds-color-card, var(--ds-panel, #12151c));
+  --ip-bg2: var(--ds-color-panel-2, var(--ds-panel-2, #161a23));
+  --ip-surface: var(--ds-color-base, var(--ds-bg, #0b0d12));
+  --ip-border: var(--ds-color-card-border, var(--ds-border, #242a36));
+  --ip-text: var(--ds-color-text, var(--ds-text, #e5e7eb));
+  --ip-muted: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af));
+  --ip-accent: var(--ds-color-accent, var(--ds-accent, #67e8f9));
+  --ip-on-accent: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10));
+
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   min-width: 0;
   min-height: 0;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--ip-gap);
+  gap: 6px;
+  padding: var(--ds-card-padding, 10px) !important;
+  background: var(--ip-bg);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ds-radius-card, 8px);
   color: var(--ip-text);
-  font-family: var(--ds-font-family, var(--ds-font, Inter, system-ui, sans-serif));
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  font-size: 11px;
+  user-select: none;
   overflow: hidden;
+  pointer-events: auto;
 }
 
-.ds-ip-top {
+.ds-ip-card * {
+  box-sizing: border-box;
+}
+
+/* ========================================================================= */
+/* 1. Single Options Row (All Buttons)                                       */
+/* ========================================================================= */
+.ds-ip-options-row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  height: var(--ds-btn-height, 28px);
+  min-height: var(--ds-btn-height, 28px);
+}
+
+/* Mode segmented tab group */
+.ds-ip-tab-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  background: var(--ds-color-panel-2, var(--ds-panel-2, #161a23));
+  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36));
+  border-radius: var(--ds-radius-control, 5px);
+  padding: 2px;
+  gap: 2px;
+  flex: 1.3 1 0;
+  min-width: 60px;
+  height: var(--ds-btn-height, 28px);
+  box-sizing: border-box;
+}
+
+.ds-ip-tab-btn {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent !important;
+  border-radius: calc(var(--ds-radius-control, 5px) - 2px);
+  background: transparent !important;
+  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af)) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1;
+  transition: all var(--ds-transition, 120ms ease);
+}
+
+.ds-ip-tab-btn:hover:not(.active):not(.is-active) {
+  color: var(--ds-color-text, var(--ds-text, #e5e7eb)) !important;
+  background: color-mix(in srgb, var(--ds-color-text, var(--ds-text, #fff)) 8%, transparent) !important;
+  border-color: transparent !important;
+}
+
+.ds-ip-tab-btn.active,
+.ds-ip-tab-btn.is-active,
+.ds-ip-tab-btn[aria-selected="true"] {
+  background: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
+  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
+  border-color: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+.ds-ip-tab-btn svg,
+.ds-ip-tab-btn .ds-icon {
+  display: block;
+  margin: auto;
+  stroke: currentColor !important;
+  fill: none !important;
+  pointer-events: none;
+}
+
+.ds-ip-tab-btn.active svg,
+.ds-ip-tab-btn.is-active svg,
+.ds-ip-tab-btn[aria-selected="true"] svg,
+.ds-ip-tab-btn.active .ds-icon,
+.ds-ip-tab-btn.is-active .ds-icon,
+.ds-ip-tab-btn[aria-selected="true"] .ds-icon {
+  stroke: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
+  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
+  fill: none !important;
+}
+
+/* Action buttons in options row */
+.ds-ip-btn {
+  flex: 1 1 0;
+  min-width: 30px;
+  height: var(--ds-btn-height, 28px);
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36));
+  border-radius: var(--ds-btn-radius, var(--ds-radius-control, 5px));
+  background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23));
+  color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb));
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  transition: all var(--ds-transition, 120ms ease);
+}
+
+.ds-ip-btn svg,
+.ds-ip-btn .ds-icon {
+  display: block;
+  margin: auto;
+  stroke: currentColor !important;
+  fill: none !important;
+  pointer-events: none;
+}
+
+.ds-ip-btn:hover:not(:disabled) {
+  background: var(--ds-btn-hover, #1e2433);
+  border-color: var(--ds-color-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
+  transform: translateY(-1px);
+}
+
+.ds-ip-btn:active:not(:disabled) {
+  background: var(--ds-btn-active, #253044);
+  transform: translateY(0);
+}
+
+.ds-ip-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+}
+
+.ds-ip-btn.is-saving {
+  border-color: var(--ip-accent, var(--ds-color-accent, var(--ds-accent, #67e8f9))) !important;
+  color: var(--ip-accent, var(--ds-color-accent, var(--ds-accent, #67e8f9))) !important;
+}
+
+.ds-ip-btn.is-saving svg {
+  animation: dsipspin 1s linear infinite;
+}
+
+@keyframes dsipspin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ========================================================================= */
+/* 2. Info / Notification Row (Under Options Row)                            */
+/* ========================================================================= */
+.ds-ip-info-row {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 30px;
+  gap: 8px;
+  min-height: 20px;
+  padding: 0 2px;
+  font-size: 9.5px;
+  color: var(--ip-muted);
 }
 
-.ds-ip-heading {
+.ds-ip-info-message {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
-  font-size: 13px;
-  letter-spacing: .03em;
+  overflow: hidden;
 }
 
-.ds-ip-mark {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 1px solid var(--ip-accent);
-  border-radius: 7px;
+.ds-ip-helper {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ip-muted);
+}
+
+/* Save Confirmation banner within info row */
+.ds-ip-save-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  animation: dsipfadein 0.15s ease-out;
+}
+
+@keyframes dsipfadein {
+  from { opacity: 0; transform: translateY(-1px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ds-ip-save-confirm-icon {
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.ds-ip-save-confirm.is-success {
   color: var(--ip-accent);
-  font-size: 9px;
-  font-weight: 800;
+}
+
+.ds-ip-save-confirm.is-success .ds-ip-save-confirm-icon {
+  color: var(--ds-color-success, #34d399);
+}
+
+.ds-ip-save-confirm.is-error {
+  color: var(--ds-color-danger, #ef4444);
+}
+
+.ds-ip-save-confirm.is-error .ds-ip-save-confirm-icon {
+  color: var(--ds-color-danger, #ef4444);
+}
+
+.ds-ip-save-confirm-title {
+  font-weight: 700;
+  color: var(--ip-text);
+  flex-shrink: 0;
+}
+
+.ds-ip-save-confirm-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ip-accent);
+}
+
+.ds-ip-save-confirm.is-error .ds-ip-save-confirm-name {
+  color: var(--ds-color-danger, #ef4444);
+}
+
+.ds-ip-save-confirm-path {
+  font-family: var(--ds-font-mono, Consolas, monospace, sans-serif);
+  font-size: 8.5px;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ds-ip-info-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-ip-dims {
+  font-variant-numeric: tabular-nums;
+  font-size: 8.5px;
+  color: var(--ip-muted);
+  opacity: 0.85;
 }
 
 .ds-ip-status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
+  gap: 4px;
+  padding: 2px 5px;
   border: 1px solid var(--ip-border);
-  border-radius: 999px;
+  border-radius: var(--ds-radius-badge, 4px);
   color: var(--ip-muted);
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
-  letter-spacing: .05em;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .ds-ip-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--ip-accent);
-  box-shadow: 0 0 8px rgba(var(--ip-accent-rgb), .55);
 }
 
-.ds-ip-modebar {
-  flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--ip-border);
-  border-radius: 8px;
-  background: var(--ip-bg);
-}
-
-.ds-ip-mode,
-.ds-ip-action {
-  appearance: none;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--ip-muted);
-  font: inherit;
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: .04em;
-  cursor: pointer;
-  transition: background .12s ease, border-color .12s ease, color .12s ease, transform .08s ease;
-}
-
-.ds-ip-mode {
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ds-ip-mode:hover,
-.ds-ip-action:hover {
-  color: var(--ip-text);
-  border-color: var(--ip-border);
-}
-
-.ds-ip-mode.active {
-  color: var(--ip-text);
-  background: var(--ip-bg2);
-  border-color: var(--ip-accent);
-  box-shadow: inset 0 -2px 0 var(--ip-accent);
-}
-
-.ds-ip-mode:active,
-.ds-ip-action:active { transform: translateY(1px); }
-
-.ds-ip-mode-note {
-  flex: 0 0 auto;
-  min-height: 13px;
-  color: var(--ip-muted);
-  font-size: 9px;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ds-ip-actions {
-  position: relative;
-  flex: 0 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.35fr;
-  gap: 5px;
-  min-height: 29px;
-}
-
-.ds-ip-root .ds-save-confirm {
-  position: absolute;
-  inset: 0;
-  z-index: 25;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  height: 100%;
-  min-height: 28px;
-  background: var(--ip-bg2);
-  border: 1px solid var(--ip-accent);
-  border-radius: 6px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
-  pointer-events: auto;
-  user-select: none;
-  animation: dssavefadein 0.15s ease-out;
-  overflow: hidden;
-  white-space: nowrap;
-}
-@keyframes dssavefadein {
-  from { opacity: 0; transform: scale(0.99); }
-  to { opacity: 1; transform: scale(1); }
-}
-.ds-ip-root .ds-save-confirm.ds-save-confirm-error {
-  border-color: var(--ds-danger, #ef4444);
-}
-.ds-ip-root .ds-save-confirm-icon {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--ip-accent);
-  flex-shrink: 0;
-}
-.ds-ip-root .ds-save-confirm.ds-save-confirm-error .ds-save-confirm-icon {
-  color: var(--ds-danger, #ef4444);
-}
-.ds-ip-root .ds-save-confirm-title {
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: 0.03em;
-  color: var(--ip-text);
-  flex-shrink: 0;
-}
-.ds-ip-root .ds-save-confirm.ds-save-confirm-error .ds-save-confirm-title {
-  color: #fca5a5;
-}
-.ds-ip-root .ds-save-confirm-sep {
-  color: var(--ip-muted);
-  opacity: 0.6;
-  flex-shrink: 0;
-  font-size: 9px;
-}
-.ds-ip-root .ds-save-confirm-name {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: var(--ip-accent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 1;
-}
-.ds-ip-root .ds-save-confirm.ds-save-confirm-error .ds-save-confirm-name {
-  color: #fca5a5;
-}
-.ds-ip-root .ds-save-confirm-path {
-  font-size: 8.5px;
-  font-family: var(--ds-font-mono, Consolas, monospace, sans-serif);
-  color: var(--ip-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 2;
-  min-width: 60px;
-}
-
-.ds-ip-action {
-  min-height: 29px;
-  background: var(--ip-bg);
-  border-color: var(--ip-border);
-  color: var(--ip-text);
-}
-
+/* ========================================================================= */
+/* 3. Preview Container (Maximized Area)                                     */
+/* ========================================================================= */
 .ds-ip-preview {
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 100px;
+  min-height: 80px;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border: 1px solid var(--ip-border);
-  border-radius: 9px;
+  border-radius: var(--ds-radius-card, 8px);
   background: var(--ip-surface);
 }
 
 .ds-ip-image {
   display: block;
-  width: auto !important;
-  height: auto !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-  object-fit: contain !important;
-  object-position: center;
   flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center center;
 }
 
-.ds-ip-image[hidden] { display: none !important; }
-.ds-ip-placeholder[hidden] { display: none !important; }
+.ds-ip-image[hidden] {
+  display: none !important;
+}
 
 .ds-ip-placeholder {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 20px;
+  gap: 4px;
+  padding: 16px;
   text-align: center;
   color: var(--ip-muted);
+  font-size: 10px;
+  line-height: 1.4;
   pointer-events: none;
+}
+
+.ds-ip-placeholder[hidden] {
+  display: none !important;
 }
 
 .ds-ip-placeholder strong {
+  display: block;
   color: var(--ip-text);
-  font-size: 13px;
-  letter-spacing: .04em;
-}
-
-.ds-ip-placeholder span { font-size: 9px; }
-
-.ds-ip-meta {
-  position: absolute;
-  left: 8px;
-  bottom: 7px;
-  padding: 3px 6px;
-  border-radius: 5px;
-  background: color-mix(in srgb, var(--ip-surface) 82%, transparent);
-  color: var(--ip-muted);
-  font-size: 8px;
-  pointer-events: none;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .ds-ip-toast {
   position: absolute;
   left: 50%;
-  bottom: 10px;
-  transform: translate(-50%, 8px);
-  opacity: 0;
-  pointer-events: none;
-  padding: 6px 9px;
+  bottom: 12px;
+  transform: translateX(-50%);
+  padding: 5px 10px;
   border: 1px solid var(--ip-border);
-  border-radius: 6px;
-  background: var(--ip-bg2);
-  color: var(--ip-text);
+  border-radius: var(--ds-radius-control, 5px);
+  background: var(--ds-btn-bg, var(--ip-bg2));
+  color: var(--ds-btn-text, var(--ip-text));
   font-size: 9px;
   font-weight: 700;
-  transition: opacity .14s ease, transform .14s ease;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 10;
   white-space: nowrap;
 }
 
 .ds-ip-toast.show {
   opacity: 1;
-  transform: translate(-50%, 0);
 }

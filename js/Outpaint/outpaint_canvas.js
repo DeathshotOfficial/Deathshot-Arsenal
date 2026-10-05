@@ -71,7 +71,7 @@ export function createPreview(container, getState) {
     }
     empty.querySelector(".ds-op-empty-title").textContent = "Connect an IMAGE input";
     empty.querySelector(".ds-op-empty-sub").textContent = "The outpaint canvas will appear here.";
-    const inset = 10;
+    const inset = 0;
     const scale = Math.min(
       Math.max(1, cssW - inset * 2) / Math.max(1, dims.totalW),
       Math.max(1, cssH - inset * 2) / Math.max(1, dims.totalH),

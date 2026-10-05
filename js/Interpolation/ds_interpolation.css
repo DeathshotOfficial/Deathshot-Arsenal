@@ -1,520 +1,597 @@
 /**
  * DS Interpolation - Custom Deathshot Arsenal UI Styling
+ * Deathshot Arsenal / DS Node Pack
  */
 
-.ds-interpolation-root {
+/* ComfyUI DOM widget positioning div around the card */
+.dom-widget:has(> .ds-interp-card) {
+  pointer-events: none !important;
+}
+
+.ds-interp-card {
   box-sizing: border-box !important;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 4px 6px 12px 6px;
-  background: transparent;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif);
-  color: var(--ds-text, #e5e7eb);
-  user-select: none;
-  pointer-events: none;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  background: var(--ds-color-card, #12151c) !important;
+  border: none !important;
+  box-shadow: inset 0 0 0 1px var(--ds-color-card-border, var(--ds-color-border, #242a36)) !important;
+  border-radius: var(--ds-radius-card, 8px) !important;
+  padding: var(--ds-card-padding, 10px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--ds-gap-sm, 6px) !important;
+  overflow: hidden !important;
+  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  transition: border-color var(--ds-transition, 120ms ease) !important;
 }
 
-.ds-interpolation-root > * {
-  pointer-events: auto;
+.ds-interp-card > * {
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  pointer-events: auto !important;
 }
 
-.ds-interp-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+.ds-interp-card .ds-ui-card-body {
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--ds-gap-sm, 6px) !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-.ds-interp-label {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ds-text-muted, #9ca3af);
-  line-height: 1.15;
+/* ------------------------------------------------------------------------- */
+/* 1. Status Bar Component (Placed on Top of Card)                           */
+/* ------------------------------------------------------------------------- */
+.ds-interp-card .ds-ui-status-bar {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  padding: 0 7px !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
+  font-size: 9.5px !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  user-select: none !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  transition: all var(--ds-transition, 120ms ease) !important;
 }
 
-/* Full Width Checkpoint Selector */
-.ds-interp-ckpt-trigger {
-  box-sizing: border-box;
-  width: 100%;
-  height: 28px;
-  min-height: 28px;
-  padding: 0 9px;
-  border-radius: 5px;
-  border: 1px solid var(--ds-border, #242a36);
-  background: var(--ds-panel-2, #161a23);
-  color: var(--ds-text, #e5e7eb);
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+.ds-interp-card .ds-ui-status-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: var(--ds-color-muted-text, #9ca3af) !important;
+  flex-shrink: 0 !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-.ds-interp-ckpt-trigger:hover {
-  border-color: var(--ds-accent, #67e8f9);
-  background: var(--ds-btn-hover, #1c2130);
+.ds-interp-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-dot {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  box-shadow: 0 0 6px var(--ds-color-accent, #67e8f9) !important;
+  animation: ds-status-pulse 1.2s infinite ease-in-out !important;
 }
 
-.ds-interp-ckpt-trigger.is-active {
-  border-color: var(--ds-accent, #67e8f9);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent, #67e8f9) 20%, transparent);
+.ds-interp-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-dot {
+  background: var(--ds-color-success, #34d399) !important;
+  box-shadow: 0 0 6px var(--ds-color-success, #34d399) !important;
 }
 
-.ds-interp-ckpt-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ds-interp-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-dot {
+  background: var(--ds-color-danger, #f87171) !important;
+  box-shadow: 0 0 6px var(--ds-color-danger, #f87171) !important;
 }
 
-.ds-interp-ckpt-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.ds-interp-card .ds-ui-status-label {
+  font-size: 9.5px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex-shrink: 1 !important;
+  min-width: 0 !important;
 }
 
-.ds-interp-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 8px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  flex-shrink: 0;
+.ds-interp-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-label {
+  color: var(--ds-color-accent, #67e8f9) !important;
 }
 
-.ds-interp-badge--installed {
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, transparent);
-  color: var(--ds-accent, #67e8f9);
-  border: 1px solid color-mix(in srgb, var(--ds-accent, #67e8f9) 35%, transparent);
+.ds-interp-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-label {
+  color: var(--ds-color-success, #34d399) !important;
 }
 
-.ds-interp-badge--download {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ds-text-muted, #9ca3af);
-  border: 1px solid var(--ds-border, #242a36);
+.ds-interp-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-label {
+  color: var(--ds-color-danger, #f87171) !important;
 }
 
-/* Collapsible Options Header */
+.ds-interp-card .ds-ui-status-track {
+  flex: 1 1 0 !important;
+  min-width: 24px !important;
+  height: 4px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  display: none !important;
+}
+
+.ds-interp-card .ds-ui-status-fill {
+  height: 100% !important;
+  width: 0% !important;
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-radius: 2px !important;
+  transition: width 0.15s ease !important;
+}
+
+.ds-interp-card .ds-ui-status-fill.is-indeterminate {
+  width: 100% !important;
+  background: linear-gradient(90deg, transparent, var(--ds-color-accent, #67e8f9), transparent) !important;
+  background-size: 200% 100% !important;
+  animation: ds-status-shimmer 1.5s infinite linear !important;
+}
+
+.ds-interp-card .ds-ui-status-percent {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  margin-left: 2px !important;
+  flex-shrink: 0 !important;
+}
+
+@keyframes ds-status-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes ds-status-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ------------------------------------------------------------------------- */
+/* 2. Checkpoint Selection & Dropdown Narrow Shrink Protection                */
+/* ------------------------------------------------------------------------- */
+.ds-interp-card .ds-ui-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ds-interp-card .ds-ui-field-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.ds-interp-card .ds-ui-field-label {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+  display: block !important;
+}
+
+.ds-interp-card .ds-ui-dropdown {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ds-interp-card .ds-ui-dropdown-trigger {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 6px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  cursor: pointer !important;
+  outline: none !important;
+}
+
+.ds-interp-card .ds-ui-dropdown-trigger:hover {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-interp-card .ds-ui-dropdown-label {
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 10px !important;
+  text-align: left !important;
+}
+
+/* ------------------------------------------------------------------------- */
+/* 3. Collapsible Options Header & Panel (Consistent with Load Video)          */
+/* ------------------------------------------------------------------------- */
+.ds-interp-collapse-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
 .ds-interp-collapse-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 3px 2px;
-  cursor: pointer;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--ds-text, #f8fafc);
-  box-sizing: border-box;
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  user-select: none;
-  transition: color 0.15s ease;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 26px !important;
+  padding: 0 8px !important;
+  cursor: pointer !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  color: var(--ds-color-text, #f8fafc) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  background: var(--ds-color-panel-2, var(--ds-panel-2, #141822)) !important;
+  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
+  border-radius: 6px !important;
+  outline: none !important;
+  transition: all 0.15s ease !important;
+  margin: 0 !important;
 }
 
 .ds-interp-collapse-header:hover {
-  color: var(--ds-accent, #67e8f9);
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-interp-collapse-header.is-open {
+  border-radius: 6px 6px 0 0 !important;
+  border-bottom: 1px solid transparent !important;
 }
 
 .ds-interp-collapse-left {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.ds-interp-collapse-left > span:last-child {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 .ds-interp-collapse-icon {
-  width: 12px;
-  height: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.18s ease;
+  width: 12px !important;
+  height: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.18s ease !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  flex-shrink: 0 !important;
 }
 
 .ds-interp-collapse-header.is-open .ds-interp-collapse-icon {
-  transform: rotate(90deg);
+  transform: rotate(90deg) !important;
 }
 
-.ds-interp-collapse-icon svg {
-  width: 10px;
-  height: 10px;
-  fill: currentColor;
+.ds-interp-collapse-badge {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  padding: 1px 6px !important;
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 12%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent, #67e8f9) 30%, transparent) !important;
+  border-radius: 10px !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  flex-shrink: 0 !important;
 }
 
-/* Big Enclosed Box Options Panel */
+/* Options Panel - completely visible, no internal scrollbar */
 .ds-interp-options-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  width: 100%;
-  background: var(--ds-panel, #12151c);
-  border: 1px solid var(--ds-border, #242a36);
-  border-radius: 6px;
-  padding: 6px 8px;
-  box-sizing: border-box;
-  flex-shrink: 0;
-  overflow: hidden;
-  transition: opacity 0.2s ease;
-  margin-bottom: 2px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  padding: 6px 8px !important;
+  background: var(--ds-color-panel-2, var(--ds-panel-2, #141822)) !important;
+  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
+  border-top: none !important;
+  border-radius: 0 0 6px 6px !important;
+  margin: 0 !important;
 }
 
 .ds-interp-options-panel.is-collapsed {
-  display: none;
+  display: none !important;
 }
 
-/* 2-Column Parameter Grid */
-.ds-interp-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-  width: 100%;
-}
-
-.ds-interp-grid-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-/* Custom Number Stepper */
-.ds-interp-stepper-box {
-  box-sizing: border-box;
-  width: 100%;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  border-radius: 5px;
-  border: 1px solid var(--ds-border, #242a36);
-  background: var(--ds-input-bg, #0e1016);
-  overflow: hidden;
-  transition: border-color 0.15s ease;
-}
-
-.ds-interp-stepper-box:focus-within {
-  border-color: var(--ds-accent, #67e8f9);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, transparent);
-}
-
-.ds-interp-num-input {
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  padding: 0 6px;
-  border: none;
-  background: transparent;
-  color: var(--ds-text, #e5e7eb);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  text-align: left;
-  outline: none;
-  -moz-appearance: textfield;
-}
-
-.ds-interp-num-input::-webkit-outer-spin-button,
-.ds-interp-num-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.ds-interp-stepper-actions {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 18px;
-  border-left: 1px solid var(--ds-border, #242a36);
-  flex-shrink: 0;
-}
-
-.ds-interp-stepper-btn {
-  box-sizing: border-box;
-  width: 100%;
-  height: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  background: var(--ds-panel-2, #161a23);
-  color: var(--ds-text-muted, #9ca3af);
-  cursor: pointer;
-  outline: none;
-  transition: background 0.1s ease, color 0.1s ease;
-}
-
-.ds-interp-stepper-btn:hover {
-  background: var(--ds-btn-hover, #1c2130);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-interp-stepper-btn:active {
-  background: var(--ds-border, #242a36);
-}
-
-.ds-interp-stepper-btn svg {
-  width: 10px;
-  height: 10px;
-  fill: currentColor;
-}
-
-/* Custom Toggle Switch */
-.ds-interp-toggle-btn {
-  box-sizing: border-box;
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 5px;
-  border: 1px solid var(--ds-border, #242a36);
-  background: var(--ds-panel-2, #161a23);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.ds-interp-toggle-btn:hover {
-  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.25));
-  background: var(--ds-btn-hover, #1c2130);
-}
-
-.ds-interp-toggle-text {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--ds-text-muted, #9ca3af);
-}
-
-.ds-interp-toggle-btn.is-active {
-  border-color: var(--ds-accent, #67e8f9);
-  position: relative;
-}
-
-.ds-interp-toggle-btn.is-active .ds-interp-toggle-text {
-  color: var(--ds-text, #e5e7eb);
-}
-
-.ds-interp-toggle-track {
-  position: relative;
-  width: 26px;
-  height: 14px;
-  border-radius: 999px;
-  background: var(--ds-panel, #12151c);
-  border: 1px solid var(--ds-border, #353b46);
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
-  overflow: hidden;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.ds-interp-toggle-thumb {
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--ds-text-muted, #9ca3af);
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease, box-shadow 0.15s ease;
-}
-
-.ds-interp-toggle-btn.is-active .ds-interp-toggle-track {
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 22%, var(--ds-panel-2, #161a23));
-  border-color: var(--ds-accent, #67e8f9);
-}
-
-.ds-interp-toggle-btn.is-active .ds-interp-toggle-thumb {
-  transform: translateX(12px);
-  background: var(--ds-accent, #67e8f9);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--ds-accent, #67e8f9) 50%, transparent);
-}
-
-/* Custom Dropdown Trigger (for Scale & Dtype) */
-.ds-interp-select-trigger {
-  box-sizing: border-box;
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 5px;
-  border: 1px solid var(--ds-border, #242a36);
-  background: var(--ds-panel-2, #161a23);
-  color: var(--ds-text, #e5e7eb);
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.ds-interp-select-trigger:hover {
-  border-color: var(--ds-accent, #67e8f9);
-  background: var(--ds-btn-hover, #1c2130);
-}
-
-.ds-interp-select-trigger.is-active {
-  border-color: var(--ds-accent, #67e8f9);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-accent, #67e8f9) 18%, transparent);
-}
-
-.ds-interp-chevron {
-  width: 14px;
-  height: 14px;
-  fill: var(--ds-text-muted, #9ca3af);
-  flex-shrink: 0;
-  transition: transform 0.15s ease;
-}
-
-.is-active .ds-interp-chevron {
-  transform: rotate(180deg);
-  fill: var(--ds-accent, #67e8f9);
-}
-
-/* Floating Custom Deathshot Dropdown Popover */
-.ds-interp-dropdown {
-  position: fixed;
-  z-index: 10000;
-  box-sizing: border-box;
-  min-width: 140px;
-  max-height: 260px;
-  overflow-y: auto;
-  padding: 4px;
-  border-radius: 6px;
-  border: 1px solid var(--ds-border, #242a36);
-  background: var(--ds-panel, #12151c);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  font-family: var(--ds-font, Inter, system-ui, sans-serif);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ds-interp-dropdown-item {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 26px;
-  height: auto;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: none;
-  background: transparent;
-  color: var(--ds-text, #e5e7eb);
-  font-size: 11px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.1s ease, color 0.1s ease;
-}
-
-.ds-interp-dropdown-item:hover {
-  background: var(--ds-hover, #1c2130);
-  color: var(--ds-text, #fff);
-}
-
-.ds-interp-dropdown-item.is-selected {
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 15%, var(--ds-panel-2, #161a23));
-  color: var(--ds-accent, #67e8f9);
-  font-weight: 700;
-}
-
-.ds-interp-dropdown-item svg {
-  width: 12px;
-  height: 12px;
-  fill: currentColor;
-}
-
-/* Mode Segmented Controls */
+/* ------------------------------------------------------------------------- */
+/* 4. Mode Segmented Buttons                                                 */
+/* ------------------------------------------------------------------------- */
 .ds-interp-mode-row {
-  display: flex;
-  width: 100%;
-  gap: 5px;
-  margin-bottom: 2px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
 }
 
 .ds-interp-mode-btn {
-  flex: 1;
-  height: 28px;
-  border-radius: 5px;
-  border: 1px solid var(--ds-border, #242a36);
-  background: var(--ds-panel-2, #161a23);
-  color: var(--ds-text-muted, #9ca3af);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  outline: none;
-  position: relative;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  height: 22px !important;
+  min-width: 0 !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 4px !important;
+  border-radius: 4px !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  background: var(--ds-color-card, #12151c) !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  cursor: pointer !important;
+  outline: none !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
 }
 
 .ds-interp-mode-btn:hover {
-  background: var(--ds-btn-hover, #1c2130);
-  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.25));
-  color: var(--ds-text, #e5e7eb);
+  border-color: var(--ds-color-border-hover, #374151) !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
 }
 
 .ds-interp-mode-btn.is-active {
-  background: var(--ds-panel-2, #161a23);
-  border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
 }
 
-.ds-interp-mode-btn.is-active::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 6px;
-  right: 6px;
-  height: 2px;
-  background: var(--ds-accent, #67e8f9);
-  border-radius: 2px 2px 0 0;
-}
-
-/* Timing Lock Badge */
+/* ------------------------------------------------------------------------- */
+/* 5. Live Duration & Timing Sync Badge                                      */
+/* ------------------------------------------------------------------------- */
 .ds-interp-timing-badge {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 3px 7px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 8%, var(--ds-panel-2, #161a23));
-  border: 1px solid color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, transparent);
-  color: var(--ds-text, #f1f5f9);
-  font-size: 9px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  letter-spacing: 0.02em;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  padding: 3px 6px !important;
+  background: color-mix(in srgb, var(--ds-color-base, #0b0d12) 75%, transparent) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: 4px !important;
+  font-size: 9px !important;
+  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
 }
 
-.ds-interp-timing-badge strong {
-  color: var(--ds-accent, #67e8f9);
-  font-weight: 700;
+.ds-interp-timing-text {
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  font-weight: 500 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
 }
 
+.ds-interp-timing-chip {
+  font-size: 8.5px !important;
+  font-weight: 700 !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 14%, transparent) !important;
+  padding: 1px 4px !important;
+  border-radius: 3px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ------------------------------------------------------------------------- */
+/* 6. 2-Column Controls Grid & Flexible Input Sizing                         */
+/* ------------------------------------------------------------------------- */
+.ds-interp-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 4px 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.ds-interp-grid-full {
+  grid-column: span 2 !important;
+}
+
+/* Stepper Sizing - Ultra-Compact & Narrow Inputs */
+.ds-interp-card .ds-ui-stepper {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 22px !important;
+}
+
+.ds-interp-card .ds-ui-stepper-btn {
+  box-sizing: border-box !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 3px !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: all var(--ds-transition, 120ms ease) !important;
+}
+
+.ds-interp-card .ds-ui-stepper-btn:hover {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-interp-card .ds-ui-stepper-btn svg {
+  width: 9px !important;
+  height: 9px !important;
+}
+
+.ds-interp-card .ds-ui-stepper-value {
+  box-sizing: border-box !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: 0 !important;
+  height: 22px !important;
+  padding: 0 2px !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums !important;
+  border-radius: 3px !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  background: var(--ds-input-bg, #0e1016) !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  outline: none !important;
+}
+
+.ds-interp-card .ds-ui-stepper-value:focus {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+/* ------------------------------------------------------------------------- */
+/* 7. Controls: Toggle Switch (Soft Rectangle)                               */
+/* ------------------------------------------------------------------------- */
+.ds-interp-card .ds-ui-toggle-row {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  padding: 0 4px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+.ds-interp-card .ds-ui-toggle-label {
+  font-size: 9.5px !important;
+  font-weight: 600 !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+}
+
+.ds-interp-card .ds-ui-toggle-row.is-on .ds-ui-toggle-label {
+  color: var(--ds-color-text, #e5e7eb) !important;
+}
+
+.ds-interp-card .ds-ui-toggle-track {
+  position: relative !important;
+  width: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  height: 16px !important;
+  min-height: 16px !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: 4px !important;
+  transition: all var(--ds-transition, 120ms ease) !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+.ds-interp-card .ds-ui-toggle-thumb {
+  position: absolute !important;
+  top: 1px !important;
+  left: 1px !important;
+  width: 12px !important;
+  height: 12px !important;
+  background: var(--ds-color-muted-text, #9ca3af) !important;
+  border-radius: 3px !important;
+  transition: transform var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease) !important;
+}
+
+.ds-interp-card .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-interp-card .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {
+  transform: translateX(12px) !important;
+  background: var(--ds-color-on-accent, #0a0c10) !important;
+}

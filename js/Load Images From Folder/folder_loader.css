@@ -8,10 +8,12 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 8px 16px;
+  padding: 8px 10px 12px;
   overflow: hidden;
-  border-radius: 0 0 8px 8px;
-  /* Adheres to LiteGraph node rounded bottom corners */
+  background: var(--ds-panel, #12151c);
+  border: 1px solid var(--ds-border, #242a36);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   color: var(--ds-text, #e5e7eb);
   font: 10px ui-sans-serif, system-ui, -apple-system, sans-serif;
   pointer-events: none;
@@ -656,7 +658,7 @@
 }
 
 /* Node Widget Switch Toggle */
-.ds-ui-toggle {
+[class*="ds-fl"] .ds-ui-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -672,11 +674,11 @@
   vertical-align: middle;
 }
 
-.ds-ui-toggle:hover .ds-ui-toggle-track {
+[class*="ds-fl"] .ds-ui-toggle:hover .ds-ui-toggle-track {
   border-color: var(--ds-accent, #67e8f9);
 }
 
-.ds-ui-toggle-track {
+[class*="ds-fl"] .ds-ui-toggle-track {
   position: relative;
   width: 28px;
   height: 15px;
@@ -688,7 +690,7 @@
   flex-shrink: 0;
 }
 
-.ds-ui-toggle-thumb {
+[class*="ds-fl"] .ds-ui-toggle-thumb {
   position: absolute;
   top: 50%;
   left: 2px;
@@ -701,25 +703,25 @@
   display: block;
 }
 
-.ds-ui-toggle.is-on .ds-ui-toggle-track {
+[class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-track {
   border-color: var(--ds-accent, #67e8f9);
   background: color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, var(--ds-panel-2, #161a23));
 }
 
-.ds-ui-toggle.is-on .ds-ui-toggle-thumb {
+[class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-thumb {
   left: 15px;
   background: var(--ds-accent, #67e8f9);
   box-shadow: 0 0 6px var(--ds-accent, #67e8f9);
 }
 
-.ds-ui-toggle-label {
+[class*="ds-fl"] .ds-ui-toggle-label {
   color: var(--ds-text-muted, #a1a8b3);
   font-size: 9.5px;
   line-height: 15px;
   white-space: nowrap;
 }
 
-.ds-ui-toggle.is-on .ds-ui-toggle-label {
+[class*="ds-fl"] .ds-ui-toggle.is-on .ds-ui-toggle-label {
   color: var(--ds-text, #fff);
 }
 

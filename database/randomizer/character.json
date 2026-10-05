@@ -7,11 +7,26 @@
       "name": "Age Range",
       "insertion_zone": "subject",
       "options": [
-        {"id": "any", "label": "Any (18+)"},
-        {"id": "18_24", "label": "18-24 (Young Adult)"},
-        {"id": "25_35", "label": "25-35 (Adult)"},
-        {"id": "36_50", "label": "36-50 (Mature)"},
-        {"id": "50_plus", "label": "50+ (Senior)"}
+        {
+          "id": "any",
+          "label": "Any (18+)"
+        },
+        {
+          "id": "18_24",
+          "label": "18-24 (Young Adult)"
+        },
+        {
+          "id": "25_35",
+          "label": "25-35 (Adult)"
+        },
+        {
+          "id": "36_50",
+          "label": "36-50 (Mature)"
+        },
+        {
+          "id": "50_plus",
+          "label": "50+ (Senior)"
+        }
       ],
       "detection_terms": [
         "\\b(\\d{1,2})[- ]?(year[- ]?old|yo)\\b",
@@ -23,23 +38,258 @@
         "\\b(early|mid|late)\\s+(twenties|thirties|forties|fifties|sixties|20s|30s|40s|50s)\\b"
       ],
       "entries": [
-        {"text": "19-year-old", "constraints": {"preset": "18_24"}, "tags": ["young_adult"]},
-        {"text": "21-year-old", "constraints": {"preset": "18_24"}, "tags": ["young_adult"]},
-        {"text": "23-year-old", "constraints": {"preset": "18_24"}, "tags": ["young_adult"]},
-        {"text": "in early twenties", "constraints": {"preset": "18_24"}, "tags": ["young_adult"]},
-        {"text": "26-year-old", "constraints": {"preset": "25_35"}, "tags": ["adult"]},
-        {"text": "28-year-old", "constraints": {"preset": "25_35"}, "tags": ["adult"]},
-        {"text": "30-year-old", "constraints": {"preset": "25_35"}, "tags": ["adult"]},
-        {"text": "32-year-old", "constraints": {"preset": "25_35"}, "tags": ["adult"]},
-        {"text": "in early thirties", "constraints": {"preset": "25_35"}, "tags": ["adult"]},
-        {"text": "38-year-old", "constraints": {"preset": "36_50"}, "tags": ["mature"]},
-        {"text": "42-year-old", "constraints": {"preset": "36_50"}, "tags": ["mature"]},
-        {"text": "45-year-old", "constraints": {"preset": "36_50"}, "tags": ["mature"]},
-        {"text": "in mid forties", "constraints": {"preset": "36_50"}, "tags": ["mature"]},
-        {"text": "52-year-old", "constraints": {"preset": "50_plus"}, "tags": ["senior"]},
-        {"text": "58-year-old", "constraints": {"preset": "50_plus"}, "tags": ["senior"]},
-        {"text": "64-year-old", "constraints": {"preset": "50_plus"}, "tags": ["senior"]},
-        {"text": "distinguished senior", "constraints": {"preset": "50_plus"}, "tags": ["senior"]}
+        {
+          "text": "19-year-old",
+          "constraints": {
+            "preset": "18_24"
+          },
+          "tags": [
+            "young_adult"
+          ]
+        },
+        {
+          "text": "21-year-old",
+          "constraints": {
+            "preset": "18_24"
+          },
+          "tags": [
+            "young_adult"
+          ]
+        },
+        {
+          "text": "23-year-old",
+          "constraints": {
+            "preset": "18_24"
+          },
+          "tags": [
+            "young_adult"
+          ]
+        },
+        {
+          "text": "in early twenties",
+          "constraints": {
+            "preset": "18_24"
+          },
+          "tags": [
+            "young_adult"
+          ]
+        },
+        {
+          "text": "26-year-old",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "28-year-old",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "30-year-old",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "32-year-old",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "in early thirties",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "38-year-old",
+          "constraints": {
+            "preset": "36_50"
+          },
+          "tags": [
+            "mature"
+          ]
+        },
+        {
+          "text": "42-year-old",
+          "constraints": {
+            "preset": "36_50"
+          },
+          "tags": [
+            "mature"
+          ]
+        },
+        {
+          "text": "45-year-old",
+          "constraints": {
+            "preset": "36_50"
+          },
+          "tags": [
+            "mature"
+          ]
+        },
+        {
+          "text": "in mid forties",
+          "constraints": {
+            "preset": "36_50"
+          },
+          "tags": [
+            "mature"
+          ]
+        },
+        {
+          "text": "52-year-old",
+          "constraints": {
+            "preset": "50_plus"
+          },
+          "tags": [
+            "senior"
+          ]
+        },
+        {
+          "text": "58-year-old",
+          "constraints": {
+            "preset": "50_plus"
+          },
+          "tags": [
+            "senior"
+          ]
+        },
+        {
+          "text": "64-year-old",
+          "constraints": {
+            "preset": "50_plus"
+          },
+          "tags": [
+            "senior"
+          ]
+        },
+        {
+          "text": "distinguished senior",
+          "constraints": {
+            "preset": "50_plus"
+          },
+          "tags": [
+            "senior"
+          ]
+        },
+        {
+          "text": "20-year-old",
+          "constraints": {
+            "preset": "18_24"
+          },
+          "tags": [
+            "young_adult"
+          ]
+        },
+        {
+          "text": "22-year-old",
+          "constraints": {
+            "preset": "18_24"
+          },
+          "tags": [
+            "young_adult"
+          ]
+        },
+        {
+          "text": "24-year-old",
+          "constraints": {
+            "preset": "18_24"
+          },
+          "tags": [
+            "young_adult"
+          ]
+        },
+        {
+          "text": "27-year-old",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "29-year-old",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "34-year-old",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "in mid thirties",
+          "constraints": {
+            "preset": "25_35"
+          },
+          "tags": [
+            "adult"
+          ]
+        },
+        {
+          "text": "40-year-old",
+          "constraints": {
+            "preset": "36_50"
+          },
+          "tags": [
+            "mature"
+          ]
+        },
+        {
+          "text": "48-year-old",
+          "constraints": {
+            "preset": "36_50"
+          },
+          "tags": [
+            "mature"
+          ]
+        },
+        {
+          "text": "55-year-old",
+          "constraints": {
+            "preset": "50_plus"
+          },
+          "tags": [
+            "senior"
+          ]
+        },
+        {
+          "text": "62-year-old",
+          "constraints": {
+            "preset": "50_plus"
+          },
+          "tags": [
+            "senior"
+          ]
+        }
       ]
     },
     {
@@ -53,12 +303,42 @@
         "\\b(woman|man|female|male|lady|gentleman|girl|boy|guy)\\b"
       ],
       "entries": [
-        {"text": "woman", "tags": ["female"]},
-        {"text": "man", "tags": ["male"]},
-        {"text": "young woman", "tags": ["female"]},
-        {"text": "young man", "tags": ["male"]},
-        {"text": "handsome man", "tags": ["male"]},
-        {"text": "beautiful woman", "tags": ["female"]}
+        {
+          "text": "woman",
+          "tags": [
+            "female"
+          ]
+        },
+        {
+          "text": "man",
+          "tags": [
+            "male"
+          ]
+        },
+        {
+          "text": "young woman",
+          "tags": [
+            "female"
+          ]
+        },
+        {
+          "text": "young man",
+          "tags": [
+            "male"
+          ]
+        },
+        {
+          "text": "handsome man",
+          "tags": [
+            "male"
+          ]
+        },
+        {
+          "text": "beautiful woman",
+          "tags": [
+            "female"
+          ]
+        }
       ]
     },
     {
@@ -66,24 +346,133 @@
       "name": "Nationality",
       "insertion_zone": "subject",
       "detection_terms": [
-        "\\b(japanese|korean|french|italian|spanish|brazilian|swedish|german|british|american|irish|mexican|greek|norwegian|canadian|australian|russian)\\b"
+        "\\b(?:russian|japanese|korean|french|italian|spanish|brazilian|colombian|swedish|norwegian|german|british|english|irish|scottish|american|mexican|greek|canadian|australian|polish|ukrainian|czech|dutch|danish|finnish|portuguese|turkish|lebanese|egyptian|moroccan|icelandic|hungarian|romanian|argentine|cuban|venezuelan|thai|vietnamese|filipina|filipino|indian)\\b"
       ],
       "cleanup_patterns": [
         "\\b(japanese|korean|french|italian|spanish|brazilian|swedish|german|british|american|irish|mexican|greek|norwegian|canadian|australian|russian)\\b"
       ],
       "entries": [
-        {"text": "Japanese", "tags": ["east_asian"]},
-        {"text": "Korean", "tags": ["east_asian"]},
-        {"text": "French", "tags": ["european"]},
-        {"text": "Italian", "tags": ["mediterranean"]},
-        {"text": "Spanish", "tags": ["mediterranean"]},
-        {"text": "Brazilian", "tags": ["south_american"]},
-        {"text": "Swedish", "tags": ["scandinavian"]},
-        {"text": "German", "tags": ["european"]},
-        {"text": "Irish", "tags": ["celtic"]},
-        {"text": "Greek", "tags": ["mediterranean"]},
-        {"text": "Norwegian", "tags": ["scandinavian"]},
-        {"text": "Australian", "tags": ["oceania"]}
+        {
+          "text": "Japanese",
+          "tags": [
+            "east_asian"
+          ]
+        },
+        {
+          "text": "Korean",
+          "tags": [
+            "east_asian"
+          ]
+        },
+        {
+          "text": "French",
+          "tags": [
+            "european"
+          ]
+        },
+        {
+          "text": "Italian",
+          "tags": [
+            "mediterranean"
+          ]
+        },
+        {
+          "text": "Spanish",
+          "tags": [
+            "mediterranean"
+          ]
+        },
+        {
+          "text": "Brazilian",
+          "tags": [
+            "south_american"
+          ]
+        },
+        {
+          "text": "Swedish",
+          "tags": [
+            "scandinavian"
+          ]
+        },
+        {
+          "text": "German",
+          "tags": [
+            "european"
+          ]
+        },
+        {
+          "text": "Irish",
+          "tags": [
+            "celtic"
+          ]
+        },
+        {
+          "text": "Greek",
+          "tags": [
+            "mediterranean"
+          ]
+        },
+        {
+          "text": "Norwegian",
+          "tags": [
+            "scandinavian"
+          ]
+        },
+        {
+          "text": "Australian",
+          "tags": [
+            "oceania"
+          ]
+        },
+        {
+          "text": "Russian",
+          "tags": [
+            "slavic"
+          ]
+        },
+        {
+          "text": "Ukrainian",
+          "tags": [
+            "slavic"
+          ]
+        },
+        {
+          "text": "Polish",
+          "tags": [
+            "slavic"
+          ]
+        },
+        {
+          "text": "Czech",
+          "tags": [
+            "slavic"
+          ]
+        },
+        {
+          "text": "Danish",
+          "tags": [
+            "nordic"
+          ]
+        },
+        {
+          "text": "Finnish",
+          "tags": [
+            "nordic"
+          ]
+        },
+        {
+          "text": "American",
+          "tags": [
+            "north_american"
+          ]
+        },
+        {
+          "text": "Colombian",
+          "tags": [
+            "south_american",
+            "latina"
+          ]
+        }
       ]
     },
     {
@@ -97,15 +486,60 @@
         "\\b(caucasian|east asian|south asian|latina|latino|hispanic|african descent|black|scandinavian|mediterranean|middle eastern|nordic|mixed heritage)\\b"
       ],
       "entries": [
-        {"text": "East Asian heritage", "tags": ["asian"]},
-        {"text": "Scandinavian heritage", "tags": ["nordic"]},
-        {"text": "Mediterranean heritage", "tags": ["mediterranean"]},
-        {"text": "Latin American heritage", "tags": ["latino"]},
-        {"text": "Afro-descendant heritage", "tags": ["african"]},
-        {"text": "South Asian heritage", "tags": ["south_asian"]},
-        {"text": "Celtic heritage", "tags": ["celtic"]},
-        {"text": "Slavic heritage", "tags": ["slavic"]},
-        {"text": "Middle Eastern heritage", "tags": ["middle_eastern"]}
+        {
+          "text": "East Asian heritage",
+          "tags": [
+            "asian"
+          ]
+        },
+        {
+          "text": "Scandinavian heritage",
+          "tags": [
+            "nordic"
+          ]
+        },
+        {
+          "text": "Mediterranean heritage",
+          "tags": [
+            "mediterranean"
+          ]
+        },
+        {
+          "text": "Latin American heritage",
+          "tags": [
+            "latino"
+          ]
+        },
+        {
+          "text": "Afro-descendant heritage",
+          "tags": [
+            "african"
+          ]
+        },
+        {
+          "text": "South Asian heritage",
+          "tags": [
+            "south_asian"
+          ]
+        },
+        {
+          "text": "Celtic heritage",
+          "tags": [
+            "celtic"
+          ]
+        },
+        {
+          "text": "Slavic heritage",
+          "tags": [
+            "slavic"
+          ]
+        },
+        {
+          "text": "Middle Eastern heritage",
+          "tags": [
+            "middle_eastern"
+          ]
+        }
       ]
     },
     {
@@ -113,19 +547,87 @@
       "name": "Skin / Complexion",
       "insertion_zone": "subject",
       "detection_terms": [
-        "\\b((fair|pale|porcelain|olive|tanned|bronzed|deep ebony|warm honey|sun-kissed|freckled|smooth|radiant|matte|dewy)\\s*(skin|complexion)?)\\b"
+        "\\b(?:fabric-free skin textures?|natural skin sheen(?: from the heat)?|fair porcelain|pale ivory|warm olive|golden bronze|sun-kissed|freckled|dewy radiant|luminous|matte|smooth|flawless|deep bronze|ebony)\\s*(?:skin|complexion|tones?|textures?)?\\b"
       ],
       "cleanup_patterns": [
         "\\b(fair|pale|porcelain|olive|tanned|bronzed|deep ebony|warm honey|sun-kissed|freckled|dewy)\\s+skin\\b"
       ],
       "entries": [
-        {"text": "fair porcelain skin with subtle natural glow", "tags": ["fair"]},
-        {"text": "sun-kissed golden bronze skin", "tags": ["tanned"]},
-        {"text": "warm olive complexion with natural texture", "tags": ["olive"]},
-        {"text": "radiant dewy skin with light dusting of freckles", "tags": ["freckles"]},
-        {"text": "deep rich luminous dark skin", "tags": ["dark"]},
-        {"text": "warm honey-toned skin with smooth finish", "tags": ["warm"]},
-        {"text": "pale ivory skin with soft rosy undertones", "tags": ["pale"]}
+        {
+          "text": "fair porcelain skin with subtle natural glow",
+          "tags": [
+            "fair"
+          ]
+        },
+        {
+          "text": "sun-kissed golden bronze skin",
+          "tags": [
+            "tanned"
+          ]
+        },
+        {
+          "text": "warm olive complexion with natural texture",
+          "tags": [
+            "olive"
+          ]
+        },
+        {
+          "text": "radiant dewy skin with light dusting of freckles",
+          "tags": [
+            "freckles"
+          ]
+        },
+        {
+          "text": "deep rich luminous dark skin",
+          "tags": [
+            "dark"
+          ]
+        },
+        {
+          "text": "warm honey-toned skin with smooth finish",
+          "tags": [
+            "warm"
+          ]
+        },
+        {
+          "text": "pale ivory skin with soft rosy undertones",
+          "tags": [
+            "pale"
+          ]
+        },
+        {
+          "text": "fair porcelain skin with natural skin sheen and authentic micro-texture",
+          "tags": [
+            "fair",
+            "sheen"
+          ]
+        },
+        {
+          "text": "sun-kissed golden bronze skin with glistening highlights",
+          "tags": [
+            "tanned",
+            "bronze"
+          ]
+        },
+        {
+          "text": "warm olive complexion with smooth natural skin texture and subtle glow",
+          "tags": [
+            "olive"
+          ]
+        },
+        {
+          "text": "pale milky skin with soft rosy undertones and fabric-free textures",
+          "tags": [
+            "pale"
+          ]
+        },
+        {
+          "text": "radiant dewy skin featuring a light natural sheen from the warm air",
+          "tags": [
+            "dewy",
+            "sheen"
+          ]
+        }
       ]
     },
     {
@@ -133,19 +635,166 @@
       "name": "Body / Figure",
       "insertion_zone": "subject",
       "detection_terms": [
-        "\\b((athletic|slender|curvy|hourglass|muscular|lean toned|statuesque|toned|petite|sporty)\\s*(build|figure|physique|frame))\\b",
-        "\\b(athletic build|slender figure|curvy figure|hourglass figure|muscular physique|lean toned physique|statuesque frame|toned build|petite frame|sporty figure)\\b"
+        "\\b(?:curvy\\s+thick|soft\\s+thick\\s+curves?|thick\\s+curves?|curvaceous|hourglass|voluptuous|thick\\s+thighs?|athletic|slender|muscular|lean\\s+toned|statuesque|toned|petite|sporty|chubby|plus-size|bbw|slim|soft\\s+curves?|heavy\\s+curves?)\\b(?:\\s*(?:build|figure|physique|frame|body|silhouette|curves?))?",
+        "\\b(?:build|figure|physique|frame)\\s*:\\s*\\w+\\b"
       ],
       "cleanup_patterns": [
         "\\b(athletic build|slender figure|curvy figure|hourglass figure|muscular physique|lean toned physique|statuesque frame|toned build|petite frame|sporty figure)\\b"
       ],
       "entries": [
-        {"text": "athletic toned build with graceful posture", "tags": ["athletic"]},
-        {"text": "slender elegant figure", "tags": ["slender"]},
-        {"text": "curvy hourglass silhouette", "tags": ["curvy"]},
-        {"text": "lean sculpted physique", "tags": ["lean"]},
-        {"text": "petite delicate frame", "tags": ["petite"]},
-        {"text": "tall statuesque figure with confident stance", "tags": ["tall"]}
+        {
+          "text": "athletic toned build with graceful posture",
+          "tags": [
+            "athletic"
+          ]
+        },
+        {
+          "text": "slender elegant figure",
+          "tags": [
+            "slender"
+          ]
+        },
+        {
+          "text": "curvy hourglass silhouette",
+          "tags": [
+            "curvy"
+          ]
+        },
+        {
+          "text": "lean sculpted physique",
+          "tags": [
+            "lean"
+          ]
+        },
+        {
+          "text": "petite delicate frame",
+          "tags": [
+            "petite"
+          ]
+        },
+        {
+          "text": "tall statuesque figure with confident stance",
+          "tags": [
+            "tall"
+          ]
+        },
+        {
+          "text": "curvy thick silhouette with soft generous curves",
+          "tags": [
+            "curvy",
+            "thick"
+          ]
+        },
+        {
+          "text": "voluptuous hourglass figure with wide hips and a narrow waist",
+          "tags": [
+            "hourglass",
+            "curvy"
+          ]
+        },
+        {
+          "text": "thick voluptuous body with heavy hips, soft belly, and lush thighs",
+          "tags": [
+            "thick",
+            "voluptuous"
+          ]
+        },
+        {
+          "text": "soft thick feminine curves with full hips and plush thighs",
+          "tags": [
+            "curvy",
+            "thick",
+            "soft"
+          ]
+        },
+        {
+          "text": "sensual plus-size figure with full rounded curves",
+          "tags": [
+            "curvy",
+            "plus_size"
+          ]
+        },
+        {
+          "text": "thick athletic build with powerful muscular thighs and round glutes",
+          "tags": [
+            "thick",
+            "athletic"
+          ]
+        },
+        {
+          "text": "natural feminine silhouette with soft curves and smooth contours",
+          "tags": [
+            "natural",
+            "curvy"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bust_size",
+      "name": "Bust / Breasts",
+      "insertion_zone": "subject",
+      "detection_terms": [
+        "\\b(?:large\\s+hanging|heavy\\s+natural|voluptuous|perky|massive|plump|full|ample|deep\\s+cleavage|small\\s+perky)?\\s*(?:breasts|bust|tits|cleavage|boobs)\\b",
+        "\\b(?:large\\s+hanging\\s+breasts|large\\s+breasts|heavy\\s+breasts|voluptuous\\s+bust)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(?:large\\s+hanging|heavy\\s+natural|voluptuous|perky|massive|plump|full|ample|deep\\s+cleavage|small\\s+perky)\\s+(?:breasts|bust|cleavage)\\b"
+      ],
+      "entries": [
+        {
+          "text": "large hanging natural breasts with soft teardrop shape",
+          "tags": [
+            "large",
+            "natural"
+          ]
+        },
+        {
+          "text": "heavy voluptuous breasts resting softly against the chest",
+          "tags": [
+            "large",
+            "heavy"
+          ]
+        },
+        {
+          "text": "voluptuous full bust with deep natural cleavage",
+          "tags": [
+            "full",
+            "cleavage"
+          ]
+        },
+        {
+          "text": "plump perky breasts with high projection and rosy areolas",
+          "tags": [
+            "perky"
+          ]
+        },
+        {
+          "text": "generous natural bust showing enticing bounce and weight",
+          "tags": [
+            "generous",
+            "natural"
+          ]
+        },
+        {
+          "text": "soft rounded breasts with subtle natural sag and delicate skin",
+          "tags": [
+            "natural",
+            "soft"
+          ]
+        },
+        {
+          "text": "ample voluptuous bust filling the frame with feminine warmth",
+          "tags": [
+            "voluptuous"
+          ]
+        },
+        {
+          "text": "modest perky breasts with subtle delicate cleavage",
+          "tags": [
+            "modest"
+          ]
+        }
       ]
     },
     {
@@ -159,10 +808,61 @@
         "\\b(tall|petite|short stature|above average height|towering stature)\\b"
       ],
       "entries": [
-        {"text": "tall and imposing", "tags": ["tall"]},
-        {"text": "petite and compact", "tags": ["petite"]},
-        {"text": "average height with balanced proportions", "tags": ["average"]},
-        {"text": "strikingly tall stature", "tags": ["tall"]}
+        {
+          "text": "tall and imposing",
+          "tags": [
+            "tall"
+          ]
+        },
+        {
+          "text": "petite and compact",
+          "tags": [
+            "petite"
+          ]
+        },
+        {
+          "text": "average height with balanced proportions",
+          "tags": [
+            "average"
+          ]
+        },
+        {
+          "text": "strikingly tall stature",
+          "tags": [
+            "tall"
+          ]
+        },
+        {
+          "text": "tall with long elegant legs",
+          "tags": [
+            "tall"
+          ]
+        },
+        {
+          "text": "petite with delicate compact proportions",
+          "tags": [
+            "petite"
+          ]
+        },
+        {
+          "text": "towering statuesque height with commanding presence",
+          "tags": [
+            "tall"
+          ]
+        },
+        {
+          "text": "short and curvy with feminine compact frame",
+          "tags": [
+            "petite",
+            "curvy"
+          ]
+        },
+        {
+          "text": "medium height with balanced aesthetic symmetry",
+          "tags": [
+            "average"
+          ]
+        }
       ]
     },
     {
@@ -170,23 +870,124 @@
       "name": "Hair",
       "insertion_zone": "subject",
       "detection_terms": [
-        "\\b((waist-length|shoulder-length|medium-length|short|long|cropped|flowing|voluminous|buzzcut|pixie|bob|layered|messy)?\\s*(wavy|straight|curly|coily|silky|textured)?\\s*(platinum blonde|golden blonde|honey blonde|blonde|brunette|jet-black|raven black|black|dark brown|chestnut|auburn|copper red|red|ginger|silver-gray|silver|gray|white)?\\s*(hair|curls|locks|tresses|ponytail|braid|bangs|updo))\\b"
+        "\\b(?:(?:waist-length|shoulder-length|medium-length|mid-back length|mid-back|elbow-length|chin-length|pixie-length|buzz-cut|very long|medium length|closely cropped short|short cropped|long|short|cropped|flowing|voluminous|layered|messy|tousled|wavy|straight|curly|coily|silky|textured|loose|natural|sleek straight|beach waves|platinum blonde|golden honey-blonde|golden blonde|honey blonde|sun-bleached blonde|dirty blonde|strawberry blonde|champagne blonde|ice blonde|bleached blonde|Swedish ice-blonde|bleached white-blonde|blonde|dark brunette|chestnut brown|chocolate brown|copper red|fiery copper-red|vibrant Irish ginger|ginger|auburn|crimson auburn|bright fiery red|ash-brown|ash brown|silver-white|silver-gray|silver gray|icy titanium silver|deep raven-black|jet-black|jet black|raven black|brunette|redhead|black|dark brown|brown|red|silver|gray|white)[\\s,]+)*(?:hair|curls|locks|tresses|ponytail|braid|bangs|updo|cut|bob)\\b",
+        "\\b(?:hair|curls|locks|tresses)\\b"
       ],
       "cleanup_patterns": [
         "\\b(blonde|brunette|black|dark brown|chestnut|auburn|platinum blonde|honey blonde|copper red|silver-gray|jet-black)\\s+hair\\b",
         "\\b(long|short|shoulder-length|flowing|wavy|curly|straight)\\s+hair\\b"
       ],
       "entries": [
-        {"text": "long flowing wavy chestnut-brown hair cascading past shoulders", "tags": ["long", "wavy", "brunette"]},
-        {"text": "short textured pixie cut in deep jet-black", "tags": ["short", "textured", "black"]},
-        {"text": "shoulder-length layered honey-blonde hair with soft curtain bangs", "tags": ["medium", "blonde"]},
-        {"text": "sleek straight midnight-black hair with mirror-like shine", "tags": ["straight", "black"]},
-        {"text": "voluminous bouncy copper-red curls framing the face", "tags": ["curly", "red"]},
-        {"text": "messy high bun with loose wispy tendrils", "tags": ["updo", "casual"]},
-        {"text": "platinum blonde bob cut with sharp blunt edges", "tags": ["short", "blonde"]},
-        {"text": "tightly coiled natural afro with neat silhouette", "tags": ["curly", "natural"]},
-        {"text": "loose beach waves in warm dark chocolate tones", "tags": ["wavy", "brunette"]},
-        {"text": "intricate Dutch side braid sweeping over one shoulder", "tags": ["braid"]}
+        {
+          "text": "long flowing wavy chestnut-brown hair cascading past shoulders",
+          "tags": [
+            "long",
+            "wavy",
+            "brunette"
+          ]
+        },
+        {
+          "text": "short textured pixie cut in deep jet-black",
+          "tags": [
+            "short",
+            "textured",
+            "black"
+          ]
+        },
+        {
+          "text": "shoulder-length layered honey-blonde hair with soft curtain bangs",
+          "tags": [
+            "medium",
+            "blonde"
+          ]
+        },
+        {
+          "text": "sleek straight midnight-black hair with mirror-like shine",
+          "tags": [
+            "straight",
+            "black"
+          ]
+        },
+        {
+          "text": "voluminous bouncy copper-red curls framing the face",
+          "tags": [
+            "curly",
+            "red"
+          ]
+        },
+        {
+          "text": "messy high bun with loose wispy tendrils",
+          "tags": [
+            "updo",
+            "casual"
+          ]
+        },
+        {
+          "text": "platinum blonde bob cut with sharp blunt edges",
+          "tags": [
+            "short",
+            "blonde"
+          ]
+        },
+        {
+          "text": "tightly coiled natural afro with neat silhouette",
+          "tags": [
+            "curly",
+            "natural"
+          ]
+        },
+        {
+          "text": "loose beach waves in warm dark chocolate tones",
+          "tags": [
+            "wavy",
+            "brunette"
+          ]
+        },
+        {
+          "text": "intricate Dutch side braid sweeping over one shoulder",
+          "tags": [
+            "braid"
+          ]
+        },
+        {
+          "text": "long wavy natural hair cascading freely over the shoulders",
+          "tags": [
+            "long",
+            "wavy"
+          ]
+        },
+        {
+          "text": "flowing silky hair with gentle natural waves",
+          "tags": [
+            "long",
+            "wavy"
+          ]
+        },
+        {
+          "text": "tousled beach waves catching the warm air",
+          "tags": [
+            "wavy",
+            "casual"
+          ]
+        },
+        {
+          "text": "sleek straight locks with mirror-like shine draping down the back",
+          "tags": [
+            "straight"
+          ]
+        },
+        {
+          "text": "messy loose high bun with soft wispy strands framing the jawline",
+          "tags": [
+            "updo"
+          ]
+        },
+        {
+          "text": "voluminous bouncy curls framing the face with sensual weight",
+          "tags": [
+            "curly"
+          ]
+        }
       ]
     },
     {
@@ -194,17 +995,70 @@
       "name": "Hair Length",
       "insertion_zone": "subject",
       "detection_terms": [
-        "\\b(waist-length|elbow-length|shoulder-length|chin-length|short cropped|pixie-length|buzz-cut|very long|medium length|long hair|short hair|shoulder length|medium-length|cropped hair)\\b"
+        "\\b(?:waist-length|shoulder-length|chin-length|mid-back length|mid-back|elbow-length|knee-length|pixie-length|buzz-cut|closely cropped short|short cropped|medium-length|medium length|very long)\\b",
+        "\\b((?:long|short|cropped))\\b(?=(?:[\\s,]+(?:platinum blonde|golden honey-blonde|golden blonde|honey blonde|strawberry blonde|dirty blonde|blonde|dark brunette|chestnut brown|chocolate brown|copper red|ginger|auburn|ash brown|silver gray|black|brown|red|white|gray|silver|brunette|redhead|wavy|straight|curly|coily|silky|textured|loose|natural|messy|tousled))*[\\s,]+(?:hair|curls|locks|tresses|ponytail|braid|bangs|updo|cut|bob)\\b)",
+        "\\b(?:platinum blonde|golden blonde|honey blonde|blonde|brunette|black|brown|red|ginger|silver|gray|white)[\\s,]+((?:long|short|cropped))\\b",
+        "\\b((?:long|short|cropped))\\b(?=[\\s,]+(?:wavy|straight|curly|coily|silky|textured|blonde|brunette|black|brown|red|ginger)\\b)",
+        "\\b((?:long|short|cropped))\\s+hair\\b"
       ],
       "cleanup_patterns": [
-        "\\b(waist-length|elbow-length|shoulder-length|chin-length|short cropped|pixie-length|buzz-cut|very long|medium length|long|short|cropped)\\s*(hair)?\\b"
+        "\\b((?:waist-length|shoulder-length|chin-length|mid-back length|mid-back|elbow-length|knee-length|pixie-length|buzz-cut|closely cropped short|short cropped|medium-length|medium length|very long)|(?:long|short|cropped))\\s*(hair)?\\b"
       ],
       "entries": [
-        {"text": "waist-length", "tags": ["long"]},
-        {"text": "shoulder-length", "tags": ["medium"]},
-        {"text": "chin-length", "tags": ["short"]},
-        {"text": "closely cropped short", "tags": ["short"]},
-        {"text": "mid-back length", "tags": ["long"]}
+        {
+          "text": "waist-length",
+          "tags": [
+            "long"
+          ]
+        },
+        {
+          "text": "shoulder-length",
+          "tags": [
+            "medium"
+          ]
+        },
+        {
+          "text": "chin-length",
+          "tags": [
+            "short"
+          ]
+        },
+        {
+          "text": "closely cropped short",
+          "tags": [
+            "short"
+          ]
+        },
+        {
+          "text": "mid-back length",
+          "tags": [
+            "long"
+          ]
+        },
+        {
+          "text": "long",
+          "tags": [
+            "long"
+          ]
+        },
+        {
+          "text": "short",
+          "tags": [
+            "short"
+          ]
+        },
+        {
+          "text": "medium-length",
+          "tags": [
+            "medium"
+          ]
+        },
+        {
+          "text": "very long",
+          "tags": [
+            "long"
+          ]
+        }
       ]
     },
     {
@@ -212,19 +1066,469 @@
       "name": "Hair Color",
       "insertion_zone": "subject",
       "detection_terms": [
-        "\\b(platinum blonde|golden blonde|honey blonde|jet black|raven black|dark brunette|chestnut brown|copper red|vibrant crimson|silver gray|ash brown|redhead|blonde|brunette|red hair|black hair|brown hair|ginger hair|ginger|dark hair|white hair|silver hair|gray hair)\\b"
+        "\\b(?:platinum blonde|golden honey-blonde|golden blonde|honey blonde|sun-bleached blonde|dirty blonde|strawberry blonde|champagne blonde|ice blonde|bleached blonde|Swedish ice-blonde|bleached white-blonde|blonde|dark brunette|chestnut brown|chocolate brown|copper red|fiery copper-red|vibrant Irish ginger|ginger|auburn|crimson auburn|bright fiery red|ash-brown|ash brown|silver-white|silver-gray|silver gray|icy titanium silver|deep raven-black|jet-black|jet black|raven black|brunette|redhead)\\b",
+        "\\b((?:black|brown|dark brown|red|white|gray|silver))\\b(?=(?:[\\s,]+(?:waist-length|shoulder-length|medium-length|mid-back|short|long|cropped|flowing|voluminous|buzzcut|pixie|bob|layered|messy|tousled|wavy|straight|curly|coily|silky|textured|loose|natural))*[\\s,]+(?:hair|curls|locks|tresses|ponytail|braid|bangs|updo|cut|bob)\\b)",
+        "\\b(?:with|has|hair is)\\s+((?:black|brown|dark brown|red|white|gray|silver))\\b(?=[\\s,]+(?:waist-length|shoulder-length|medium-length|mid-back|short|long|cropped|flowing|voluminous|buzzcut|pixie|bob|layered|messy|tousled|wavy|straight|curly|coily|silky|textured|loose|natural)\\b)",
+        "\\b((?:black|brown|dark brown|red|white|gray|silver))\\s+(?:hair|curls|locks|tresses|ponytail|braid|bangs|updo|cut|bob)\\b",
+        "\\b((?:black|brown|dark brown|red|white|gray|silver))\\b(?=[\\s,]+(?:short|long|wavy|straight|curly)\\b)"
       ],
       "cleanup_patterns": [
-        "\\b(platinum blonde|golden blonde|honey blonde|jet black|raven black|dark brunette|chestnut brown|copper red|vibrant crimson|silver gray|ash brown|redhead|blonde|brunette|red|ginger|black|brown|dark|white|silver|gray)\\s*(hair)?\\b"
+        "\\b((?:platinum blonde|golden honey-blonde|golden blonde|honey blonde|sun-bleached blonde|dirty blonde|strawberry blonde|champagne blonde|ice blonde|bleached blonde|Swedish ice-blonde|bleached white-blonde|blonde|dark brunette|chestnut brown|chocolate brown|copper red|fiery copper-red|vibrant Irish ginger|ginger|auburn|crimson auburn|bright fiery red|ash-brown|ash brown|silver-white|silver-gray|silver gray|icy titanium silver|deep raven-black|jet-black|jet black|raven black|brunette|redhead)|(?:black|brown|dark brown|red|white|gray|silver))\\s*(?:hair|curls|locks|tresses)?\\b"
       ],
       "entries": [
-        {"text": "golden honey-blonde", "tags": ["blonde"]},
-        {"text": "deep raven-black", "tags": ["black"]},
-        {"text": "rich chestnut brown with subtle caramel highlights", "tags": ["brunette"]},
-        {"text": "fiery copper-red", "tags": ["red"]},
-        {"text": "cool ash-brown", "tags": ["brunette"]},
-        {"text": "platinum silver-blonde", "tags": ["blonde"]},
-        {"text": "luminous mahogany brown", "tags": ["brunette"]}
+        {
+          "text": "platinum blonde",
+          "constraints": {
+            "preset": "blonde"
+          },
+          "tags": [
+            "blonde"
+          ]
+        },
+        {
+          "text": "Swedish ice-blonde",
+          "constraints": {
+            "preset": "blonde"
+          },
+          "tags": [
+            "blonde"
+          ]
+        },
+        {
+          "text": "golden honey-blonde",
+          "constraints": {
+            "preset": "blonde"
+          },
+          "tags": [
+            "blonde"
+          ]
+        },
+        {
+          "text": "champagne blonde",
+          "constraints": {
+            "preset": "blonde"
+          },
+          "tags": [
+            "blonde"
+          ]
+        },
+        {
+          "text": "bleached white-blonde",
+          "constraints": {
+            "preset": "blonde"
+          },
+          "tags": [
+            "blonde"
+          ]
+        },
+        {
+          "text": "strawberry blonde",
+          "constraints": {
+            "preset": "blonde"
+          },
+          "tags": [
+            "blonde",
+            "redhead"
+          ]
+        },
+        {
+          "text": "fiery copper-red",
+          "constraints": {
+            "preset": "redhead"
+          },
+          "tags": [
+            "redhead"
+          ]
+        },
+        {
+          "text": "vibrant Irish ginger",
+          "constraints": {
+            "preset": "redhead"
+          },
+          "tags": [
+            "redhead"
+          ]
+        },
+        {
+          "text": "crimson auburn",
+          "constraints": {
+            "preset": "redhead"
+          },
+          "tags": [
+            "redhead"
+          ]
+        },
+        {
+          "text": "bright fiery red",
+          "constraints": {
+            "preset": "redhead"
+          },
+          "tags": [
+            "redhead"
+          ]
+        },
+        {
+          "text": "dark chocolate brown",
+          "constraints": {
+            "preset": "brunette"
+          },
+          "tags": [
+            "brunette"
+          ]
+        },
+        {
+          "text": "warm chestnut brown",
+          "constraints": {
+            "preset": "brunette"
+          },
+          "tags": [
+            "brunette"
+          ]
+        },
+        {
+          "text": "hazelnut brown",
+          "constraints": {
+            "preset": "brunette"
+          },
+          "tags": [
+            "brunette"
+          ]
+        },
+        {
+          "text": "ash-brown",
+          "constraints": {
+            "preset": "brunette"
+          },
+          "tags": [
+            "brunette"
+          ]
+        },
+        {
+          "text": "deep raven-black",
+          "constraints": {
+            "preset": "black"
+          },
+          "tags": [
+            "black"
+          ]
+        },
+        {
+          "text": "jet-black",
+          "constraints": {
+            "preset": "black"
+          },
+          "tags": [
+            "black"
+          ]
+        },
+        {
+          "text": "silver-white",
+          "constraints": {
+            "preset": "silver_white"
+          },
+          "tags": [
+            "silver_white"
+          ]
+        },
+        {
+          "text": "icy titanium silver",
+          "constraints": {
+            "preset": "silver_white"
+          },
+          "tags": [
+            "silver_white"
+          ]
+        },
+        {
+          "text": "blonde",
+          "constraints": {
+            "preset": "blonde"
+          },
+          "tags": [
+            "blonde"
+          ]
+        },
+        {
+          "text": "brunette",
+          "constraints": {
+            "preset": "brunette"
+          },
+          "tags": [
+            "brunette"
+          ]
+        },
+        {
+          "text": "black",
+          "constraints": {
+            "preset": "black"
+          },
+          "tags": [
+            "black"
+          ]
+        },
+        {
+          "text": "brown",
+          "constraints": {
+            "preset": "brunette"
+          },
+          "tags": [
+            "brunette"
+          ]
+        },
+        {
+          "text": "red",
+          "constraints": {
+            "preset": "redhead"
+          },
+          "tags": [
+            "redhead"
+          ]
+        },
+        {
+          "text": "ginger",
+          "constraints": {
+            "preset": "redhead"
+          },
+          "tags": [
+            "redhead"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hair_type",
+      "name": "Hair Type",
+      "insertion_zone": "subject",
+      "detection_terms": [
+        "\\b(sleek straight|straight|beach waves|loose waves|gentle waves|wavy|bouncy curls|ringlets|curly|coily|kinky|afro-textured|afro|tousled|messy|silky|textured)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(sleek straight|straight|beach waves|loose waves|gentle waves|wavy|bouncy curls|ringlets|curly|coily|kinky|afro-textured|afro|tousled|messy|silky|textured)\\s*(hair)?\\b"
+      ],
+      "entries": [
+        {
+          "text": "straight",
+          "tags": [
+            "straight"
+          ],
+          "constraints": {
+            "preset": "straight"
+          }
+        },
+        {
+          "text": "wavy",
+          "tags": [
+            "wavy"
+          ],
+          "constraints": {
+            "preset": "wavy"
+          }
+        },
+        {
+          "text": "curly",
+          "tags": [
+            "curly"
+          ],
+          "constraints": {
+            "preset": "curly"
+          }
+        },
+        {
+          "text": "coily",
+          "tags": [
+            "coily"
+          ],
+          "constraints": {
+            "preset": "coily"
+          }
+        },
+        {
+          "text": "beach waves",
+          "tags": [
+            "wavy"
+          ],
+          "constraints": {
+            "preset": "wavy"
+          }
+        },
+        {
+          "text": "bouncy curls",
+          "tags": [
+            "curly"
+          ],
+          "constraints": {
+            "preset": "curly"
+          }
+        },
+        {
+          "text": "loose waves",
+          "tags": [
+            "wavy"
+          ],
+          "constraints": {
+            "preset": "wavy"
+          }
+        },
+        {
+          "text": "sleek straight",
+          "tags": [
+            "straight"
+          ],
+          "constraints": {
+            "preset": "straight"
+          }
+        },
+        {
+          "text": "tousled",
+          "tags": [
+            "wavy"
+          ]
+        },
+        {
+          "text": "textured",
+          "tags": [
+            "curly"
+          ]
+        },
+        {
+          "text": "afro-textured",
+          "tags": [
+            "coily"
+          ],
+          "constraints": {
+            "preset": "coily"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hair_style",
+      "name": "Hair Style",
+      "insertion_zone": "subject",
+      "detection_terms": [
+        "\\b(pixie cut|pixie|blunt bob|french bob|bob cut|bob|high ponytail|ponytail|messy bun|topknot|chignon|bun|french braid|dutch braid|box braids|cornrows|dreadlocks|dreads|braids|braid|curtain bangs|blunt bangs|bangs|layered cut|wolf cut|shag cut|layered hair|undercut|buzz cut|updo)\\b"
+      ],
+      "cleanup_patterns": [
+        "\\b(pixie cut|pixie|blunt bob|french bob|bob cut|bob|high ponytail|ponytail|messy bun|topknot|chignon|bun|french braid|dutch braid|box braids|cornrows|dreadlocks|dreads|braids|braid|curtain bangs|blunt bangs|bangs|layered cut|wolf cut|shag cut|layered hair|undercut|buzz cut|updo)\\b"
+      ],
+      "entries": [
+        {
+          "text": "pixie cut",
+          "tags": [
+            "short"
+          ],
+          "constraints": {
+            "preset": "short"
+          }
+        },
+        {
+          "text": "blunt bob cut",
+          "tags": [
+            "short"
+          ],
+          "constraints": {
+            "preset": "short"
+          }
+        },
+        {
+          "text": "high ponytail",
+          "tags": [
+            "tied"
+          ],
+          "constraints": {
+            "preset": "tied"
+          }
+        },
+        {
+          "text": "messy high bun with loose wispy tendrils",
+          "tags": [
+            "tied"
+          ],
+          "constraints": {
+            "preset": "tied"
+          }
+        },
+        {
+          "text": "intricate Dutch braid cascading over one shoulder",
+          "tags": [
+            "braided"
+          ],
+          "constraints": {
+            "preset": "braided"
+          }
+        },
+        {
+          "text": "curtain bangs framing the face",
+          "tags": [
+            "loose"
+          ],
+          "constraints": {
+            "preset": "loose"
+          }
+        },
+        {
+          "text": "textured wolf cut with layered feathering",
+          "tags": [
+            "loose"
+          ],
+          "constraints": {
+            "preset": "loose"
+          }
+        },
+        {
+          "text": "elegant swept-up updo",
+          "tags": [
+            "tied"
+          ],
+          "constraints": {
+            "preset": "tied"
+          }
+        },
+        {
+          "text": "neat box braids",
+          "tags": [
+            "braided"
+          ],
+          "constraints": {
+            "preset": "braided"
+          }
+        },
+        {
+          "text": "classic layered cut",
+          "tags": [
+            "loose"
+          ],
+          "constraints": {
+            "preset": "loose"
+          }
+        },
+        {
+          "text": "undercut with sweeping side-part",
+          "tags": [
+            "short"
+          ],
+          "constraints": {
+            "preset": "short"
+          }
+        },
+        {
+          "text": "soft wavy bob",
+          "tags": [
+            "short"
+          ],
+          "constraints": {
+            "preset": "short"
+          }
+        },
+        {
+          "text": "loose natural hair",
+          "tags": [
+            "loose"
+          ],
+          "constraints": {
+            "preset": "loose"
+          }
+        }
       ]
     },
     {
@@ -238,13 +1542,48 @@
         "\\b(emerald green|sapphire blue|deep brown|hazel|amber|dark chocolate|ice blue|slate gray)\\s+eyes\\b"
       ],
       "entries": [
-        {"text": "piercing emerald-green eyes", "tags": ["green"]},
-        {"text": "deep sapphire-blue eyes with dark limbal rings", "tags": ["blue"]},
-        {"text": "warm hazel eyes with flecks of gold", "tags": ["hazel"]},
-        {"text": "intense dark chocolate brown eyes", "tags": ["brown"]},
-        {"text": "luminous amber-gold eyes", "tags": ["amber"]},
-        {"text": "clear crystalline ice-blue eyes", "tags": ["blue"]},
-        {"text": "mysterious stormy slate-gray eyes", "tags": ["gray"]}
+        {
+          "text": "piercing emerald-green eyes",
+          "tags": [
+            "green"
+          ]
+        },
+        {
+          "text": "deep sapphire-blue eyes with dark limbal rings",
+          "tags": [
+            "blue"
+          ]
+        },
+        {
+          "text": "warm hazel eyes with flecks of gold",
+          "tags": [
+            "hazel"
+          ]
+        },
+        {
+          "text": "intense dark chocolate brown eyes",
+          "tags": [
+            "brown"
+          ]
+        },
+        {
+          "text": "luminous amber-gold eyes",
+          "tags": [
+            "amber"
+          ]
+        },
+        {
+          "text": "clear crystalline ice-blue eyes",
+          "tags": [
+            "blue"
+          ]
+        },
+        {
+          "text": "mysterious stormy slate-gray eyes",
+          "tags": [
+            "gray"
+          ]
+        }
       ]
     },
     {
@@ -258,11 +1597,36 @@
         "\\b(high cheekbones|sculpted jawline|soft jawline|button nose|aquiline nose|full lips|delicate facial features|chiseled jaw|defined cheekbones)\\b"
       ],
       "entries": [
-        {"text": "sculpted high cheekbones and a refined jawline", "tags": ["sculpted"]},
-        {"text": "delicate symmetry with soft full lips and gentle features", "tags": ["soft"]},
-        {"text": "sharp chiseled jawline and piercing gaze", "tags": ["sharp"]},
-        {"text": "youthful face with cute dimples and natural contours", "tags": ["youthful"]},
-        {"text": "striking aristocratic facial contours", "tags": ["aristocratic"]}
+        {
+          "text": "sculpted high cheekbones and a refined jawline",
+          "tags": [
+            "sculpted"
+          ]
+        },
+        {
+          "text": "delicate symmetry with soft full lips and gentle features",
+          "tags": [
+            "soft"
+          ]
+        },
+        {
+          "text": "sharp chiseled jawline and piercing gaze",
+          "tags": [
+            "sharp"
+          ]
+        },
+        {
+          "text": "youthful face with cute dimples and natural contours",
+          "tags": [
+            "youthful"
+          ]
+        },
+        {
+          "text": "striking aristocratic facial contours",
+          "tags": [
+            "aristocratic"
+          ]
+        }
       ]
     },
     {
@@ -276,12 +1640,42 @@
         "\\b(no-makeup look|natural makeup|smoky eye|bold red lip|winged eyeliner|glam makeup|dewy minimalist makeup)\\b"
       ],
       "entries": [
-        {"text": "minimalist dewy no-makeup makeup with glossy lips", "tags": ["natural"]},
-        {"text": "sultry dark smoky eyeshadow with clean winged eyeliner", "tags": ["dramatic"]},
-        {"text": "classic matte crimson-red lipstick with subtle mascara", "tags": ["classic"]},
-        {"text": "sun-kissed bronzed makeup with subtle golden highlighter", "tags": ["bronze"]},
-        {"text": "bare, clean natural skin without visible makeup", "tags": ["bare"]},
-        {"text": "soft pastel blush and sheer tinted lip balm", "tags": ["soft"]}
+        {
+          "text": "minimalist dewy no-makeup makeup with glossy lips",
+          "tags": [
+            "natural"
+          ]
+        },
+        {
+          "text": "sultry dark smoky eyeshadow with clean winged eyeliner",
+          "tags": [
+            "dramatic"
+          ]
+        },
+        {
+          "text": "classic matte crimson-red lipstick with subtle mascara",
+          "tags": [
+            "classic"
+          ]
+        },
+        {
+          "text": "sun-kissed bronzed makeup with subtle golden highlighter",
+          "tags": [
+            "bronze"
+          ]
+        },
+        {
+          "text": "bare, clean natural skin without visible makeup",
+          "tags": [
+            "bare"
+          ]
+        },
+        {
+          "text": "soft pastel blush and sheer tinted lip balm",
+          "tags": [
+            "soft"
+          ]
+        }
       ]
     },
     {
@@ -289,18 +1683,82 @@
       "name": "Expression",
       "insertion_zone": "subject",
       "detection_terms": [
-        "\\b(confident expression|subtle smile|gentle warm smile|enigmatic gaze|contemplative look|intense focused expression|serene expression|sultry smirk|playful expression)\\b"
+        "\\b(?:moaning expression, mouth parted, eyes half-closed|parted lips, eyes half-closed|seductive look|ecstatic expression|alluring gaze|pleasure expression|sensual smile|sultry smirk|intense gaze|parted lips|half-closed eyes|blissful expression|breathless look)\\b"
       ],
       "cleanup_patterns": [
         "\\b(confident expression|subtle smile|gentle warm smile|enigmatic gaze|contemplative look|intense focused expression|serene expression|sultry smirk|playful expression)\\b"
       ],
       "entries": [
-        {"text": "a calm, enigmatic half-smile and captivating gaze", "tags": ["calm", "smile"]},
-        {"text": "a confident and poised expression", "tags": ["confident"]},
-        {"text": "an intense, piercing gaze straight toward the lens", "tags": ["intense"]},
-        {"text": "a gentle, candid warm smile", "tags": ["warm", "smile"]},
-        {"text": "a pensive contemplative mood with eyes slightly averted", "tags": ["pensive"]},
-        {"text": "a relaxed, effortless expression of quiet confidence", "tags": ["relaxed"]}
+        {
+          "text": "a calm, enigmatic half-smile and captivating gaze",
+          "tags": [
+            "calm",
+            "smile"
+          ]
+        },
+        {
+          "text": "a confident and poised expression",
+          "tags": [
+            "confident"
+          ]
+        },
+        {
+          "text": "an intense, piercing gaze straight toward the lens",
+          "tags": [
+            "intense"
+          ]
+        },
+        {
+          "text": "a gentle, candid warm smile",
+          "tags": [
+            "warm",
+            "smile"
+          ]
+        },
+        {
+          "text": "a pensive contemplative mood with eyes slightly averted",
+          "tags": [
+            "pensive"
+          ]
+        },
+        {
+          "text": "a relaxed, effortless expression of quiet confidence",
+          "tags": [
+            "relaxed"
+          ]
+        },
+        {
+          "text": "a moaning expression with mouth parted in breathless pleasure and eyes half-closed",
+          "tags": [
+            "ecstatic",
+            "intense"
+          ]
+        },
+        {
+          "text": "an ecstatic expression of pure pleasure, eyes rolled back slightly and lips softly parted",
+          "tags": [
+            "ecstatic",
+            "pleasure"
+          ]
+        },
+        {
+          "text": "an intensely seductive direct gaze straight into the lens, lower lip gently bitten",
+          "tags": [
+            "seductive"
+          ]
+        },
+        {
+          "text": "a sultry, alluring expression with parted glossy lips and flushed cheeks",
+          "tags": [
+            "sultry"
+          ]
+        },
+        {
+          "text": "a passionate breathless look with glistening eyes locked with the camera",
+          "tags": [
+            "passionate"
+          ]
+        }
       ]
     },
     {
@@ -314,12 +1772,82 @@
         "\\b(sitting|standing|leaning|reclining|walking|looking over shoulder|arms crossed|hand through hair|lying on (her|his|their) (back|stomach|side)|lying down|kneeling)\\b"
       ],
       "entries": [
-        {"text": "standing effortlessly with weight shifted to one hip", "tags": ["standing"]},
-        {"text": "casually leaning against a wall with relaxed posture", "tags": ["leaning"]},
-        {"text": "looking back over shoulder with an alluring glance", "tags": ["looking_back"]},
-        {"text": "sitting comfortably with one hand lightly touching chin", "tags": ["sitting"]},
-        {"text": "captured mid-stride walking with natural momentum", "tags": ["walking", "motion"]},
-        {"text": "graceful three-quarter body profile pose", "tags": ["three_quarter"]}
+        {
+          "text": "standing effortlessly with weight shifted to one hip",
+          "tags": [
+            "standing"
+          ]
+        },
+        {
+          "text": "casually leaning against a wall with relaxed posture",
+          "tags": [
+            "leaning"
+          ]
+        },
+        {
+          "text": "looking back over shoulder with an alluring glance",
+          "tags": [
+            "looking_back"
+          ]
+        },
+        {
+          "text": "sitting comfortably with one hand lightly touching chin",
+          "tags": [
+            "sitting"
+          ]
+        },
+        {
+          "text": "captured mid-stride walking with natural momentum",
+          "tags": [
+            "walking",
+            "motion"
+          ]
+        },
+        {
+          "text": "graceful three-quarter body profile pose",
+          "tags": [
+            "three_quarter"
+          ]
+        },
+        {
+          "text": "suspended completely off the ground in mid-air facing the camera",
+          "tags": [
+            "airborne",
+            "intimate"
+          ]
+        },
+        {
+          "text": "arching back gracefully with legs spread wide open",
+          "tags": [
+            "arched",
+            "intimate"
+          ]
+        },
+        {
+          "text": "kneeling on all fours with hips pushed upward",
+          "tags": [
+            "kneeling",
+            "intimate"
+          ]
+        },
+        {
+          "text": "standing firmly upright with legs planted wide",
+          "tags": [
+            "standing"
+          ]
+        },
+        {
+          "text": "reclining sensually on her back with arms stretched overhead",
+          "tags": [
+            "reclining"
+          ]
+        },
+        {
+          "text": "leaning back with head tilted and lips parted",
+          "tags": [
+            "leaning"
+          ]
+        }
       ]
     },
     {
@@ -333,11 +1861,37 @@
         "\\b(gold jewelry|silver pendant|pearl earrings|stylish sunglasses|vintage wristwatch|layered necklaces|chunky gold hoops)\\b"
       ],
       "entries": [
-        {"text": "wearing delicate gold hoop earrings and a slender necklace", "tags": ["jewelry", "gold"]},
-        {"text": "wearing modern dark acetate designer sunglasses", "tags": ["sunglasses"]},
-        {"text": "wearing a vintage leather-strap luxury watch", "tags": ["watch"]},
-        {"text": "wearing minimalist sterling silver rings and subtle studs", "tags": ["silver"]},
-        {"text": "wearing elegant pearl drop earrings", "tags": ["pearls"]}
+        {
+          "text": "wearing delicate gold hoop earrings and a slender necklace",
+          "tags": [
+            "jewelry",
+            "gold"
+          ]
+        },
+        {
+          "text": "wearing modern dark acetate designer sunglasses",
+          "tags": [
+            "sunglasses"
+          ]
+        },
+        {
+          "text": "wearing a vintage leather-strap luxury watch",
+          "tags": [
+            "watch"
+          ]
+        },
+        {
+          "text": "wearing minimalist sterling silver rings and subtle studs",
+          "tags": [
+            "silver"
+          ]
+        },
+        {
+          "text": "wearing elegant pearl drop earrings",
+          "tags": [
+            "pearls"
+          ]
+        }
       ]
     },
     {
@@ -351,10 +1905,31 @@
         "\\b((delicate fine-line|intricate sleeve|geometric|botanical forearm|minimalist collarbone|green ink|black ink|tribal)\\s+)?(tattoos?|body ink)\\b"
       ],
       "entries": [
-        {"text": "a delicate fine-line botanical tattoo along the forearm", "tags": ["ink"]},
-        {"text": "subtle minimalist geometric ink on the collarbone", "tags": ["ink"]},
-        {"text": "intricate blackwork sleeve tattoo with Japanese wave motifs", "tags": ["ink", "sleeve"]},
-        {"text": "flawless unblemished skin with no tattoos", "tags": ["none"]}
+        {
+          "text": "a delicate fine-line botanical tattoo along the forearm",
+          "tags": [
+            "ink"
+          ]
+        },
+        {
+          "text": "subtle minimalist geometric ink on the collarbone",
+          "tags": [
+            "ink"
+          ]
+        },
+        {
+          "text": "intricate blackwork sleeve tattoo with Japanese wave motifs",
+          "tags": [
+            "ink",
+            "sleeve"
+          ]
+        },
+        {
+          "text": "flawless unblemished skin with no tattoos",
+          "tags": [
+            "none"
+          ]
+        }
       ]
     },
     {
@@ -368,10 +1943,30 @@
         "\\b(dainty nose stud|subtle septum ring|multiple ear cartilage piercings|classic earlobe studs|no visible piercings|pierced\\s+\\w+|\\w+\\s+piercings?|piercings?)\\b"
       ],
       "entries": [
-        {"text": "a dainty silver nose stud", "tags": ["piercing"]},
-        {"text": "curated ear piercings with tiny gold Huggie hoops", "tags": ["piercing"]},
-        {"text": "a subtle minimalist rose-gold septum clicker", "tags": ["piercing"]},
-        {"text": "clean natural ears with simple diamond studs", "tags": ["subtle"]}
+        {
+          "text": "a dainty silver nose stud",
+          "tags": [
+            "piercing"
+          ]
+        },
+        {
+          "text": "curated ear piercings with tiny gold Huggie hoops",
+          "tags": [
+            "piercing"
+          ]
+        },
+        {
+          "text": "a subtle minimalist rose-gold septum clicker",
+          "tags": [
+            "piercing"
+          ]
+        },
+        {
+          "text": "clean natural ears with simple diamond studs",
+          "tags": [
+            "subtle"
+          ]
+        }
       ]
     }
   ]

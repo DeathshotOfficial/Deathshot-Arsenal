@@ -1,19 +1,32 @@
-/* ============================================================
-   DS Randomizer - DeathshotArsenal
-   Custom DOM Randomizer Node Extension
-   ============================================================ */
+/**
+ * DeathshotArsenal — DS Randomizer Node Extension
+ * Overhauled to strict UIElements Design System.
+ * Clean, flat 2-section hierarchy: Attribute Selection (Top) + Generated Prompt (Bottom).
+ */
 
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
+import {
+  Card,
+  Button,
+  DSIcon,
+  DSIconMarkup,
+  installDSUI,
+  normalizeDSWidgetHost,
+  protectDSResizeCorners,
+} from "../UIElements/index.js";
 
-// Load CSS stylesheet
+installDSUI();
+
+const TYPE = "DS_Randomizer";
+const EXT = "DeathshotArsenal.Randomizer";
 const CSS_HREF = "/extensions/DeathshotArsenal/Randomizer/ds_randomizer.css";
 const CSS_FALLBACK = new URL("./ds_randomizer.css", import.meta.url).href;
 
 if (!document.querySelector(`link[data-ds-randomizer-css], link[href*="ds_randomizer.css"]`)) {
   const cssLink = document.createElement("link");
   cssLink.rel = "stylesheet";
-  cssLink.href = CSS_HREF;
+  cssLink.href = `${CSS_HREF}?v=${Date.now()}`;
   cssLink.onerror = () => {
     cssLink.href = CSS_FALLBACK;
   };
@@ -21,15 +34,22 @@ if (!document.querySelector(`link[data-ds-randomizer-css], link[href*="ds_random
   document.head.appendChild(cssLink);
 }
 
-const ICONS = {
-  shuffle: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20l17-17M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>`,
-  dice: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M12 12h.01M8 8h.01M8 16h.01M16 8h.01M16 16h.01"/></svg>`,
-  refresh: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16M16 16h5v5"/></svg>`,
-  rotateCcw: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5"/></svg>`,
-  copy: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
-  clear: `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>`,
-  link: `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`,
-};
+const MIN_NODE_WIDTH = 420;
+const DEFAULT_NODE_WIDTH = 460;
+const DEFAULT_NODE_HEIGHT = 520;
+const CARD_MARGIN = 5;
+const BOTTOM_GAP = 5;
+const NATURAL_CARD_HEIGHT = 380;
+const MIN_WIDGET_HEIGHT = NATURAL_CARD_HEIGHT + (CARD_MARGIN * 2);
+
+function getGroupLabel(grp) {
+  if (!grp) return "";
+  if (grp.id === "camera") return "Camera";
+  if (grp.id === "character") return "Character";
+  if (grp.id === "clothing") return "Clothing";
+  if (grp.id === "environment") return "Environment";
+  return grp.name ? grp.name.split("/")[0].trim() : String(grp.id || "");
+}
 
 async function copyToClipboard(text) {
   const val = String(text ?? "");
@@ -59,7 +79,7 @@ function hideNativeWidget(widget) {
   widget.hidden = true;
   widget.options = widget.options || {};
   widget.options.hidden = true;
-  widget.computeSize = () => [0, 0];
+  widget.computeSize = () => [0, -4];
   widget.draw = () => {};
   for (const el of [widget.inputEl, widget.element]) {
     if (el?.style) {
@@ -77,7 +97,7 @@ function hideNativeWidget(widget) {
 function hideAllNativeWidgets(node) {
   if (!node?.widgets) return;
   for (const w of node.widgets) {
-    if (w.name === "ds_randomizer_widget" || w.type === "custom") continue;
+    if (w.name === "ds_randomizer_ui" || w.name === "ds_randomizer_widget" || w.type === "custom") continue;
     hideNativeWidget(w);
   }
 }
@@ -103,13 +123,11 @@ function cleanupObsoleteInputs(node) {
     const textIndex = node.inputs.findIndex((inp) => inp && inp.name === "text");
     const stLink = node.inputs[stIndex].link;
     if (stLink != null && textIndex !== -1 && node.inputs[textIndex].link == null) {
-      // Migrate connected link to standard 'text' input
       node.inputs[textIndex].link = stLink;
       if (app?.graph?.links?.[stLink]) {
         app.graph.links[stLink].target_slot = textIndex;
       }
     }
-    // Remove obsolete input socket
     if (typeof node.removeInput === "function") {
       node.removeInput(stIndex);
     } else {
@@ -124,7 +142,7 @@ function cleanupObsoleteInputs(node) {
 function getUpstreamConnection(node) {
   if (!node?.inputs) return null;
   const input = node.inputs.find(
-    (inp) => inp && (inp.name === "text" || inp.name === "source_text") && inp.link != null
+    (inp) => inp && (inp.name === "text" || inp.name === "source_text" || inp.name === "prompt") && inp.link != null
   );
   if (!input || input.link == null || !app?.graph?.links) return null;
   const link = app.graph.links[input.link];
@@ -139,7 +157,6 @@ function resolveUpstreamPrompt(node) {
   if (!conn || !conn.originNode) return "";
   const origin = conn.originNode;
 
-  // 1. If DS_Prompt, check effective text (includes trigger words) or base prompt
   if (origin.properties?.ds_prompt_effective_text) {
     return String(origin.properties.ds_prompt_effective_text).trim();
   }
@@ -149,18 +166,15 @@ function resolveUpstreamPrompt(node) {
   if (origin._dsPromptValue) {
     return String(origin._dsPromptValue).trim();
   }
-  // 2. Check preview properties
   if (origin.properties?.ds_randomizer_preview) {
     return String(origin.properties.ds_randomizer_preview).trim();
   }
-  // 3. Check widget values (text, prompt)
   const textWidget = (origin.widgets || []).find(
     (w) => w?.name === "text" || w?.name === "prompt"
   );
   if (textWidget && typeof textWidget.value === "string" && textWidget.value.trim()) {
     return textWidget.value.trim();
   }
-  // 4. Check custom DOM textarea in custom nodes
   if (origin._dsRoot) {
     const ta = origin._dsRoot.querySelector("textarea");
     if (ta && ta.value && ta.value.trim()) {
@@ -170,11 +184,53 @@ function resolveUpstreamPrompt(node) {
   return "";
 }
 
+function protectRandomizerResizeCorners(node) {
+  if (!node || node._dsRandomizerResizeCornersProtected) return;
+  const originalGetWidgetOnPos = node.getWidgetOnPos;
+  if (typeof originalGetWidgetOnPos !== "function") return;
+
+  node._dsRandomizerResizeCornersProtected = true;
+  node._dsRandomizerOriginalGetWidgetOnPos = originalGetWidgetOnPos;
+  node.getWidgetOnPos = function (canvasX, canvasY, includeDisabled = false) {
+    if (this.resizable !== false) {
+      const localX = Number(canvasX) - Number(this.pos?.[0] ?? 0);
+      const localY = Number(canvasY) - Number(this.pos?.[1] ?? 0);
+      const width = Number(this.size?.[0]) || 0;
+      const height = Number(this.size?.[1]) || 0;
+      const handle = Number(this.constructor?.resizeHandleSize) || 15;
+
+      const inLeft = localX <= handle;
+      const inRight = localX >= width - handle;
+      const inTop = localY <= handle;
+      const inBottom = localY >= height - handle;
+
+      if ((inLeft || inRight) && (inTop || inBottom)) {
+        return undefined;
+      }
+    }
+
+    return originalGetWidgetOnPos.call(this, canvasX, canvasY, includeDisabled);
+  };
+}
+
+function getRandomizerWidgetY(node) {
+  const widget = node?._dsRandomizerDOMWidget;
+  const y = Number(widget?.y);
+  if (Number.isFinite(y) && y >= 0) return y;
+  const lastY = Number(widget?.last_y);
+  if (Number.isFinite(lastY) && lastY >= 0) return lastY;
+  const slotH = globalThis.LiteGraph?.NODE_SLOT_HEIGHT ?? 20;
+  const inCount = (node?.inputs ?? []).filter((i) => !i.widget).length;
+  const outCount = (node?.outputs ?? []).length;
+  const rows = Math.max(inCount, outCount, 1);
+  return rows * slotH + 28;
+}
+
 app.registerExtension({
-  name: "DeathshotArsenal.Randomizer",
+  name: EXT,
 
   async beforeRegisterNodeDef(nodeType, nodeData) {
-    if (nodeData.name !== "DS_Randomizer") return;
+    if (nodeData.name !== TYPE) return;
 
     const originalCreated = nodeType.prototype.onNodeCreated;
     const originalConfigure = nodeType.prototype.configure;
@@ -184,11 +240,45 @@ app.registerExtension({
     const originalOnSerialize = nodeType.prototype.onSerialize;
     const originalAddWidget = nodeType.prototype.addWidget;
     const originalOnWidgetAdded = nodeType.prototype.onWidgetAdded;
+    const originalResize = nodeType.prototype.onResize;
+    const originalSetSize = nodeType.prototype.setSize;
+    const originalComputeSize = nodeType.prototype.computeSize;
 
-    // Prevent any dynamically added widgets (e.g., control_after_generate) from showing
+    nodeType.prototype.computeSize = function (out) {
+      const size = originalComputeSize ? originalComputeSize.apply(this, arguments) : [MIN_NODE_WIDTH, DEFAULT_NODE_HEIGHT];
+      const widgetY = getRandomizerWidgetY(this);
+      const minH = Math.ceil(widgetY + MIN_WIDGET_HEIGHT + BOTTOM_GAP);
+      size[0] = Math.max(Number(size[0]) || MIN_NODE_WIDTH, MIN_NODE_WIDTH);
+      size[1] = Math.max(Number(size[1]) || minH, minH);
+      return size;
+    };
+
+    nodeType.prototype.onResize = function (size) {
+      if (size) {
+        const widgetY = getRandomizerWidgetY(this);
+        const minH = Math.ceil(widgetY + MIN_WIDGET_HEIGHT + BOTTOM_GAP);
+        size[0] = Math.max(Number(size[0]) || MIN_NODE_WIDTH, MIN_NODE_WIDTH);
+        size[1] = Math.max(Number(size[1]) || minH, minH);
+      }
+      const res = originalResize ? originalResize.apply(this, arguments) : undefined;
+      this.setDirtyCanvas?.(true, true);
+      return res;
+    };
+
+    nodeType.prototype.setSize = function (size) {
+      const widgetY = getRandomizerWidgetY(this);
+      const minH = Math.ceil(widgetY + MIN_WIDGET_HEIGHT + BOTTOM_GAP);
+      const w = Math.max(Number(size?.[0]) || MIN_NODE_WIDTH, MIN_NODE_WIDTH);
+      const h = Math.max(Number(size?.[1]) || minH, minH);
+      this.size = [w, h];
+      const res = originalSetSize ? originalSetSize.call(this, [w, h]) : undefined;
+      this.setDirtyCanvas?.(true, true);
+      return res;
+    };
+
     nodeType.prototype.addWidget = function (type, name) {
       const widget = originalAddWidget ? originalAddWidget.apply(this, arguments) : null;
-      if (widget && name !== "ds_randomizer_widget" && type !== "custom") {
+      if (widget && name !== "ds_randomizer_ui" && name !== "ds_randomizer_widget" && type !== "custom") {
         hideNativeWidget(widget);
       }
       return widget;
@@ -196,7 +286,7 @@ app.registerExtension({
 
     nodeType.prototype.onWidgetAdded = function (widget) {
       if (originalOnWidgetAdded) originalOnWidgetAdded.apply(this, arguments);
-      if (widget && widget.name !== "ds_randomizer_widget" && widget.type !== "custom") {
+      if (widget && widget.name !== "ds_randomizer_ui" && widget.name !== "ds_randomizer_widget" && widget.type !== "custom") {
         hideNativeWidget(widget);
       }
     };
@@ -206,49 +296,57 @@ app.registerExtension({
 
       cleanupObsoleteInputs(this);
 
-      this.size = this.size || [440, 620];
-      if (this.size[0] < 440) this.size[0] = 440;
-      if (this.size[1] < 620) this.size[1] = 620;
+      this.resizable = true;
+      protectDSResizeCorners(this);
+      protectRandomizerResizeCorners(this);
 
-      // Ensure properties container
+      this.size = this.size || [DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT];
+      if (this.size[0] < MIN_NODE_WIDTH) this.size[0] = MIN_NODE_WIDTH;
+      if (this.size[1] < DEFAULT_NODE_HEIGHT) this.size[1] = DEFAULT_NODE_HEIGHT;
+
       this.properties = this.properties || {};
       this.properties.ds_randomizer_state = this.properties.ds_randomizer_state || {
-        enabled_categories: ["hair", "lighting", "location", "clothing"],
+        enabled_categories: ["hair_color", "lighting", "location", "clothing"],
         options: { age_range: { preset: "any" } },
       };
       this.properties.ds_randomizer_preview = this.properties.ds_randomizer_preview || "";
 
-      // Ensure state widget exists and hide ALL native widgets
       ensureStateWidget(this);
       hideAllNativeWidgets(this);
 
-      // Build DOM Root
-      const root = document.createElement("div");
-      root.className = "ds-randomizer-root";
-      this._dsRoot = root;
-
-      // Hook up theme system
-      if (window.DSGlobalTheme?.bindNode) {
-        window.DSGlobalTheme.bindNode(root, this);
-      }
-
-      // State references
       const self = this;
       let categoriesCatalog = { groups: [], categories: [] };
       let activeGroup = "all";
 
-      // -------------------------------------------------------------
-      // 1. TOOLBAR
-      // -------------------------------------------------------------
-      const toolbar = document.createElement("div");
-      toolbar.className = "ds-randomizer-toolbar";
+      // The Card itself is the visible container surface
+      const card = Card({ className: "ds-randomizer-card" });
+      const cardEl = card.root;
+      cardEl.dataset.dsThemed = "true";
+      this._dsCard = cardEl;
 
-      const title = document.createElement("div");
-      title.className = "ds-randomizer-title";
-      title.innerHTML = `<span class="ds-randomizer-title-icon">${ICONS.dice}</span><span>DS Randomizer</span>`;
+      normalizeDSWidgetHost(cardEl, this, { shell: false });
+
+      // -------------------------------------------------------------
+      // 1. TOOLBAR / HEADER (Positioned at the TOP of the card)
+      // -------------------------------------------------------------
+      const head = document.createElement("div");
+      head.className = "ds-ui-card-head ds-rand-card-head";
+
+      const titleGroup = document.createElement("div");
+      titleGroup.className = "ds-rand-title-group";
+
+      const titleText = document.createElement("span");
+      titleText.className = "ds-ui-card-title";
+      titleText.textContent = "DS Randomizer";
+
+      const wiredTag = document.createElement("span");
+      wiredTag.className = "ds-rand-wired-tag";
+      wiredTag.style.display = "none";
 
       const statusNotice = document.createElement("span");
       statusNotice.className = "ds-rand-status";
+
+      titleGroup.append(titleText, wiredTag, statusNotice);
 
       const showStatus = (msg) => {
         statusNotice.textContent = msg;
@@ -260,313 +358,212 @@ app.registerExtension({
       };
 
       const actions = document.createElement("div");
-      actions.className = "ds-randomizer-actions";
+      actions.className = "ds-rand-card-actions";
 
       // Regenerate / Preview Button
-      const regenBtn = document.createElement("button");
-      regenBtn.type = "button";
-      regenBtn.className = "ds-rand-btn is-accent";
-      regenBtn.title = "Generate live randomized preview";
-      regenBtn.innerHTML = `${ICONS.shuffle}<span>Preview</span>`;
-      regenBtn.onclick = async () => {
-        try {
-          regenBtn.classList.add("is-loading");
-          let promptText = (srcTextarea.value || "").trim();
-          if (!promptText) {
-            promptText = resolveUpstreamPrompt(self);
+      const regenBtn = Button({
+        label: "Preview",
+        icon: "refresh-cw",
+        variant: "primary",
+        size: "compact",
+        tooltip: "Generate live randomized preview",
+        onClick: async () => {
+          try {
+            regenBtn.root.classList.add("is-loading");
+            const promptText = resolveUpstreamPrompt(self);
+
+            const res = await fetch("/ds/randomizer/preview", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                text: promptText,
+                enabled_categories: self.properties.ds_randomizer_state.enabled_categories || [],
+                options: self.properties.ds_randomizer_state.options || {},
+                node_id: String(self.id),
+              }),
+            });
+            const data = await res.json();
+            if (data.preview !== undefined) {
+              previewTextarea.value = data.preview;
+              self.properties.ds_randomizer_preview = data.preview;
+              showStatus("Preview Generated");
+            }
+          } catch (e) {
+            console.error("[DS Randomizer] Preview error:", e);
+            showStatus("Preview Error");
+          } finally {
+            regenBtn.root.classList.remove("is-loading");
           }
-          if (!promptText) {
-            showStatus("No Prompt Text");
-            return;
-          }
+        },
+      });
 
-          const res = await fetch("/ds/randomizer/preview", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              text: promptText,
-              enabled_categories: self.properties.ds_randomizer_state.enabled_categories || [],
-              options: self.properties.ds_randomizer_state.options || {},
-              node_id: String(self.id),
-            }),
-          });
-          const data = await res.json();
-          if (data.preview !== undefined) {
-            previewTextarea.value = data.preview;
-            self.properties.ds_randomizer_preview = data.preview;
-            showStatus("Variation Generated");
-          }
-        } catch (e) {
-          console.error("[DS Randomizer] Preview error:", e);
-          showStatus("Preview Error");
-        } finally {
-          regenBtn.classList.remove("is-loading");
-        }
-      };
-
-      // Reset History Button
-      const resetBtn = document.createElement("button");
-      resetBtn.type = "button";
-      resetBtn.className = "ds-rand-icon-btn";
-      resetBtn.title = "Reset non-repetition history";
-      resetBtn.innerHTML = ICONS.rotateCcw;
-      resetBtn.onclick = async () => {
-        try {
-          await fetch("/ds/randomizer/reset_history", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ node_id: String(self.id) }),
-          });
-          showStatus("History Reset");
-        } catch (e) {
-          console.error("[DS Randomizer] Reset history error:", e);
-        }
-      };
-
-      // Copy Source Prompt Button
-      const copySrcBtn = document.createElement("button");
-      copySrcBtn.type = "button";
-      copySrcBtn.className = "ds-rand-icon-btn";
-      copySrcBtn.title = "Copy source prompt";
-      copySrcBtn.innerHTML = ICONS.copy;
-      copySrcBtn.onclick = async () => {
-        const textToCopy = (srcTextarea.value || "").trim() || resolveUpstreamPrompt(self);
-        const ok = await copyToClipboard(textToCopy);
-        if (ok) showStatus("Copied Prompt");
-      };
-
-      // Clear Source Prompt Button
-      const clearBtn = document.createElement("button");
-      clearBtn.type = "button";
-      clearBtn.className = "ds-rand-icon-btn";
-      clearBtn.title = "Clear source prompt";
-      clearBtn.innerHTML = ICONS.clear;
-      clearBtn.onclick = () => {
-        if (!srcTextarea.value || confirm("Clear source prompt?")) {
-          srcTextarea.value = "";
-          syncSourceText("");
-          showStatus("Cleared");
-        }
-      };
-
-      actions.appendChild(regenBtn);
-      actions.appendChild(resetBtn);
-      actions.appendChild(copySrcBtn);
-      actions.appendChild(clearBtn);
-
-      toolbar.appendChild(title);
-      toolbar.appendChild(statusNotice);
-      toolbar.appendChild(actions);
-      root.appendChild(toolbar);
+      actions.appendChild(regenBtn.root);
+      head.append(titleGroup, actions);
+      cardEl.insertBefore(head, card.body);
 
       // -------------------------------------------------------------
-      // 2. SECTION A: SOURCE PROMPT
+      // 2. CARD BODY: STRICT 2-SECTION HIERARCHY
       // -------------------------------------------------------------
-      const srcSection = document.createElement("div");
-      srcSection.className = "ds-rand-section";
-      srcSection.style.flex = "1 1 0";
+      const body = card.body;
+      body.classList.add("ds-rand-card-body");
 
-      const srcHeader = document.createElement("div");
-      srcHeader.className = "ds-rand-section-header";
+      // =============================================================
+      // SECTION 1: ATTRIBUTE SELECTION (TOP SECTION)
+      // =============================================================
+      const attrSection = document.createElement("div");
+      attrSection.className = "ds-rand-attr-section";
 
-      const srcHeaderLeft = document.createElement("div");
-      srcHeaderLeft.style.display = "flex";
-      srcHeaderLeft.style.alignItems = "center";
-      srcHeaderLeft.style.gap = "6px";
+      // 1.1 Category Tabs Row (All, Camera, Character, Clothing, Environment)
+      const tabsRow = document.createElement("div");
+      tabsRow.className = "ds-rand-tabs-row";
+      attrSection.appendChild(tabsRow);
 
-      const srcHeaderTitle = document.createElement("span");
-      srcHeaderTitle.textContent = "Source Prompt (Template)";
+      // 1.2 Sub-Header Row: Section Label + Active Count on Left, Actions on Right
+      const subHeader = document.createElement("div");
+      subHeader.className = "ds-rand-sub-header";
 
-      const wiredBadge = document.createElement("span");
-      wiredBadge.className = "ds-rand-wired-badge";
-      wiredBadge.style.display = "none";
-      wiredBadge.innerHTML = `${ICONS.link}<span>Wired</span>`;
+      const subLeft = document.createElement("div");
+      subLeft.className = "ds-rand-sub-left";
 
-      srcHeaderLeft.appendChild(srcHeaderTitle);
-      srcHeaderLeft.appendChild(wiredBadge);
-      srcHeader.appendChild(srcHeaderLeft);
-
-      const srcWrap = document.createElement("div");
-      srcWrap.className = "ds-rand-textarea-wrap";
-
-      const promptWidget = (this.widgets || []).find((w) => w.name === "prompt" || w.name === "text");
-
-      const srcTextarea = document.createElement("textarea");
-      srcTextarea.className = "ds-rand-textarea";
-      srcTextarea.placeholder = "Enter your prompt template here (e.g. Portrait of a 25-year-old woman with long hair, wearing a jacket, in a coffee shop)...";
-      srcTextarea.value = self.properties.ds_randomizer_source ?? promptWidget?.value ?? "";
-
-      function syncSourceText(val) {
-        if (promptWidget) promptWidget.value = val;
-        self.properties.ds_randomizer_source = val;
-      }
-
-      srcTextarea.oninput = () => syncSourceText(srcTextarea.value);
-
-      function updateWiredStatus() {
-        const conn = getUpstreamConnection(self);
-        if (conn) {
-          const originTitle = conn.originNode.title || conn.originNode.type || "Upstream";
-          wiredBadge.innerHTML = `${ICONS.link}<span>Wired: ${originTitle}</span>`;
-          wiredBadge.style.display = "inline-flex";
-
-          const upstreamPrompt = resolveUpstreamPrompt(self);
-          if (upstreamPrompt) {
-            srcTextarea.value = upstreamPrompt;
-            self.properties.ds_randomizer_source = upstreamPrompt;
-          }
-          srcTextarea.readOnly = true;
-          srcTextarea.classList.add("is-wired");
-          srcTextarea.placeholder = `Connected to upstream (${originTitle}). Incoming text takes precedence on execution and live preview.`;
-        } else {
-          wiredBadge.style.display = "none";
-          srcTextarea.readOnly = false;
-          srcTextarea.classList.remove("is-wired");
-          srcTextarea.placeholder = "Enter your prompt template here (e.g. Portrait of a 25-year-old woman with long hair, wearing a jacket, in a coffee shop)...";
-        }
-      }
-      self._updateWiredStatus = updateWiredStatus;
-
-      srcWrap.appendChild(srcTextarea);
-      srcSection.appendChild(srcHeader);
-      srcSection.appendChild(srcWrap);
-      root.appendChild(srcSection);
-
-      // -------------------------------------------------------------
-      // 3. SECTION B: RANDOMIZATION CATEGORIES
-      // -------------------------------------------------------------
-      const catPanel = document.createElement("div");
-      catPanel.className = "ds-rand-categories-panel";
-
-      // 1. Group Tabs (Header Track)
-      const tabsHeader = document.createElement("div");
-      tabsHeader.className = "ds-rand-tabs-header";
-
-      const tabsWrap = document.createElement("div");
-      tabsWrap.className = "ds-rand-group-tabs";
-      tabsHeader.appendChild(tabsWrap);
-      catPanel.appendChild(tabsHeader);
-
-      // 2. Clear Visual Partition Divider Line
-      const partitionLine = document.createElement("div");
-      partitionLine.className = "ds-rand-partition-divider";
-      catPanel.appendChild(partitionLine);
-
-      // 3. Sub-Options Box (Distinct container for active tab's sub-options)
-      const suboptionsBox = document.createElement("div");
-      suboptionsBox.className = "ds-rand-suboptions-box";
-
-      const suboptionsHeader = document.createElement("div");
-      suboptionsHeader.className = "ds-rand-suboptions-header";
-
-      const suboptionsTitleRow = document.createElement("div");
-      suboptionsTitleRow.className = "ds-rand-suboptions-title-row";
-
-      const suboptionsLabel = document.createElement("span");
-      suboptionsLabel.className = "ds-rand-suboptions-label";
-      suboptionsLabel.textContent = "ALL ATTRIBUTES";
+      const subLabel = document.createElement("span");
+      subLabel.className = "ds-rand-sub-label";
+      subLabel.textContent = "ALL ATTRIBUTES";
 
       const catCountBadge = document.createElement("span");
-      catCountBadge.className = "ds-rand-badge";
+      catCountBadge.className = "ds-rand-count-pill";
       catCountBadge.textContent = "0 active";
 
-      suboptionsTitleRow.appendChild(suboptionsLabel);
-      suboptionsTitleRow.appendChild(catCountBadge);
-      suboptionsHeader.appendChild(suboptionsTitleRow);
+      subLeft.append(subLabel, catCountBadge);
 
-      const catQuickActions = document.createElement("div");
-      catQuickActions.className = "ds-rand-chips-actions";
+      const subActions = document.createElement("div");
+      subActions.className = "ds-rand-sub-actions";
 
-      const selectAllBtn = document.createElement("button");
-      selectAllBtn.type = "button";
-      selectAllBtn.className = "ds-rand-micro-btn";
-      selectAllBtn.textContent = "Select All";
-      selectAllBtn.onclick = () => {
-        const visibleCats = getVisibleCategoryIds();
-        const cur = new Set(self.properties.ds_randomizer_state.enabled_categories || []);
-        for (const cid of visibleCats) cur.add(cid);
-        self.properties.ds_randomizer_state.enabled_categories = Array.from(cur);
-        saveState();
-        renderChips();
-      };
+      const selectAllBtn = Button({
+        label: "Select All",
+        size: "compact",
+        tooltip: "Select all categories in this tab",
+        onClick: () => {
+          const visibleCats = getVisibleCategoryIds();
+          const cur = new Set(self.properties.ds_randomizer_state.enabled_categories || []);
+          for (const cid of visibleCats) cur.add(cid);
+          self.properties.ds_randomizer_state.enabled_categories = Array.from(cur);
+          saveState();
+          renderChips();
+        },
+      });
 
-      const clearAllBtn = document.createElement("button");
-      clearAllBtn.type = "button";
-      clearAllBtn.className = "ds-rand-micro-btn";
-      clearAllBtn.textContent = "Clear All";
-      clearAllBtn.onclick = () => {
-        const visibleCats = new Set(getVisibleCategoryIds());
-        const cur = (self.properties.ds_randomizer_state.enabled_categories || []).filter(
-          (cid) => !visibleCats.has(cid)
-        );
-        self.properties.ds_randomizer_state.enabled_categories = cur;
-        saveState();
-        renderChips();
-      };
+      const clearAllBtn = Button({
+        label: "Clear All",
+        size: "compact",
+        tooltip: "Clear categories in this tab",
+        onClick: () => {
+          const visibleCats = new Set(getVisibleCategoryIds());
+          const cur = (self.properties.ds_randomizer_state.enabled_categories || []).filter(
+            (cid) => !visibleCats.has(cid)
+          );
+          self.properties.ds_randomizer_state.enabled_categories = cur;
+          saveState();
+          renderChips();
+        },
+      });
 
-      catQuickActions.appendChild(selectAllBtn);
-      catQuickActions.appendChild(clearAllBtn);
-      suboptionsHeader.appendChild(catQuickActions);
-      suboptionsBox.appendChild(suboptionsHeader);
+      subActions.append(selectAllBtn.root, clearAllBtn.root);
+      subHeader.append(subLeft, subActions);
+      attrSection.appendChild(subHeader);
 
-      // Chips Grid inside the sub-options box
+      // 1.3 Age Options Shelf (ONLY for Age Range when enabled, pure UIElements Buttons)
+      const optionsShelf = document.createElement("div");
+      optionsShelf.className = "ds-rand-options-shelf";
+      optionsShelf.style.display = "none";
+      attrSection.appendChild(optionsShelf);
+
+      // 1.4 Chips Grid (Expands to fill all remaining height of Section 1)
       const chipsGrid = document.createElement("div");
       chipsGrid.className = "ds-rand-chips-grid";
-      suboptionsBox.appendChild(chipsGrid);
+      this._dsChipsGrid = chipsGrid;
+      attrSection.appendChild(chipsGrid);
 
-      // Category Options Panel (e.g. Age Range presets)
-      const optionsPanel = document.createElement("div");
-      optionsPanel.className = "ds-rand-options-panel";
-      optionsPanel.style.display = "none";
-      suboptionsBox.appendChild(optionsPanel);
+      body.appendChild(attrSection);
 
-      catPanel.appendChild(suboptionsBox);
-      root.appendChild(catPanel);
+      // =============================================================
+      // SECTION 2: GENERATED PROMPT (BOTTOM SECTION)
+      // =============================================================
+      const genSection = document.createElement("div");
+      genSection.className = "ds-rand-gen-section";
 
-      // -------------------------------------------------------------
-      // 4. SECTION C: PREVIEW
-      // -------------------------------------------------------------
-      const prevSection = document.createElement("div");
-      prevSection.className = "ds-rand-section";
-      prevSection.style.flex = "1 1 0";
+      const genHeader = document.createElement("div");
+      genHeader.className = "ds-rand-gen-header";
 
-      const prevHeader = document.createElement("div");
-      prevHeader.className = "ds-rand-section-header";
+      const genTitleGroup = document.createElement("div");
+      genTitleGroup.className = "ds-rand-gen-title-group";
 
-      const prevLabel = document.createElement("span");
-      prevLabel.textContent = "Generated Preview (Output)";
+      const genIcon = DSIcon("file-text", { size: 12, color: "var(--ds-color-accent, #67e8f9)" });
+      const genTitle = document.createElement("span");
+      genTitle.className = "ds-rand-gen-title";
+      genTitle.textContent = "Generated Prompt";
 
-      const copyPrevBtn = document.createElement("button");
-      copyPrevBtn.type = "button";
-      copyPrevBtn.className = "ds-rand-copy-btn";
-      copyPrevBtn.title = "Copy generated variation";
-      copyPrevBtn.innerHTML = `${ICONS.copy}<span>Copy</span>`;
-      copyPrevBtn.onclick = async () => {
-        const ok = await copyToClipboard(previewTextarea.value);
-        if (ok) showStatus("Copied Preview");
-      };
+      genTitleGroup.append(genIcon, genTitle);
 
-      prevHeader.appendChild(prevLabel);
-      prevHeader.appendChild(copyPrevBtn);
+      const genActions = document.createElement("div");
+      genActions.className = "ds-rand-gen-actions";
+
+      const copyBtn = Button({
+        label: "Copy",
+        icon: "copy",
+        size: "compact",
+        tooltip: "Copy generated prompt",
+        onClick: async () => {
+          const val = previewTextarea.value || "";
+          const ok = await copyToClipboard(val);
+          if (ok) {
+            showStatus("Copied Prompt");
+            copyBtn.setLabel("Copied!");
+            copyBtn.setIcon("check");
+            setTimeout(() => {
+              copyBtn.setLabel("Copy");
+              copyBtn.setIcon("copy");
+            }, 1400);
+          }
+        },
+      });
+
+      const clearBtn = Button({
+        icon: "trash-2",
+        size: "compact",
+        tooltip: "Clear preview",
+        onClick: () => {
+          previewTextarea.value = "";
+          self.properties.ds_randomizer_preview = "";
+          showStatus("Cleared");
+        },
+      });
+
+      genActions.append(copyBtn.root, clearBtn.root);
+      genHeader.append(genTitleGroup, genActions);
+      genSection.appendChild(genHeader);
 
       const prevWrap = document.createElement("div");
       prevWrap.className = "ds-rand-textarea-wrap";
 
       const previewTextarea = document.createElement("textarea");
-      previewTextarea.className = "ds-rand-textarea is-preview";
-      previewTextarea.setAttribute("readonly", "true");
-      previewTextarea.placeholder = "The randomized variation will appear here on queue or preview...";
+      previewTextarea.className = "ds-ui-text-editor ds-rand-textarea";
+      previewTextarea.placeholder = "Randomized prompt will appear here on queue or preview...";
       previewTextarea.value = self.properties.ds_randomizer_preview || "";
-
-      prevWrap.appendChild(previewTextarea);
-      prevSection.appendChild(prevHeader);
-      prevSection.appendChild(prevWrap);
-      root.appendChild(prevSection);
-
       this._dsPreviewTextarea = previewTextarea;
 
+      prevWrap.appendChild(previewTextarea);
+      genSection.appendChild(prevWrap);
+      body.appendChild(genSection);
+
+      // Prevent canvas dragging or shortcuts when selecting text in preview
+      const stopCanvas = (event) => event.stopPropagation();
+      previewTextarea.addEventListener("pointerdown", stopCanvas);
+      previewTextarea.addEventListener("mousedown", stopCanvas);
+      previewTextarea.addEventListener("keydown", stopCanvas);
+      previewTextarea.addEventListener("wheel", stopCanvas, { passive: true });
+
       // -------------------------------------------------------------
-      // HELPER METHODS & STATE SYNC
+      // 3. HELPER METHODS & STATE SYNC
       // -------------------------------------------------------------
       function saveState() {
         const stateWidget = ensureStateWidget(self);
@@ -575,11 +572,35 @@ app.registerExtension({
         }
         updateBadge();
         renderOptions();
+        self.setDirtyCanvas?.(true, true);
       }
 
       function updateBadge() {
-        const count = (self.properties.ds_randomizer_state.enabled_categories || []).length;
-        catCountBadge.textContent = `${count} active`;
+        const enabledList = self.properties.ds_randomizer_state.enabled_categories || [];
+        const totalCount = enabledList.length;
+        if (activeGroup === "all") {
+          catCountBadge.textContent = `${totalCount} active`;
+          catCountBadge.title = `${totalCount} active categories total`;
+        } else {
+          const tabCats = new Set(
+            (categoriesCatalog.categories || [])
+              .filter((c) => c.group === activeGroup)
+              .map((c) => c.id)
+          );
+          const tabActiveCount = enabledList.filter((id) => tabCats.has(id)).length;
+          catCountBadge.textContent = `${tabActiveCount} active`;
+          catCountBadge.title = `${tabActiveCount} active in this tab (${totalCount} total across all tabs)`;
+        }
+      }
+
+      function updateSubHeaderLabel() {
+        if (activeGroup === "all") {
+          subLabel.textContent = "ALL ATTRIBUTES";
+        } else {
+          const grp = (categoriesCatalog.groups || []).find((g) => g.id === activeGroup);
+          const shortName = grp ? getGroupLabel(grp) : activeGroup;
+          subLabel.textContent = `${shortName.toUpperCase()} ATTRIBUTES`;
+        }
       }
 
       function getVisibleCategoryIds() {
@@ -592,65 +613,70 @@ app.registerExtension({
       }
 
       function renderTabs() {
-        tabsWrap.innerHTML = "";
-        const allTab = document.createElement("button");
-        allTab.type = "button";
-        allTab.className = `ds-rand-tab ${activeGroup === "all" ? "is-active" : ""}`;
-        allTab.textContent = "All";
-        allTab.onclick = () => {
-          activeGroup = "all";
-          renderTabs();
-          renderChips();
-        };
-        tabsWrap.appendChild(allTab);
+        tabsRow.replaceChildren();
 
-        for (const grp of categoriesCatalog.groups) {
-          const tab = document.createElement("button");
-          tab.type = "button";
-          tab.className = `ds-rand-tab ${activeGroup === grp.id ? "is-active" : ""}`;
-          tab.textContent = grp.name;
-          tab.onclick = () => {
-            activeGroup = grp.id;
+        const allBtn = Button({
+          label: "All",
+          size: "compact",
+          active: activeGroup === "all",
+          className: "ds-rand-tab-btn",
+          onClick: () => {
+            activeGroup = "all";
             renderTabs();
             renderChips();
-          };
-          tabsWrap.appendChild(tab);
+            renderOptions();
+          },
+        });
+        tabsRow.appendChild(allBtn.root);
+
+        for (const grp of categoriesCatalog.groups) {
+          const shortName = getGroupLabel(grp);
+          const tabBtn = Button({
+            label: shortName,
+            size: "compact",
+            active: activeGroup === grp.id,
+            className: "ds-rand-tab-btn",
+            tooltip: grp.name || shortName,
+            onClick: () => {
+              activeGroup = grp.id;
+              renderTabs();
+              renderChips();
+              renderOptions();
+            },
+          });
+          tabsRow.appendChild(tabBtn.root);
         }
 
-        const activeGroupObj = (categoriesCatalog.groups || []).find((g) => g.id === activeGroup);
-        suboptionsLabel.textContent =
-          activeGroup === "all"
-            ? "ALL ATTRIBUTES"
-            : `${activeGroupObj ? activeGroupObj.name.toUpperCase() : activeGroup.toUpperCase()} ATTRIBUTES`;
+        updateSubHeaderLabel();
       }
 
       function renderChips() {
-        chipsGrid.innerHTML = "";
+        chipsGrid.replaceChildren();
         const enabledSet = new Set(self.properties.ds_randomizer_state.enabled_categories || []);
         const cats = categoriesCatalog.categories.filter(
           (c) => activeGroup === "all" || c.group === activeGroup
         );
 
         for (const cat of cats) {
-          const chip = document.createElement("button");
-          chip.type = "button";
           const isActive = enabledSet.has(cat.id);
-          chip.className = `ds-rand-chip ${isActive ? "is-active" : ""}`;
-          chip.title = `${cat.name} (${cat.entries_count || 0} variations)`;
-          chip.textContent = cat.name;
-
-          chip.onclick = () => {
-            const list = self.properties.ds_randomizer_state.enabled_categories || [];
-            if (enabledSet.has(cat.id)) {
-              self.properties.ds_randomizer_state.enabled_categories = list.filter((id) => id !== cat.id);
-            } else {
-              self.properties.ds_randomizer_state.enabled_categories = [...list, cat.id];
-            }
-            saveState();
-            renderChips();
-          };
-
-          chipsGrid.appendChild(chip);
+          const chipBtn = Button({
+            label: cat.name,
+            size: "compact",
+            active: isActive,
+            className: "ds-rand-chip-btn",
+            tooltip: `${cat.name} (${cat.entries_count || 0} variations)`,
+            onClick: () => {
+              const list = self.properties.ds_randomizer_state.enabled_categories || [];
+              if (enabledSet.has(cat.id)) {
+                self.properties.ds_randomizer_state.enabled_categories = list.filter((id) => id !== cat.id);
+              } else {
+                self.properties.ds_randomizer_state.enabled_categories = [...list, cat.id];
+              }
+              saveState();
+              renderChips();
+            },
+          });
+          chipsGrid.appendChild(chipBtn.root);
         }
         updateBadge();
         renderOptions();
@@ -658,46 +684,81 @@ app.registerExtension({
 
       function renderOptions() {
         const enabled = self.properties.ds_randomizer_state.enabled_categories || [];
-        const hasAge = enabled.includes("age_range");
+        const isAgeActive = enabled.includes("age_range");
+        const isTabRelevant = activeGroup === "all" || activeGroup === "character";
 
-        if (!hasAge) {
-          optionsPanel.style.display = "none";
+        // Strictly hide when age is not enabled or viewing unrelated tab
+        if (!isAgeActive || !isTabRelevant) {
+          optionsShelf.classList.remove("is-visible");
+          optionsShelf.style.display = "none";
+          optionsShelf.replaceChildren();
           return;
         }
 
-        optionsPanel.style.display = "flex";
-        optionsPanel.innerHTML = "";
+        optionsShelf.classList.add("is-visible");
+        optionsShelf.style.display = "flex";
+        optionsShelf.replaceChildren();
+
+        const row = document.createElement("div");
+        row.className = "ds-rand-opt-row";
 
         const label = document.createElement("span");
-        label.className = "ds-rand-options-label";
-        label.textContent = "Age Range:";
-        optionsPanel.appendChild(label);
+        label.className = "ds-rand-opt-label";
+        label.textContent = "AGE TARGET:";
+        row.appendChild(label);
 
-        const ageOpts = [
-          { id: "any", label: "Any (18+)" },
-          { id: "18_24", label: "18–24" },
-          { id: "25_35", label: "25–35" },
-          { id: "36_50", label: "36–50" },
-          { id: "50_plus", label: "50+" },
+        const pillsWrap = document.createElement("div");
+        pillsWrap.className = "ds-rand-opt-pills";
+
+        const ageCat = (categoriesCatalog.categories || []).find((c) => c.id === "age_range");
+        const options = ageCat?.options || [
+          { id: "any", label: "Any", desc: "Any age (18+)" },
+          { id: "18_24", label: "18-24", desc: "18-24 (Young Adult)" },
+          { id: "25_35", label: "25-35", desc: "25-35 (Adult)" },
+          { id: "36_50", label: "36-50", desc: "36-50 (Mature)" },
+          { id: "50_plus", label: "50+", desc: "50+ (Senior)" },
         ];
 
         const curPreset = self.properties.ds_randomizer_state.options?.age_range?.preset || "any";
 
-        for (const opt of ageOpts) {
-          const optChip = document.createElement("button");
-          optChip.type = "button";
-          optChip.className = `ds-rand-opt-chip ${curPreset === opt.id ? "is-selected" : ""}`;
-          optChip.textContent = opt.label;
-          optChip.onclick = () => {
-            self.properties.ds_randomizer_state.options = self.properties.ds_randomizer_state.options || {};
-            self.properties.ds_randomizer_state.options.age_range = { preset: opt.id };
-            saveState();
-          };
-          optionsPanel.appendChild(optChip);
+        for (const opt of options) {
+          const isSelected = curPreset === opt.id;
+          const optLabel = opt.label.replace(/\s*\([^)]*\)/, "").trim() || opt.label;
+          const optTooltip = opt.desc || opt.label;
+          const optBtn = Button({
+            label: optLabel,
+            size: "compact",
+            active: isSelected,
+            className: "ds-rand-opt-btn",
+            tooltip: optTooltip,
+            onClick: () => {
+              self.properties.ds_randomizer_state.options = self.properties.ds_randomizer_state.options || {};
+              self.properties.ds_randomizer_state.options.age_range = { preset: opt.id };
+              saveState();
+              renderOptions();
+            },
+          });
+          pillsWrap.appendChild(optBtn.root);
         }
+        row.appendChild(pillsWrap);
+        optionsShelf.appendChild(row);
       }
 
-      // Fetch category catalog from backend
+      function updateWiredStatus() {
+        const conn = getUpstreamConnection(self);
+        if (conn) {
+          const originTitle = conn.originNode.title || conn.originNode.type || "Upstream";
+          wiredTag.innerHTML = `${DSIconMarkup("link", { size: 10 })}<span>Wired: ${originTitle}</span>`;
+          wiredTag.style.display = "inline-flex";
+          wiredTag.title = `Connected to upstream (${originTitle}). Incoming text is analyzed and randomized.`;
+          titleText.style.display = "none";
+        } else {
+          wiredTag.style.display = "none";
+          titleText.style.display = "inline";
+        }
+      }
+      self._updateWiredStatus = updateWiredStatus;
+
       async function loadCatalog() {
         try {
           const res = await fetch("/ds/randomizer/categories");
@@ -710,7 +771,6 @@ app.registerExtension({
           }
         } catch (_) {}
 
-        // Fallback catalog if backend is not yet contacted
         categoriesCatalog = {
           groups: [
             { id: "character", name: "Character" },
@@ -721,6 +781,10 @@ app.registerExtension({
           categories: [
             { id: "age_range", name: "Age Range", group: "character" },
             { id: "hair", name: "Hair", group: "character" },
+            { id: "hair_color", name: "Hair Color", group: "character" },
+            { id: "hair_length", name: "Hair Length", group: "character" },
+            { id: "hair_type", name: "Hair Type", group: "character" },
+            { id: "hair_style", name: "Hair Style", group: "character" },
             { id: "expression", name: "Expression", group: "character" },
             { id: "location", name: "Location", group: "environment" },
             { id: "lighting", name: "Lighting", group: "environment" },
@@ -736,20 +800,38 @@ app.registerExtension({
         saveState();
       }
 
+      self._dsRenderTabs = renderTabs;
+      self._dsRenderChips = renderChips;
+      self._dsRenderOptions = renderOptions;
+      self._dsUpdateBadge = updateBadge;
+
       loadCatalog();
       updateWiredStatus();
 
-      // Mount DOM widget to LiteGraph node
-      this.addDOMWidget("ds_randomizer_widget", "custom", root, {
+      // Mount the Card element directly as the DOM widget surface
+      this._dsRandomizerDOMWidget = this.addDOMWidget("ds_randomizer_ui", "custom", cardEl, {
         serialize: false,
         hideOnZoom: false,
+        margin: CARD_MARGIN,
+        getMinHeight: () => MIN_WIDGET_HEIGHT,
+        getMaxHeight: () => {
+          const y = getRandomizerWidgetY(this);
+          const nodeHeight = Number(this.size?.[1]) || 0;
+          const available = nodeHeight - y - BOTTOM_GAP;
+          return Math.max(
+            MIN_WIDGET_HEIGHT,
+            available + BOTTOM_GAP,
+          );
+        },
       });
 
-      // Initial clean pass to guarantee no native widgets are drawn on canvas
       hideAllNativeWidgets(this);
+
+      try {
+        window.DSGlobalTheme?.bindNode?.(cardEl, this);
+      } catch (_) {}
     };
 
-    // Connections change - detect wired upstream prompt
     nodeType.prototype.onConnectionsChange = function () {
       if (originalConnections) originalConnections.apply(this, arguments);
       cleanupObsoleteInputs(this);
@@ -759,7 +841,6 @@ app.registerExtension({
       hideAllNativeWidgets(this);
     };
 
-    // Serialization: guarantee randomizer_state is included
     nodeType.prototype.onSerialize = function (info) {
       if (originalOnSerialize) originalOnSerialize.apply(this, arguments);
       const sw = ensureStateWidget(this);
@@ -777,7 +858,6 @@ app.registerExtension({
       return data;
     };
 
-    // Configure / Graph Restore
     nodeType.prototype.configure = function (info) {
       if (originalConfigure) originalConfigure.apply(this, arguments);
 
@@ -785,7 +865,6 @@ app.registerExtension({
       ensureStateWidget(this);
       hideAllNativeWidgets(this);
 
-      const promptWidget = (this.widgets || []).find((w) => w.name === "prompt" || w.name === "text");
       const stateWidget = (this.widgets || []).find((w) => w.name === "randomizer_state");
 
       if (stateWidget && stateWidget.value && stateWidget.value !== "{}") {
@@ -793,6 +872,12 @@ app.registerExtension({
           const parsed = JSON.parse(stateWidget.value);
           if (parsed && typeof parsed === "object") {
             this.properties = this.properties || {};
+            // Clean up any stale legacy options so only age_range persists
+            const cleanOptions = {};
+            if (parsed.options?.age_range) {
+              cleanOptions.age_range = parsed.options.age_range;
+            }
+            parsed.options = cleanOptions;
             this.properties.ds_randomizer_state = parsed;
           }
         } catch (_) {}
@@ -804,17 +889,24 @@ app.registerExtension({
         this._dsPreviewTextarea.value = this.properties.ds_randomizer_preview;
       }
 
+      if (typeof this._dsRenderTabs === "function") {
+        this._dsRenderTabs();
+      }
+      if (typeof this._dsRenderChips === "function") {
+        this._dsRenderChips();
+      }
+      if (typeof this._dsRenderOptions === "function") {
+        this._dsRenderOptions();
+      }
+      if (typeof this._dsUpdateBadge === "function") {
+        this._dsUpdateBadge();
+      }
+
       if (typeof this._updateWiredStatus === "function") {
         this._updateWiredStatus();
-      } else if (this._dsRoot) {
-        const textarea = this._dsRoot.querySelector(".ds-rand-textarea:not(.is-preview)");
-        if (textarea) {
-          textarea.value = this.properties?.ds_randomizer_source ?? promptWidget?.value ?? "";
-        }
       }
     };
 
-    // Handle ComfyUI execution results
     nodeType.prototype.onExecuted = function (message) {
       if (originalExecuted) originalExecuted.apply(this, arguments);
 
@@ -841,7 +933,6 @@ if (api && !api._dsRandomizerQueueWrapped) {
     try {
       const out = args[1]?.output;
       if (out) {
-        // 1. Detect if any DS_ImageCheckpoint or gate node is in 'continue' mode
         let isContinuing = false;
         for (const id in out) {
           const entry = out[id];
@@ -865,7 +956,6 @@ if (api && !api._dsRandomizerQueueWrapped) {
           }
         }
 
-        // 2. Index DS_Randomizer nodes in the graph
         const randIndex = new Map();
         if (app?.graph) {
           for (const n of (app.graph._nodes || app.graph.nodes || [])) {
@@ -875,26 +965,26 @@ if (api && !api._dsRandomizerQueueWrapped) {
           }
         }
 
-        // 3. Coordinate seed per DS_Randomizer
         for (const id in out) {
           const entry = out[id];
           if (entry?.class_type === "DS_Randomizer") {
             const node = randIndex.get(String(id));
             entry.inputs = entry.inputs || {};
 
-            if (isContinuing) {
-              // CONTINUE / UPSCALE STAGE: Preserve the exact seed so the upscaler gets the identical prompt!
-              const stableSeed = node?._dsLastRunSeed || entry.inputs.seed || 1;
-              entry.inputs.seed = stableSeed;
-            } else {
-              // FRESH QUEUE or REGENERATE: Assign a fresh random seed to trigger new variation
-              const freshSeed = Math.floor(Math.random() * 0x7fffffff) + 1;
-              if (node) {
-                node._dsLastRunSeed = freshSeed;
-                const seedWidget = (node.widgets || []).find((w) => w?.name === "seed");
-                if (seedWidget) seedWidget.value = freshSeed;
+            const isWiredSeed = Array.isArray(entry.inputs.seed);
+            if (!isWiredSeed) {
+              if (isContinuing) {
+                const stableSeed = node?._dsLastRunSeed || entry.inputs.seed || 1;
+                entry.inputs.seed = stableSeed;
+              } else {
+                const freshSeed = Math.floor(Math.random() * 0x7fffffff) + 1;
+                if (node) {
+                  node._dsLastRunSeed = freshSeed;
+                  const seedWidget = (node.widgets || []).find((w) => w?.name === "seed");
+                  if (seedWidget) seedWidget.value = freshSeed;
+                }
+                entry.inputs.seed = freshSeed;
               }
-              entry.inputs.seed = freshSeed;
             }
           }
         }

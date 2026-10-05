@@ -20,7 +20,6 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Global Reminder**: Floating action dock notification center for ComfyUI with execution alarms, countdown timer presets, browser audio alerts, and persistent queue state tracking. See [DS Reminder Documentation](docs/DS%20Reminder.md).
 
 ### 🎛️ System Diagnostics & Control
-- **DS Control Panel**: Centralized management interface for Deathshot workflow components. See [DS Control Panel Documentation](docs/DS%20Control%20Panel.md).
 - **DS Hardware Monitor**: Real-time tracking of GPU / VRAM usage, CPU, RAM, and temperature via NVML and system sensors. See [DS Hardware Monitor Documentation](docs/DS%20Hardware%20Monitor.md).
 - **DS System Monitor**: Compact status bar for live generation stats and hardware metrics. See [DS System Monitor Documentation](docs/DS%20System%20Monitor.md).
 - **DS Futuristic HUD**: Sci-fi cyberpunk telemetry heads-up display overlay for the canvas and viewport. See [DS Futuristic HUD Documentation](docs/DS%20Futuristic%20HUD.md).

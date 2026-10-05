@@ -1,5 +1,7 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
+import { Card, protectDSResizeCorners } from "../UIElements/index.js";
+import { DSIcon } from "../Icons/index.js";
 
 const TYPE = "DS_Seed";
 const EXT = "DeathshotArsenal.DS_Seed";
@@ -7,11 +9,12 @@ const CSS = "/extensions/DeathshotArsenal/Seed/ds_seed.css";
 const STATE_KEY = "ds_seed_state";
 const STATE_VERSION = 4;
 const MAX_SAFE_SEED = Number.MAX_SAFE_INTEGER;
-const MIN_W = 250;
-const MIN_H = 112;
-const DEFAULT_W = 330;
-const DEFAULT_H = 112;
-const DOM_BODY_H = 81;
+const MIN_W = 260;
+const MIN_H = 154;
+const DEFAULT_W = 280;
+const DEFAULT_H = 154;
+const FIXED_H = 130;
+const DOM_BODY_H = 88;
 const MODES = new Set(["random", "fixed", "increment", "decrement"]);
 const SEED_NAMES = new Set(["seed", "noise_seed", "random_seed", "variation_seed"]);
 
@@ -87,7 +90,7 @@ function getHiddenSeedWidget(node) {
 function ensureHiddenWidgets(node) {
   let seedWidget = getHiddenSeedWidget(node);
   if (!seedWidget && typeof node.addWidget === "function") {
-    seedWidget = node.addWidget("number", "seed", 0, () => {}, {
+    seedWidget = node.addWidget("number", "seed", 0, () => { }, {
       min: 0,
       max: MAX_SAFE_SEED,
       step: 1,
@@ -102,8 +105,8 @@ function ensureHiddenWidgets(node) {
     seedWidget.options.min = 0;
     seedWidget.options.max = MAX_SAFE_SEED;
     seedWidget.options.step = 1;
-    seedWidget.computeSize = () => [0, 0];
-    seedWidget.draw = () => {};
+    seedWidget.computeSize = () => [0, -4];
+    seedWidget.draw = () => { };
     seedWidget.serialize = true;
     seedWidget.value = ensureState(node).seed_value;
     if (seedWidget.element?.style) {
@@ -118,14 +121,14 @@ function ensureHiddenWidgets(node) {
 
   let stateWidget = node.widgets?.find?.((w) => w?.name === "ds_seed_state") || null;
   if (!stateWidget && typeof node.addWidget === "function") {
-    stateWidget = node.addWidget("text", "ds_seed_state", "", () => {}, {
+    stateWidget = node.addWidget("text", "ds_seed_state", "", () => { }, {
       serialize: true,
     });
   }
   if (stateWidget) {
     stateWidget.hidden = true;
-    stateWidget.computeSize = () => [0, 0];
-    stateWidget.draw = () => {};
+    stateWidget.computeSize = () => [0, -4];
+    stateWidget.draw = () => { };
     stateWidget.serialize = true;
     stateWidget.value = JSON.stringify(ensureState(node));
     if (stateWidget.element?.style) {
@@ -219,20 +222,22 @@ function modeTitle(mode) {
   }
 }
 
-function makeButton(className, label, title) {
+function makeButton(className, labelOrIcon, title) {
   const b = document.createElement("button");
   b.type = "button";
-  b.className = className;
-  b.textContent = label;
+  b.className = `ds-ui-btn ${className}`;
+  if (labelOrIcon instanceof SVGElement || labelOrIcon instanceof HTMLElement) {
+    b.appendChild(labelOrIcon);
+  } else {
+    b.textContent = String(labelOrIcon);
+  }
   b.setAttribute("aria-label", title);
   b.title = title;
   return b;
 }
 
 function buildUI(node) {
-  const root = document.createElement("div");
-  root.className = "ds-seed-root";
-  root.dataset.dsUiShell = "base";
+  const card = Card({ className: "ds-seed-card" });
 
   const field = document.createElement("div");
   field.className = "ds-seed-input-wrap";
@@ -244,40 +249,73 @@ function buildUI(node) {
   input.autocomplete = "off";
   input.spellcheck = false;
   input.setAttribute("aria-label", "Seed value");
-  input.title = "Click to edit seed value. Use stepper arrows or scroll wheel to adjust.";
+  input.title = "Click to edit seed value or use scroll wheel to adjust.";
   node._dsSeedInput = input;
 
-  const stepper = document.createElement("div");
-  stepper.className = "ds-seed-stepper";
-  const up = makeButton("ds-seed-step", "▲", "Increment seed (+1)");
-  const down = makeButton("ds-seed-step", "▼", "Decrement seed (-1)");
-  stepper.append(up, down);
-  field.append(input, stepper);
+  // Up/down spinner buttons stacked on the right side of the field
+  const spinners = document.createElement("div");
+  spinners.className = "ds-seed-spinners";
+
+  const spinUp = document.createElement("button");
+  spinUp.type = "button";
+  spinUp.className = "ds-seed-spin-btn";
+  spinUp.title = "Increment seed";
+  spinUp.appendChild(DSIcon("chevron-up", { size: 10 }));
+
+  const spinDn = document.createElement("button");
+  spinDn.type = "button";
+  spinDn.className = "ds-seed-spin-btn";
+  spinDn.title = "Decrement seed";
+  spinDn.appendChild(DSIcon("chevron-down", { size: 10 }));
+
+  spinners.append(spinUp, spinDn);
+  field.append(input, spinners);
 
   const actions = document.createElement("div");
   actions.className = "ds-seed-actions";
   const rf = makeButton("ds-seed-mode-btn", "F", modeTitle("fixed"));
-  const inc = makeButton("ds-seed-mode-btn", "⇧", modeTitle("increment"));
-  const dec = makeButton("ds-seed-mode-btn", "⇩", modeTitle("decrement"));
-  const reuse = makeButton("ds-seed-reuse-btn", "↺", "Reuse last generated seed");
+  const inc = makeButton("ds-seed-mode-btn", DSIcon("plus", { size: 12 }), modeTitle("increment"));
+  const dec = makeButton("ds-seed-mode-btn", DSIcon("minus", { size: 12 }), modeTitle("decrement"));
+  const reuse = makeButton("ds-seed-reuse-btn", DSIcon("refresh-cw", { size: 12 }), "Reuse last generated seed");
   actions.append(rf, inc, dec, reuse);
 
   node._dsSeedButtons = { rf, inc, dec, reuse };
 
   const stopCanvas = (event) => event.stopPropagation();
-  for (const element of [input, up, down, rf, inc, dec, reuse]) {
+  for (const element of [input, spinUp, spinDn, rf, inc, dec, reuse]) {
     element.addEventListener("pointerdown", stopCanvas);
     element.addEventListener("mousedown", stopCanvas);
   }
 
-  const step = (delta) => {
+  const stepSeed = (delta) => {
     const state = ensureState(node);
-    if (state.mode === "random") {
-      setMode(node, "fixed");
-    }
+    if (state.mode === "random") setMode(node, "fixed");
     setSeed(node, state.seed_value + delta, true);
     touch(node);
   };
+
+  // Hold-to-repeat on spinner buttons
+  let _spinTimer = null;
+  let _spinInterval = null;
+  const startSpin = (delta) => {
+    stepSeed(delta);
+    _spinTimer = setTimeout(() => {
+      _spinInterval = setInterval(() => stepSeed(delta), 80);
+    }, 350);
+  };
+  const stopSpin = () => {
+    clearTimeout(_spinTimer);
+    clearInterval(_spinInterval);
+    _spinTimer = null;
+    _spinInterval = null;
+  };
+
+  spinUp.addEventListener("pointerdown", (e) => { e.stopPropagation(); startSpin(1); });
+  spinUp.addEventListener("pointerup", stopSpin);
+  spinUp.addEventListener("pointerleave", stopSpin);
+  spinDn.addEventListener("pointerdown", (e) => { e.stopPropagation(); startSpin(-1); });
+  spinDn.addEventListener("pointerup", stopSpin);
+  spinDn.addEventListener("pointerleave", stopSpin);
 
   input.addEventListener("input", () => {
     if (!/^\d*$/.test(input.value.trim())) {
@@ -287,43 +325,30 @@ function buildUI(node) {
   input.addEventListener("change", () => commitSeedInput(node));
   input.addEventListener("blur", () => commitSeedInput(node));
   input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      commitSeedInput(node);
-      input.blur();
-    }
+    if (event.key === "Enter") { event.preventDefault(); commitSeedInput(node); input.blur(); }
   });
   input.addEventListener("wheel", (event) => {
     event.preventDefault();
-    step(event.deltaY < 0 ? 1 : -1);
+    stepSeed(event.deltaY < 0 ? 1 : -1);
   }, { passive: false });
-
-  up.addEventListener("click", () => step(1));
-  down.addEventListener("click", () => step(-1));
 
   rf.addEventListener("click", () => {
     const state = ensureState(node);
     const next = state.mode === "random" ? "fixed" : "random";
     setMode(node, next);
-    if (next === "fixed") {
-      broadcastToCanvas(node, state.seed_value);
-    }
+    if (next === "fixed") broadcastToCanvas(node, state.seed_value);
   });
   inc.addEventListener("click", () => {
     const state = ensureState(node);
     const nextMode = state.mode === "increment" ? "fixed" : "increment";
     setMode(node, nextMode);
-    if (nextMode === "increment" || nextMode === "fixed") {
-      broadcastToCanvas(node, state.seed_value);
-    }
+    if (nextMode === "increment" || nextMode === "fixed") broadcastToCanvas(node, state.seed_value);
   });
   dec.addEventListener("click", () => {
     const state = ensureState(node);
     const nextMode = state.mode === "decrement" ? "fixed" : "decrement";
     setMode(node, nextMode);
-    if (nextMode === "decrement" || nextMode === "fixed") {
-      broadcastToCanvas(node, state.seed_value);
-    }
+    if (nextMode === "decrement" || nextMode === "fixed") broadcastToCanvas(node, state.seed_value);
   });
   reuse.addEventListener("click", () => {
     const state = ensureState(node);
@@ -333,8 +358,8 @@ function buildUI(node) {
     touch(node);
   });
 
-  root.append(field, actions);
-  return root;
+  card.body.append(field, actions);
+  return card.root;
 }
 
 function syncUI(node) {
@@ -354,18 +379,26 @@ function syncUI(node) {
   b.rf.textContent = isRandom ? "R" : "F";
   b.rf.dataset.active = (isRandom || isFixed) ? "true" : "false";
   b.rf.classList.toggle("is-active", isRandom || isFixed);
+  b.rf.classList.toggle("ds-ui-btn-primary", isRandom || isFixed);
+  b.rf.classList.toggle("ds-ui-btn-secondary", !(isRandom || isFixed));
   b.rf.setAttribute("aria-pressed", isRandom ? "true" : "false");
   b.rf.title = modeTitle(isRandom ? "random" : "fixed");
 
   b.inc.dataset.active = isInc ? "true" : "false";
   b.inc.classList.toggle("is-active", isInc);
+  b.inc.classList.toggle("ds-ui-btn-primary", isInc);
+  b.inc.classList.toggle("ds-ui-btn-secondary", !isInc);
   b.inc.setAttribute("aria-pressed", isInc ? "true" : "false");
   b.inc.title = modeTitle("increment");
 
   b.dec.dataset.active = isDec ? "true" : "false";
   b.dec.classList.toggle("is-active", isDec);
+  b.dec.classList.toggle("ds-ui-btn-primary", isDec);
+  b.dec.classList.toggle("ds-ui-btn-secondary", !isDec);
   b.dec.setAttribute("aria-pressed", isDec ? "true" : "false");
   b.dec.title = modeTitle("decrement");
+
+  b.reuse.classList.toggle("ds-ui-btn-secondary", true);
 
   const hasLastSeed = state.last_executed_seed != null;
   b.reuse.title = hasLastSeed
@@ -376,74 +409,127 @@ function syncUI(node) {
 }
 
 function installNode(node) {
-  if (!node || node._dsSeedInstalled) return;
+  if (!node) return;
+  node._dsSeedFixedH = FIXED_H;
+  if (node.size) {
+    node.size[1] = FIXED_H;
+  }
+  if (node._dsSeedInstalled) return;
   node._dsSeedInstalled = true;
   node.resizable = true;
-  node.size = [
-    Math.max(MIN_W, Number(node.size?.[0]) || DEFAULT_W),
-    Math.max(MIN_H, Number(node.size?.[1]) || DEFAULT_H),
-  ];
+
+  const initialW = Math.max(MIN_W, Number(node.size?.[0]) || DEFAULT_W);
+  node.size = [initialW, FIXED_H];
 
   ensureState(node);
   ensureHiddenWidgets(node);
+  protectDSResizeCorners(node);
 
-  const root = buildUI(node);
-  root.dataset.dsTransparent = "true";
-  node._dsSeedRoot = root;
-  node._dsSeedDomWidget = node.addDOMWidget("ds_seed_ui", "div", root, {
-    serialize: false,
-    hideOnZoom: false,
-    margin: 0,
-  });
+  const card = buildUI(node);
+  node._dsSeedRoot = card;
 
-  node._dsSeedDomWidget.options.getMinHeight = () => DOM_BODY_H;
-  node._dsSeedDomWidget.options.getMaxHeight = () => DOM_BODY_H;
-  node._dsSeedDomWidget.computeSize = () => [0, DOM_BODY_H];
-  node._dsSeedDomWidget.computeLayoutSize = () => ({
-    minHeight: DOM_BODY_H,
-    maxHeight: DOM_BODY_H,
-    minWidth: 0,
-  });
-
-  const syncTransparentContainers = () => {
-    let parent = root.parentElement;
-    for (let depth = 0; depth < 4 && parent; depth += 1) {
-      if (parent.id === "graph-canvas" || parent.classList?.contains("litegraph")) break;
-      parent.style.setProperty("background", "transparent", "important");
-      parent.style.setProperty("background-color", "transparent", "important");
-      parent.dataset.dsSeedHost = "true";
-      delete parent.dataset.dsNodeBase;
-      parent = parent.parentElement;
-    }
+  node.computeSize = function () {
+    return [MIN_W, FIXED_H];
   };
 
-  const host = root.parentElement;
-  if (host) {
-    host.dataset.dsSeedHost = "true";
-    host.style.setProperty("background", "transparent", "important");
-    host.style.setProperty("background-color", "transparent", "important");
-    host.style.width = "100%";
-    host.style.height = `${DOM_BODY_H}px`;
-    host.style.minHeight = `${DOM_BODY_H}px`;
-    host.style.maxHeight = `${DOM_BODY_H}px`;
-    host.style.padding = "0";
-    host.style.margin = "0";
-    host.style.boxSizing = "border-box";
-    host.style.overflow = "hidden";
-    host.style.alignSelf = "flex-start";
-    host.style.flex = `0 0 ${DOM_BODY_H}px`;
-  }
-  syncTransparentContainers();
+  const origOnResize = node.onResize;
+  node.onResize = function (size) {
+    if (size) {
+      size[0] = Math.max(MIN_W, Number(size[0]) || DEFAULT_W);
+      size[1] = FIXED_H;
+    }
+    const res = origOnResize?.apply(this, arguments);
+    if (this.size) {
+      this.size[0] = Math.max(MIN_W, Number(this.size[0]) || DEFAULT_W);
+      this.size[1] = FIXED_H;
+    }
+    this.setDirtyCanvas?.(true, true);
+    return res;
+  };
 
-  try { window.DSGlobalTheme?.bindNode?.(root, node); } catch {}
+  const origSetSize = node.setSize;
+  node.setSize = function (size) {
+    const w = Math.max(MIN_W, Number(size?.[0]) || DEFAULT_W);
+    this.size = [w, FIXED_H];
+    const res = origSetSize?.apply(this, [this.size]);
+    if (this.size) {
+      this.size[0] = w;
+      this.size[1] = FIXED_H;
+    }
+    this.setDirtyCanvas?.(true, true);
+    return res;
+  };
+
+  const origDrawWidgets = node.drawWidgets;
+  node.drawWidgets = function (ctx) {
+    const res = origDrawWidgets?.apply(this, arguments);
+    if (this.size && this.size[1] !== FIXED_H) {
+      this.size[1] = FIXED_H;
+      this.setDirtyCanvas?.(true, true);
+    }
+    return res;
+  };
+
+  const origDrawFg = node.onDrawForeground;
+  node.onDrawForeground = function (ctx) {
+    const res = origDrawFg?.apply(this, arguments);
+    if (this.size && this.size[1] !== FIXED_H) {
+      this.size[1] = FIXED_H;
+      this.setDirtyCanvas?.(true, true);
+    }
+    return res;
+  };
+
+  const origDrawBg = node.onDrawBackground;
+  node.onDrawBackground = function (ctx) {
+    if (this.size && this.size[1] !== FIXED_H) {
+      this.size[1] = FIXED_H;
+    }
+    return origDrawBg?.apply(this, arguments);
+  };
+
+  node._dsSeedDomWidget = node.addDOMWidget("ds_seed_ui", "custom", card, {
+    serialize: false,
+    hideOnZoom: false,
+    margin: 5,
+    getMinHeight: () => DOM_BODY_H,
+    getHeight: () => DOM_BODY_H,
+  });
+
+  node._dsSeedDomWidget.computeSize = () => [
+    MIN_W,
+    0,
+  ];
+
+  requestAnimationFrame(() => {
+    ensureHiddenWidgets(node);
+    if (node._dsSeedWidget?.element) {
+      node._dsSeedWidget.element.style.cssText =
+        "display:none!important;visibility:hidden!important;" +
+        "position:absolute!important;width:0!important;height:0!important;" +
+        "overflow:hidden!important;pointer-events:none!important;";
+    }
+
+    const host = card.parentElement;
+    if (host) {
+      host.style.setProperty("pointer-events", "none", "important");
+      host.style.setProperty("background", "transparent", "important");
+      host.style.setProperty("background-color", "transparent", "important");
+      if (host.parentElement && host.parentElement !== document.body) {
+        host.parentElement.style.setProperty("background", "transparent", "important");
+        host.parentElement.style.setProperty("background-color", "transparent", "important");
+      }
+    }
+
+    node._dsSeedFixedH = FIXED_H;
+    const currentW = Math.max(MIN_W, Number(node.size?.[0]) || DEFAULT_W);
+    node.size = [currentW, FIXED_H];
+    node.setDirtyCanvas?.(true, true);
+  });
+
+  try { node._dsSeedThemeUnsub = window.DSGlobalTheme?.bindNode?.(card, node); } catch {}
   try { window.DSUI?.protectResizeCorners?.(node); } catch {}
   try { window.DSGlobalTheme?.applyNodeBase?.(node); } catch {}
-  syncTransparentContainers();
-  try {
-    node._dsSeedThemeUnsub = window.DSGlobalTheme?.subscribe?.(() => {
-      syncTransparentContainers();
-    });
-  } catch {}
 
   syncUI(node);
 }
@@ -610,7 +696,7 @@ function broadcast(output, graphNodes, source, seed, workflow) {
           if (widget && isSeedWidget(widget)) {
             widget.value = seed;
             if (typeof widget.callback === "function") {
-              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) {}
+              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) { }
             }
             disableWidgetRandomizer(graphNode, widget);
           }
@@ -633,7 +719,7 @@ function broadcast(output, graphNodes, source, seed, workflow) {
           if (isSeedWidget(widget)) {
             widget.value = seed;
             if (typeof widget.callback === "function") {
-              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) {}
+              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) { }
             }
             disableWidgetRandomizer(graphNode, widget);
           }
@@ -660,7 +746,7 @@ function broadcast(output, graphNodes, source, seed, workflow) {
           if (isSeedWidget(widget)) {
             widget.value = seed;
             if (typeof widget.callback === "function") {
-              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) {}
+              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) { }
             }
             disableWidgetRandomizer(graphNode, widget);
             graphNode.setDirtyCanvas?.(true, true);
@@ -696,7 +782,7 @@ function broadcastToCanvas(source, seed) {
           if (isSeedWidget(widget)) {
             widget.value = seed;
             if (typeof widget.callback === "function") {
-              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) {}
+              try { widget.callback(seed, app.canvas, graphNode, null, null); } catch (_) { }
             }
             disableWidgetRandomizer(graphNode, widget);
             graphNode.setDirtyCanvas?.(true, true);
@@ -822,24 +908,57 @@ app.registerExtension({
     const oldSerialize = nodeType.prototype.serialize;
     const oldOnSerialize = nodeType.prototype.onSerialize;
     const oldResize = nodeType.prototype.onResize;
+    const oldSetSize = nodeType.prototype.setSize;
     const oldSelected = nodeType.prototype.onSelected;
     const oldRemoved = nodeType.prototype.onRemoved;
+
+    nodeType.prototype.computeSize = function () {
+      return [
+        MIN_W,
+        FIXED_H,
+      ];
+    };
 
     nodeType.prototype.onNodeCreated = function () {
       const result = oldCreated?.apply(this, arguments);
       installNode(this);
+      if (this.size) {
+        this.size[0] = Math.max(MIN_W, Number(this.size[0]) || DEFAULT_W);
+        this.size[1] = FIXED_H;
+      }
       return result;
     };
 
     nodeType.prototype.onConfigure = function () {
       const result = oldConfigured?.apply(this, arguments);
+      if (this.size) {
+        this.size[0] = Math.max(MIN_W, Number(this.size[0]) || DEFAULT_W);
+        this.size[1] = FIXED_H;
+      }
       setTimeout(() => {
         ensureState(this);
+        if (this.size) {
+          this.size[0] = Math.max(MIN_W, Number(this.size[0]) || DEFAULT_W);
+          this.size[1] = FIXED_H;
+        }
         installNode(this);
         ensureHiddenWidgets(this);
         syncUI(this);
+        this.setDirtyCanvas?.(true, true);
       }, 0);
       return result;
+    };
+
+    nodeType.prototype.setSize = function (size) {
+      const w = Math.max(MIN_W, Number(size?.[0]) || DEFAULT_W);
+      this.size = [w, FIXED_H];
+      const res = oldSetSize?.apply(this, [this.size]);
+      if (this.size) {
+        this.size[0] = w;
+        this.size[1] = FIXED_H;
+      }
+      this.setDirtyCanvas?.(true, true);
+      return res;
     };
 
     nodeType.prototype.onSelected = function () {
@@ -849,14 +968,14 @@ app.registerExtension({
     };
 
     nodeType.prototype.onResize = function (size) {
-      if (Array.isArray(size)) {
+      if (size) {
         size[0] = Math.max(MIN_W, Number(size[0]) || DEFAULT_W);
-        size[1] = Math.max(MIN_H, Number(size[1]) || DEFAULT_H);
+        size[1] = FIXED_H;
       }
       const result = oldResize?.apply(this, arguments);
-      if (this._dsSeedRoot) {
-        this._dsSeedRoot.style.width = "100%";
-        this._dsSeedRoot.style.height = `${DOM_BODY_H}px`;
+      if (this.size) {
+        this.size[0] = Math.max(MIN_W, Number(this.size[0]) || DEFAULT_W);
+        this.size[1] = FIXED_H;
       }
       this.setDirtyCanvas?.(true, true);
       return result;
@@ -877,9 +996,9 @@ app.registerExtension({
     };
 
     nodeType.prototype.onRemoved = function () {
-      try { this._dsSeedThemeUnsub?.(); } catch {}
-      try { this._dsSeedDomWidget?.onRemove?.(); } catch {}
-      try { this._dsSeedRoot?.remove?.(); } catch {}
+      try { this._dsSeedThemeUnsub?.(); } catch { }
+      try { this._dsSeedDomWidget?.onRemove?.(); } catch { }
+      try { this._dsSeedRoot?.remove?.(); } catch { }
       return oldRemoved?.apply(this, arguments);
     };
   },

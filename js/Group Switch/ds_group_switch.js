@@ -1,24 +1,39 @@
 import { app } from "/scripts/app.js";
+import {
+  Card,
+  normalizeDSWidgetHost,
+  protectDSResizeCorners,
+  Toggle,
+  Dropdown,
+  installDSUI,
+} from "../UIElements/index.js";
+
+installDSUI();
+
+const CSS_HREF = "/extensions/DeathshotArsenal/Group Switch/ds_group_switch.css";
+if (typeof document !== "undefined") {
+  const linkId = "ds-group-switch-css";
+  let link = document.getElementById(linkId);
+  const cacheBustHref = `${CSS_HREF}?t=${Date.now()}`;
+  if (!link) {
+    link = document.createElement("link");
+    link.id = linkId;
+    link.rel = "stylesheet";
+    link.href = cacheBustHref;
+    document.head.appendChild(link);
+  } else {
+    link.href = cacheBustHref;
+  }
+}
 
 const TYPE = "DS_GroupSwitch";
 const EXT = "DeathshotArsenal.DS_GroupSwitch";
-const BASE_W = 360;
-const BASE_H = 400;
-const MIN_SCALE = 0.70;
-const MAX_SCALE = 2.20;
-const DEFAULT_W = BASE_W;
-const DEFAULT_H = BASE_H;
+const CARD_MARGIN = 5;
+const MIN_WIDTH = 240;
+const DEFAULT_W = 270;
+const ROW_HEIGHT = 36;
 const TITLE_H = 0;
-const ROW_H = 38;
-const UI_PAD_Y = 17;
-const UI_TOP_H = 30;
-const UI_CONTROLS_H = 33;
-const UI_LIST_MARGIN = 8;
-const UI_LIST_MIN_H = 120;
-const UI_FOOTER_H = 23;
-const UI_WIDGET_MARGIN = 10;
-const UI_MAX_FIT_ROWS = 8;
-const UI_SIZE_VERSION = 4;
+const UI_SIZE_VERSION = 8;
 
 const OPEN_POPUPS = new Map();
 const GROUP_KEYS = new WeakMap();
@@ -28,11 +43,34 @@ let refreshTimer = null;
 let globalsInstalled = false;
 
 const ICON = {
-  gear: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.7 2.8h4.6l.7 2.2c.5.2 1 .4 1.4.8l2.2-.6 2.3 4-1.6 1.6c.1.5.1 1 0 1.5l1.6 1.6-2.3 4-2.2-.6c-.4.4-.9.6-1.4.8l-.7 2.2H9.7L9 17.9c-.5-.2-1-.4-1.4-.8l-2.2.6-2.3-4 1.6-1.6c-.1-.5-.1-1 0-1.5L3.1 9.2l2.3-4 2.2.6c.4-.4.9-.6 1.4-.8l.7-2.2Z"/><circle cx="12" cy="12" r="3.1"/></svg>`,
-  check: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>`,
   search: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>`,
   close: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
 };
+
+function registerGearMenu() {
+  if (typeof window !== "undefined" && window.DSGearMenu?.register) {
+    const gearConfig = {
+      tooltip: "DS Group Switch Settings",
+      onClick: (node) => {
+        if (!node) return;
+        if (OPEN_POPUPS.has(node.id)) {
+          closeSettings(node.id);
+        } else {
+          openSettings(node);
+        }
+      },
+    };
+    window.DSGearMenu.register(TYPE, gearConfig);
+    window.DSGearMenu.register("DS Group Switch", gearConfig);
+    return true;
+  }
+  return false;
+}
+
+if (!registerGearMenu()) {
+  setTimeout(registerGearMenu, 250);
+  setTimeout(registerGearMenu, 1000);
+}
 
 function graphOf(node) {
   return node?.graph || app?.canvas?.graph || app?.graph || app?.rootGraph || null;
@@ -90,7 +128,6 @@ function groupsOf(node) {
 
   for (const group of rawGroups(node)) {
     try {
-      // This is the canonical ComfyUI/LiteGraph membership calculation.
       group.recomputeInsideNodes?.(100);
     } catch {}
 
@@ -141,7 +178,6 @@ function memberNodes(info, controller) {
     out.push(n);
   }
 
-  // Older LiteGraph builds may not populate _nodes. Only then use geometry.
   if (!out.length) {
     for (const n of graphNodes(controller)) {
       if (!n || n === controller || n.id == null) continue;
@@ -152,10 +188,11 @@ function memberNodes(info, controller) {
 }
 
 function configOf(node) {
+  if (!node || node.type !== TYPE) return null;
   node.properties ||= {};
   node.properties.ds_group_switch ||= {
     version: 3,
-    uiSizeVersion: 3,
+    uiSizeVersion: UI_SIZE_VERSION,
     selectionMode: "pick",
     actionMode: "bypass",
     switchMode: "any",
@@ -169,13 +206,15 @@ function configOf(node) {
   if (!["pick", "all"].includes(c.selectionMode)) c.selectionMode = "pick";
   if (!["bypass", "mute"].includes(c.actionMode)) c.actionMode = "bypass";
   if (!["any", "one", "always"].includes(c.switchMode)) c.switchMode = "any";
-  if (!Number.isFinite(Number(c.uiSizeVersion))) c.uiSizeVersion = 2;
+  c.uiSizeVersion = UI_SIZE_VERSION;
   c.version = 3;
   return c;
 }
 
 function controlled(node) {
+  if (!node || node.type !== TYPE) return [];
   const c = configOf(node);
+  if (!c) return [];
   const groups = groupsOf(node);
   if (c.selectionMode === "all") return groups;
   const selected = new Set(c.selectedGroups.map(String));
@@ -261,6 +300,12 @@ function setGroup(node, info, enabled) {
   touch(node);
 }
 
+function isAllOn(node) {
+  const groups = controlled(node).filter(g => memberNodes(g, node).length);
+  if (!groups.length) return false;
+  return groups.every(g => stateOf(node, g) === "on");
+}
+
 function setAll(node, enabled) {
   const c = configOf(node);
   const groups = controlled(node).filter(g => memberNodes(g, node).length);
@@ -279,13 +324,17 @@ function setAll(node, enabled) {
 function installCSS() {
   if (cssPromise) return cssPromise;
   cssPromise = new Promise(resolve => {
+    const timestamp = Date.now();
     const existing = document.getElementById("ds-group-switch-css");
-    if (existing) return resolve();
+    if (existing) {
+      existing.href = `${location.origin}/extensions/DeathshotArsenal/Group Switch/ds_group_switch.css?t=${timestamp}`;
+      return resolve();
+    }
 
     const link = document.createElement("link");
     link.id = "ds-group-switch-css";
     link.rel = "stylesheet";
-    link.href = `${location.origin}/extensions/DeathshotArsenal/Group Switch/ds_group_switch.css?v=7.0.0`;
+    link.href = `${location.origin}/extensions/DeathshotArsenal/Group Switch/ds_group_switch.css?t=${timestamp}`;
     link.onload = () => resolve();
     link.onerror = () => resolve();
     document.head.appendChild(link);
@@ -311,75 +360,165 @@ function makeButton(text, cls, handler) {
 }
 
 function stateLabel(state) {
-  return state === "on" ? "ON" : state === "off" ? "OFF" : state === "mixed" ? "MIXED" : "EMPTY";
+  return state === "on" ? "ON" : state === "off" ? "OFF" : state === "mixed" ? "MIX" : "EMPTY";
+}
+
+function calculateExactHeight(node) {
+  if (!node || node.type !== TYPE) return 0;
+  const groups = controlled(node);
+  const rowCount = groups.length;
+  const maxVisibleRows = 8;
+  const visibleRows = Math.min(rowCount, maxVisibleRows);
+  const listHeight = rowCount > 0 ? (visibleRows * ROW_HEIGHT) : 40;
+  // Card header 20px + margin 8px = 28px
+  // Controls 28px + margin 8px = 36px
+  // List listHeight + margin 8px
+  // Footer 14px
+  // Card padding: 10px top + 10px bottom = 20px, Card border: 2px = 22px
+  // Node outer margin: 5px top + 5px bottom = 10px
+  const naturalCardHeight = 28 + 36 + listHeight + 8 + 14 + 22;
+  return Math.ceil(naturalCardHeight + (CARD_MARGIN * 2));
+}
+
+function fitNodeHeight(node) {
+  if (!node || node.type !== TYPE) return;
+  const targetH = calculateExactHeight(node);
+  if (!targetH) return;
+  const currentW = Math.max(MIN_WIDTH, Number(node.size?.[0]) || DEFAULT_W);
+  node.size[0] = currentW;
+  node.size[1] = targetH;
+  node.setDirtyCanvas?.(true, true);
 }
 
 function buildNodeUI(node) {
-  const root = document.createElement("div");
-  root.className = "ds-gs-node";
-  root.dataset.dsThemed = "true";
-
-  // The face is visual-only. Let LiteGraph receive drag/selection/resize
-  // events everywhere except actual controls, which opt into pointer events.
-  root.style.pointerEvents = "none";
-
-  const top = document.createElement("div");
-  top.className = "ds-gs-node-top";
-
-  const brand = document.createElement("div");
-  brand.className = "ds-gs-brand";
-  brand.textContent = "DS";
-
-  const title = document.createElement("div");
-  title.className = "ds-gs-node-title";
-  title.textContent = "Group Switch";
-
-  const settings = document.createElement("button");
-  settings.type = "button";
-  settings.className = "ds-gs-settings";
-  settings.innerHTML = ICON.gear;
-  settings.title = "Group Switch settings";
-  settings.addEventListener("pointerdown", stopEvent);
-  settings.addEventListener("click", e => {
-    stopEvent(e);
-    openSettings(node);
+  const card = Card({
+    title: "Group Switch",
+    icon: "layers",
   });
+  card.root.classList.add("ds-gs-card");
+  card.root.dataset.dsThemed = "true";
+  card.root.style.height = "100%";
+  card.root.style.boxSizing = "border-box";
 
-  top.append(brand, title, settings);
-  root.appendChild(top);
+  if (card.head) {
+    card.head.style.height = "20px";
+    card.head.style.minHeight = "20px";
+    card.head.style.marginBottom = "8px";
+  }
+
+  if (card.body) {
+    card.body.style.display = "flex";
+    card.body.style.flexDirection = "column";
+    card.body.style.justifyContent = "flex-start";
+    card.body.style.gap = "0";
+    card.body.style.padding = "0";
+    card.body.style.margin = "0";
+    card.body.style.width = "100%";
+    card.body.style.flex = "1 1 auto";
+    card.body.style.minHeight = "0";
+  }
 
   const controls = document.createElement("div");
   controls.className = "ds-gs-node-controls";
+  controls.style.display = "flex";
+  controls.style.flexDirection = "row";
+  controls.style.alignItems = "center";
+  controls.style.justifyContent = "space-between";
+  controls.style.gap = "10px";
+  controls.style.width = "100%";
+  controls.style.boxSizing = "border-box";
+  controls.style.flex = "0 0 28px";
+  controls.style.height = "28px";
+  controls.style.marginBottom = "8px";
 
   const action = document.createElement("div");
-  action.className = "ds-gs-node-segment";
-  const mute = makeButton("MUTE", "ds-gs-node-seg", () => {
+  action.className = "ds-gs-segment ds-gs-node-segment";
+  action.style.display = "grid";
+  action.style.gridTemplateColumns = "1fr 1fr";
+  action.style.gap = "2px";
+  action.style.padding = "2px";
+  action.style.flex = "1 1 auto";
+  action.style.minWidth = "0";
+  action.style.width = "auto";
+  action.style.margin = "0";
+  action.style.boxSizing = "border-box";
+
+  const mute = makeButton("MUTE", "ds-gs-tab ds-gs-node-seg", () => {
     configOf(node).actionMode = "mute";
     touch(node);
   });
-  const bypass = makeButton("BYPASS", "ds-gs-node-seg", () => {
+  const bypass = makeButton("BYPASS", "ds-gs-tab ds-gs-node-seg", () => {
     configOf(node).actionMode = "bypass";
     touch(node);
   });
   action.append(mute, bypass);
 
-  const allOn = makeButton("ALL ON", "ds-gs-node-action", () => setAll(node, true));
-  const allOff = makeButton("ALL OFF", "ds-gs-node-action", () => setAll(node, false));
+  const allWrap = document.createElement("div");
+  allWrap.className = "ds-gs-all-toggle-wrap";
+  allWrap.style.display = "flex";
+  allWrap.style.flexDirection = "row";
+  allWrap.style.alignItems = "center";
+  allWrap.style.gap = "6px";
+  allWrap.style.flex = "0 0 auto";
+  allWrap.style.margin = "0";
+  allWrap.style.padding = "0 10px 0 0";
+  allWrap.style.boxSizing = "border-box";
 
-  controls.append(action, allOn, allOff);
-  root.appendChild(controls);
+  const allToggle = Toggle({
+    className: "ds-gs-all-toggle",
+    label: "ALL",
+    checked: false,
+    onChange: (checked) => {
+      setAll(node, checked);
+    },
+  });
+  allToggle.root.style.display = "inline-flex";
+  allToggle.root.style.flexDirection = "row";
+  allToggle.root.style.alignItems = "center";
+  allToggle.root.style.gap = "6px";
+  allToggle.root.style.margin = "0";
+  allToggle.root.style.width = "auto";
+  allWrap.appendChild(allToggle.root);
+
+  controls.append(action, allWrap);
+  card.body.appendChild(controls);
 
   const list = document.createElement("div");
   list.className = "ds-gs-node-list";
-  root.appendChild(list);
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.flexWrap = "nowrap";
+  list.style.width = "100%";
+  list.style.boxSizing = "border-box";
+  list.style.flex = "0 0 auto";
+  list.style.margin = "0 0 8px 0";
+  list.style.padding = "0";
+  list.addEventListener("wheel", e => e.stopPropagation(), { passive: true });
+  card.body.appendChild(list);
 
   const footer = document.createElement("div");
   footer.className = "ds-gs-node-footer";
-  root.appendChild(footer);
+  footer.style.flex = "0 0 14px";
+  footer.style.height = "14px";
+  footer.style.lineHeight = "14px";
+  footer.style.margin = "0";
+  footer.style.padding = "0";
+  card.body.appendChild(footer);
 
-  node._dsGsDom = { root, list, footer, mute, bypass, settings };
+  node._dsGsDom = {
+    card,
+    root: card.root,
+    list,
+    footer,
+    mute,
+    bypass,
+    allToggle,
+    renderedKeys: "",
+    toggleMap: new Map(),
+  };
+
   renderNodeUI(node);
-  return root;
+  return card.root;
 }
 
 function renderNodeUI(node) {
@@ -389,102 +528,71 @@ function renderNodeUI(node) {
   const c = configOf(node);
   const groups = controlled(node);
 
+  ui.mute.classList.toggle("is-active", c.actionMode === "mute");
   ui.mute.classList.toggle("active", c.actionMode === "mute");
+  ui.bypass.classList.toggle("is-active", c.actionMode === "bypass");
   ui.bypass.classList.toggle("active", c.actionMode === "bypass");
 
-  ui.list.innerHTML = "";
+  const groupsKey = groups.map(g => g.key).join("|");
+  const listStructureChanged = ui.renderedKeys !== groupsKey;
 
-  if (!groups.length) {
-    const empty = document.createElement("div");
-    empty.className = "ds-gs-node-empty";
-    empty.textContent = c.selectionMode === "pick"
-      ? "No groups selected — open settings"
-      : "No groups detected on this canvas";
-    ui.list.appendChild(empty);
-  } else {
-    for (const group of groups) {
-      const row = document.createElement("div");
-      row.className = "ds-gs-node-row";
+  if (listStructureChanged) {
+    ui.renderedKeys = groupsKey;
+    ui.list.replaceChildren();
+    ui.toggleMap.clear();
 
-      const dot = document.createElement("span");
-      dot.className = "ds-gs-node-dot";
+    if (!groups.length) {
+      const empty = document.createElement("div");
+      empty.className = "ds-gs-node-empty";
+      empty.textContent = c.selectionMode === "pick"
+        ? "No groups selected"
+        : "No canvas groups detected";
+      ui.list.appendChild(empty);
+    } else {
+      for (const group of groups) {
+        const toggle = Toggle({
+          className: "ds-gs-group-row",
+          label: group.name,
+          checked: false,
+          onChange: (checked) => {
+            setGroup(node, group, checked);
+          },
+        });
+        toggle.root.style.display = "flex";
+        toggle.root.style.flexDirection = "row";
+        toggle.root.style.alignItems = "center";
+        toggle.root.style.justifyContent = "space-between";
+        toggle.root.style.width = "100%";
+        toggle.root.style.minWidth = "100%";
+        toggle.root.style.maxWidth = "100%";
+        toggle.root.style.boxSizing = "border-box";
+        toggle.root.style.height = "36px";
+        toggle.root.style.flex = "0 0 36px";
 
-      const name = document.createElement("span");
-      name.className = "ds-gs-node-group-name";
-      name.textContent = group.name;
-
-      const state = document.createElement("button");
-      state.type = "button";
-      state.className = "ds-gs-node-toggle";
-      const current = stateOf(node, group);
-      state.dataset.state = current;
-      const label = current === "on" ? "ON" :
-        current === "off" ? "OFF" :
-        current === "mixed" ? "MIX" : "—";
-      state.innerHTML = `<span class="ds-gs-toggle-mark" aria-hidden="true"><i></i></span><span class="ds-gs-toggle-label">${label}</span>`;
-      state.title = current === "on" ? "Enabled — click to disable" :
-        current === "off" ? "Disabled — click to enable" :
-        current === "mixed" ? "Mixed state — click to enable all" :
-        "No nodes in group";
-
-      state.addEventListener("pointerdown", stopEvent);
-      state.addEventListener("click", e => {
-        stopEvent(e);
-        const now = stateOf(node, group);
-        setGroup(node, group, now !== "on");
-      });
-
-      // Only the state control captures pointer input. The row itself remains
-      // transparent to the pointer so native LiteGraph dragging still works.
-      row.append(dot, name, state);
-      ui.list.appendChild(row);
+        ui.toggleMap.set(group.key, toggle);
+        ui.list.appendChild(toggle.root);
+      }
     }
   }
+
+  // Update toggle values in place
+  for (const group of groups) {
+    const toggle = ui.toggleMap.get(group.key);
+    if (toggle) {
+      const current = stateOf(node, group);
+      toggle.setValue(current === "on", false);
+      toggle.setDisabled(current === "empty");
+    }
+  }
+
+  // Master ALL toggle
+  ui.allToggle.setValue(isAllOn(node), false);
 
   const detected = groupsOf(node).length;
   const controlledCount = groups.length;
   ui.footer.textContent = `${controlledCount} controlled · ${detected} detected`;
-}
 
-function fixedNodeHeightForWidth(width) {
-  const w = Math.max(BASE_W * MIN_SCALE, Number(width) || BASE_W);
-  return Math.round(w * BASE_H / BASE_W);
-}
-
-function applyResizeAspect(node) {
-  const proposedW = Math.max(1, Number(node.size?.[0]) || BASE_W);
-  const proposedH = Math.max(1, Number(node.size?.[1]) || BASE_H);
-  const scale = Math.max(
-    MIN_SCALE,
-    Math.min(MAX_SCALE, Math.max(proposedW / BASE_W, proposedH / BASE_H))
-  );
-  const w = Math.round(BASE_W * scale);
-  const h = Math.round(BASE_H * scale);
-  if (Math.abs(proposedW - w) > 0.5) node.size[0] = w;
-  if (Math.abs(proposedH - h) > 0.5) node.size[1] = h;
-  node._dsGsScale = scale;
-}
-
-function syncScale(node) {
-  const w = Number(node.size?.[0]) || BASE_W;
-  node._dsGsScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, w / BASE_W));
-}
-
-function syncDOMWidgetGeometry(node) {
-  const widget = node?._dsGsDomWidget;
-  const dom = node?._dsGsDomRoot;
-  if (!widget || !dom) return;
-
-  const w = Math.max(BASE_W * MIN_SCALE, Number(node.size?.[0]) || BASE_W);
-  const h = fixedNodeHeightForWidth(w);
-
-  // The node itself owns the geometry. The DOM is only the visual face.
-  // The widget wrapper gets its height from getHeight(); keep the face itself
-  // pinned to that geometry without feeding the measurement back into node.size.
-  dom.style.width = "100%";
-  dom.style.height = "100%";
-  dom.style.minHeight = "0";
-  dom.style.maxHeight = "100%";
+  fitNodeHeight(node);
 }
 
 function refreshNodeUI(node) {
@@ -501,81 +609,68 @@ function bindDOMWidget(node) {
   node.flags.no_title = true;
   node.title = "";
   node.badges = [];
-  node.min_size = [Math.round(BASE_W * MIN_SCALE), Math.round(BASE_H * MIN_SCALE)];
+
+  const initialH = calculateExactHeight(node);
+  node.min_size = [MIN_WIDTH, initialH];
 
   if (!Array.isArray(node.size) || node.size.length < 2 ||
       !Number.isFinite(Number(node.size[0])) || Number(node.size[0]) <= 0 ||
       !Number.isFinite(Number(node.size[1])) || Number(node.size[1]) <= 0) {
-    node.size = [DEFAULT_W, DEFAULT_H];
+    node.size = [DEFAULT_W, initialH];
   }
 
-  // Normalize only if the node is clearly invalid. Existing workflow sizes
-  // are preserved; deliberate resizing is never replaced by content height.
-  if (Number(node.size[0]) < node.min_size[0]) node.size[0] = node.min_size[0];
-  syncScale(node);
+  if (Number(node.size[0]) < MIN_WIDTH) node.size[0] = MIN_WIDTH;
+  node.size[1] = initialH;
 
   if (!node.properties) node.properties = {};
   const config = configOf(node);
   config.uiSizeVersion = UI_SIZE_VERSION;
 
-  const dom = buildNodeUI(node);
-  node._dsGsDomRoot = dom;
+  const cardRoot = buildNodeUI(node);
+  node._dsGsDomRoot = cardRoot;
 
   if (typeof node.addDOMWidget === "function") {
-    // Match the proven DOM widget geometry contract:
-    // let ComfyUI own the widget geometry, while the node width remains the
-    // single source of truth for the aspect ratio. Do not use afterResize or
-    // write computedHeight on every frame; those can turn the DOM widget into
-    // a full-canvas interaction shield and can also create resize feedback.
-    const widget = node.addDOMWidget("ds_group_switch_ui", "group_switch", dom, {
+    const domWidget = node.addDOMWidget("ds_group_switch_ui", "custom", cardRoot, {
       serialize: false,
-      hideOnZoom: false,
-      getHeight: () => Math.max(1, Math.round((Number(node.size?.[0]) || BASE_W) * BASE_H / BASE_W)),
-      getMinHeight: Math.round(BASE_H * MIN_SCALE),
-    });
-    widget.computeLayoutSize = () => ({
-      minHeight: Math.round(BASE_H * MIN_SCALE),
-      minWidth: Math.round(BASE_W * MIN_SCALE),
+      margin: CARD_MARGIN,
+      getMinHeight: () => calculateExactHeight(node),
+      getMaxHeight: () => {
+        const widgetY = Number(domWidget?.y ?? (node.widgets_start_y ?? 0));
+        const nodeHeight = Number(node.size?.[1] ?? 0);
+        return Math.max(calculateExactHeight(node), nodeHeight - widgetY);
+      },
     });
 
-    node._dsGsDomWidget = widget;
+    domWidget.computeLayoutSize = () => ({
+      minHeight: calculateExactHeight(node),
+      minWidth: MIN_WIDTH,
+    });
 
-    // The DOM widget occupies the visual body of the node, so recent
-    // ComfyUI CanvasPointer handling may route the pointer through the
-    // widget instead of the native node hit-test. Bridge non-control
-    // pointer-downs back into LiteGraph's native drag lifecycle. This is
-    // the same pattern used by ComfyUI's own full-node custom widgets.
-    widget.onPointerDown = function(pointer, ownerNode, canvas) {
+    node._dsGsDomWidget = domWidget;
+
+    domWidget.onPointerDown = function(pointer, ownerNode, canvas) {
       const target = pointer?.eDown?.target;
-
-      // Actual DOM controls own their click. Returning true here prevents
-      // LiteGraph from interpreting a button press as a node drag.
-      if (target?.closest?.("button, input, select, textarea, [contenteditable=\"true\"]")) {
+      if (target?.closest?.("button, input, select, textarea, [contenteditable=\"true\"], .ds-ui-toggle-row, .ds-ui-toggle-track, .ds-ui-toggle-thumb, .ds-ui-dropdown, .ds-gs-tab")) {
         return true;
       }
-
-      // IMPORTANT: do not cancel LiteGraph for the visual surface.
-      // Returning false hands the pointer back to native CanvasPointer
-      // processing, so the entire node body can select, drag and resize.
-      // This is the supported DOMWidget/LiteGraph hand-off.
       return false;
     };
 
-    // Only set the visual face geometry. Never use it to mutate node.size.
-    syncDOMWidgetGeometry(node);
+    normalizeDSWidgetHost(cardRoot, node, { shell: false });
+    protectDSResizeCorners(node);
   } else {
     installCanvasFallback(node);
   }
 
   try {
-    window.DSGlobalTheme?.bindNode?.(dom, node);
+    window.DSGlobalTheme?.bindNode?.(cardRoot, node);
   } catch {}
 
   setTimeout(() => {
     try {
-      window.DSGlobalTheme?.bindNode?.(dom, node);
+      window.DSGlobalTheme?.bindNode?.(cardRoot, node);
       renderNodeUI(node);
-      syncDOMWidgetGeometry(node);
+      fitNodeHeight(node);
       node.setDirtyCanvas?.(true, true);
     } catch (e) {
       console.error("[DS Group Switch] UI initialization error:", e);
@@ -588,53 +683,19 @@ function installCanvasFallback(node) {
   node._dsGsCanvasFallback = true;
 
   node.onDrawForeground = function(ctx) {
-    const w = Math.max(BASE_W * MIN_SCALE, Number(node.size?.[0]) || DEFAULT_W);
-    const h = fixedNodeHeightForWidth(w);
+    const w = Math.max(MIN_WIDTH, Number(node.size?.[0]) || DEFAULT_W);
+    const h = calculateExactHeight(node);
     ctx.save();
-    ctx.fillStyle = "#17191d";
+    ctx.fillStyle = "#12151c";
     ctx.fillRect(0, TITLE_H, w, h - TITLE_H);
     ctx.fillStyle = "#e5e7eb";
     ctx.font = "700 13px sans-serif";
     ctx.fillText("DS Group Switch", 12, TITLE_H + 22);
     ctx.font = "10px sans-serif";
     ctx.fillStyle = "#9ca3af";
-    ctx.fillText("Open settings to select workflow groups.", 12, TITLE_H + 45);
+    ctx.fillText("Open settings in toolbar to select workflow groups.", 12, TITLE_H + 45);
     ctx.restore();
   };
-}
-
-function popupTheme(popup, theme) {
-  popup.dataset.dsThemed = "true";
-  if (theme?.vars) {
-    for (const [key, value] of Object.entries(theme.vars)) {
-      popup.style.setProperty(key, value);
-    }
-  }
-}
-
-async function loadTheme() {
-  try {
-    const r = await fetch("/ds/theme/config", { cache: "no-store" });
-    if (!r.ok) return null;
-    const cfg = (await r.json())?.config || {};
-    const id = cfg.theme || "deathshot_dark";
-
-    let data = null;
-    try {
-      const t = await fetch("/ds/theme/themes", { cache: "no-store" });
-      if (t.ok) data = await t.json();
-    } catch {}
-
-    if (!data) {
-      const t = await fetch("/extensions/DeathshotArsenal/themes/themes.json", { cache: "no-store" });
-      if (t.ok) data = await t.json();
-    }
-
-    const theme = data?.themes?.[id];
-    return theme ? { id, ...theme } : null;
-  } catch {
-    return null;
-  }
 }
 
 function popupPosition(node, popup) {
@@ -649,7 +710,7 @@ function popupPosition(node, popup) {
     left: rect.left + (Number(node.pos?.[0] || 0) + Number(offset[0] || 0)) * scale,
     top: rect.top + (Number(node.pos?.[1] || 0) + Number(offset[1] || 0)) * scale,
     width: Number(node.size?.[0] || DEFAULT_W) * scale,
-    height: Number(node.size?.[1] || DEFAULT_H) * scale,
+    height: Number(node.size?.[1] || 300) * scale,
   };
 
   const margin = 8;
@@ -676,22 +737,6 @@ function closeSettings(nodeId) {
   OPEN_POPUPS.delete(nodeId);
 }
 
-function makeSegment(container, labels, active, callback) {
-  container.innerHTML = "";
-  for (const [value, label] of labels) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = `ds-gs-popup-seg${active === value ? " active" : ""}`;
-    b.textContent = label;
-    b.addEventListener("pointerdown", stopEvent);
-    b.addEventListener("click", e => {
-      stopEvent(e);
-      callback(value);
-    });
-    container.appendChild(b);
-  }
-}
-
 function openSettings(node) {
   if (OPEN_POPUPS.has(node.id)) {
     popupPosition(node, OPEN_POPUPS.get(node.id).popup);
@@ -704,14 +749,13 @@ function openSettings(node) {
   popup.className = "ds-gs-popup";
   popup.dataset.dsThemed = "true";
   popup.addEventListener("pointerdown", stopEvent);
-  popup.addEventListener("mousedown", stopEvent);
   popup.addEventListener("wheel", e => e.stopPropagation(), { passive: true });
 
   const item = { node, popup, search: "", sort: "position", raf: 0 };
   OPEN_POPUPS.set(node.id, item);
   document.body.appendChild(popup);
 
-  renderSettings(item);
+  buildSettingsContent(item);
 
   item.raf = requestAnimationFrame(function loop() {
     if (!document.body.contains(popup)) return;
@@ -720,14 +764,14 @@ function openSettings(node) {
   });
 }
 
-function renderSettings(item) {
+function buildSettingsContent(item) {
   const { node, popup } = item;
   const c = configOf(node);
   const groups = groupsOf(node);
-  const selected = new Set(c.selectedGroups.map(String));
 
-  popup.innerHTML = "";
+  popup.replaceChildren();
 
+  // Header
   const head = document.createElement("div");
   head.className = "ds-gs-popup-head";
   head.innerHTML = `<div class="ds-gs-popup-brand">DS</div><div><div class="ds-gs-popup-title">Group Switch</div><div class="ds-gs-popup-sub">Select which canvas groups this node controls</div></div>`;
@@ -747,31 +791,70 @@ function renderSettings(item) {
   const body = document.createElement("div");
   body.className = "ds-gs-popup-body";
 
+  // Section 1: Execution Action
   const actionSection = document.createElement("section");
   actionSection.className = "ds-gs-popup-section";
   actionSection.innerHTML = `<div class="ds-gs-popup-label">Execution action</div>`;
   const actionSeg = document.createElement("div");
-  actionSeg.className = "ds-gs-popup-segment";
-  makeSegment(actionSeg, [["mute", "Mute"], ["bypass", "Bypass"]], c.actionMode, value => {
-    configOf(node).actionMode = value;
+  actionSeg.className = "ds-gs-segment ds-gs-popup-segment";
+
+  const muteBtn = makeButton("Mute", `ds-gs-tab${c.actionMode === "mute" ? " is-active active" : ""}`, () => {
+    c.actionMode = "mute";
+    muteBtn.classList.add("is-active", "active");
+    bypassBtn.classList.remove("is-active", "active");
     touch(node);
-    renderSettings(item);
   });
+  const bypassBtn = makeButton("Bypass", `ds-gs-tab${c.actionMode === "bypass" ? " is-active active" : ""}`, () => {
+    c.actionMode = "bypass";
+    bypassBtn.classList.add("is-active", "active");
+    muteBtn.classList.remove("is-active", "active");
+    touch(node);
+  });
+  actionSeg.append(muteBtn, bypassBtn);
   actionSection.appendChild(actionSeg);
   body.appendChild(actionSection);
 
+  // Section 2: Controlled Groups
   const selectionSection = document.createElement("section");
   selectionSection.className = "ds-gs-popup-section";
   selectionSection.innerHTML = `<div class="ds-gs-popup-label">Controlled groups</div>`;
   const selectionSeg = document.createElement("div");
-  selectionSeg.className = "ds-gs-popup-segment";
-  makeSegment(selectionSeg, [["all", "All groups"], ["pick", "Pick groups"]], c.selectionMode, value => {
-    configOf(node).selectionMode = value;
+  selectionSeg.className = "ds-gs-segment ds-gs-popup-segment";
+
+  let allBtn, pickBtn;
+  const updateSelectionToggles = () => {
+    const isAll = c.selectionMode === "all";
+    allBtn.classList.toggle("is-active", isAll);
+    allBtn.classList.toggle("active", isAll);
+    pickBtn.classList.toggle("is-active", !isAll);
+    pickBtn.classList.toggle("active", !isAll);
+
+    for (const [key, t] of toggleRowMap) {
+      t.setDisabled(isAll);
+      if (isAll) {
+        t.setValue(true, false);
+      } else {
+        const set = new Set(c.selectedGroups.map(String));
+        t.setValue(set.has(String(key)), false);
+      }
+    }
+    updateNote();
+  };
+
+  allBtn = makeButton("All groups", `ds-gs-tab${c.selectionMode === "all" ? " is-active active" : ""}`, () => {
+    c.selectionMode = "all";
+    updateSelectionToggles();
     touch(node);
-    renderSettings(item);
   });
+  pickBtn = makeButton("Pick groups", `ds-gs-tab${c.selectionMode === "pick" ? " is-active active" : ""}`, () => {
+    c.selectionMode = "pick";
+    updateSelectionToggles();
+    touch(node);
+  });
+  selectionSeg.append(allBtn, pickBtn);
   selectionSection.appendChild(selectionSeg);
 
+  // Toolbar (Search + Dropdown)
   const toolbar = document.createElement("div");
   toolbar.className = "ds-gs-popup-toolbar";
 
@@ -779,153 +862,176 @@ function renderSettings(item) {
   search.className = "ds-gs-popup-search";
   search.innerHTML = ICON.search;
   const input = document.createElement("input");
-  input.type = "search";
+  input.type = "text";
   input.placeholder = "Filter groups…";
   input.value = item.search;
   input.addEventListener("pointerdown", stopEvent);
   input.addEventListener("input", () => {
     item.search = input.value;
-    renderSettings(item);
-    const next = popup.querySelector("input");
-    next?.focus();
-    if (next) next.setSelectionRange(next.value.length, next.value.length);
+    filterRows();
   });
   search.appendChild(input);
   toolbar.appendChild(search);
 
-  const sort = document.createElement("select");
-  sort.className = "ds-gs-popup-sort";
-  for (const [value, label] of [["position", "Position"], ["name", "Name"]]) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    sort.appendChild(option);
-  }
-  sort.value = item.sort;
-  sort.addEventListener("pointerdown", stopEvent);
-  sort.addEventListener("change", e => {
-    stopEvent(e);
-    item.sort = e.target.value;
-    renderSettings(item);
+  const sortDropdown = Dropdown({
+    options: [
+      { id: "position", label: "Position" },
+      { id: "name", label: "Name" },
+    ],
+    value: item.sort,
+    width: 95,
+    compact: true,
+    onChange: (val) => {
+      item.sort = val;
+      sortRows();
+    },
   });
-  toolbar.appendChild(sort);
+  toolbar.appendChild(sortDropdown.root);
   selectionSection.appendChild(toolbar);
 
-  let filtered = groups.filter(g =>
-    g.name.toLowerCase().includes(item.search.trim().toLowerCase())
-  );
-  if (item.sort === "name") {
-    filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-  }
-
+  // List of group toggles (strictly 1 item per row)
   const list = document.createElement("div");
   list.className = "ds-gs-popup-list";
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.flexWrap = "nowrap";
+  list.style.width = "100%";
+  list.style.boxSizing = "border-box";
+  list.style.padding = "0";
+  list.style.marginTop = "8px";
 
-  if (!filtered.length) {
-    const empty = document.createElement("div");
-    empty.className = "ds-gs-popup-empty";
-    empty.textContent = groups.length ? "No groups match the filter." : "No groups detected on this canvas.";
-    list.appendChild(empty);
-  } else {
-    for (const g of filtered) {
-      const row = document.createElement("button");
-      row.type = "button";
-      row.className = `ds-gs-popup-row${c.selectionMode === "all" || selected.has(String(g.key)) ? " selected" : ""}`;
+  const toggleRowMap = new Map();
+  const rowElements = [];
 
-      const check = document.createElement("span");
-      check.className = "ds-gs-popup-check";
-      check.innerHTML = ICON.check;
+  const updateNote = () => {
+    let visibleCount = 0;
+    for (const r of rowElements) {
+      if (r.style.display !== "none") visibleCount++;
+    }
+    note.textContent = `${visibleCount} shown · ${groups.length} detected · ${controlled(node).length} controlled`;
+  };
 
-      const text = document.createElement("span");
-      text.className = "ds-gs-popup-group";
-      const name = document.createElement("span");
-      name.className = "ds-gs-popup-group-name";
-      name.textContent = g.name;
-      const meta = document.createElement("span");
-      meta.className = "ds-gs-popup-group-meta";
-      meta.textContent = `${memberNodes(g, node).length} node${memberNodes(g, node).length === 1 ? "" : "s"}`;
-      text.append(name, meta);
+  for (const g of groups) {
+    const isSelected = c.selectionMode === "all" || c.selectedGroups.map(String).includes(String(g.key));
+    const gState = stateOf(node, g);
+    const memberCount = memberNodes(g, node).length;
 
-      const status = document.createElement("span");
-      status.className = `ds-gs-popup-status ${stateOf(node, g)}`;
-      status.textContent = stateLabel(stateOf(node, g));
-
-      row.append(check, text, status);
-      row.addEventListener("pointerdown", stopEvent);
-      row.addEventListener("click", e => {
-        stopEvent(e);
+    const groupToggle = Toggle({
+      className: "ds-gs-popup-row",
+      label: g.name,
+      description: `${memberCount} node${memberCount === 1 ? "" : "s"} · ${stateLabel(gState)}`,
+      checked: isSelected,
+      disabled: c.selectionMode === "all",
+      onChange: (checked) => {
         if (c.selectionMode === "all") return;
-
-        const cfg = configOf(node);
-        const set = new Set(cfg.selectedGroups.map(String));
+        const set = new Set(c.selectedGroups.map(String));
         const key = String(g.key);
-        if (set.has(key)) set.delete(key);
-        else set.add(key);
-        cfg.selectedGroups = [...set];
+        if (checked) set.add(key);
+        else set.delete(key);
+        c.selectedGroups = [...set];
 
         touch(node);
-        renderSettings(item);
-      });
+        updateNote();
+      },
+    });
 
-      list.appendChild(row);
-    }
+    groupToggle.root.style.display = "flex";
+    groupToggle.root.style.flexDirection = "row";
+    groupToggle.root.style.alignItems = "center";
+    groupToggle.root.style.justifyContent = "space-between";
+    groupToggle.root.style.width = "100%";
+    groupToggle.root.style.minWidth = "100%";
+    groupToggle.root.style.maxWidth = "100%";
+    groupToggle.root.style.boxSizing = "border-box";
+
+    toggleRowMap.set(g.key, groupToggle);
+    groupToggle.root.dataset.groupKey = g.key;
+    groupToggle.root.dataset.groupName = g.name;
+    rowElements.push(groupToggle.root);
+    list.appendChild(groupToggle.root);
   }
 
   selectionSection.appendChild(list);
 
   const note = document.createElement("div");
   note.className = "ds-gs-popup-note";
-  note.textContent = `${filtered.length} shown · ${groups.length} detected · ${controlled(node).length} controlled`;
   selectionSection.appendChild(note);
+  updateNote();
 
   body.appendChild(selectionSection);
 
+  const filterRows = () => {
+    const q = item.search.trim().toLowerCase();
+    for (const r of rowElements) {
+      const name = (r.dataset.groupName || "").toLowerCase();
+      r.style.display = (!q || name.includes(q)) ? "flex" : "none";
+    }
+    updateNote();
+  };
+
+  const sortRows = () => {
+    const sorted = [...rowElements].sort((a, b) => {
+      if (item.sort === "name") {
+        return (a.dataset.groupName || "").localeCompare(b.dataset.groupName || "", undefined, { sensitivity: "base" });
+      }
+      return 0;
+    });
+    for (const r of sorted) list.appendChild(r);
+  };
+
+  // Section 3: Switching Rules Tabs
   const ruleSection = document.createElement("section");
   ruleSection.className = "ds-gs-popup-section";
   ruleSection.innerHTML = `<div class="ds-gs-popup-label">Switching rule</div>`;
 
-  const rules = document.createElement("div");
-  rules.className = "ds-gs-popup-rules";
   const ruleData = [
     ["any", "Independent", "Each group can be switched separately."],
     ["one", "Only one", "Turning one on turns the others off."],
     ["always", "Always one", "At least one controlled group stays on."],
   ];
 
-  for (const [value, label, desc] of ruleData) {
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className = `ds-gs-popup-rule${c.switchMode === value ? " active" : ""}`;
-    row.innerHTML = `<span class="ds-gs-popup-radio"></span><span><strong>${label}</strong><small>${desc}</small></span>`;
-    row.addEventListener("pointerdown", stopEvent);
-    row.addEventListener("click", e => {
-      stopEvent(e);
-      configOf(node).switchMode = value;
-      touch(node);
-      renderSettings(item);
-    });
-    rules.appendChild(row);
-  }
+  const ruleSeg = document.createElement("div");
+  ruleSeg.className = "ds-gs-segment ds-gs-popup-segment ds-gs-rule-tabs";
+  ruleSeg.style.gridTemplateColumns = "1fr 1fr 1fr";
 
-  ruleSection.appendChild(rules);
+  const ruleButtons = [];
+  for (const [val, label] of ruleData) {
+    const isAct = c.switchMode === val;
+    const b = makeButton(label, `ds-gs-tab${isAct ? " is-active active" : ""}`, () => {
+      c.switchMode = val;
+      for (const btn of ruleButtons) btn.classList.remove("is-active", "active");
+      b.classList.add("is-active", "active");
+      const activeInfo = ruleData.find(r => r[0] === val) || ruleData[0];
+      ruleDesc.textContent = activeInfo[2];
+      touch(node);
+    });
+    ruleButtons.push(b);
+    ruleSeg.appendChild(b);
+  }
+  ruleSection.appendChild(ruleSeg);
+
+  const activeRule = ruleData.find(r => r[0] === c.switchMode) || ruleData[0];
+  const ruleDesc = document.createElement("div");
+  ruleDesc.className = "ds-gs-rule-desc";
+  ruleDesc.textContent = activeRule[2];
+  ruleSection.appendChild(ruleDesc);
+
   body.appendChild(ruleSection);
   popup.appendChild(body);
 
+  // Footer Actions
   const footer = document.createElement("div");
   footer.className = "ds-gs-popup-footer";
   footer.append(
-    makeButton("Enable controlled groups", "ds-gs-popup-footer-btn", () => {
+    makeButton("Enable controlled groups", "ds-ui-btn ds-ui-btn-compact ds-gs-popup-footer-btn", () => {
       setAll(node, true);
-      renderSettings(item);
     }),
-    makeButton("Disable controlled groups", "ds-gs-popup-footer-btn", () => {
+    makeButton("Disable controlled groups", "ds-ui-btn ds-ui-btn-compact ds-gs-popup-footer-btn", () => {
       setAll(node, false);
-      renderSettings(item);
     })
   );
   popup.appendChild(footer);
 
-  popupTheme(popup, window.__DS_GROUP_SWITCH_THEME__ || null);
   popupPosition(node, popup);
 }
 
@@ -936,6 +1042,7 @@ function installGlobals() {
   window.addEventListener("pointerdown", e => {
     for (const [id, item] of [...OPEN_POPUPS]) {
       if (item.popup.contains(e.target)) continue;
+      if (document.querySelector(".ds-ui-popup")?.contains(e.target)) continue;
       if (item.node?._dsGsDomRoot?.contains?.(e.target)) continue;
       closeSettings(id);
     }
@@ -953,17 +1060,17 @@ function patchNode(node) {
   node.flags.no_title = true;
   node.title = "";
   node.resizable = true;
-  // The custom face is the node. Do not let DSGlobalTheme paint a second
-  // native base underneath it.
   node._dsNodeBaseOptOut = true;
   node.bgcolor = "transparent";
   node.color = "transparent";
   node.boxcolor = "transparent";
   bindDOMWidget(node);
+  fitNodeHeight(node);
 }
 
 function refresh() {
   const nodes = graphNodes(null).filter(n => n?.type === TYPE);
+  if (!nodes.length) return;
   for (const node of nodes) {
     if (!node._dsGsDomBound) patchNode(node);
 
@@ -973,12 +1080,8 @@ function refresh() {
 
     if (sig !== node._dsGsGroupSignature) {
       node._dsGsGroupSignature = sig;
-      syncScale(node);
-      syncDOMWidgetGeometry(node);
       refreshNodeUI(node);
-      for (const item of OPEN_POPUPS.values()) {
-        if (item.node === node) renderSettings(item);
-      }
+      fitNodeHeight(node);
     } else {
       refreshNodeUI(node);
     }
@@ -991,7 +1094,8 @@ app.registerExtension({
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData?.name !== TYPE) return;
 
-    // Chromeless node: title mode belongs to the NODE TYPE.
+    registerGearMenu();
+
     const LG = window.LiteGraph || {};
     nodeType.title_mode = LG.NO_TITLE != null ? LG.NO_TITLE : 1;
 
@@ -999,6 +1103,7 @@ app.registerExtension({
     nodeType.prototype.onNodeCreated = function() {
       const result = oldCreated ? oldCreated.apply(this, arguments) : undefined;
       patchNode(this);
+      fitNodeHeight(this);
       return result;
     };
 
@@ -1009,13 +1114,11 @@ app.registerExtension({
       this.flags.no_title = true;
       this.title = "";
       configOf(this);
-      syncScale(this);
 
-      // Keep only configuration in workflow JSON; the DOM itself is transient.
       setTimeout(() => {
         patchNode(this);
         refreshNodeUI(this);
-        syncDOMWidgetGeometry(this);
+        fitNodeHeight(this);
       }, 0);
 
       return result;
@@ -1023,14 +1126,30 @@ app.registerExtension({
 
     const oldResize = nodeType.prototype.onResize;
     nodeType.prototype.onResize = function(size) {
-      // Snap LiteGraph's freeform resize proposal back to the node's one
-      // canonical aspect ratio. Do this before ComfyUI's original hook.
-      applyResizeAspect(this);
+      if (size) {
+        size[0] = Math.max(MIN_WIDTH, Number(size[0]) || MIN_WIDTH);
+        size[1] = calculateExactHeight(this);
+      }
       const result = oldResize ? oldResize.apply(this, arguments) : undefined;
-      syncScale(this);
-      syncDOMWidgetGeometry(this);
+      this.size[1] = calculateExactHeight(this);
       this.setDirtyCanvas?.(true, true);
       return result;
+    };
+
+    const oldDrawBg = nodeType.prototype.onDrawBackground;
+    nodeType.prototype.onDrawBackground = function() {
+      const targetH = calculateExactHeight(this);
+      if (this.size && this.size[1] !== targetH) {
+        this.size[1] = targetH;
+      }
+      return oldDrawBg ? oldDrawBg.apply(this, arguments) : undefined;
+    };
+
+    nodeType.prototype.setSize = function(size) {
+      const targetH = calculateExactHeight(this);
+      const w = Math.max(MIN_WIDTH, Number(size?.[0]) || MIN_WIDTH);
+      this.size = [w, targetH];
+      this.setDirtyCanvas?.(true, true);
     };
 
     const oldRemoved = nodeType.prototype.onRemoved;
@@ -1041,26 +1160,25 @@ app.registerExtension({
   },
 
   nodeCreated(node) {
-    patchNode(node);
+    if (node?.type === TYPE) {
+      patchNode(node);
+      fitNodeHeight(node);
+    }
   },
 
   loadedGraphNode(node) {
-    patchNode(node);
+    if (node?.type === TYPE) {
+      patchNode(node);
+      fitNodeHeight(node);
+    }
   },
 
   async setup() {
     await installCSS();
     installGlobals();
+    registerGearMenu();
 
-    try {
-      window.__DS_GROUP_SWITCH_THEME__ = await loadTheme();
-    } catch {}
-
-    window.addEventListener("ds-theme-changed", e => {
-      window.__DS_GROUP_SWITCH_THEME__ = e?.detail?.theme || null;
-      for (const item of OPEN_POPUPS.values()) {
-        popupTheme(item.popup, window.__DS_GROUP_SWITCH_THEME__);
-      }
+    window.addEventListener("ds-theme-changed", () => {
       for (const node of graphNodes(null).filter(n => n?.type === TYPE)) {
         try {
           window.DSGlobalTheme?.bindNode?.(node._dsGsDomRoot, node);
