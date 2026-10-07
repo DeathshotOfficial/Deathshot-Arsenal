@@ -1,4 +1,5 @@
 // DeathshotArsenal/js/Load Images From Folder/os_dialog_bridge.js
+import { Button } from "../UIElements/index.js";
 
 /**
  * Open built-in browser folder picker modal.
@@ -7,45 +8,115 @@
 export function openFolderBrowserModal(initialPath, onSelect) {
   document.querySelector(".ds-fl-dir-modal")?.remove();
 
+  const modalBackdrop = document.createElement("div");
+  modalBackdrop.className = "ds-fl-modal-backdrop ds-fl-dir-modal";
+
   const modal = document.createElement("div");
-  modal.className = "ds-fl-modal-backdrop ds-fl-dir-modal";
-  modal.innerHTML = `
-    <div class="ds-fl-modal" style="width:min(520px,94vw);height:min(440px,75vh);">
-      <div class="ds-fl-modal-head">
-        <div class="ds-fl-modal-title">📁 Browse Folders</div>
-        <button class="ds-fl-modal-close" data-close>✕</button>
-      </div>
-      <div style="padding:8px 12px;border-bottom:1px solid var(--ds-border,#242a36);font-size:9.5px;color:var(--ds-text-muted,#9ca3af);display:flex;align-items:center;gap:6px;background:var(--ds-panel-2,#141822);">
-        <span style="font-weight:700;">Path:</span>
-        <span class="ds-fl-dir-path" style="color:var(--ds-text,#e5e7eb);word-break:break-all;font-family:monospace;"></span>
-      </div>
-      <div class="ds-fl-dir-list" style="flex:1;overflow-y:auto;padding:8px;background:var(--ds-bg, var(--ds-panel, #12151c));display:flex;flex-direction:column;gap:3px;">
-        <div style="padding:20px;text-align:center;color:var(--ds-text-muted,#8d95a1);">Loading directories...</div>
-      </div>
-      <div class="ds-fl-modal-foot">
-        <button class="ds-fl-btn" data-up>↑ Up</button>
-        <div style="display:flex;gap:6px;">
-          <button class="ds-fl-btn" data-cancel>Cancel</button>
-          <button class="ds-fl-btn ds-fl-btn-primary" data-select-this>Select This Folder</button>
-        </div>
-      </div>
-    </div>
+  modal.className = "ds-fl-modal";
+  modal.dataset.dsThemed = "true";
+  modal.style.cssText = "width:min(520px,94vw);height:min(440px,75vh);";
+
+  // Head
+  const head = document.createElement("div");
+  head.className = "ds-fl-modal-head";
+
+  const title = document.createElement("div");
+  title.className = "ds-fl-modal-title";
+  title.textContent = "📁 Browse Folders";
+
+  const closeBtn = Button({
+    icon: "x",
+    compact: true,
+    className: "ds-ui-btn-icon-only ds-fl-modal-close-btn",
+    tooltip: "Close",
+    onClick: () => close(),
+  });
+
+  head.append(title, closeBtn.root);
+
+  // Path info bar
+  const pathBar = document.createElement("div");
+  pathBar.style.cssText =
+    "padding:8px 16px;border-bottom:1px solid var(--ds-color-border,#242a36);font-size:10px;color:var(--ds-color-muted-text,#9ca3af);display:flex;align-items:center;gap:6px;background:var(--ds-color-panel-2,#141822);";
+  pathBar.innerHTML = `
+    <span style="font-weight:700;">Path:</span>
+    <span class="ds-fl-dir-path" style="color:var(--ds-color-text,#e5e7eb);word-break:break-all;font-family:monospace;"></span>
   `;
-  document.body.appendChild(modal);
+
+  // Directory List
+  const listEl = document.createElement("div");
+  listEl.className = "ds-fl-dir-list";
+  listEl.style.cssText =
+    "flex:1;overflow-y:auto;padding:10px 16px;background:var(--ds-color-base,#0b0d12);display:flex;flex-direction:column;gap:4px;";
+  listEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ds-color-muted-text,#8d95a1);">Loading directories...</div>`;
+
+  // Footer
+  const foot = document.createElement("div");
+  foot.className = "ds-fl-modal-foot";
+
+  const upBtn = Button({
+    label: "↑ Up",
+    compact: true,
+    onClick: (e) => {
+      e.stopPropagation();
+      if (!activePath) return;
+      const clean = activePath.replace(/[\\\/]$/, "");
+      const lastSep = Math.max(clean.lastIndexOf("/"), clean.lastIndexOf("\\"));
+      if (lastSep > 0) {
+        loadDir(clean.slice(0, lastSep));
+      } else {
+        loadDir("");
+      }
+    },
+  });
+
+  const actions = document.createElement("div");
+  actions.style.display = "flex";
+  actions.style.gap = "6px";
+
+  const cancelBtn = Button({
+    label: "Cancel",
+    compact: true,
+    onClick: () => close(),
+  });
+
+  const selectThisBtn = Button({
+    label: "Select This Folder",
+    variant: "primary",
+    compact: true,
+    onClick: (e) => {
+      e.stopPropagation();
+      if (activePath) {
+        onSelect?.(activePath);
+        close();
+      }
+    },
+  });
+
+  actions.append(cancelBtn.root, selectThisBtn.root);
+  foot.append(upBtn.root, actions);
+
+  modal.append(head, pathBar, listEl, foot);
+  modalBackdrop.appendChild(modal);
+  document.body.appendChild(modalBackdrop);
 
   const pathEl = modal.querySelector(".ds-fl-dir-path");
-  const listEl = modal.querySelector(".ds-fl-dir-list");
   let activePath = initialPath || "";
 
-  const close = () => modal.remove();
-  modal.querySelector("[data-close]").onclick = close;
-  modal.querySelector("[data-cancel]").onclick = close;
-  modal.addEventListener("pointerdown", (e) => {
-    if (e.target === modal) close();
+  const close = () => {
+    closeBtn.destroy?.();
+    upBtn.destroy?.();
+    cancelBtn.destroy?.();
+    selectThisBtn.destroy?.();
+    modalBackdrop.remove();
+  };
+
+  modalBackdrop.addEventListener("pointerdown", (e) => {
+    if (e.target === modalBackdrop) close();
   });
 
   const loadDir = async (target) => {
-    listEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ds-text-muted,#8d95a1);">Loading...</div>`;
+    listEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ds-color-muted-text,#8d95a1);">Loading...</div>`;
     try {
       const res = await fetch("/ds/folder_loader/list_dir", {
         method: "POST",
@@ -53,7 +124,7 @@ export function openFolderBrowserModal(initialPath, onSelect) {
         body: JSON.stringify({ path: target }),
       });
       if (!res.ok) {
-        listEl.innerHTML = `<div style="padding:20px;text-align:center;color:#f87171;">Failed to list directory.</div>`;
+        listEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ds-color-danger,#f87171);">Failed to list directory.</div>`;
         return;
       }
       const data = await res.json();
@@ -63,14 +134,16 @@ export function openFolderBrowserModal(initialPath, onSelect) {
 
       const dirs = data.dirs || [];
       if (dirs.length === 0) {
-        listEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ds-text-muted,#8d95a1);">No subdirectories found.</div>`;
+        listEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ds-color-muted-text,#8d95a1);">No subdirectories found.</div>`;
         return;
       }
 
       for (const dirName of dirs) {
         const item = document.createElement("button");
-        item.className = "ds-fl-btn";
-        item.style.cssText = "width:100%;justify-content:flex-start;text-align:left;height:28px;padding:0 8px;font-size:9.5px;";
+        item.type = "button";
+        item.className = "ds-ui-btn ds-ui-btn-compact";
+        item.style.cssText =
+          "width:100%;justify-content:flex-start;text-align:left;height:26px;padding:0 8px;font-size:10px;";
         item.textContent = (data.is_drives ? "💾 " : "📁 ") + dirName;
         item.onclick = (e) => {
           e.stopPropagation();
@@ -85,27 +158,7 @@ export function openFolderBrowserModal(initialPath, onSelect) {
         listEl.appendChild(item);
       }
     } catch (e) {
-      listEl.innerHTML = `<div style="padding:20px;text-align:center;color:#f87171;">Error: ${e.message}</div>`;
-    }
-  };
-
-  modal.querySelector("[data-up]").onclick = (e) => {
-    e.stopPropagation();
-    if (!activePath) return;
-    const clean = activePath.replace(/[\\\/]$/, "");
-    const lastSep = Math.max(clean.lastIndexOf("/"), clean.lastIndexOf("\\"));
-    if (lastSep > 0) {
-      loadDir(clean.slice(0, lastSep));
-    } else {
-      loadDir(""); // Show drives
-    }
-  };
-
-  modal.querySelector("[data-select-this]").onclick = (e) => {
-    e.stopPropagation();
-    if (activePath) {
-      onSelect?.(activePath);
-      close();
+      listEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ds-color-danger,#f87171);">Error: ${e.message}</div>`;
     }
   };
 
@@ -132,7 +185,6 @@ export async function browseFolderOS(currentPath, onSelect) {
         return data.path;
       }
       if (data.cancelled) {
-        // User deliberately cancelled the native dialog; do NOT open in-browser modal
         return null;
       }
     }
@@ -140,7 +192,6 @@ export async function browseFolderOS(currentPath, onSelect) {
     console.warn("[DS Load Images From Folder] Native browse error, falling back to modal:", e);
   }
 
-  // Fallback: only open in-browser directory browser modal if native browse failed/errored or unsupported
   openFolderBrowserModal(currentPath, onSelect);
   return null;
 }

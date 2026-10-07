@@ -177,6 +177,23 @@ export function Slider(options = {}) {
         emit(clamp(current - step, min, max), "keyboard");
       }
     });
+    numInput.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      numInput.focus();
+      numInput.select();
+      try {
+        numInput.setSelectionRange(0, numInput.value.length);
+      } catch (_) {}
+    });
+    numInput.addEventListener("focus", () => {
+      setTimeout(() => {
+        try {
+          numInput.select();
+          numInput.setSelectionRange(0, numInput.value.length);
+        } catch (_) {}
+      }, 10);
+    });
     numInput.addEventListener("wheel", (e) => {
       e.preventDefault();
       emit(clamp(current + (e.deltaY < 0 ? step : -step), min, max), "wheel");

@@ -23,6 +23,13 @@ import { ArrowSelector } from "./Controls/ArrowSelector.js";
 import { Toggle } from "./Controls/Toggle.js";
 import { ColorPicker, DEFAULT_COLOR_PRESETS } from "./Controls/ColorPicker.js";
 
+import {
+  openCivitaiRetrieverModal,
+  retrieveCivitaiMetadata,
+  getCivitaiSettings,
+  saveCivitaiSettings,
+} from "./Controls/CivitaiRetriever.js";
+
 // Text
 import { TextPreview } from "./Text/TextPreview.js";
 import { TextEditor } from "./Text/TextEditor.js";
@@ -57,6 +64,10 @@ export {
   Toggle,
   ColorPicker,
   DEFAULT_COLOR_PRESETS,
+  openCivitaiRetrieverModal,
+  retrieveCivitaiMetadata,
+  getCivitaiSettings,
+  saveCivitaiSettings,
   TextPreview,
   TextEditor,
   ImagePreview,

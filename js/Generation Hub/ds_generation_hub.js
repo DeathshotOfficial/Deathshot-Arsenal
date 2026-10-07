@@ -9,6 +9,7 @@ import {
   protectDSResizeCorners,
   normalizeDSWidgetHost,
   installDSUI,
+  openCivitaiRetrieverModal,
 } from "../UIElements/index.js";
 import { DSIcon, DSIconMarkup } from "../Icons/index.js";
 
@@ -814,243 +815,20 @@ function getCivitaiSiteMode() {
 }
 
 // ---------------------------------------------------------------------------
-// CivitAI Trigger Words Side Popover Panel
+// CivitAI Trigger Words Side Popover
 // ---------------------------------------------------------------------------
-let _activeLoraPopover = null;
-
 async function openCivitAIModal(node, loraRow, anchorEl) {
-  if (_activeLoraPopover) {
-    _activeLoraPopover.remove();
-    _activeLoraPopover = null;
-  }
-
-  const modal = document.createElement("div");
-  modal.className = "ds-hub-modal";
-  applyNodeThemeToElement(node?._domRoot || anchorEl, modal);
-
-  const head = document.createElement("div");
-  head.className = "ds-hub-modal-head";
-  const title = document.createElement("strong");
-  title.textContent = loraRow.name || "LoRA Metadata";
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
-  closeBtn.title = "Close";
-  closeBtn.appendChild(DSIcon("x", { size: 14 }));
-
-  let outsideHandler = null;
-  const closeModal = () => {
-    if (_activeLoraPopover === modal) {
-      _activeLoraPopover = null;
-    }
-    modal.remove();
-    if (outsideHandler) {
-      document.removeEventListener("pointerdown", outsideHandler, true);
-      outsideHandler = null;
-    }
-    node._renderUI?.();
-  };
-
-  closeBtn.onclick = closeModal;
-  head.append(title, closeBtn);
-
-  const body = document.createElement("div");
-  body.className = "ds-hub-modal-body";
-
-  const statusRow = document.createElement("div");
-  statusRow.className = "ds-hub-modal-status-row";
-
-  const status = document.createElement("div");
-  status.className = "ds-hub-modal-status-text";
-  status.textContent = "Checking metadata cache...";
-
-  const retrieveBtn = document.createElement("button");
-  retrieveBtn.type = "button";
-  retrieveBtn.className = "ds-hub-btn-civitai";
-  retrieveBtn.innerHTML = `
-    ${DSIconMarkup("download", { size: 13 })}
-    <span>Retrieve from CivitAI</span>
-  `;
-
-  statusRow.append(status, retrieveBtn);
-  body.appendChild(statusRow);
-
-  const tagsContainer = document.createElement("div");
-  tagsContainer.className = "ds-hub-chips-wrap";
-  tagsContainer.style.marginTop = "8px";
-
-  let triggers = Array.from(loraRow.selectedTriggers || []);
-  let availableTags = [];
-
-  let initialPositionSet = false;
-
-  const positionSideToNode = (force = false) => {
-    if (initialPositionSet && !force) return;
-
-    const pw = 390;
-    modal.style.width = `${pw}px`;
-
-    const nodeEl = node?._domRoot || (anchorEl?.closest ? anchorEl.closest(".ds-hub-container") : null);
-    const nodeRect = (nodeEl && document.body.contains(nodeEl)) ? nodeEl.getBoundingClientRect() : null;
-    const validAnchor = anchorEl && document.body.contains(anchorEl);
-    const rowRect = validAnchor ? anchorEl.getBoundingClientRect() : nodeRect;
-    const ph = modal.offsetHeight || 280;
-
-    let left = 16;
-    if (nodeRect) {
-      if (nodeRect.right + pw + 16 <= window.innerWidth) {
-        left = nodeRect.right + 12;
-      } else if (nodeRect.left - pw - 16 >= 0) {
-        left = nodeRect.left - pw - 12;
-      } else {
-        left = Math.max(12, window.innerWidth - pw - 12);
-      }
-    } else if (rowRect) {
-      left = rowRect.right + pw + 16 <= window.innerWidth ? rowRect.right + 12 : Math.max(12, rowRect.left - pw - 12);
-    }
-
-    let top = (rowRect && rowRect.top > 0) ? rowRect.top - 8 : 80;
-    if (top + ph > window.innerHeight - 12) {
-      top = Math.max(12, window.innerHeight - ph - 12);
-    }
-    top = Math.max(12, top);
-
-    modal.style.left = `${Math.round(left)}px`;
-    modal.style.top = `${Math.round(top)}px`;
-    initialPositionSet = true;
-  };
-
-  const renderTags = (availableTagsList) => {
-    availableTags = availableTagsList || [];
-    tagsContainer.textContent = "";
-    if (!availableTags.length) {
-      const empty = document.createElement("div");
-      empty.style.fontSize = "11px";
-      empty.style.color = "var(--ds-text-muted)";
-      empty.textContent = "No trigger words found in cache. Click 'Retrieve from CivitAI' to fetch them online.";
-      tagsContainer.appendChild(empty);
-      if (!initialPositionSet) positionSideToNode();
-      return;
-    }
-
-    for (const tag of availableTags) {
-      const isSel = triggers.includes(tag);
-      const chip = Button({
-        label: (isSel ? "✓ " : "") + tag,
-        compact: true,
-        active: isSel,
-        className: "ds-hub-mp-btn",
-        onClick: () => {
-          if (triggers.includes(tag)) {
-            triggers = triggers.filter(t => t !== tag);
-          } else {
-            triggers.push(tag);
-          }
-          loraRow.selectedTriggers = triggers;
-          saveState(node);
-          renderTags(availableTags);
-        },
-      });
-      tagsContainer.appendChild(chip.root);
-    }
-    if (!initialPositionSet) positionSideToNode();
-  };
-
-  body.appendChild(tagsContainer);
-
-  const foot = document.createElement("div");
-  foot.className = "ds-hub-modal-foot";
-  const doneBtn = Button({
-    label: "Done",
-    compact: true,
-    variant: "primary",
-    onClick: () => {
-      loraRow.selectedTriggers = triggers;
+  return openCivitaiRetrieverModal({
+    node,
+    loraName: loraRow.name,
+    selectedTriggers: loraRow.selectedTriggers || [],
+    anchorEl,
+    onApply: (newTriggers) => {
+      loraRow.selectedTriggers = newTriggers;
       saveState(node);
       node._renderUI?.();
-      closeModal();
     },
   });
-  foot.appendChild(doneBtn.root);
-
-  modal.append(head, body, foot);
-  document.body.appendChild(modal);
-  _activeLoraPopover = modal;
-  positionSideToNode();
-
-  outsideHandler = (ev) => {
-    if (!modal.contains(ev.target) && (!anchorEl || !anchorEl.contains(ev.target))) {
-      closeModal();
-    }
-  };
-  setTimeout(() => document.addEventListener("pointerdown", outsideHandler, true), 20);
-
-  const fetchMetadata = async (forceOnline = false) => {
-    if (!loraRow.name) {
-      status.textContent = "Select a LoRA model first.";
-      renderTags([]);
-      return;
-    }
-
-    if (forceOnline) {
-      retrieveBtn.disabled = true;
-      retrieveBtn.innerHTML = `
-        <span style="display:inline-block;animation:ds-hub-spin 1s linear infinite;">⏳</span>
-        <span>Retrieving...</span>
-      `;
-      status.textContent = "Querying CivitAI (computing hash)...";
-    } else {
-      status.textContent = "Checking cache...";
-    }
-
-    try {
-      const res = await fetch("/ds/lora_metadata", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: loraRow.name,
-          forceOnline,
-          apiKey: getCivitaiApiKey(),
-          allowNsfw: true,
-          siteMode: getCivitaiSiteMode(),
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.ok) {
-          status.textContent = `Source: ${data.source || (forceOnline ? "civitai" : "cache")}`;
-          const words = data.trainedWords || [];
-          const combined = Array.from(new Set([...words, ...triggers]));
-          renderTags(combined);
-          if (forceOnline && !words.length) {
-            status.textContent = "Model found on CivitAI, but no trigger words are registered.";
-          }
-        } else {
-          status.textContent = data.error || (forceOnline ? "CivitAI lookup returned no metadata." : "No cache found. Click 'Retrieve from CivitAI' to fetch.");
-          renderTags(triggers);
-        }
-      } else {
-        status.textContent = forceOnline ? "CivitAI lookup request failed." : "Cache unavailable.";
-        renderTags(triggers);
-      }
-    } catch (err) {
-      status.textContent = `Request failed: ${err?.message || err}`;
-      renderTags(triggers);
-    } finally {
-      if (forceOnline) {
-        retrieveBtn.disabled = false;
-        retrieveBtn.innerHTML = `
-          ${DSIconMarkup("download", { size: 13 })}
-          <span>Retrieve from CivitAI</span>
-        `;
-      }
-      positionSideToNode();
-    }
-  };
-
-  retrieveBtn.onclick = () => fetchMetadata(true);
-  fetchMetadata(false);
 }
 
 // ---------------------------------------------------------------------------

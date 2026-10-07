@@ -652,6 +652,8 @@
   outline: none;
   margin: 0;
   -moz-appearance: textfield !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 .ds-ui-slider-number::-webkit-inner-spin-button,
@@ -680,6 +682,12 @@ input[type="number"]::-webkit-outer-spin-button {
   gap: 2px;
   width: 100%;
   height: var(--ds-control-h, 28px);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ds-ui-stepper-compact {
+  height: 24px;
 }
 
 .ds-ui-stepper-btn {
@@ -687,8 +695,9 @@ input[type="number"]::-webkit-outer-spin-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
+  width: 28px;
   height: 100%;
+  flex: 0 0 28px;
   background: var(--ds-color-panel-2, #161a23);
   border: 1px solid var(--ds-color-border, #242a36);
   border-radius: var(--ds-radius-control, 5px);
@@ -699,6 +708,12 @@ input[type="number"]::-webkit-outer-spin-button {
   transition: all var(--ds-transition);
 }
 
+.ds-ui-stepper-compact .ds-ui-stepper-btn {
+  width: 24px;
+  flex: 0 0 24px;
+  border-radius: 4px;
+}
+
 .ds-ui-stepper-btn:hover {
   border-color: var(--ds-color-accent, #67e8f9);
   color: var(--ds-color-accent, #67e8f9);
@@ -706,8 +721,11 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .ds-ui-stepper-value {
   box-sizing: border-box;
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0 !important;
+  width: 0 !important;
   height: 100%;
+  padding: 0 4px;
   text-align: center;
   font-size: 11px;
   font-weight: 600;
@@ -717,6 +735,14 @@ input[type="number"]::-webkit-outer-spin-button {
   border-radius: var(--ds-radius-control, 5px);
   color: var(--ds-color-text, #e5e7eb);
   outline: none;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.ds-ui-stepper-compact .ds-ui-stepper-value {
+  font-size: 10px;
+  padding: 0 2px;
+  border-radius: 4px;
 }
 
 .ds-ui-stepper-value:focus {
@@ -2000,4 +2026,235 @@ input[type="number"]::-webkit-outer-spin-button {
 @keyframes ds-continue-shrink {
   from { width: 100%; }
   to { width: 0%; }
+}
+
+/* ========================================================================= */
+/* 24. Centralized CivitAI Retriever Modal                                   */
+/* ========================================================================= */
+.ds-civitai-modal-host {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100000;
+}
+
+.ds-civitai-modal {
+  position: fixed;
+  pointer-events: auto;
+  box-sizing: border-box;
+  background: var(--ds-color-card, #12151c);
+  border: 1px solid var(--ds-color-card-border, #242a36);
+  border-radius: var(--ds-radius-card, 8px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
+  color: var(--ds-color-text, #e5e7eb);
+  animation: ds-civitai-fade-in 120ms ease-out;
+}
+
+@keyframes ds-civitai-fade-in {
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ds-civitai-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--ds-color-border, #242a36);
+}
+
+.ds-civitai-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ds-civitai-modal-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ds-color-text, #e5e7eb);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ds-civitai-site-badge {
+  font-size: 9.5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(103, 232, 249, 0.12);
+  color: var(--ds-color-accent, #67e8f9);
+  border: 1px solid rgba(103, 232, 249, 0.28);
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.ds-civitai-settings-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  margin-top: 8px;
+  background: var(--ds-color-panel-2, #161a23);
+  border-radius: 6px;
+  border: 1px solid var(--ds-color-border, #242a36);
+  animation: ds-civitai-fade-in 100ms ease;
+}
+
+.ds-civitai-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ds-civitai-input {
+  box-sizing: border-box;
+  background: var(--ds-color-base, #0b0d12);
+  color: var(--ds-color-text, #e5e7eb);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  outline: none;
+  flex: 1;
+  transition: border-color var(--ds-transition, 120ms ease);
+}
+
+.ds-civitai-input:focus {
+  border-color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-civitai-modal-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ds-civitai-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: var(--ds-color-panel-2, #161a23);
+  border-radius: 6px;
+  border: 1px solid var(--ds-color-border, #242a36);
+}
+
+.ds-civitai-status-text {
+  font-size: 11px;
+  color: var(--ds-color-muted-text, #9ca3af);
+  flex: 1;
+  line-height: 1.35;
+}
+
+.ds-civitai-spinner {
+  display: inline-block;
+  animation: ds-civitai-spin 1s linear infinite;
+  margin-right: 4px;
+}
+
+@keyframes ds-civitai-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ds-civitai-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ds-civitai-count-badge {
+  font-size: 10.5px;
+  color: var(--ds-color-muted-text, #9ca3af);
+  margin-left: auto;
+  font-weight: 500;
+}
+
+.ds-civitai-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 2px 2px 2px 0;
+  scrollbar-width: thin;
+}
+
+.ds-civitai-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--ds-color-border, #242a36);
+  background: var(--ds-btn-bg, #161a23);
+  color: var(--ds-color-text, #e5e7eb);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all var(--ds-transition, 120ms ease);
+}
+
+.ds-civitai-tag-chip:hover {
+  border-color: var(--ds-color-accent, #67e8f9);
+  color: #fff;
+}
+
+.ds-civitai-tag-chip.is-selected {
+  border-color: var(--ds-color-accent, #67e8f9);
+  color: var(--ds-color-accent, #67e8f9);
+  background: rgba(103, 232, 249, 0.12);
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(103, 232, 249, 0.2);
+}
+
+.ds-civitai-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 18px 8px;
+  gap: 5px;
+  text-align: center;
+  color: var(--ds-color-muted-text, #9ca3af);
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  border: 1px dashed var(--ds-color-border, #242a36);
+}
+
+.ds-civitai-thumb-wrap {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.ds-civitai-thumb-img {
+  max-width: 100%;
+  max-height: 160px;
+  border-radius: 6px;
+  border: 1px solid var(--ds-color-border, #242a36);
+  object-fit: contain;
+}
+
+.ds-civitai-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ds-color-border, #242a36);
 }

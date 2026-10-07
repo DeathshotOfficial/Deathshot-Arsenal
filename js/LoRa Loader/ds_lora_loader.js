@@ -8,13 +8,14 @@ import {
   protectDSResizeCorners,
   installDSUI,
   DSIcon,
+  openCivitaiRetrieverModal,
 } from "../UIElements/index.js";
 
 installDSUI();
 
 const MAX_LORAS = 32;
 const STORAGE_KEY = "DS_LoRaLoader.settings.v1";
-const CSS_HREF = "/extensions/DeathshotArsenal/LoRa%20Loader/ds_lora_loader.css?v=56";
+const CSS_HREF = "/extensions/DeathshotArsenal/LoRa%20Loader/ds_lora_loader.css?v=58";
 
 const existingLink = document.querySelector(`link[href*="ds_lora_loader.css"]`);
 if (existingLink) {
@@ -966,165 +967,17 @@ function renderSettingsModal(node, anchorEl) {
 /* CivitAI Trigger Words Modal                                               */
 /* ========================================================================= */
 function openTriggerModal(node, row, anchorEl) {
-  const settings = { ...DEFAULT_SETTINGS, ...loadSettings(), ...node._dsLora.settings };
-  const modal = document.createElement("div");
-  modal.className = "ds-lora-popover-host";
-
-  const panel = document.createElement("div");
-  panel.className = "ds-lora-modal ds-lora-side-panel";
-
-  const head = document.createElement("div");
-  head.className = "ds-lora-modal-head";
-
-  const titleGroup = document.createElement("div");
-  titleGroup.className = "ds-lora-modal-title-group";
-  titleGroup.append(DSIcon("sparkles", { size: 14 }), document.createTextNode(displayName(row.name, settings.hideExtension)));
-
-  const closeBtn = Button({
-    icon: "x",
-    compact: true,
-    tooltip: "Close",
-    onClick: () => {
+  return openCivitaiRetrieverModal({
+    node,
+    loraName: row.name,
+    selectedTriggers: row.selectedTriggers || [],
+    anchorEl: anchorEl || node._dsLora?.card,
+    onApply: (newTriggers) => {
+      row.selectedTriggers = newTriggers;
       serialize(node);
-      modal.remove();
+      node._dsRender?.();
     },
   });
-  head.append(titleGroup, closeBtn.root);
-
-  const body = document.createElement("div");
-  body.className = "ds-lora-modal-body";
-
-  const status = document.createElement("div");
-  status.textContent = "Loading metadata…";
-  status.style.fontSize = "10px";
-  status.style.color = "var(--ds-color-muted-text, #8d96a3)";
-
-  let tags = [];
-  const tagsWrap = document.createElement("div");
-  tagsWrap.className = "ds-lora-tags";
-
-  const renderTags = () => {
-    tagsWrap.textContent = "";
-    for (const t of tags) {
-      const isSel = row.selectedTriggers.includes(t);
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "ds-lora-tag" + (isSel ? " is-selected" : "");
-      b.textContent = t;
-      b.onclick = () => {
-        if (row.selectedTriggers.includes(t)) {
-          row.selectedTriggers = row.selectedTriggers.filter((x) => x !== t);
-        } else {
-          row.selectedTriggers.push(t);
-        }
-        serialize(node);
-        renderTags();
-      };
-      tagsWrap.appendChild(b);
-    }
-  };
-
-  const quickRow = document.createElement("div");
-  quickRow.style.display = "flex";
-  quickRow.style.gap = "6px";
-  quickRow.style.alignItems = "center";
-  quickRow.style.flexWrap = "wrap";
-
-  const allBtn = Button({
-    label: "All",
-    compact: true,
-    onClick: () => {
-      for (const t of tags) row.selectedTriggers = [...new Set([...row.selectedTriggers, t])];
-      renderTags();
-      serialize(node);
-    },
-  });
-
-  const noneBtn = Button({
-    label: "None",
-    compact: true,
-    onClick: () => {
-      row.selectedTriggers = [];
-      renderTags();
-      serialize(node);
-    },
-  });
-
-  const retrieveCivitaiBtn = Button({
-    label: "Retrieve from CivitAI",
-    compact: true,
-    onClick: async () => {
-      retrieveCivitaiBtn.root.disabled = true;
-      const prevText = retrieveCivitaiBtn.root.textContent;
-      retrieveCivitaiBtn.root.textContent = "Retrieving...";
-      status.textContent = "Querying CivitAI (computing hash & parsing triggers)...";
-      try {
-        const m = await fetchMetadata(node, row, true);
-        const newTags = Array.from(new Set(m.trainedWords || []));
-        if (newTags.length) {
-          tags = newTags;
-          status.textContent = `Retrieved ${newTags.length} trigger words from CivitAI!`;
-          if (settings.showThumbnails && m.images?.[0]) {
-            thumb.src = m.images[0];
-            thumb.hidden = false;
-          }
-          renderTags();
-        } else {
-          status.textContent = m.error || "No triggers found on CivitAI.";
-        }
-      } catch (err) {
-        status.textContent = "CivitAI query failed.";
-      } finally {
-        retrieveCivitaiBtn.root.disabled = false;
-        retrieveCivitaiBtn.root.textContent = prevText;
-      }
-    },
-  });
-
-  quickRow.append(allBtn.root, noneBtn.root, retrieveCivitaiBtn.root);
-
-  const thumb = document.createElement("img");
-  thumb.className = "ds-lora-thumb";
-  thumb.hidden = true;
-  thumb.alt = "";
-
-  body.append(status, quickRow, tagsWrap, thumb);
-
-  const foot = document.createElement("div");
-  foot.className = "ds-lora-modal-foot";
-
-  const doneBtn = Button({
-    label: "Done",
-    variant: "primary",
-    onClick: () => {
-      serialize(node);
-      node._dsRender();
-      modal.remove();
-    },
-  });
-  foot.appendChild(doneBtn.root);
-
-  panel.append(head, body, foot);
-  modal.appendChild(panel);
-  document.body.appendChild(modal);
-
-  requestAnimationFrame(() => placeSidePanel(panel, anchorEl || node._dsLora?.card, "right"));
-  installOutsideClose(panel, anchorEl || node._dsLora?.card, () => {
-    serialize(node);
-    node._dsRender();
-    modal.remove();
-  });
-
-  (async () => {
-    const m = await fetchMetadata(node, row, false);
-    tags = Array.from(new Set(m.trainedWords || []));
-    if (settings.showThumbnails && m.images?.[0]) {
-      thumb.src = m.images[0];
-      thumb.hidden = false;
-    }
-    status.textContent = m.ok ? (tags.length ? `Loaded ${tags.length} trigger words.` : "No triggers found.") : (m.error || "No triggers found.");
-    renderTags();
-  })();
 }
 
 /* ========================================================================= */

@@ -41,7 +41,11 @@ export function Toggle(options = {}) {
   thumb.className = "ds-ui-toggle-thumb";
   track.appendChild(thumb);
 
-  root.append(copy, track);
+  if (options.reverse) {
+    root.append(track, copy);
+  } else {
+    root.append(copy, track);
+  }
 
   const update = (fire = false) => {
     root.classList.toggle("is-on", checked);
