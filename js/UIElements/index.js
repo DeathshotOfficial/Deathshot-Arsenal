@@ -18,7 +18,7 @@ import { normalizeDSWidgetHost, protectDSResizeCorners } from "./Core/system.js"
 import { Button } from "./Controls/Button.js";
 import { Dropdown } from "./Controls/Dropdown.js";
 import { Slider } from "./Controls/Slider.js";
-import { Stepper } from "./Controls/Stepper.js";
+import { Stepper, Spinbox } from "./Controls/Stepper.js";
 import { ArrowSelector } from "./Controls/ArrowSelector.js";
 import { Toggle } from "./Controls/Toggle.js";
 import { ColorPicker, DEFAULT_COLOR_PRESETS } from "./Controls/ColorPicker.js";
@@ -60,6 +60,7 @@ export {
   Dropdown,
   Slider,
   Stepper,
+  Spinbox,
   ArrowSelector,
   Toggle,
   ColorPicker,
@@ -126,6 +127,7 @@ if (typeof window !== "undefined") {
   window.DSUI.Dropdown = Dropdown;
   window.DSUI.Slider = Slider;
   window.DSUI.Stepper = Stepper;
+  window.DSUI.Spinbox = Spinbox;
   window.DSUI.ArrowSelector = ArrowSelector;
   window.DSUI.Toggle = Toggle;
   window.DSUI.ColorPicker = ColorPicker;

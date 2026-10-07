@@ -435,8 +435,8 @@ function renderRow(node, row, index, allLoras) {
     const sStepper = createSubStepper(
       "S",
       row.modelStrength ?? 1.0,
-      -10.0,
-      10.0,
+      -20.0,
+      20.0,
       (val) => {
         row.modelStrength = Math.round(val * 100) / 100;
         row.clipStrength = row.modelStrength;
@@ -451,7 +451,7 @@ function renderRow(node, row, index, allLoras) {
         "V",
         row.videoStrength ?? 1.0,
         0.0,
-        10.0,
+        20.0,
         (val) => {
           row.videoStrength = Math.round(val * 100) / 100;
           saveStateAndSync(node);
@@ -466,7 +466,7 @@ function renderRow(node, row, index, allLoras) {
         "A",
         row.audioStrength ?? 1.0,
         0.0,
-        10.0,
+        20.0,
         (val) => {
           row.audioStrength = Math.round(val * 100) / 100;
           saveStateAndSync(node);
@@ -477,8 +477,8 @@ function renderRow(node, row, index, allLoras) {
     }
   } else {
     steppersWrap = Stepper({
-      min: -10.0,
-      max: 10.0,
+      min: -20.0,
+      max: 20.0,
       step: stepVal,
       value: row.modelStrength ?? 0.5,
       className: "ds-ui-stepper",
@@ -809,8 +809,8 @@ function renderSettingsModal(node, anchorEl) {
   const defStrStepper = createArrowStepper(
     settings.defaultStrength ?? 0.5,
     Number(settings.strengthStep) || 0.05,
-    -10,
-    10,
+    -20,
+    20,
     (v) => { settings.defaultStrength = v; }
   );
   body.appendChild(createRow("Default strength (new LoRAs)", defStrStepper));

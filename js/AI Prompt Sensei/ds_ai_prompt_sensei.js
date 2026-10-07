@@ -7,6 +7,7 @@ import {
   Button,
   Toggle,
   Stepper,
+  Spinbox,
   Dropdown,
   DSIcon,
   DSIconMarkup,
@@ -506,35 +507,10 @@ function mkBtn(text, cls, onClick) {
   });
   return btn.root;
 }
-function mkStepper({ value, min, max, step = 1, decimals = 0, width = "68px", placeholder = "", fallbackValue, className = "", onChange }) {
-  const wrap = document.createElement("div"); wrap.className = "ds-sensei-stepper" + (className ? " " + className : ""); if (width) wrap.style.width = width;
-  const inp = document.createElement("input"); inp.type = "text"; inp.inputMode = "decimal"; inp.className = "ds-sensei-stepper-input";
-  if (placeholder) {
-    inp.placeholder = placeholder;
-    inp.title = placeholder;
-  }
-  const fmt = (v) => { const n = parseFloat(v); return isNaN(n) ? "" : decimals > 0 ? n.toFixed(decimals) : String(Math.round(n)); };
-  inp.value = fmt(value);
-  const btns = document.createElement("div"); btns.className = "ds-sensei-stepper-btns";
-  const up = document.createElement("button"); up.type = "button"; up.className = "ds-sensei-stepper-btn"; up.setAttribute("tabindex", "-1");
-  up.innerHTML = `<svg viewBox="0 0 10 6" width="8" height="5" style="display:block"><path d="M1 5L5 1L9 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
-  const dn = document.createElement("button"); dn.type = "button"; dn.className = "ds-sensei-stepper-btn"; dn.setAttribute("tabindex", "-1");
-  dn.innerHTML = `<svg viewBox="0 0 10 6" width="8" height="5" style="display:block"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
-  const clamp = (n) => { if (min !== undefined && n < min) n = min; if (max !== undefined && n > max) n = max; return n; };
-  const fire = (n) => { inp.value = fmt(n); onChange?.(n); };
-  const getBase = () => {
-    const parsed = parseFloat(inp.value);
-    if (!isNaN(parsed)) return parsed;
-    if (fallbackValue !== undefined && fallbackValue !== null && !isNaN(parseFloat(fallbackValue))) return parseFloat(fallbackValue);
-    return min ?? 0;
-  };
-  up.onclick = (e) => { e.stopPropagation(); fire(clamp(+((getBase() + step).toFixed(decimals > 0 ? decimals : 4)))); };
-  dn.onclick = (e) => { e.stopPropagation(); fire(clamp(+((getBase() - step).toFixed(decimals > 0 ? decimals : 4)))); };
-  inp.onchange = () => { const n = parseFloat(inp.value); fire(isNaN(n) ? (min ?? 0) : clamp(n)); };
-  inp.onkeydown = (e) => { if (e.key === "ArrowUp") { e.preventDefault(); up.onclick(e); } else if (e.key === "ArrowDown") { e.preventDefault(); dn.onclick(e); } else if (e.key === "Enter") inp.blur(); };
-  btns.append(up, dn); wrap.append(inp, btns);
-  return { wrap, root: wrap, setValue: (v) => { inp.value = fmt(v); } };
+function mkStepper(options = {}) {
+  return Spinbox(options);
 }
+
 
 function openSysPromptModal(cur, onSave, mode = "i2v") {
   document.querySelectorAll(".ds-sensei-modal-backdrop").forEach((e) => e.remove());
@@ -2944,8 +2920,8 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
       const curStr = Number.isFinite(row.strength) ? Number(row.strength) : 1.0;
       const stepper = mkStepper({
         value: curStr,
-        min: -10.0,
-        max: 10.0,
+        min: -20.0,
+        max: 20.0,
         step: 0.05,
         decimals: 2,
         width: "58px",

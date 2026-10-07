@@ -1245,7 +1245,7 @@ function buildLoRASection(node) {
     const curStr = Number.isFinite(row.strength) ? Math.max(0.0, Number(row.strength)) : 1.0;
     const stepper = Stepper({
       min: 0.0,
-      max: 10.0,
+      max: 20.0,
       step: 0.1,
       value: curStr,
       className: "ds-hub-lora-stepper",

@@ -749,6 +749,93 @@ input[type="number"]::-webkit-outer-spin-button {
   border-color: var(--ds-color-accent, #67e8f9);
 }
 
+/* Spinner / Vertical Chevrons Variant */
+.ds-ui-stepper-spinner {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  width: auto;
+  min-width: 54px;
+  height: var(--ds-control-h, 28px);
+  background: var(--ds-input-bg, var(--ds-color-panel-2, #161a23));
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: border-color var(--ds-transition, 120ms ease);
+}
+
+.ds-ui-stepper-spinner.ds-ui-stepper-compact {
+  height: 24px;
+}
+
+.ds-ui-stepper-spinner:focus-within {
+  border-color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-ui-stepper-spinner-value {
+  flex: 1 1 0% !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 100%;
+  border: none !important;
+  background: transparent !important;
+  color: var(--ds-color-text, #f8fafc);
+  font-family: var(--ds-font, inherit);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  outline: none !important;
+  padding: 0 4px;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.ds-ui-stepper-spinner-value::-webkit-inner-spin-button,
+.ds-ui-stepper-spinner-value::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+  display: none;
+}
+
+.ds-ui-stepper-spinner-btns {
+  display: flex;
+  flex-direction: column;
+  width: 14px;
+  height: 100%;
+  border-left: 1px solid var(--ds-color-border, #242a36);
+  flex-shrink: 0;
+}
+
+.ds-ui-stepper-spinner-btn {
+  flex: 1;
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--ds-color-muted-text, #9ca3af);
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: background var(--ds-transition, 120ms ease), color var(--ds-transition, 120ms ease);
+  user-select: none;
+}
+
+.ds-ui-stepper-spinner-btn:hover {
+  background: var(--ds-btn-hover, #1e2433);
+  color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-ui-stepper-spinner-btn:active {
+  background: var(--ds-btn-active, #2a3346);
+}
+
 /* Arrow Selector */
 .ds-ui-arrow-selector {
   box-sizing: border-box;
