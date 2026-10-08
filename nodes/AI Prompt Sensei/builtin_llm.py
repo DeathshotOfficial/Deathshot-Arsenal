@@ -194,7 +194,10 @@ def get_lmstudio_model_roots():
             except Exception:
                 pass
 
-    # 4. Check standard root drives on Windows (C:, D:, E:, F:, G:, H:, etc.)
+    # 4. Check all active drives on Windows (C:, D:, E:, F:, G:, H:, etc.) dynamically
+    import re
+    drive_pat = re.compile(r'(lm[\s_\-]?studio|llm[\s_\-]?model|gguf[\s_\-]?model|ai[\s_\-]?model|^models?$|^llms?$|^ggufs?$)', re.I)
+
     drives = []
     if sys.platform.startswith("win"):
         import string
@@ -206,20 +209,49 @@ def get_lmstudio_model_roots():
         drives = ["/"]
 
     for d in drives:
+        # A. Check known standard paths on this drive
         candidates.extend([
+            os.path.join(d, "LM_Studio_Models"),
+            os.path.join(d, "LM Studio Models"),
+            os.path.join(d, "LM-Studio-Models"),
+            os.path.join(d, "LMStudioModels"),
             os.path.join(d, "LM Studio", "models"),
             os.path.join(d, "LM-Studio", "models"),
             os.path.join(d, "lmstudio", "models"),
             os.path.join(d, "lm-studio", "models"),
             os.path.join(d, "LMStudio", "models"),
+            os.path.join(d, "LLM_Models"),
+            os.path.join(d, "LLM Models"),
+            os.path.join(d, "LLM"),
+            os.path.join(d, "LLMs"),
+            os.path.join(d, "GGUF"),
             os.path.join(d, "AI", "models", "LM-Studio"),
             os.path.join(d, "AI", "models", "LMStudio"),
             os.path.join(d, "AI", "LM-Studio", "models"),
             os.path.join(d, "AI", "LMStudio", "models"),
             os.path.join(d, "AI", "models", "LLM"),
+            os.path.join(d, "AI", "models"),
             os.path.join(d, "models", "LLM"),
+            os.path.join(d, "models", "llm"),
+            os.path.join(d, "models", "LLMs"),
             os.path.join(d, "models", "GGUF"),
+            os.path.join(d, "models", "gguf"),
+            os.path.join(d, "StabilityMatrix", "Models", "LLM"),
+            os.path.join(d, "StabilityMatrix", "Models", "GGUF"),
         ])
+
+        # B. Dynamic drive root scan: inspect all top-level folders matching model/llm/lmstudio patterns
+        try:
+            for entry in os.listdir(d):
+                full_entry = os.path.join(d, entry)
+                if os.path.isdir(full_entry) and drive_pat.search(entry):
+                    candidates.append(full_entry)
+                    for sub in ("models", "LLM", "llm", "gguf", "GGUF", "models/LLM"):
+                        sub_path = os.path.join(full_entry, sub)
+                        if os.path.isdir(sub_path):
+                            candidates.append(sub_path)
+        except Exception:
+            pass
 
     # 5. Check Environment Variables
     for env_k in ("LM_STUDIO_MODELS_DIR", "LM_STUDIO_MODELS", "LM_STUDIO_HOME", "LLM_MODELS_DIR", "GGUF_MODELS_DIR", "DS_LLM_MODELS_PATH"):
