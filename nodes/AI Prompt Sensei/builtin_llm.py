@@ -67,85 +67,258 @@ def ascii_path(path: str) -> str:
 def _get_models_dir() -> str:
     try:
         import folder_paths
-        return folder_paths.models_dir
+        if hasattr(folder_paths, "models_dir") and folder_paths.models_dir and os.path.isdir(folder_paths.models_dir):
+            return folder_paths.models_dir
     except Exception:
-        return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "models"))
+        pass
+    
+    # Traverse parent directories to find root ComfyUI directory containing custom_nodes/ and models/
+    p = os.path.abspath(os.path.dirname(__file__))
+    for _ in range(7):
+        if (os.path.isfile(os.path.join(p, "main.py")) or os.path.isdir(os.path.join(p, "custom_nodes"))) and os.path.isdir(os.path.join(p, "models")):
+            return os.path.join(p, "models")
+        parent = os.path.dirname(p)
+        if parent == p:
+            break
+        p = parent
+    return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "models"))
 
 
 def register_llm_folder():
-    """Register ComfyUI/models/LLM in folder_paths and ensure it exists."""
+    """Register ComfyUI/models/LLM in folder_paths and return all ComfyUI LLM directories."""
+    dirs = []
+    base_models = _get_models_dir()
+    default_llm = os.path.join(base_models, "LLM")
+    try:
+        os.makedirs(default_llm, exist_ok=True)
+    except Exception:
+        pass
+
     try:
         import folder_paths
-        llm_dir = os.path.join(folder_paths.models_dir, "LLM")
-        os.makedirs(llm_dir, exist_ok=True)
         if "LLM" not in folder_paths.folder_names_and_paths:
-            folder_paths.add_model_folder_path("LLM", llm_dir)
-        return llm_dir
+            folder_paths.add_model_folder_path("LLM", default_llm)
+        
+        # Check all possible ComfyUI folder registrations
+        for tag in ("LLM", "llm", "LLMs", "gguf", "GGUF", "text_encoders"):
+            try:
+                paths = folder_paths.get_folder_paths(tag)
+                if paths:
+                    dirs.extend(paths)
+            except Exception:
+                pass
     except Exception as e:
-        logger.warning(f"[Builtin LLM] Error registering LLM folder: {e}")
-        return os.path.join(_get_models_dir(), "LLM")
+        logger.debug(f"[Builtin LLM] Error querying folder_paths: {e}")
+
+    # Also include standard fallback subdirectories
+    for sub in ("LLM", "llm", "LLMs", "gguf", "GGUF"):
+        candidate = os.path.join(base_models, sub)
+        if os.path.isdir(candidate):
+            dirs.append(candidate)
+
+    if default_llm not in dirs and os.path.isdir(default_llm):
+        dirs.append(default_llm)
+
+    return dirs if dirs else [default_llm]
 
 
-def lmstudio_models_dir() -> str:
-    """Detect LM Studio's downloaded models directory."""
+def get_lmstudio_model_roots():
+    """Universal detection of LM Studio models across user profiles, settings, pointers, and all drives."""
+    roots = []
     user = os.path.expanduser("~")
-    home = os.path.join(user, ".lmstudio")
-    try:
-        with open(os.path.join(user, ".lmstudio-home-pointer"), "r", encoding="utf-8") as f:
-            p = f.read().strip()
-        if p and os.path.isdir(p):
-            home = p
-    except OSError:
-        pass
-    try:
-        with open(os.path.join(home, "settings.json"), "r", encoding="utf-8") as f:
-            d = json.load(f).get("downloadsFolder")
-        if isinstance(d, str) and os.path.isdir(d):
-            return d
-    except (OSError, ValueError, AttributeError):
-        pass
-    d = os.path.join(home, "models")
-    old = os.path.join(user, ".cache", "lm-studio", "models")
-    return d if os.path.isdir(d) or not os.path.isdir(old) else old
+    
+    # 1. User profile and cache defaults
+    candidates = [
+        os.path.join(user, ".cache", "lm-studio", "models"),
+        os.path.join(user, ".lmstudio", "models"),
+        os.path.join(user, ".lmstudio"),
+    ]
+    
+    # Windows AppData paths
+    appdata = os.environ.get("APPDATA", "")
+    localappdata = os.environ.get("LOCALAPPDATA", "")
+    userprofile = os.environ.get("USERPROFILE", user)
+    
+    if appdata:
+        candidates.extend([
+            os.path.join(appdata, "LM Studio", "models"),
+            os.path.join(appdata, "lm-studio", "models"),
+        ])
+    if localappdata:
+        candidates.extend([
+            os.path.join(localappdata, "LM Studio", "models"),
+            os.path.join(localappdata, "lm-studio", "models"),
+        ])
+
+    # 2. Check settings.json files for custom download / model directories
+    settings_files = [
+        os.path.join(user, ".lmstudio", "settings.json"),
+        os.path.join(userprofile, ".lmstudio", "settings.json"),
+        os.path.join(appdata, "LM Studio", "settings.json") if appdata else "",
+        os.path.join(appdata, "lm-studio", "settings.json") if appdata else "",
+    ]
+    for sf in settings_files:
+        if sf and os.path.isfile(sf):
+            try:
+                with open(sf, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                for key in ("downloadsFolder", "modelsDirectory", "modelDirectory", "modelPath"):
+                    val = cfg.get(key)
+                    if isinstance(val, str) and os.path.isdir(val):
+                        candidates.append(val)
+                for list_key in ("customModelPaths", "indexedFolders", "downloadFolders"):
+                    arr = cfg.get(list_key)
+                    if isinstance(arr, list):
+                        for item in arr:
+                            if isinstance(item, str) and os.path.isdir(item):
+                                candidates.append(item)
+            except Exception:
+                pass
+
+    # 3. Check LM Studio home / models pointer files
+    pointer_files = [
+        os.path.join(user, ".lmstudio-home-pointer"),
+        os.path.join(userprofile, ".lmstudio-home-pointer"),
+        os.path.join(user, ".lmstudio-models-pointer"),
+    ]
+    for pf in pointer_files:
+        if pf and os.path.isfile(pf):
+            try:
+                with open(pf, "r", encoding="utf-8") as f:
+                    ptr = f.read().strip()
+                if ptr and os.path.isdir(ptr):
+                    candidates.append(ptr)
+                    models_sub = os.path.join(ptr, "models")
+                    if os.path.isdir(models_sub):
+                        candidates.append(models_sub)
+            except Exception:
+                pass
+
+    # 4. Check standard root drives on Windows (C:, D:, E:, F:, G:, H:, etc.)
+    drives = []
+    if sys.platform.startswith("win"):
+        import string
+        for letter in string.ascii_uppercase:
+            d = f"{letter}:\\"
+            if os.path.exists(d):
+                drives.append(d)
+    else:
+        drives = ["/"]
+
+    for d in drives:
+        candidates.extend([
+            os.path.join(d, "LM Studio", "models"),
+            os.path.join(d, "LM-Studio", "models"),
+            os.path.join(d, "lmstudio", "models"),
+            os.path.join(d, "lm-studio", "models"),
+            os.path.join(d, "LMStudio", "models"),
+            os.path.join(d, "AI", "models", "LM-Studio"),
+            os.path.join(d, "AI", "models", "LMStudio"),
+            os.path.join(d, "AI", "LM-Studio", "models"),
+            os.path.join(d, "AI", "LMStudio", "models"),
+            os.path.join(d, "AI", "models", "LLM"),
+            os.path.join(d, "models", "LLM"),
+            os.path.join(d, "models", "GGUF"),
+        ])
+
+    # 5. Check Environment Variables
+    for env_k in ("LM_STUDIO_MODELS_DIR", "LM_STUDIO_MODELS", "LM_STUDIO_HOME", "LLM_MODELS_DIR", "GGUF_MODELS_DIR", "DS_LLM_MODELS_PATH"):
+        v = os.environ.get(env_k)
+        if v and os.path.isdir(v):
+            candidates.append(v)
+            if os.path.isdir(os.path.join(v, "models")):
+                candidates.append(os.path.join(v, "models"))
+
+    seen = set()
+    for c in candidates:
+        if c and os.path.isdir(c):
+            norm = os.path.normcase(os.path.realpath(c))
+            if norm not in seen:
+                seen.add(norm)
+                roots.append(c)
+    return roots
 
 
 def model_roots():
-    """Return list of (label, directory) to search for GGUF models."""
-    comfy_llm = register_llm_folder()
-    roots = [("ComfyUI", comfy_llm), ("LM Studio", lmstudio_models_dir())]
-    out, seen = [], set()
-    for label, d in roots:
+    """Return list of (label, directory) to search for GGUF models across ComfyUI, LM Studio, and PC."""
+    out = []
+    seen = set()
+
+    # 1. ComfyUI LLM folders
+    comfy_dirs = register_llm_folder()
+    for d in comfy_dirs:
         if d and os.path.isdir(d):
             key = os.path.normcase(os.path.realpath(d))
             if key not in seen:
                 seen.add(key)
-                out.append((label, d))
+                out.append(("ComfyUI", d))
+
+    # 2. LM Studio & External LLM folders
+    for d in get_lmstudio_model_roots():
+        if d and os.path.isdir(d):
+            key = os.path.normcase(os.path.realpath(d))
+            if key not in seen:
+                seen.add(key)
+                out.append(("LM Studio", d))
+
+    # 3. Ollama standard folder
+    user = os.path.expanduser("~")
+    ollama_dir = os.path.join(user, ".ollama", "models")
+    if os.path.isdir(ollama_dir):
+        key = os.path.normcase(os.path.realpath(ollama_dir))
+        if key not in seen:
+            seen.add(key)
+            out.append(("Ollama", ollama_dir))
+
     return out
 
 
 def _is_mmproj(name: str) -> bool:
-    return "mmproj" in name.lower()
+    low = name.lower()
+    return "mmproj" in low or "projector" in low or ("vision" in low and ".gguf" in low) or ("-vl-" in low and "proj" in low)
 
 
 def find_mmproj_for(model_path: str):
-    """Find vision projector GGUF located next to the model."""
+    """Find vision projector GGUF located next to the model, in subfolder, or in parent."""
+    if not model_path or not os.path.exists(model_path):
+        return None
     folder = os.path.dirname(model_path)
     stem = os.path.basename(model_path).lower()
     if not os.path.isdir(folder):
         return None
-    found = [f for f in os.listdir(folder) if f.lower().endswith(".gguf") and _is_mmproj(f)]
+
+    # Search candidates: 1. same folder, 2. 'mmproj' subfolder, 3. parent folder
+    search_folders = [folder]
+    sub_mm = os.path.join(folder, "mmproj")
+    if os.path.isdir(sub_mm):
+        search_folders.append(sub_mm)
+    parent_folder = os.path.dirname(folder)
+    if os.path.isdir(parent_folder):
+        search_folders.append(parent_folder)
+
+    found = []
+    for fld in search_folders:
+        try:
+            for f in os.listdir(fld):
+                if f.lower().endswith(".gguf") and _is_mmproj(f):
+                    full_p = os.path.join(fld, f)
+                    if full_p != model_path and os.path.isfile(full_p):
+                        found.append(full_p)
+        except Exception:
+            pass
+
     if not found:
         return None
 
-    def shared_prefix_len(f):
-        f_low = f.lower()
+    def shared_prefix_len(full_f):
+        f_name = os.path.basename(full_f).lower()
         n = 0
-        while n < min(len(f_low), len(stem)) and f_low[n] == stem[n]:
+        while n < min(len(f_name), len(stem)) and f_name[n] == stem[n]:
             n += 1
         return n
 
-    found.sort(key=lambda f: (-shared_prefix_len(f), f))
-    return os.path.join(folder, found[0])
+    found.sort(key=lambda f: (-shared_prefix_len(f), len(f)))
+    return found[0]
 
 
 def list_builtin_models():
@@ -166,14 +339,18 @@ def list_builtin_models():
                     continue
                 full = os.path.join(dirpath, f)
                 real = os.path.normcase(os.path.realpath(full))
-                size_bytes = os.path.getsize(full)
+                try:
+                    size_bytes = os.path.getsize(full)
+                except OSError:
+                    continue
+
                 file_sig = (f.lower(), size_bytes)
                 if real in seen_paths or file_sig in seen_names:
                     continue
                 seen_paths.add(real)
                 seen_names.add(file_sig)
 
-                rel = os.path.relpath(full, root).replace(os.sep, "/")
+                rel = os.path.relpath(full, root).replace("\\", "/")
                 key = f"{label}/{rel}"
                 mmproj = find_mmproj_for(full)
                 size_gb = round(size_bytes / GiB, 2)
@@ -198,15 +375,64 @@ def list_builtin_models():
 
 
 def resolve_model_key(key: str):
-    """Resolve model key ('Root/rel_path') to (model_path, mmproj_path)."""
-    label, _, rel = str(key).partition("/")
-    for root_label, root in model_roots():
-        if root_label == label:
-            path = os.path.join(root, *rel.split("/"))
-            if os.path.isfile(path):
-                mmproj = find_mmproj_for(path)
-                return path, mmproj
-    raise FileNotFoundError(f"[Builtin LLM] Model not found: {key}")
+    """
+    Resolve model key to (model_path, mmproj_path).
+    Supports:
+    - 'Root/rel/path/model.gguf'
+    - 'Root\\rel\\path\\model.gguf' (Windows backslashes)
+    - Direct absolute paths ('D:/models/LLM/model.gguf')
+    - Bare model filenames ('model.gguf' or 'model')
+    - Relative paths
+    """
+    if not key:
+        raise FileNotFoundError("[Builtin LLM] Empty model key provided")
+
+    s_key = str(key).strip()
+
+    # 1. Direct absolute file path check
+    for direct in (s_key, s_key.replace("/", "\\"), s_key.replace("\\", "/")):
+        if os.path.isfile(direct):
+            return direct, find_mmproj_for(direct)
+
+    # Normalize slashes
+    norm_key = s_key.replace("\\", "/")
+    label, sep, rel = norm_key.partition("/")
+
+    # 2. Match via registered roots
+    if sep:
+        for root_label, root in model_roots():
+            if root_label.lower() == label.lower():
+                path = os.path.join(root, *rel.split("/"))
+                if os.path.isfile(path):
+                    return path, find_mmproj_for(path)
+
+    # 3. Fallback: Search all discovered models in list_builtin_models()
+    all_models = list_builtin_models()
+    norm_lower = norm_key.lower()
+    base_name = norm_key.split("/")[-1].lower()
+    if base_name.endswith(".gguf"):
+        base_stem = base_name[:-5]
+    else:
+        base_stem = base_name
+        base_name = f"{base_name}.gguf"
+
+    # Exact ID match (case-insensitive)
+    for m in all_models:
+        if m["id"].lower() == norm_lower or m["id"].replace("\\", "/").lower() == norm_lower:
+            return m["full_path"], m.get("mmproj_path") or find_mmproj_for(m["full_path"])
+
+    # Relative path match
+    for m in all_models:
+        if m["rel_path"].lower() == norm_lower or m["rel_path"].lower() == rel.lower():
+            return m["full_path"], m.get("mmproj_path") or find_mmproj_for(m["full_path"])
+
+    # Filename match
+    for m in all_models:
+        m_file = os.path.basename(m["full_path"]).lower()
+        if m_file == base_name or m["name"].lower() == base_stem:
+            return m["full_path"], m.get("mmproj_path") or find_mmproj_for(m["full_path"])
+
+    raise FileNotFoundError(f"[Builtin LLM] Model not found on disk: {key}")
 
 
 def _preload_cuda_linux():

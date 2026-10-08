@@ -686,7 +686,7 @@ function openSenseiGearConfig(node, anchorEl) {
   const lm = s.lm_studio;
   const bi = s.built_in;
 
-  let activeTab = s.gear_tab || (s.provider === "built_in" ? "built_in" : "lm_studio");
+  let activeTab = s.gear_tab || (s.provider === "built_in" ? "built_in" : (bi.model && !lm.model ? "built_in" : "lm_studio"));
 
   const popup = document.createElement("div");
   popup.className = "ds-sensei-gear-popover";
@@ -845,6 +845,10 @@ function openSenseiGearConfig(node, anchorEl) {
       modelSec.append(modelLbl, modelDd.el);
       popup.appendChild(modelSec);
 
+      const statusBox = document.createElement("div");
+      statusBox.style.cssText = "margin-top:6px;display:none;";
+      modelSec.appendChild(statusBox);
+
       fetchLMStudioModels(lm.ip, lm.port).then((res) => {
         if (res.ok && res.models?.length > 0) {
           const llmModels = res.models.filter((m) => !/(embed|nomic-embed|bge-)/i.test(m));
@@ -854,6 +858,20 @@ function openSenseiGearConfig(node, anchorEl) {
             lm.model = displayModels[0];
             modelDd.setValue(displayModels[0]);
             sync();
+          }
+          statusBox.style.display = "none";
+        } else {
+          statusBox.style.display = "block";
+          statusBox.innerHTML = `
+            <div style="padding:6px 8px;border-radius:4px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);font-size:11px;color:var(--ds-color-text,#e5e7eb);line-height:1.4;">
+              <div style="color:#f87171;font-weight:700;margin-bottom:2px;">⚠️ LM Studio Server Offline</div>
+              <div>No response on <code>${lm.ip}:${lm.port}</code>. If you have local GGUF models, use the <strong>Built In</strong> tab.</div>
+              <button type="button" class="ds-ui-btn ds-ui-btn-primary ds-ui-btn-compact" style="margin-top:6px;width:100%;font-size:10px;justify-content:center;">Switch to Built In</button>
+            </div>
+          `;
+          const swBtn = statusBox.querySelector("button");
+          if (swBtn) {
+            swBtn.onclick = () => tabBi.click();
           }
         }
       });
@@ -1053,9 +1071,9 @@ function openSenseiGearConfig(node, anchorEl) {
 
       const modelDd = createCustomDropdown({
         value: bi.model || "",
-        options: bi.model ? [bi.model] : [],
-        placeholder: "Scanning models in ComfyUI/models/LLM...",
-        onSelect: (selected) => {
+        options: bi.model ? [{ id: bi.model, label: String(bi.model).split(/[/\\]/).pop().replace(/\.gguf$/i, "") }] : [],
+        placeholder: "Scanning models in ComfyUI/models/LLM & LM Studio...",
+        onSelect: (selected, item) => {
           bi.model = selected;
           s.error_msg = null;
           sync();
@@ -1067,15 +1085,38 @@ function openSenseiGearConfig(node, anchorEl) {
 
       const loadModelsIntoDd = () => {
         fetchBuiltinModels().then((res) => {
-          if (res.ok && res.models?.length > 0) {
-            const modelIds = res.models.map((m) => m.id);
-            modelDd.setOptions(modelIds);
-            if (!bi.model || !modelIds.includes(bi.model)) {
-              bi.model = modelIds[0];
-              modelDd.setValue(modelIds[0]);
+          if (res.ok && Array.isArray(res.models) && res.models.length > 0) {
+            const modelOptions = res.models.map((m) => {
+              const rootPrefix = m.root && m.root !== "ComfyUI" ? `[${m.root}] ` : "";
+              const visTag = m.has_vision ? " 👁️ Vision" : "";
+              return {
+                id: m.id,
+                label: `${rootPrefix}${m.name} (${m.size_gb} GB)${visTag}`,
+                name: m.name,
+                root: m.root,
+                has_vision: m.has_vision,
+                size_gb: m.size_gb,
+              };
+            });
+            modelDd.setOptions(modelOptions);
+
+            const cur = String(bi.model || "").replace(/\\/g, "/").toLowerCase();
+            const curBase = cur.split("/").pop();
+            let match = modelOptions.find((opt) => String(opt.id).replace(/\\/g, "/").toLowerCase() === cur);
+            if (!match && curBase) {
+              match = modelOptions.find((opt) => {
+                const optNorm = String(opt.id).replace(/\\/g, "/").toLowerCase();
+                return optNorm.endsWith("/" + curBase) || opt.name?.toLowerCase() === curBase.replace(/\.gguf$/i, "");
+              });
+            }
+
+            if (match) {
+              bi.model = match.id;
+              modelDd.setValue(match.id);
+            } else if (modelOptions.length > 0) {
+              bi.model = modelOptions[0].id;
+              modelDd.setValue(modelOptions[0].id);
               sync();
-            } else {
-              modelDd.setValue(bi.model);
             }
           } else {
             modelDd.setOptions([]);
