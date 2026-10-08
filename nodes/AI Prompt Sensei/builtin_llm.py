@@ -773,13 +773,18 @@ def _plan_gpu(model_path, mmproj_path, n_ctx, requested_layers):
     return plan
 
 
-def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False):
-    """Loads GGUF model and mmproj vision projector if present."""
+def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False, require_vision=False):
+    """Loads GGUF model and mmproj vision projector if present and required."""
     with _lock:
         if _state["llm"] is not None and _state["key"] == key and _state["n_ctx"] >= n_ctx:
-            return _state["llm"]
-
-        _unload_locked()
+            # If vision is required now but wasn't loaded before, reload with vision projector
+            if require_vision and not _state.get("has_vision"):
+                logger.info(f"[Builtin LLM] Image provided; attaching vision projector for {key}...")
+                _unload_locked()
+            else:
+                return _state["llm"]
+        else:
+            _unload_locked()
 
         if free_comfy:
             try:
@@ -794,7 +799,7 @@ def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False):
             logger.warning(f"[Builtin LLM] Backends initialized with note: {be['error']}")
 
         model_path, mmproj_path = resolve_model_key(key)
-        has_vision = bool(mmproj_path and os.path.isfile(mmproj_path))
+        has_vision = bool(require_vision and mmproj_path and os.path.isfile(mmproj_path))
 
         import llama_cpp
         from llama_cpp import Llama
@@ -803,7 +808,7 @@ def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False):
         plan = {"layers": 0, "mm_gpu": False, "n_layer": 32, "layers_num": 0, "note": "gpu disabled"}
         if be.get("gpu") and n_gpu_layers != 0:
             plan = _plan_gpu(model_path, mmproj_path if has_vision else None, n_ctx, n_gpu_layers)
-        logger.info(f"[Builtin LLM] GPU plan: {plan['note']}")
+        logger.info(f"[Builtin LLM] GPU plan (vision={has_vision}): {plan['note']}")
 
         handler = None
         if has_vision:
@@ -1142,6 +1147,10 @@ def generate_prompt_builtin(
     except Exception:
         pass
 
+    has_image = bool(image_tensor is not None or (image_path and os.path.isfile(image_path)))
+    enable_vision = bool(cfg.get("enable_vision", True))
+    need_vision = bool(has_image and enable_vision)
+
     t_load_start = time.time()
     try:
         load_model(
@@ -1149,6 +1158,7 @@ def generate_prompt_builtin(
             n_ctx=context_length,
             n_gpu_layers=n_gpu_layers,
             free_comfy=free_comfy,
+            require_vision=need_vision,
         )
         t_load = round(time.time() - t_load_start, 1)
         try:

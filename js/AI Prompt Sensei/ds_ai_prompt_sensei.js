@@ -1095,12 +1095,15 @@ function openSenseiGearConfig(node, anchorEl) {
 
         const modelSizeGB = Number(modelMeta?.size_gb) || 4.5;
         const totalLayers = Number(modelMeta?.total_layers) || 32;
-        const mmprojSizeGB = Number(modelMeta?.mmproj_size_gb) || (modelMeta?.has_vision ? 0.4 : 0);
+        
+        // Vision projector is only loaded for I2V or image-guided inputs (skipped in T2I/T2V to save VRAM)
+        const isVisionActive = s.mode === "i2v" && (bi.enable_vision !== false);
+        const mmprojSizeGB = isVisionActive ? (Number(modelMeta?.mmproj_size_gb) || (modelMeta?.has_vision ? 0.4 : 0)) : 0;
         
         // KV cache calculation (~0.35 GB per 4K context on standard LLMs)
         const kvCacheGB = (ctxLen / 4096) * 0.35;
         const computeOverheadGB = 0.25;
-        const baseVramGB = (modelMeta?.has_vision ? mmprojSizeGB + 0.15 : 0) + kvCacheGB + computeOverheadGB;
+        const baseVramGB = (isVisionActive && mmprojSizeGB > 0 ? mmprojSizeGB + 0.15 : 0) + kvCacheGB + computeOverheadGB;
         
         const totalRequiredGB = modelSizeGB + baseVramGB;
 
@@ -1669,6 +1672,16 @@ function openSenseiGearConfig(node, anchorEl) {
         },
       });
       behBiBox.appendChild(cpuOnlyToggle.root);
+
+      const onDemandVisionToggle = Toggle({
+        label: "On-demand vision (Skip projector in T2I/T2V to save ~1GB VRAM)",
+        checked: bi.enable_vision !== false,
+        onChange: (checked) => {
+          bi.enable_vision = checked;
+          sync();
+        },
+      });
+      behBiBox.appendChild(onDemandVisionToggle.root);
 
       const randSeedBiToggle = Toggle({
         label: "Randomize seed each generation",
