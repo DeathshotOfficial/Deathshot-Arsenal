@@ -1120,7 +1120,7 @@ def generate_prompt_builtin(
     temperature = float(cfg.get("temperature", 0.7))
     max_tokens = int(cfg.get("max_tokens", 2048))
     context_length = int(cfg.get("context_length", 8192))
-    n_gpu_layers = 0 if cfg.get("cpu_only") else int(cfg.get("n_gpu_layers", 15))
+    n_gpu_layers = 0 if cfg.get("cpu_only") else int(cfg.get("n_gpu_layers", -1))
     top_p = float(cfg.get("top_p", 0.95))
     top_k = int(cfg.get("top_k", 40))
     repetition_penalty = float(cfg.get("repetition_penalty", 1.1))

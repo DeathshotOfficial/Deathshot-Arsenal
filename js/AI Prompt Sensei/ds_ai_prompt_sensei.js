@@ -1402,14 +1402,14 @@ function openSenseiGearConfig(node, anchorEl) {
       gpuField.className = "ds-sensei-gear-field";
       gpuField.innerHTML = `<label class="ds-sensei-gear-label">GPU Layers (-1=All)</label>`;
       gpuSt = mkStepper({
-        value: bi.n_gpu_layers ?? 15,
+        value: bi.n_gpu_layers ?? -1,
         min: -1,
         max: 128,
         step: 1,
         decimals: 0,
         width: "100%",
         onChange: (v) => {
-          bi.n_gpu_layers = parseInt(v) ?? 15;
+          bi.n_gpu_layers = isNaN(parseInt(v)) ? -1 : parseInt(v);
           sync();
           updateHWWarn();
         },
@@ -1970,7 +1970,7 @@ function defaultState() {
       temperature: 0.7,
       max_tokens: 2048,
       context_length: 8192,
-      n_gpu_layers: 15,
+      n_gpu_layers: -1,
       cpu_only: false,
       top_p: 0.95,
       top_k: 40,
