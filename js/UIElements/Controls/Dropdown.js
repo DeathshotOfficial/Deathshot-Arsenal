@@ -6,6 +6,41 @@
 import { DSIcon } from "../../Icons/index.js";
 import { Popup } from "../Core/Popup.js";
 
+function normalizePath(str) {
+  return String(str || "")
+    .replace(/[\\/]+/g, "/")
+    .replace(/^\.\//, "")
+    .toLowerCase()
+    .trim();
+}
+
+function findMatchingItem(items, val) {
+  if (val == null || val === "") return null;
+  const sVal = String(val);
+  const normVal = normalizePath(sVal);
+
+  // Exact match first
+  let found = items.find((i) => !i.separator && String(i.id ?? i.value ?? i) === sVal);
+  if (found) return found;
+
+  // Normalized path match (handles \ vs / across OS)
+  found = items.find((i) => !i.separator && normalizePath(i.id ?? i.value ?? i) === normVal);
+  if (found) return found;
+
+  // Filename-only fallback if subfolders differ
+  const baseVal = sVal.split(/[\\/]/).pop()?.toLowerCase();
+  if (baseVal) {
+    found = items.find((i) => {
+      if (i.separator) return false;
+      const baseI = String(i.id ?? i.value ?? i).split(/[\\/]/).pop()?.toLowerCase();
+      return baseI === baseVal;
+    });
+    if (found) return found;
+  }
+
+  return null;
+}
+
 export function Dropdown(options = {}) {
   const root = document.createElement("div");
   root.className = "ds-ui-dropdown";
@@ -42,6 +77,7 @@ export function Dropdown(options = {}) {
 
   // Popup surface
   const popupContent = document.createElement("div");
+  popupContent.className = "ds-ui-dropdown-popup-content";
   let searchInput = null;
   const isSearchable = options.searchable ?? items.length > 8;
 
@@ -77,13 +113,21 @@ export function Dropdown(options = {}) {
   popup.root.appendChild(popupContent);
 
   const updateTriggerText = () => {
-    const activeItem = items.find((i) => String(i.id) === String(currentValue));
-    triggerLabel.textContent = activeItem?.label ?? (options.placeholder || String(currentValue || "Select..."));
+    const activeItem = findMatchingItem(items, currentValue);
+    if (activeItem) {
+      triggerLabel.textContent = activeItem.label ?? String(activeItem.id ?? currentValue);
+    } else if (currentValue != null && String(currentValue).trim() !== "") {
+      triggerLabel.textContent = String(currentValue);
+    } else {
+      triggerLabel.textContent = options.placeholder || "Select...";
+    }
   };
 
   const renderItems = (filter = "") => {
     itemsContainer.replaceChildren();
     const query = filter.trim().toLowerCase();
+    const activeItem = findMatchingItem(items, currentValue);
+    let matchCount = 0;
 
     items.forEach((item) => {
       if (item.separator) {
@@ -95,11 +139,12 @@ export function Dropdown(options = {}) {
 
       const text = String(item.label || item.id);
       if (query && !text.toLowerCase().includes(query)) return;
+      matchCount++;
 
       const row = document.createElement("button");
       row.type = "button";
       row.className = "ds-ui-popup-item";
-      const isSelected = String(item.id) === String(currentValue);
+      const isSelected = activeItem ? (item === activeItem) : (String(item.id) === String(currentValue) || normalizePath(item.id) === normalizePath(currentValue));
       if (isSelected) row.classList.add("is-selected");
 
       const labelSpan = document.createElement("span");
@@ -120,10 +165,33 @@ export function Dropdown(options = {}) {
 
       itemsContainer.appendChild(row);
     });
+
+    if (matchCount === 0) {
+      const empty = document.createElement("div");
+      empty.className = "ds-ui-popup-empty";
+      empty.textContent = options.emptyText || "No matching options";
+      itemsContainer.appendChild(empty);
+    }
+
+    // Immediately re-anchor so shrinking/growing options stay attached to dropdown
+    popup.reposition(trigger);
   };
 
   if (searchInput) {
     searchInput.addEventListener("input", (e) => renderItems(e.target.value));
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        popup.hide();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
+        const firstItem = itemsContainer.querySelector(".ds-ui-popup-item");
+        if (firstItem) {
+          firstItem.click();
+        }
+      }
+    });
   }
 
   trigger.addEventListener("click", (e) => {
@@ -144,7 +212,7 @@ export function Dropdown(options = {}) {
       currentValue = val;
       updateTriggerText();
       if (fire) {
-        const item = items.find((i) => String(i.id) === String(currentValue));
+        const item = findMatchingItem(items, currentValue);
         options.onChange?.(currentValue, item, api);
       }
     },

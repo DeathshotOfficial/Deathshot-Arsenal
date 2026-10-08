@@ -5,13 +5,20 @@ import folder_paths
 import comfy.utils
 import comfy.sd
 from .civitai_client import inspect_lora_metadata, get_lora_full_path
-from .memory_manager import clear_lora_caches
 from .lora_weight_cache import load_cached_lora_weights, clear_cached_lora_weights
 
 MAX_LORAS = 32
 
-def _load_lora_file(path):
-    data, _ = load_cached_lora_weights(path)
+# Number of LoRA weight files kept in RAM between runs for each "LoRa memory use" option
+MEMORY_MODE_CACHE_SIZE = {"Fast": 8, "Standard": 2, "Lowest": 0}
+
+def _cache_size_for(mode):
+    return MEMORY_MODE_CACHE_SIZE.get(str(mode), MEMORY_MODE_CACHE_SIZE["Standard"])
+
+def _load_lora_file(path, max_entries):
+    data, _ = load_cached_lora_weights(path, max_entries)
+    if data is None:
+        raise RuntimeError(f"could not read LoRA file '{path}'")
     return data
 
 def clear_local_cache():
@@ -129,6 +136,8 @@ class DS_LoRaLoader:
         mode = state.get("mode", "image")
         settings = state.get("settings") or {}
         separator = str(settings.get("triggerSeparator", ", "))
+        memory_mode = str(settings.get("memoryMode", "Standard"))
+        cache_size = _cache_size_for(memory_mode)
 
         current_model = model
         current_clip = clip
@@ -173,7 +182,7 @@ class DS_LoRaLoader:
                     continue
 
                 try:
-                    lora_data = _load_lora_file(lora_path)
+                    lora_data = _load_lora_file(lora_path, cache_size)
                     has_audio = any("audio" in str(k).lower() for k in lora_data.keys())
                     if has_audio:
                         video_weights = {k: v for k, v in lora_data.items() if "audio" not in str(k).lower()}
@@ -221,7 +230,7 @@ class DS_LoRaLoader:
                 # 2. Apply LoRA weights to model and clip
                 if lm != 0.0 or lc != 0.0:
                     try:
-                        lora_data = _load_lora_file(lora_path)
+                        lora_data = _load_lora_file(lora_path, cache_size)
                         current_model, current_clip = comfy.sd.load_lora_for_models(
                             current_model,
                             current_clip,
@@ -234,12 +243,9 @@ class DS_LoRaLoader:
                         print(f"[DS LoRa Loader] Failed to apply '{name}': {exc}")
                         continue
 
-        if str(settings.get("memoryMode", "Standard")) == "Lowest":
-            try:
-                clear_local_cache()
-                clear_lora_caches()
-            except Exception as exc:
-                print(f"[DS LoRa Loader] cache cleanup warning: {exc}")
+        # Lowest keeps nothing cached; release anything left over from earlier runs
+        if cache_size == 0:
+            clear_local_cache()
 
         # Preserve order and remove duplicate trigger words
         seen = set()

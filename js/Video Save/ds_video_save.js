@@ -60,7 +60,7 @@ const PIX_FMT_OPTIONS = [
 ];
 
 const DEFAULT_PROPERTIES = {
-  drawer_expanded: false,
+  drawer_expanded: true,
   active_category: "Video",
   selected_format: "h264-mp4",
   fps: 24.0,
@@ -94,8 +94,15 @@ function getPropState(node) {
   node.properties ||= {};
   let s = node.properties[PROP];
   if (!s || typeof s !== "object") {
-    s = node.properties[PROP] = { ...DEFAULT_PROPERTIES };
+    s = node._dsVsState || { ...DEFAULT_PROPERTIES };
   }
+  // configure() swaps in a new properties object on load/refresh: merge it into
+  // the original so every closure built earlier keeps pointing at live state.
+  if (node._dsVsState && node._dsVsState !== s) {
+    Object.assign(node._dsVsState, s);
+    s = node._dsVsState;
+  }
+  node._dsVsState = node.properties[PROP] = s;
   for (const [k, v] of Object.entries(DEFAULT_PROPERTIES)) {
     if (s[k] === undefined) s[k] = v;
   }
@@ -128,11 +135,25 @@ function syncWidgets(node) {
   set("config_json", JSON.stringify(s));
 }
 
+let _trackTimer = null;
+function requestAutosave() {
+  // ComfyUI's change tracker checks on mouseup, which fires BEFORE our click
+  // handler, so the workflow gets saved one step behind. Run one check after
+  // the click settles. Debounced, and never called from serialize().
+  clearTimeout(_trackTimer);
+  _trackTimer = setTimeout(() => {
+    try {
+      app.extensionManager?.workflow?.activeWorkflow?.changeTracker?.checkState?.();
+    } catch {}
+  }, 200);
+}
+
 function persist(node) {
   syncWidgets(node);
   try {
     app.graph?.setDirtyCanvas?.(true, true);
   } catch {}
+  requestAutosave();
 }
 
 function hideWidgets(node) {
@@ -229,6 +250,14 @@ function buildVideoSaveUI(node) {
 
   let drawerToggleBtn = null;
 
+  // Toggle drawer helper – callable from button click or context menu
+  function toggleDrawer() {
+    s.drawer_expanded = !s.drawer_expanded;
+    drawerToggleBtn?.classList.toggle("is-active", s.drawer_expanded);
+    persist(node);
+    render(node);
+  }
+
   // 1. Root Card Construction
   const card = Card({
     title: "Video Save",
@@ -250,21 +279,25 @@ function buildVideoSaveUI(node) {
         tooltip: "Toggle Encoder Settings",
         onClick: (e) => {
           e.stopPropagation();
-          s.drawer_expanded = !s.drawer_expanded;
-          drawerToggleBtn?.classList.toggle("is-active", s.drawer_expanded);
-          persist(node);
-          render(node);
+          toggleDrawer();
         },
       },
     ],
   });
 
-  // Reference the drawer toggle action button
+  // Reference the drawer toggle action button – robust multi-strategy lookup
   const actionButtons = card.head?.querySelectorAll(".ds-ui-card-actions button");
   if (actionButtons && actionButtons.length >= 3) {
     drawerToggleBtn = actionButtons[2];
+  } else if (actionButtons && actionButtons.length > 0) {
+    drawerToggleBtn = actionButtons[actionButtons.length - 1];
+  }
+  if (drawerToggleBtn) {
     drawerToggleBtn.classList.toggle("is-active", s.drawer_expanded);
   }
+
+  // Store toggleDrawer on node so context menu & external callers can use it
+  node._toggleDrawer = toggleDrawer;
 
   // 2. FPS Stepper Row (Inline label + Stepper control)
   const fpsRow = document.createElement("div");
@@ -881,6 +914,22 @@ function patchNode(node) {
     render(this);
   };
 
+  // Right-click context menu: expose Toggle Settings option as reliable fallback
+  const origGetExtraMenuOptions = node.getExtraMenuOptions;
+  node.getExtraMenuOptions = function (canvas, options) {
+    const extras = origGetExtraMenuOptions?.apply(this, arguments) || [];
+    extras.push(
+      null, // separator
+      {
+        content: getPropState(this).drawer_expanded ? "⚙️ Hide Encoder Settings" : "⚙️ Show Encoder Settings",
+        callback: () => {
+          if (typeof this._toggleDrawer === "function") this._toggleDrawer();
+        },
+      }
+    );
+    return extras;
+  };
+
   // Immediate preview restoration if previous generation path exists
   if (s.last_path) {
     node._lastPath = s.last_path;
@@ -1145,7 +1194,9 @@ app.registerExtension({
           try {
             const raw = Array.isArray(w.value) ? w.value.join("") : String(w.value);
             const saved = JSON.parse(raw);
-            if (saved && typeof saved === "object") Object.assign(s, saved);
+            if (saved && typeof saved === "object") {
+              Object.assign(s, saved);
+            }
           } catch {}
         }
         syncWidgets(this);
@@ -1163,7 +1214,7 @@ app.registerExtension({
 
     const oldSerialize = nodeType.prototype.serialize;
     nodeType.prototype.serialize = function () {
-      persist(this);
+      syncWidgets(this);
       return oldSerialize?.apply(this, arguments) || {};
     };
 

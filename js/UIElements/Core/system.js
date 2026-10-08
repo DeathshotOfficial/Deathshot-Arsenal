@@ -83,5 +83,10 @@ export function normalizeDSWidgetHost(root, node = null, options = {}) {
     if (root.parentElement?.parentElement) {
       root.parentElement.parentElement.style.pointerEvents = "none";
     }
+    // Re-assert pointer-events:auto on the card itself after parent override
+    const cardEl = root.querySelector(".ds-ui-card") || root.firstElementChild;
+    if (cardEl) {
+      cardEl.style.pointerEvents = "auto";
+    }
   });
 }

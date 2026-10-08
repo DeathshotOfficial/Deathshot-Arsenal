@@ -1,11 +1,13 @@
 /* DS LoRa Loader UI Styles */
 
+.dom-widget:has(> .ds-lora-card) {
+  pointer-events: none !important;
+}
+
 .ds-lora-card,
 .ds-lora-card *,
 .ds-lora-card *::before,
 .ds-lora-card *::after,
-.ds-lora-top-add-area,
-.ds-lora-top-add-area *,
 .ds-lora-modal,
 .ds-lora-modal *,
 .ds-lora-settings,
@@ -23,36 +25,31 @@
   outline: none !important;
 }
 
-/* Top Add LoRA Button */
-.ds-lora-top-add-area {
+/* Add LoRA button: anchored to the Card, floats in the empty area between the left and right sockets.
+   Left/right offsets keep it clear of socket labels and stretch it with node width. */
+.ds-lora-card > .ds-lora-big-add-btn {
+  position: absolute;
+  top: var(--ds-lora-add-top, -48px);
+  left: var(--ds-lora-add-left, 60px);
+  right: var(--ds-lora-add-right, 70px);
   box-sizing: border-box;
-  width: 100%;
-  height: 38px;
-  padding: 0 80px 0 70px;
+  width: auto;
+  height: 24px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
-  user-select: none;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif);
-}
-
-.ds-lora-big-add-btn {
-  pointer-events: auto;
-  width: 100%;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 6px;
   background: var(--ds-btn-bg, #161a23) !important;
   border: 1px dashed var(--ds-color-border, #353b46) !important;
-  border-radius: var(--ds-radius-control, 6px);
+  border-radius: var(--ds-radius-control, 5px);
   color: var(--ds-color-text, #ffffff) !important;
   font-family: var(--ds-font, Inter, system-ui, sans-serif);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+  pointer-events: auto;
   transition: all var(--ds-transition, 120ms ease);
 }
 
@@ -60,24 +57,27 @@
   background: var(--ds-btn-hover, #1e2433) !important;
   border-color: var(--ds-color-accent, #67e8f9) !important;
   border-style: solid !important;
-  color: #ffffff !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
 }
 
 .ds-lora-big-add-btn svg {
   stroke: var(--ds-color-accent, #67e8f9) !important;
-  stroke-width: 2.2 !important;
+  stroke-width: 2 !important;
 }
 
-/* Card Surface */
+/* Card Surface - Exactly 5px margin from base edges, 10px internal padding */
 .ds-lora-card {
   box-sizing: border-box;
-  width: calc(100% - 10px) !important;
-  margin: 0 5px 5px 5px !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
   padding: var(--ds-card-padding, 10px);
   background: var(--ds-color-card, #12151c) !important;
   border: 1px solid var(--ds-color-card-border, #242a36) !important;
   border-radius: var(--ds-radius-card, 8px) !important;
   color: var(--ds-color-text, #e5e7eb);
+  position: relative;
+  overflow: visible;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
@@ -181,15 +181,15 @@
 .ds-lora-rows {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   width: 100%;
 }
 
 .ds-lora-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 6px;
+  gap: var(--ds-gap-sm, 6px);
+  padding: 4px 8px;
   background: var(--ds-color-panel-2, #161a23) !important;
   border: 1px solid var(--ds-color-border, #242a36) !important;
   border-radius: var(--ds-radius-control, 5px);
@@ -227,33 +227,9 @@
   min-width: 0;
 }
 
-/* Stepper: Image Mode */
+/* Steppers: Image Mode (Uses unified UIElements Stepper) */
 .ds-lora-row .ds-ui-stepper {
-  width: 76px;
-  height: 24px;
   flex-shrink: 0;
-  gap: 2px;
-}
-
-.ds-lora-row .ds-ui-stepper-btn {
-  width: 22px;
-  height: 24px;
-  padding: 0;
-  border-radius: var(--ds-radius-control, 4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ds-lora-row .ds-ui-stepper-value {
-  flex: 1;
-  height: 24px;
-  font-size: 11px;
-  padding: 0;
-  min-width: 0;
-  text-align: center !important;
-  font-variant-numeric: tabular-nums;
-  border-radius: var(--ds-radius-control, 4px);
 }
 
 /* Steppers: Video Mode (S, V, A) */
@@ -267,7 +243,7 @@
 .ds-lora-sub-stepper {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -287,59 +263,30 @@
 }
 
 .ds-lora-sub-stepper .ds-ui-stepper {
-  width: 72px;
-  height: 24px;
-  gap: 2px;
+  flex-shrink: 0;
 }
 
-.ds-lora-sub-stepper .ds-ui-stepper-btn {
-  width: 20px;
-  height: 24px;
-  padding: 0;
-  border-radius: var(--ds-radius-control, 4px);
+/* Row Controls: Toggle and Action Buttons */
+.ds-lora-row .ds-ui-toggle-row {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+  gap: 0 !important;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.ds-lora-sub-stepper .ds-ui-stepper-value {
-  flex: 1;
-  height: 24px;
-  font-size: 11px;
-  padding: 0;
-  min-width: 0;
-  text-align: center !important;
-  font-variant-numeric: tabular-nums;
-  border-radius: var(--ds-radius-control, 4px);
+/* The row toggle has no text label; an empty label node would add extra space on the switch's left side */
+.ds-lora-row .ds-ui-toggle-row > :empty:not(input) {
+  display: none !important;
 }
 
-/* Row Controls */
-.ds-lora-row .ds-ui-toggle-row {
+.ds-lora-row > .ds-ui-btn {
+  flex: 0 0 auto;
   margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.ds-lora-row .ds-ui-toggle-track {
-  width: 30px;
-  min-width: 30px;
-  height: 18px;
-  flex-shrink: 0;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.ds-lora-row .ds-ui-toggle-thumb {
-  width: 12px;
-  height: 12px;
-  top: 2px;
-  left: 2px;
-}
-
-.ds-lora-row .is-on .ds-ui-toggle-thumb {
-  transform: translateX(12px);
 }
 
 .ds-lora-row .ds-lora-info-btn.has-triggers {
@@ -351,7 +298,7 @@
 .ds-lora-popover-host {
   position: fixed;
   inset: 0;
-  z-index: 10080;
+  z-index: 9990;
   pointer-events: none;
   font-family: var(--ds-font, Inter, system-ui, sans-serif);
 }
@@ -446,121 +393,10 @@
   flex: 1;
 }
 
-/* Modal Numeric Stepper */
-.ds-lora-spin-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100px;
-  height: 26px;
-  flex-shrink: 0;
-}
-
-.ds-lora-spin-input {
-  width: 100% !important;
-  height: 26px !important;
-  padding: 0 20px 0 8px !important;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-input-bg, #161a23);
-  color: var(--ds-color-text, #e5e7eb);
-  font: 600 11px/1 monospace, var(--ds-font, Inter, system-ui, sans-serif);
-  text-align: center;
-  outline: none !important;
-  box-shadow: none !important;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.ds-lora-spin-input::-webkit-inner-spin-button,
-.ds-lora-spin-input::-webkit-outer-spin-button {
-  appearance: none;
-  margin: 0;
-}
-
-.ds-lora-spin-input:focus {
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-.ds-lora-spin-controls {
-  position: absolute;
-  right: 1px;
-  top: 1px;
-  bottom: 1px;
-  width: 16px;
-  display: flex;
-  flex-direction: column;
-}
-
-.ds-lora-spin-btn {
-  flex: 1;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--ds-color-muted-text, #7f8794);
-  cursor: pointer;
-  outline: none !important;
-  line-height: 1;
-}
-
-.ds-lora-spin-btn:hover {
-  color: var(--ds-color-accent, #67e8f9);
-  background: var(--ds-btn-hover, #1e2433);
-}
-
-.ds-lora-spin-btn svg {
-  display: block;
-  stroke: currentColor;
-}
-
-/* Modal Inputs & Selects */
+/* Modal Inputs */
 .ds-lora-setting-input {
   width: 140px;
   height: 26px;
-  padding: 0 8px;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-input-bg, #161a23);
-  color: var(--ds-color-text, #e5e7eb);
-  font: 500 11px/1 var(--ds-font, Inter, system-ui, sans-serif);
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.ds-lora-setting-input:focus {
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-.ds-lora-setting-select {
-  width: 140px;
-  height: 26px;
-  padding: 0 24px 0 8px;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-input-bg, #161a23);
-  color: var(--ds-color-text, #e5e7eb);
-  font: 500 11px/1 var(--ds-font, Inter, system-ui, sans-serif);
-  outline: none !important;
-  box-shadow: none !important;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="%239ca3af" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>');
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-}
-
-.ds-lora-setting-select:hover,
-.ds-lora-setting-select:focus {
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-.ds-lora-setting-select option {
-  background: var(--ds-color-card, #12151c);
-  color: var(--ds-color-text, #e5e7eb);
 }
 
 /* Civitai Modal Tags & Thumbnail */

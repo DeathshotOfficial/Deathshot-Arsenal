@@ -15,7 +15,7 @@ installDSUI();
 
 const MAX_LORAS = 32;
 const STORAGE_KEY = "DS_LoRaLoader.settings.v1";
-const CSS_HREF = "/extensions/DeathshotArsenal/LoRa%20Loader/ds_lora_loader.css?v=58";
+const CSS_HREF = "/extensions/DeathshotArsenal/LoRa%20Loader/ds_lora_loader.css?v=61";
 
 const existingLink = document.querySelector(`link[href*="ds_lora_loader.css"]`);
 if (existingLink) {
@@ -267,16 +267,26 @@ async function fetchMetadata(node, row, forceOnline = false) {
   }
 }
 
+const CARD_MARGIN = 5;
+const BOTTOM_GAP = 5;
+// First widget starts right below the three socket rows (3 x 20px slots + 4px)
+const WIDGET_START_Y = 64;
+
+// Real fitted Card height: 10px padding x2 + 1px border x2 + header (26) + header gap (8) + rows
 function calculateCardHeight(node) {
   const rows = node?._dsLora?.rows || [];
   const rowCount = Math.max(1, rows.length);
-  const rowsHeight = rowCount * 34 + Math.max(0, rowCount - 1) * 5;
+  const rowsHeight = rowCount * 34 + Math.max(0, rowCount - 1) * 6;
   return 56 + rowsHeight;
 }
 
+// DOM widget allocation includes the 5px margin above and below the Card
+function calculateWidgetHeight(node) {
+  return calculateCardHeight(node) + CARD_MARGIN * 2;
+}
+
 function calculateNodeHeight(node) {
-  const cardHeight = calculateCardHeight(node);
-  return 96 + cardHeight + 5;
+  return WIDGET_START_Y + calculateWidgetHeight(node) + BOTTOM_GAP;
 }
 
 function resizeNode(node) {
@@ -284,8 +294,6 @@ function resizeNode(node) {
   const minW = node._dsLora?.mode === "video" ? 440 : 380;
   const w = Math.max(minW, Number(node.size?.[0]) || minW);
   const targetH = calculateNodeHeight(node);
-  const cardH = calculateCardHeight(node);
-
   node.min_size = [minW, targetH];
   node.size[0] = w;
   node.size[1] = targetH;
@@ -298,11 +306,8 @@ function resizeNode(node) {
   node.size[0] = w;
   node.size[1] = targetH;
 
-  if (node._dsLora?.addWidget) {
-    node._dsLora.addWidget.computeSize = () => [minW, 36];
-  }
   if (node._dsLora?.cardWidget) {
-    node._dsLora.cardWidget.computeSize = () => [minW, cardH];
+    node._dsLora.cardWidget.computeSize = () => [minW, calculateWidgetHeight(node)];
   }
 
   try {
@@ -341,7 +346,11 @@ function placeSidePanel(panel, anchor, preferred = "right") {
 
 function installOutsideClose(panel, anchor, onClose) {
   const handler = (e) => {
-    if (panel.contains(e.target) || anchor?.contains?.(e.target)) return;
+    if (
+      panel.contains(e.target) ||
+      anchor?.contains?.(e.target) ||
+      e.target?.closest?.(".ds-ui-popup")
+    ) return;
     onClose();
     document.removeEventListener("pointerdown", handler, true);
   };
@@ -425,7 +434,8 @@ function renderRow(node, row, index, allLoras) {
         max,
         step: stepVal,
         value: val,
-        className: "ds-ui-stepper",
+        compact: true,
+        width: "78px",
         onChange,
       });
       wrap.appendChild(st.root);
@@ -481,7 +491,8 @@ function renderRow(node, row, index, allLoras) {
       max: 20.0,
       step: stepVal,
       value: row.modelStrength ?? 0.5,
-      className: "ds-ui-stepper",
+      compact: true,
+      width: "86px",
       onChange: (val) => {
         row.modelStrength = Math.round(val * 100) / 100;
         row.clipStrength = row.modelStrength;
@@ -595,6 +606,20 @@ function renderCard(node) {
   card.classList.toggle("is-master-off", !isMasterOn);
 
   // Card Header: Master switch on left, Mode tabs on right
+  // Add LoRA button sits in the empty socket area above the Card and stretches with node width
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "ds-lora-big-add-btn";
+  addBtn.append(DSIcon("plus", { size: 13 }), document.createTextNode("Add LoRA"));
+  addBtn.onclick = () => {
+    if (node._dsLora.rows.length >= MAX_LORAS) return;
+    node._dsLora.rows.push(defaultRow(node._dsLora.settings));
+    node._dsRender();
+    resizeNode(node);
+    serialize(node);
+  };
+  card.appendChild(addBtn);
+
   const cardHead = document.createElement("div");
   cardHead.className = "ds-lora-card-head";
 
@@ -734,101 +759,36 @@ function renderSettingsModal(node, anchorEl) {
     return row;
   };
 
-  // Helper for clean true stepper with up/down arrows (compact, no +- buttons)
-  const createArrowStepper = (val, step, min, max, onChange) => {
-    const wrap = document.createElement("div");
-    wrap.className = "ds-lora-spin-wrap";
+  // 1. Default strength (UIElements Stepper spinner)
+  const defStrStepper = Stepper({
+    value: settings.defaultStrength ?? 0.5,
+    step: Number(settings.strengthStep) || 0.05,
+    min: -20,
+    max: 20,
+    layout: "spinner",
+    compact: true,
+    width: "100px",
+    onChange: (v) => { settings.defaultStrength = v; },
+  });
+  body.appendChild(createRow("Default strength (new LoRAs)", defStrStepper.root));
 
-    const input = document.createElement("input");
-    input.type = "number";
-    input.className = "ds-lora-spin-input";
-    input.value = Number(val).toFixed(step < 0.01 ? 3 : 2);
-    input.step = String(step);
-    input.min = String(min);
-    input.max = String(max);
-
-    const controls = document.createElement("div");
-    controls.className = "ds-lora-spin-controls";
-
-    const up = document.createElement("button");
-    up.type = "button";
-    up.className = "ds-lora-spin-btn";
-    up.appendChild(DSIcon("chevron-up", { size: 9 }));
-
-    const down = document.createElement("button");
-    down.type = "button";
-    down.className = "ds-lora-spin-btn";
-    down.appendChild(DSIcon("chevron-down", { size: 9 }));
-
-    const commit = (newVal) => {
-      const clamped = Math.min(max, Math.max(min, Number(newVal) || 0));
-      const rounded = Math.round(clamped * 1000) / 1000;
-      input.value = rounded.toFixed(step < 0.01 ? 3 : 2);
-      onChange(rounded);
-    };
-
-    let timer = null;
-    let interval = null;
-    const startRepeat = (delta) => {
-      commit(Number(input.value) + delta);
-      timer = setTimeout(() => {
-        interval = setInterval(() => {
-          commit(Number(input.value) + delta);
-        }, 80);
-      }, 320);
-    };
-    const stopRepeat = () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-      timer = null;
-      interval = null;
-    };
-
-    up.addEventListener("pointerdown", (e) => {
-      e.stopPropagation();
-      startRepeat(step);
-    });
-    up.addEventListener("pointerup", stopRepeat);
-    up.addEventListener("pointerleave", stopRepeat);
-
-    down.addEventListener("pointerdown", (e) => {
-      e.stopPropagation();
-      startRepeat(-step);
-    });
-    down.addEventListener("pointerup", stopRepeat);
-    down.addEventListener("pointerleave", stopRepeat);
-
-    input.onchange = () => commit(Number(input.value));
-
-    controls.append(up, down);
-    wrap.append(input, controls);
-    return wrap;
-  };
-
-  // 1. Default strength
-  const defStrStepper = createArrowStepper(
-    settings.defaultStrength ?? 0.5,
-    Number(settings.strengthStep) || 0.05,
-    -20,
-    20,
-    (v) => { settings.defaultStrength = v; }
-  );
-  body.appendChild(createRow("Default strength (new LoRAs)", defStrStepper));
-
-  // 2. Strength step
-  const stepStepper = createArrowStepper(
-    settings.strengthStep ?? 0.05,
-    0.01,
-    0.001,
-    5,
-    (v) => { settings.strengthStep = v; }
-  );
-  body.appendChild(createRow("Strength step (arrows)", stepStepper));
+  // 2. Strength step (UIElements Stepper spinner)
+  const stepStepper = Stepper({
+    value: settings.strengthStep ?? 0.05,
+    step: 0.01,
+    min: 0.001,
+    max: 5,
+    layout: "spinner",
+    compact: true,
+    width: "100px",
+    onChange: (v) => { settings.strengthStep = v; },
+  });
+  body.appendChild(createRow("Strength step (arrows)", stepStepper.root));
 
   // 3. Separator
   const sepInput = document.createElement("input");
   sepInput.type = "text";
-  sepInput.className = "ds-lora-setting-input";
+  sepInput.className = "ds-ui-input ds-lora-setting-input";
   sepInput.value = settings.triggerSeparator || ", ";
   body.appendChild(createRow("Trigger words separator", sepInput));
 
@@ -890,46 +850,36 @@ function renderSettingsModal(node, anchorEl) {
   });
   body.appendChild(nsfwToggle.root);
 
-  // 5. Reliable Themed Selects (Never Dead)
-  const createThemedSelect = (val, options, onChange) => {
-    const select = document.createElement("select");
-    select.className = "ds-lora-setting-select";
-    for (const opt of options) {
-      const el = document.createElement("option");
-      el.value = opt.id;
-      el.textContent = opt.label;
-      if (opt.id === val) el.selected = true;
-      select.appendChild(el);
-    }
-    select.onchange = () => onChange(select.value);
-    return select;
-  };
-
-  const memSelect = createThemedSelect(
-    settings.memoryMode || "Standard",
-    [
+  // 5. UIElements Dropdowns
+  const memDropdown = Dropdown({
+    value: settings.memoryMode || "Standard",
+    options: [
       { id: "Standard", label: "Standard" },
       { id: "Fast", label: "Fast" },
       { id: "Lowest", label: "Lowest" },
     ],
-    (v) => { settings.memoryMode = v; }
-  );
-  body.appendChild(createRow("LoRa memory use", memSelect));
+    compact: true,
+    width: 140,
+    onChange: (v) => { settings.memoryMode = v; },
+  });
+  body.appendChild(createRow("LoRa memory use", memDropdown.root));
 
-  const siteSelect = createThemedSelect(
-    settings.siteMode || "Standard",
-    [
+  const siteDropdown = Dropdown({
+    value: settings.siteMode || "Standard",
+    options: [
       { id: "Standard", label: "Standard" },
       { id: "Unrestricted", label: "Unrestricted" },
     ],
-    (v) => { settings.siteMode = v; }
-  );
-  body.appendChild(createRow("Ask this site first", siteSelect));
+    compact: true,
+    width: 140,
+    onChange: (v) => { settings.siteMode = v; },
+  });
+  body.appendChild(createRow("Ask this site first", siteDropdown.root));
 
   // 6. Civitai API Key
   const keyInput = document.createElement("input");
   keyInput.type = "password";
-  keyInput.className = "ds-lora-setting-input";
+  keyInput.className = "ds-ui-input ds-lora-setting-input";
   keyInput.placeholder = "optional";
   keyInput.value = loadSettings().civitaiApiKey || "";
   body.appendChild(createRow("Civitai API key (saved locally)", keyInput));
@@ -1007,7 +957,12 @@ app.registerExtension({
     nodeType.prototype.onNodeCreated = function () {
       const r = originalCreated?.apply(this, arguments);
       this.resizable = true;
-      this.widgets_start_y = 36;
+      this.widgets_start_y = WIDGET_START_Y;
+      Object.defineProperty(this, "widgets_start_y", {
+        configurable: true,
+        get() { return WIDGET_START_Y; },
+        set() {},
+      });
       this.properties = this.properties || {};
 
       const graph = this.graph || app?.graph;
@@ -1024,79 +979,30 @@ app.registerExtension({
 
       this._dsRender = () => renderCard(this);
 
-      // Top Add LoRA area (positioned in empty space between sockets)
-      const addArea = document.createElement("div");
-      addArea.className = "ds-lora-top-add-area";
-
-      const addBtn = document.createElement("button");
-      addBtn.type = "button";
-      addBtn.className = "ds-lora-big-add-btn";
-      addBtn.appendChild(DSIcon("plus", { size: 15 }));
-      addBtn.appendChild(document.createTextNode("Add LoRA"));
-      addBtn.onclick = () => {
-        if (this._dsLora.rows.length >= MAX_LORAS) return;
-        this._dsLora.rows.push(defaultRow(this._dsLora.settings));
-        this._dsRender();
-        resizeNode(this);
-        serialize(this);
-      };
-      addArea.appendChild(addBtn);
-
-      // Card is the primary container for controls and LoRA rows
+      // The Card is the DOM widget root and visible container
       const card = document.createElement("div");
       card.className = "ds-ui-card ds-lora-card";
-
-      this._dsLora.addArea = addArea;
       this._dsLora.card = card;
 
       const minW = this._dsLora.mode === "video" ? 440 : 380;
 
-      const addWidget = this.addDOMWidget("ds_lora_add", "custom", addArea, {
-        serialize: false,
-        margin: 0,
-      });
-      addWidget.serialize = false;
-      addWidget.computeSize = () => [minW, 36];
-      const origAddDraw = addWidget.draw;
-      addWidget.draw = function (ctx, node, widget_width, y, widget_height) {
-        if (typeof origAddDraw === "function") {
-          origAddDraw.call(this, ctx, node, widget_width, 34, widget_height);
-        }
-      };
-      this._dsLora.addWidget = addWidget;
-
       const cardWidget = this.addDOMWidget("ds_lora_card", "custom", card, {
         serialize: false,
-        margin: 0,
-        getMinHeight: () => calculateCardHeight(this),
-        getMaxHeight: () => calculateCardHeight(this),
+        margin: CARD_MARGIN,
+        getMinHeight: () => calculateWidgetHeight(this),
+        getMaxHeight: () => {
+          const widgetY = Number(cardWidget?.y ?? this._getWidgetY?.() ?? WIDGET_START_Y);
+          const nodeHeight = Number(this.size?.[1] ?? 0);
+          return Math.max(calculateWidgetHeight(this), nodeHeight - widgetY);
+        },
       });
       cardWidget.serialize = false;
-      cardWidget.computeSize = () => [minW, calculateCardHeight(this)];
-      const origCardDraw = cardWidget.draw;
-      cardWidget.draw = function (ctx, node, widget_width, y, widget_height) {
-        if (typeof origCardDraw === "function") {
-          origCardDraw.call(this, ctx, node, widget_width, 96, widget_height);
-        }
-      };
+      cardWidget.computeSize = () => [minW, calculateWidgetHeight(this)];
       this._dsLora.cardWidget = cardWidget;
 
       protectDSResizeCorners(this);
       registerGearMenu();
       ensureHiddenWidget(this);
-
-      if (Array.isArray(this.widgets)) {
-        const addIdx = this.widgets.indexOf(addWidget);
-        if (addIdx > 0) {
-          this.widgets.splice(addIdx, 1);
-          this.widgets.unshift(addWidget);
-        }
-        const cardIdx = this.widgets.indexOf(cardWidget);
-        if (cardIdx > 1) {
-          this.widgets.splice(cardIdx, 1);
-          this.widgets.splice(1, 0, cardWidget);
-        }
-      }
 
       this.min_size = [minW, calculateNodeHeight(this)];
 
@@ -1140,7 +1046,12 @@ app.registerExtension({
 
     nodeType.prototype.onConfigure = function (info) {
       const r = originalConfigure?.apply(this, arguments);
-      this.widgets_start_y = 36;
+      this.widgets_start_y = WIDGET_START_Y;
+      Object.defineProperty(this, "widgets_start_y", {
+        configurable: true,
+        get() { return WIDGET_START_Y; },
+        set() {},
+      });
       this.properties = this.properties || {};
 
       const rawState =
@@ -1168,23 +1079,8 @@ app.registerExtension({
 
       const minW = this._dsLora.mode === "video" ? 440 : 380;
 
-      if (this._dsLora?.addWidget) {
-        this._dsLora.addWidget.computeSize = () => [minW, 36];
-        const origAddDraw = this._dsLora.addWidget.draw;
-        this._dsLora.addWidget.draw = function (ctx, node, widget_width, y, widget_height) {
-          if (typeof origAddDraw === "function") {
-            origAddDraw.call(this, ctx, node, widget_width, 34, widget_height);
-          }
-        };
-      }
       if (this._dsLora?.cardWidget) {
-        this._dsLora.cardWidget.computeSize = () => [minW, calculateCardHeight(this)];
-        const origCardDraw = this._dsLora.cardWidget.draw;
-        this._dsLora.cardWidget.draw = function (ctx, node, widget_width, y, widget_height) {
-          if (typeof origCardDraw === "function") {
-            origCardDraw.call(this, ctx, node, widget_width, 96, widget_height);
-          }
-        };
+        this._dsLora.cardWidget.computeSize = () => [minW, calculateWidgetHeight(this)];
       }
 
       this.min_size = [minW, calculateNodeHeight(this)];
@@ -1278,7 +1174,6 @@ app.registerExtension({
 
     nodeType.prototype.onRemoved = function () {
       try {
-        this._dsLora?.addArea?.remove?.();
         this._dsLora?.card?.remove?.();
         this._dsLora = null;
       } catch {}

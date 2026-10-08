@@ -18,6 +18,9 @@ import {
 const TYPE = "DS_Gallery";
 const EXT_NAME = "DeathshotArsenal.DSGallery";
 const PROP_KEY = "ds_gallery";
+const CARD_MARGIN = 5;
+const MIN_WIDGET_HEIGHT = 160;
+const AUTO_REFRESH_MS = 2000;
 
 function hideWidgets(node) {
   if (!node.widgets) return;
@@ -231,6 +234,7 @@ app.registerExtension({
       }
 
       registerGalleryGearMenu();
+      this._startAutoRefresh();
       // Re-assert size after LiteGraph's auto-fit may have called computeSize()
       // and snapped the node to the minimum [340, 220].
       setTimeout(() => {
@@ -285,6 +289,10 @@ app.registerExtension({
       document.querySelectorAll(".ds-gallery-player-modal, .ds-gallery-lightbox").forEach((el) => {
         try { el.remove(); } catch (_) {}
       });
+      if (this._autoRefreshTimer) {
+        clearInterval(this._autoRefreshTimer);
+        this._autoRefreshTimer = null;
+      }
       if (this._nsfwPolling) {
         clearInterval(this._nsfwPolling);
         this._nsfwPolling = null;
@@ -312,18 +320,12 @@ app.registerExtension({
       return [minW, minH];
     };
 
-    // Compute the pixel height the gallery widget should fill.
-    // LiteGraph title bar = 30px. Each slot row = 20px.
-    // We use widget.y when available (most accurate), otherwise estimate.
+    // Widget allocation runs from its y position to the node bottom; the 5px DOM margin
+    // then leaves the visible Card exactly 5px above the node base.
     nodeType.prototype._getWidgetHeight = function () {
-      const nodeH = Math.max(220, Number(this.size?.[1]) || 520);
-      const TITLE_H = (typeof LiteGraph !== "undefined" && LiteGraph.NODE_TITLE_HEIGHT) || 30;
-      const slotCount = Math.max(this.inputs?.length || 0, this.outputs?.length || 0);
-      const slotH = slotCount > 0 ? slotCount * 20 : 0;
-      const startY = Number.isFinite(this._galleryWidget?.y) && this._galleryWidget.y > TITLE_H
-        ? this._galleryWidget.y
-        : (TITLE_H + slotH);
-      return Math.max(160, Math.floor(nodeH - startY));
+      const nodeH = Number(this.size?.[1]) || 520;
+      const widgetY = Number(this._galleryWidget?.y ?? this._getWidgetY?.() ?? 0);
+      return Math.max(MIN_WIDGET_HEIGHT, Math.floor(nodeH - widgetY));
     };
 
     // Node resizing handler
@@ -406,21 +408,14 @@ app.registerExtension({
     nodeType.prototype._buildGalleryWidget = function () {
       const state = this.properties[PROP_KEY] || { ...DEFAULT_SETTINGS };
 
-      // Root host container
-      const root = document.createElement("div");
-      root.className = "ds-gallery-host";
-      root.dataset.dsUiHost = "true";
-      root.dataset.dsThemed = "true";
-      root.dataset.sneakPeek = state.sneak_peek ? "true" : "false";
-      root.style.boxSizing = "border-box";
-      root.style.width = "100%";
-      root.style.padding = "0 5px 5px 5px";
-      root.style.setProperty("--ds-ui-margin", "5px");
-      root.style.setProperty("--ds-card-padding", "10px");
-
       // The Card itself is the visible container
       const card = document.createElement("div");
-      card.className = "ds-ui-card ds-gallery-card";
+      card.className = "ds-ui-card ds-gallery-card ds-gallery-host";
+      card.dataset.dsUiHost = "true";
+      card.dataset.dsThemed = "true";
+      card.dataset.sneakPeek = state.sneak_peek ? "true" : "false";
+      card.style.setProperty("--ds-card-padding", "10px");
+      const root = card;
       card.style.boxSizing = "border-box";
       card.style.width = "100%";
       card.style.height = "100%";
@@ -529,8 +524,6 @@ app.registerExtension({
         </div>
       `;
 
-      root.appendChild(card);
-
       this._galleryHost = root;
       this._galleryRoot = root;
       this._galleryCard = card;
@@ -597,43 +590,16 @@ app.registerExtension({
       const widget = this.addDOMWidget("gallery_ui", "custom", root, {
         serialize: false,
         hideOnZoom: false,
-        margin: 0,
+        margin: CARD_MARGIN,
         getValue: () => null,
         setValue: () => { },
-        getMinHeight: () => 160,
-        getHeight: () => this._getWidgetHeight(),
+        getMinHeight: () => MIN_WIDGET_HEIGHT,
+        getMaxHeight: () => this._getWidgetHeight(),
       });
       this._galleryWidget = widget;
 
-      widget.computeLayoutSize = () => ({
-        minHeight: 160,
-        minWidth: 340,
-      });
-
-      // CRITICAL: widget.computeSize()[1] is what LiteGraph uses to set the
-      // CSS height of the DOM wrapper div. Must return the real desired height.
-      widget.computeSize = (width) => [
-        Math.max(340, Number(width) || this.size?.[0] || 480),
-        this._getWidgetHeight ? this._getWidgetHeight() : Math.max(160, (this.size?.[1] || 520) - 50),
-      ];
-
-      this._syncGalleryHostHeight = () => {
-        const widgetH = this._getWidgetHeight();
-
-        // Only update computedHeight — ComfyUI reads this and sets
-        // root.style.height = computedHeight × canvasScale (screen pixels).
-        // Do NOT override root.style.height here; we'd be setting canvas-coord
-        // units as CSS pixels which is wrong at any zoom level other than 1.0.
-        if (this._galleryWidget) {
-          this._galleryWidget.computedHeight = widgetH;
-        }
-        // Card fills root's content area via flex (root padding-bottom = 5px → 5px gap)
-        if (card) {
-          card.style.flex = "1 1 auto";
-          card.style.minHeight = "0";
-        }
-      };
-      this._syncGalleryHostHeight();
+      // Height is owned by ComfyUI's layout (getMinHeight/getMaxHeight above); nothing to push manually
+      this._syncGalleryHostHeight = () => { };
 
       widget.onPointerDown = (pointer) => {
         const e = pointer?.eDown || pointer?.e;
@@ -653,16 +619,6 @@ app.registerExtension({
 
       // After DOM attachment, ComfyUI has assigned widget.y — sync height then.
       const doPostAttachSync = () => {
-        const host = root.parentElement;
-        if (host) {
-          host.style.overflow = "hidden";
-          host.style.borderRadius = "0 0 8px 8px";
-          host.style.boxSizing = "border-box";
-          host.style.margin = "0";
-          host.style.padding = "0";
-          host.style.background = "transparent";
-        }
-        this._syncGalleryHostHeight?.();
         try { this.setDirtyCanvas?.(true, true); } catch (_) {}
       };
       setTimeout(doPostAttachSync, 0);
@@ -906,6 +862,8 @@ app.registerExtension({
           return;
         }
 
+        this._knownSignature = undefined;
+        this._pendingSignature = null;
         this._allFiles = data.files || [];
         this._folderLabel.textContent = state.folder_path.split(/[\\/]/).pop() || state.folder_path;
         this._folderBtn.title = state.folder_path;
@@ -915,6 +873,59 @@ app.registerExtension({
         console.error("[DS Gallery] Scan error:", err);
         this._showEmptyState("Scan Failed", String(err));
       }
+    };
+
+    // Polls a cheap folder signature and rescans once it changes and has stopped changing,
+    // so a video still being written is not picked up half-finished.
+    nodeType.prototype._startAutoRefresh = function () {
+      if (this._autoRefreshTimer) return;
+      this._autoRefreshTimer = setInterval(async () => {
+        const state = this.properties?.[PROP_KEY];
+        if (!state?.folder_path || document.hidden || this._autoRefreshBusy) return;
+        if (document.querySelector(".ds-gallery-player-modal, .ds-gallery-lightbox")) return;
+        this._autoRefreshBusy = true;
+        try {
+          const q = new URLSearchParams({ folder: state.folder_path });
+          const resp = await fetch(`/ds/gallery/signature?${q.toString()}`);
+          const { signature, error } = await resp.json();
+          if (error || !signature) return;
+          if (this._knownSignature === undefined) {
+            this._knownSignature = signature;
+            return;
+          }
+          if (signature === this._knownSignature) {
+            this._pendingSignature = null;
+            return;
+          }
+          if (signature !== this._pendingSignature) {
+            this._pendingSignature = signature;
+            return;
+          }
+          this._pendingSignature = null;
+          this._knownSignature = signature;
+          await this._silentRescan();
+        } catch (_) {
+        } finally {
+          this._autoRefreshBusy = false;
+        }
+      }, AUTO_REFRESH_MS);
+    };
+
+    // Rescan without clearing selection or resetting scroll position
+    nodeType.prototype._silentRescan = async function () {
+      const state = this.properties[PROP_KEY];
+      const query = new URLSearchParams({ folder: state.folder_path, sort: state.sort_by });
+      const resp = await fetch(`/ds/gallery/scan?${query.toString()}`);
+      const data = await resp.json();
+      if (data.error) return;
+      const scroller = this._gridEl?.parentElement;
+      const top = scroller ? scroller.scrollTop : 0;
+      this._allFiles = data.files || [];
+      this._selectedSet.forEach((p) => {
+        if (!this._allFiles.some((f) => f.full_path === p)) this._selectedSet.delete(p);
+      });
+      this._applyLocalFiltersAndRender();
+      if (scroller) scroller.scrollTop = top;
     };
 
     nodeType.prototype._showEmptyState = function (title, hint) {

@@ -13,9 +13,6 @@ class DS_Gallery:
     def INPUT_TYPES(cls):
         return {
             "required": {},
-            "optional": {
-                "folder_path": ("STRING", {"default": "", "forceInput": True}),
-            },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
                 "extra_pnginfo": "EXTRA_PNGINFO",

@@ -231,6 +231,16 @@ def register_routes():
                         f["nsfw_score"] = None
             return web.json_response(res)
 
+        @routes.get("/ds/gallery/signature")
+        async def api_gallery_signature(request):
+            # Lightweight change detector used by the node's auto-refresh poll
+            folder = request.query.get("folder", "")
+            loop = asyncio.get_event_loop()
+            res = await loop.run_in_executor(None, scan_gallery_folder, folder, "all", "", "name_asc", False)
+            files = res.get("files", []) if isinstance(res, dict) else []
+            sig = f"{len(files)}:{max((f['mtime'] for f in files), default=0)}:{sum(f['size'] for f in files)}"
+            return web.json_response({"signature": sig, "error": res.get("error") if isinstance(res, dict) else None})
+
         @routes.post("/ds/gallery/nsfw/eval_batch")
         async def api_nsfw_eval_batch(request):
             try:

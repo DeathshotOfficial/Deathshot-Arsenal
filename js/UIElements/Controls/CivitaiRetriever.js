@@ -170,8 +170,8 @@ export function openCivitaiRetrieverModal(options = {}) {
 
   // Panel
   const panel = document.createElement("div");
-  panel.className = "ds-civitai-modal ds-ui-popup";
-  panel.style.width = "420px";
+  panel.className = "ds-civitai-modal";
+  panel.style.width = "460px";
   panel.style.maxWidth = "calc(100vw - 32px)";
 
   // 1. Header
@@ -362,35 +362,83 @@ export function openCivitaiRetrieverModal(options = {}) {
   // Positioning
   const positionModal = () => {
     if (!panel.isConnected) return;
-    const pw = panel.offsetWidth || 420;
-    const ph = panel.offsetHeight || 300;
+    const pw = panel.offsetWidth || 460;
+    const ph = panel.offsetHeight || 480;
 
-    let targetRect = null;
+    let nodeRect = null;
+    let anchorRect = null;
+
     if (anchorEl && document.body.contains(anchorEl)) {
-      targetRect = anchorEl.getBoundingClientRect();
-    } else if (node?._domRoot && document.body.contains(node._domRoot)) {
-      targetRect = node._domRoot.getBoundingClientRect();
+      anchorRect = anchorEl.getBoundingClientRect();
     }
 
-    if (targetRect) {
-      let left = targetRect.right + 12;
-      if (left + pw > window.innerWidth - 12) {
-        left = targetRect.left - pw - 12;
+    if (node) {
+      const nodeEl = node._domCard || node._domRoot || node._dsLora?.card || node.dom;
+      if (nodeEl && document.body.contains(nodeEl)) {
+        nodeRect = nodeEl.getBoundingClientRect();
       }
-      left = Math.max(12, Math.min(left, window.innerWidth - pw - 12));
+    }
 
-      let top = targetRect.top;
-      if (top + ph > window.innerHeight - 12) {
-        top = Math.max(12, window.innerHeight - ph - 12);
+    if (!nodeRect && anchorEl && document.body.contains(anchorEl)) {
+      const nodeCard = anchorEl.closest?.(".ds-sensei-root, .ds-sensei-container, .ds-sensei-card, .ds-hub-container, .ds-lora-card, .ds-card, .ds-node-root");
+      if (nodeCard && document.body.contains(nodeCard)) {
+        nodeRect = nodeCard.getBoundingClientRect();
       }
-      top = Math.max(12, top);
+    }
+
+    if (!nodeRect && node?.pos && window.app?.canvas?.ds) {
+      try {
+        const ds = window.app.canvas.ds;
+        const canvasEl = window.app.canvas.canvas;
+        const cRect = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0 };
+        const screenX = cRect.left + (node.pos[0] + ds.offset[0]) * ds.scale;
+        const screenY = cRect.top + (node.pos[1] + ds.offset[1]) * ds.scale;
+        const nodeW = (node.size ? node.size[0] : 420) * ds.scale;
+        const nodeH = (node.size ? node.size[1] : 500) * ds.scale;
+        nodeRect = {
+          left: screenX,
+          top: screenY,
+          right: screenX + nodeW,
+          bottom: screenY + nodeH,
+          width: nodeW,
+          height: nodeH,
+        };
+      } catch (_) {}
+    }
+
+    const margin = 14;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    const targetRect = nodeRect || anchorRect;
+
+    if (targetRect) {
+      // Preferred side: Right side of the node
+      let left = targetRect.right + margin;
+      if (left + pw > viewportW - margin) {
+        // If right side doesn't fit, check if left side of node has enough space
+        if (targetRect.left - pw - margin >= margin) {
+          left = targetRect.left - pw - margin;
+        } else {
+          // Clamp inside viewport
+          left = Math.max(margin, viewportW - pw - margin);
+        }
+      }
+      left = Math.max(margin, Math.min(left, viewportW - pw - margin));
+
+      // Vertical position: align near the clicked row (anchor) or top of node card
+      let top = anchorRect ? anchorRect.top - 20 : targetRect.top;
+      if (top + ph > viewportH - margin) {
+        top = Math.max(margin, viewportH - ph - margin);
+      }
+      top = Math.max(margin, top);
 
       panel.style.left = `${Math.round(left)}px`;
       panel.style.top = `${Math.round(top)}px`;
     } else {
       // Center
-      panel.style.left = `${Math.max(12, Math.round((window.innerWidth - pw) / 2))}px`;
-      panel.style.top = `${Math.max(12, Math.round((window.innerHeight - ph) / 2))}px`;
+      panel.style.left = `${Math.max(margin, Math.round((viewportW - pw) / 2))}px`;
+      panel.style.top = `${Math.max(margin, Math.round((viewportH - ph) / 2))}px`;
     }
   };
 
@@ -459,8 +507,11 @@ export function openCivitaiRetrieverModal(options = {}) {
   // Update thumbnail
   const updateThumbnail = (images) => {
     if (settings.showThumbnails && Array.isArray(images) && images.length && images[0]) {
+      thumbImg.onload = () => {
+        positionModal();
+      };
       thumbImg.src = images[0];
-      thumbWrap.style.display = "block";
+      thumbWrap.style.display = "flex";
     } else {
       thumbWrap.style.display = "none";
     }
@@ -553,6 +604,7 @@ export function openCivitaiRetrieverModal(options = {}) {
     if (!apply && onClose) {
       onClose();
     }
+    window.removeEventListener("resize", positionModal);
     modal.remove();
     document.removeEventListener("pointerdown", outsideHandler, true);
     document.removeEventListener("keydown", escHandler, true);
@@ -570,6 +622,8 @@ export function openCivitaiRetrieverModal(options = {}) {
       closeModal(true);
     }
   };
+
+  window.addEventListener("resize", positionModal);
 
   setTimeout(() => {
     document.addEventListener("pointerdown", outsideHandler, true);

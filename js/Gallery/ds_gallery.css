@@ -7,31 +7,19 @@
 /* ========================================================================= */
 /* 1. Host & Card Container                                                  */
 /* ========================================================================= */
+/* The Card is the DOM widget root; .ds-gallery-host only marks it for theme and sneak-peek selectors */
 .ds-gallery-host {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  /* ComfyUI sets an explicit CSS pixel height on this element (computedHeight × scale).
-     height:100% ensures we fill that. overflow:hidden clips content to node bounds. */
-  height: 100% !important;
-  padding: 0 5px 5px 5px !important;
-  pointer-events: none !important;
-  background: transparent !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column !important;
   font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
   font-size: 11px;
   color: var(--ds-color-text, #e5e7eb);
   user-select: none;
-  box-shadow: none !important;
 }
 
 .ds-gallery-card {
   box-sizing: border-box !important;
   pointer-events: auto !important;
   width: 100% !important;
-  /* flex:1 1 auto fills host content area (host height - 5px bottom padding) */
-  flex: 1 1 auto !important;
+  height: 100% !important;
   min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;

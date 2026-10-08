@@ -99,14 +99,49 @@ export function Popup(options = {}) {
     let y = 0;
 
     if (anchorOrPos instanceof HTMLElement) {
+      if (!anchorOrPos.isConnected) {
+        hide();
+        return;
+      }
       const rect = anchorOrPos.getBoundingClientRect();
-      x = rect.left;
-      y = rect.bottom + (options.offset ?? 4);
+      const margin = 8;
+      const gap = options.offset ?? 4;
 
-      // If opening below would overflow screen bottom, open above
+      // Ensure min-width matches the anchor trigger
+      if (!options.width) {
+        root.style.minWidth = `${Math.max(140, Math.round(rect.width))}px`;
+      }
+
+      const popupW = root.offsetWidth || Math.max(180, Math.round(rect.width));
       const popupH = root.offsetHeight || 180;
-      if (y + popupH > window.innerHeight && rect.top - popupH > 0) {
-        y = Math.max(8, rect.top - popupH - (options.offset ?? 4));
+
+      // Horizontal alignment: Align with left of anchor, clamped within screen
+      x = rect.left;
+      if (x + popupW > window.innerWidth - margin) {
+        x = Math.max(margin, window.innerWidth - popupW - margin);
+      }
+      if (x < margin) x = margin;
+
+      // Vertical alignment: determine whether below or above fits best
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+      const spaceAbove = rect.top - margin;
+
+      if (spaceBelow >= popupH + gap || spaceBelow >= spaceAbove) {
+        y = rect.bottom + gap;
+        // If overflowing viewport bottom:
+        if (y + popupH > window.innerHeight - margin) {
+          if (spaceAbove >= popupH + gap) {
+            y = rect.top - popupH - gap;
+          } else {
+            y = Math.max(margin, window.innerHeight - popupH - margin);
+          }
+        }
+      } else {
+        // Position above the anchor
+        y = rect.top - popupH - gap;
+        if (y < margin) {
+          y = margin;
+        }
       }
     } else if (typeof anchorOrPos.x === "number" && typeof anchorOrPos.y === "number") {
       x = anchorOrPos.x;
@@ -117,8 +152,8 @@ export function Popup(options = {}) {
     const safeLeft = Math.max(8, Math.min(window.innerWidth - popupW - 8, x));
     const safeTop = Math.max(8, Math.min(window.innerHeight - 40, y));
 
-    root.style.left = `${safeLeft}px`;
-    root.style.top = `${safeTop}px`;
+    root.style.left = `${Math.round(safeLeft)}px`;
+    root.style.top = `${Math.round(safeTop)}px`;
   };
 
   const show = (anchor = options.anchor) => {
@@ -130,10 +165,9 @@ export function Popup(options = {}) {
     // Frame-delayed positioning to get exact offsetWidth/Height
     requestAnimationFrame(() => reposition(anchor));
 
-    if (options.node || (anchor?.pos && anchor?.size)) {
-      ACTIVE_NODE_POPUPS.add(api);
-      ensureFollowLoop();
-    }
+    // Always follow open anchor in animation loop for responsive canvas tracking
+    ACTIVE_NODE_POPUPS.add(api);
+    ensureFollowLoop();
 
     if (options.closeOnClickOutside !== false) {
       setTimeout(() => {

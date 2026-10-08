@@ -447,21 +447,22 @@
 /* Floating Popup */
 .ds-ui-popup {
   position: fixed;
-  z-index: 10000;
+  z-index: 100020;
   box-sizing: border-box;
   background: var(--ds-color-card, #12151c);
   border: 1px solid var(--ds-color-card-border, #242a36);
   border-radius: var(--ds-radius-popup, 8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  padding: var(--ds-gap-xs, 4px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 5px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   max-height: 280px;
-  overflow-y: auto;
   min-width: 140px;
-  font-family: var(--ds-font);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
   outline: none;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
   animation: ds-popup-appear 100ms ease;
 }
 
@@ -477,22 +478,45 @@
   }
 }
 
+.ds-ui-dropdown-popup-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
 .ds-ui-popup-search {
   box-sizing: border-box;
   width: 100%;
-  height: 24px;
-  padding: 0 6px;
+  height: 26px;
+  padding: 0 8px;
   border: 1px solid var(--ds-color-border, #242a36);
   border-radius: var(--ds-radius-control, 5px);
   background: var(--ds-color-panel-2, #161a23);
   color: var(--ds-color-text, #e5e7eb);
-  font-size: 10px;
+  font-size: 11px;
   outline: none;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+  transition: border-color var(--ds-transition, 120ms ease);
 }
 
 .ds-ui-popup-search:focus {
   border-color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-ui-popup-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-right: 2px;
 }
 
 .ds-ui-popup-item {
@@ -506,12 +530,13 @@
   border: none;
   background: transparent;
   color: var(--ds-color-text, #e5e7eb);
-  font-family: var(--ds-font);
+  font-family: var(--ds-font, Inter, system-ui, sans-serif);
   font-size: 11px;
   cursor: pointer;
   user-select: none;
   text-align: left;
-  transition: all var(--ds-transition);
+  flex-shrink: 0;
+  transition: all var(--ds-transition, 120ms ease);
 }
 
 .ds-ui-popup-item:hover,
@@ -523,13 +548,23 @@
 .ds-ui-popup-item.is-selected {
   background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 15%, transparent);
   color: var(--ds-color-accent, #67e8f9);
-  font-weight: 700;
+  font-weight: 650;
+}
+
+.ds-ui-popup-empty {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ds-color-muted-text, #9ca3af);
+  user-select: none;
+  font-style: italic;
 }
 
 .ds-ui-popup-sep {
   height: 1px;
   background: var(--ds-color-border, #242a36);
   margin: 3px 0;
+  flex-shrink: 0;
 }
 
 /* ========================================================================= */
@@ -2131,15 +2166,21 @@ input[type="number"]::-webkit-outer-spin-button {
   box-sizing: border-box;
   background: var(--ds-color-card, #12151c);
   border: 1px solid var(--ds-color-card-border, #242a36);
-  border-radius: var(--ds-radius-card, 8px);
-  padding: 12px;
+  border-radius: var(--ds-radius-card, 10px);
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
+  width: 460px;
+  max-width: calc(100vw - 32px);
+  min-height: 420px;
+  max-height: min(720px, calc(100vh - 40px));
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
   font-family: var(--ds-font, Inter, system-ui, sans-serif);
   color: var(--ds-color-text, #e5e7eb);
   animation: ds-civitai-fade-in 120ms ease-out;
+  user-select: none;
+  overflow: hidden;
 }
 
 @keyframes ds-civitai-fade-in {
@@ -2152,8 +2193,9 @@ input[type="number"]::-webkit-outer-spin-button {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--ds-color-border, #242a36);
+  flex-shrink: 0;
 }
 
 .ds-civitai-modal-title-group {
@@ -2165,7 +2207,7 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .ds-civitai-modal-title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 650;
   color: var(--ds-color-text, #e5e7eb);
   white-space: nowrap;
@@ -2174,26 +2216,27 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 .ds-civitai-site-badge {
-  font-size: 9.5px;
-  padding: 2px 6px;
+  font-size: 10px;
+  padding: 2px 7px;
   border-radius: 999px;
   background: rgba(103, 232, 249, 0.12);
   color: var(--ds-color-accent, #67e8f9);
   border: 1px solid rgba(103, 232, 249, 0.28);
-  font-weight: 550;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .ds-civitai-settings-drawer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  margin-top: 8px;
+  gap: 8px;
+  padding: 10px;
+  margin-top: 10px;
   background: var(--ds-color-panel-2, #161a23);
   border-radius: 6px;
   border: 1px solid var(--ds-color-border, #242a36);
   animation: ds-civitai-fade-in 100ms ease;
+  flex-shrink: 0;
 }
 
 .ds-civitai-settings-row {
@@ -2208,9 +2251,9 @@ input[type="number"]::-webkit-outer-spin-button {
   background: var(--ds-color-base, #0b0d12);
   color: var(--ds-color-text, #e5e7eb);
   border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 11px;
+  border-radius: 5px;
+  padding: 5px 9px;
+  font-size: 11.5px;
   outline: none;
   flex: 1;
   transition: border-color var(--ds-transition, 120ms ease);
@@ -2223,26 +2266,31 @@ input[type="number"]::-webkit-outer-spin-button {
 .ds-civitai-modal-body {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 2px;
+  margin-top: 10px;
 }
 
 .ds-civitai-action-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 6px 10px;
+  gap: 10px;
+  padding: 8px 12px;
   background: var(--ds-color-panel-2, #161a23);
   border-radius: 6px;
   border: 1px solid var(--ds-color-border, #242a36);
+  flex-shrink: 0;
 }
 
 .ds-civitai-status-text {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--ds-color-muted-text, #9ca3af);
   flex: 1;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .ds-civitai-spinner {
@@ -2259,12 +2307,12 @@ input[type="number"]::-webkit-outer-spin-button {
 .ds-civitai-quick-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .ds-civitai-count-badge {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--ds-color-muted-text, #9ca3af);
   margin-left: auto;
   font-weight: 500;
@@ -2273,39 +2321,46 @@ input[type="number"]::-webkit-outer-spin-button {
 .ds-civitai-chips-wrap {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 6px;
-  margin-top: 8px;
-  max-height: 190px;
+  min-height: 95px;
+  max-height: 220px;
+  flex: 1 1 auto;
   overflow-y: auto;
-  padding: 2px 2px 2px 0;
+  padding: 8px;
+  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.25));
+  border-radius: 6px;
+  border: 1px solid var(--ds-color-border, #242a36);
   scrollbar-width: thin;
 }
 
 .ds-civitai-tag-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 9px;
+  gap: 5px;
+  padding: 5px 11px;
   border-radius: 999px;
   border: 1px solid var(--ds-color-border, #242a36);
   background: var(--ds-btn-bg, #161a23);
   color: var(--ds-color-text, #e5e7eb);
-  font-size: 11px;
+  font-size: 11.5px;
   cursor: pointer;
+  user-select: none;
   transition: all var(--ds-transition, 120ms ease);
 }
 
 .ds-civitai-tag-chip:hover {
   border-color: var(--ds-color-accent, #67e8f9);
   color: #fff;
+  background: var(--ds-btn-hover, #1e2433);
 }
 
 .ds-civitai-tag-chip.is-selected {
   border-color: var(--ds-color-accent, #67e8f9);
   color: var(--ds-color-accent, #67e8f9);
-  background: rgba(103, 232, 249, 0.12);
+  background: rgba(103, 232, 249, 0.14);
   font-weight: 600;
-  box-shadow: 0 0 8px rgba(103, 232, 249, 0.2);
+  box-shadow: 0 0 10px rgba(103, 232, 249, 0.22);
 }
 
 .ds-civitai-empty-state {
@@ -2314,34 +2369,42 @@ input[type="number"]::-webkit-outer-spin-button {
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 18px 8px;
-  gap: 5px;
+  min-height: 80px;
+  padding: 16px 8px;
+  gap: 6px;
   text-align: center;
   color: var(--ds-color-muted-text, #9ca3af);
-  font-size: 11px;
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  border: 1px dashed var(--ds-color-border, #242a36);
+  font-size: 11.5px;
 }
 
 .ds-civitai-thumb-wrap {
-  margin-top: 8px;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 240px;
+  min-height: 120px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--ds-color-border, #242a36);
+  padding: 4px;
 }
 
 .ds-civitai-thumb-img {
   max-width: 100%;
-  max-height: 160px;
-  border-radius: 6px;
-  border: 1px solid var(--ds-color-border, #242a36);
+  max-height: 230px;
+  border-radius: 4px;
   object-fit: contain;
+  display: block;
 }
 
 .ds-civitai-modal-foot {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: 8px;
   margin-top: 10px;
-  padding-top: 8px;
+  padding-top: 10px;
   border-top: 1px solid var(--ds-color-border, #242a36);
+  flex-shrink: 0;
 }
