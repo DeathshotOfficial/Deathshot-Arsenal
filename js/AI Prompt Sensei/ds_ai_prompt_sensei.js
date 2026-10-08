@@ -1069,6 +1069,72 @@ function openSenseiGearConfig(node, anchorEl) {
       modelHdr.append(modelLbl, rescanBtn);
       modelSec.appendChild(modelHdr);
 
+      let cachedBuiltinModelsList = [];
+
+      const getSelectedModelMeta = () => {
+        const cur = String(bi.model || "").replace(/\\/g, "/").toLowerCase();
+        const curBase = cur.split("/").pop();
+        let match = cachedBuiltinModelsList.find((m) => String(m.id).replace(/\\/g, "/").toLowerCase() === cur);
+        if (!match && curBase) {
+          match = cachedBuiltinModelsList.find((m) => {
+            const mNorm = String(m.id).replace(/\\/g, "/").toLowerCase();
+            return mNorm.endsWith("/" + curBase) || m.name?.toLowerCase() === curBase.replace(/\.gguf$/i, "");
+          });
+        }
+        return match || null;
+      };
+
+      const calcModelPlan = (hw, modelMeta, ctxLen = (bi.context_length || 4096)) => {
+        if (!hw || !hw.has_gpu || !hw.total_vram_mb) {
+          return { recommended: 0, totalLayers: 32, fits100Percent: false, totalRequiredGB: 0, usableVramGB: 0, totalVramGB: 0, safeLayers: 0, hasGpu: false };
+        }
+
+        const totalVramGB = (hw.total_vram_mb || 0) / 1024;
+        const osReserveGB = 0.6;
+        const usableVramGB = Math.max(0.5, totalVramGB - osReserveGB);
+
+        const modelSizeGB = Number(modelMeta?.size_gb) || 4.5;
+        const totalLayers = Number(modelMeta?.total_layers) || 32;
+        const mmprojSizeGB = Number(modelMeta?.mmproj_size_gb) || (modelMeta?.has_vision ? 0.4 : 0);
+        
+        // KV cache calculation (~0.35 GB per 4K context on standard LLMs)
+        const kvCacheGB = (ctxLen / 4096) * 0.35;
+        const computeOverheadGB = 0.25;
+        const baseVramGB = (modelMeta?.has_vision ? mmprojSizeGB + 0.15 : 0) + kvCacheGB + computeOverheadGB;
+        
+        const totalRequiredGB = modelSizeGB + baseVramGB;
+
+        // If the entire model + vision projector + KV cache fits in usable VRAM:
+        if (totalRequiredGB <= usableVramGB) {
+          return {
+            recommended: -1, // ALL layers
+            totalLayers,
+            fits100Percent: true,
+            totalRequiredGB: Math.round(totalRequiredGB * 10) / 10,
+            usableVramGB: Math.round(usableVramGB * 10) / 10,
+            totalVramGB: Math.round(totalVramGB * 10) / 10,
+            safeLayers: totalLayers,
+            hasGpu: true,
+          };
+        }
+
+        // Partial offload calculation
+        const weightBudgetGB = Math.max(0.2, usableVramGB - baseVramGB);
+        const weightPerLayerGB = Math.max(0.01, (modelSizeGB * 0.94) / totalLayers);
+        const safeLayers = Math.max(0, Math.min(totalLayers, Math.floor(weightBudgetGB / weightPerLayerGB)));
+
+        return {
+          recommended: safeLayers > 0 ? safeLayers : 0,
+          totalLayers,
+          fits100Percent: false,
+          totalRequiredGB: Math.round(totalRequiredGB * 10) / 10,
+          usableVramGB: Math.round(usableVramGB * 10) / 10,
+          totalVramGB: Math.round(totalVramGB * 10) / 10,
+          safeLayers,
+          hasGpu: true,
+        };
+      };
+
       const modelDd = createCustomDropdown({
         value: bi.model || "",
         options: bi.model ? [{ id: bi.model, label: String(bi.model).split(/[/\\]/).pop().replace(/\.gguf$/i, "") }] : [],
@@ -1077,6 +1143,7 @@ function openSenseiGearConfig(node, anchorEl) {
           bi.model = selected;
           s.error_msg = null;
           sync();
+          updateHWWarn();
         },
       });
       modelDd.el.style.width = "100%";
@@ -1086,6 +1153,7 @@ function openSenseiGearConfig(node, anchorEl) {
       const loadModelsIntoDd = () => {
         fetchBuiltinModels().then((res) => {
           if (res.ok && Array.isArray(res.models) && res.models.length > 0) {
+            cachedBuiltinModelsList = res.models;
             const modelOptions = res.models.map((m) => {
               const rootPrefix = m.root && m.root !== "ComfyUI" ? `[${m.root}] ` : "";
               const visTag = m.has_vision ? " 👁️ Vision" : "";
@@ -1096,6 +1164,8 @@ function openSenseiGearConfig(node, anchorEl) {
                 root: m.root,
                 has_vision: m.has_vision,
                 size_gb: m.size_gb,
+                total_layers: m.total_layers,
+                mmproj_size_gb: m.mmproj_size_gb,
               };
             });
             modelDd.setOptions(modelOptions);
@@ -1119,9 +1189,11 @@ function openSenseiGearConfig(node, anchorEl) {
               sync();
             }
           } else {
+            cachedBuiltinModelsList = [];
             modelDd.setOptions([]);
             modelDd.setValue("");
           }
+          updateHWWarn();
         });
       };
       loadModelsIntoDd();
@@ -1142,16 +1214,6 @@ function openSenseiGearConfig(node, anchorEl) {
 
       let gpuSt = null;
 
-      const calcRecommendedLayers = (hw) => {
-        if (!hw) return 15;
-        const vramMB = hw.total_vram_mb || 0;
-        if (!hw.has_gpu || vramMB === 0) return 0;
-        if (vramMB <= 4096) return 8;
-        if (vramMB <= 6144) return 15;
-        if (vramMB <= 8192) return 22;
-        return -1;
-      };
-
       const formatHWName = (hw) => {
         if (!hw) return "Detecting hardware...";
         const vramMB = hw.total_vram_mb || 0;
@@ -1163,7 +1225,6 @@ function openSenseiGearConfig(node, anchorEl) {
       };
 
       let detectedHW = _senseiCachedHW;
-      let recommendedLayers = calcRecommendedLayers(detectedHW);
 
       const hwCard = document.createElement("div");
       hwCard.className = "ds-sensei-gear-hw-card";
@@ -1174,7 +1235,7 @@ function openSenseiGearConfig(node, anchorEl) {
             <span class="ds-sensei-hw-name">${formatHWName(detectedHW)}</span>
           </div>
           <button type="button" class="ds-sensei-btn-compact ds-sensei-autotune-btn" style="${detectedHW ? 'display:inline-flex;' : 'display:none;'}">
-            💡 Auto-Tune (${recommendedLayers === -1 ? 'ALL' : recommendedLayers})
+            💡 Auto-Tune
           </button>
         </div>
       `;
@@ -1187,49 +1248,64 @@ function openSenseiGearConfig(node, anchorEl) {
       scrollBody.appendChild(hwBox);
 
       const updateHWWarn = () => {
-        const curLayers = bi.n_gpu_layers ?? 15;
-        if (!detectedHW) {
-          hwWarn.classList.remove("is-visible");
-          hwWarn.style.display = "none";
-          hwWarn.innerHTML = "";
+        const curLayers = bi.n_gpu_layers ?? -1;
+        const modelMeta = getSelectedModelMeta();
+        const plan = calcModelPlan(detectedHW, modelMeta, bi.context_length || 4096);
+
+        // Update Auto-Tune button text
+        const tuneBtn = hwCard.querySelector(".ds-sensei-autotune-btn");
+        if (tuneBtn) {
+          const recLabel = plan.recommended === -1 ? "ALL" : plan.recommended;
+          tuneBtn.innerHTML = `💡 Auto-Tune (${recLabel})`;
+          tuneBtn.title = plan.fits100Percent
+            ? `Full GPU offload: Entire model (~${plan.totalRequiredGB}GB) fits in ${plan.totalVramGB}GB VRAM.`
+            : `Safe GPU offload: Offload ${plan.safeLayers} of ${plan.totalLayers} layers to stay within ${plan.totalVramGB}GB VRAM.`;
+        }
+
+        if (!detectedHW || !plan.hasGpu) {
+          if (curLayers !== 0) {
+            hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span>No dedicated GPU detected. Set GPU Layers to 0 (CPU Only).</span>`;
+            hwWarn.classList.add("is-visible");
+            hwWarn.style.display = "flex";
+          } else {
+            hwWarn.classList.remove("is-visible");
+            hwWarn.style.display = "none";
+            hwWarn.innerHTML = "";
+          }
           return;
         }
-        const vramMB = detectedHW.total_vram_mb || 0;
-        const hasGpu = detectedHW.has_gpu;
 
-        let warnHtml = null;
-        if (!hasGpu || vramMB === 0) {
-          if (curLayers !== 0) {
-            warnHtml = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span>No dedicated GPU detected. Set GPU Layers to 0 (CPU Only) to avoid freezing.</span>`;
+        if (plan.fits100Percent) {
+          // Model fits 100% in VRAM - NO warning when choosing ALL (-1) or any layers <= totalLayers
+          if (curLayers > plan.totalLayers) {
+            hwWarn.innerHTML = `${DSIconMarkup("info", { size: 13, color: "var(--ds-color-accent, #67e8f9)" })}<span>Model has ${plan.totalLayers} layers. Setting layers above ${plan.totalLayers} has no additional effect (use -1 for ALL).</span>`;
+            hwWarn.classList.add("is-visible");
+            hwWarn.style.display = "flex";
+          } else {
+            hwWarn.classList.remove("is-visible");
+            hwWarn.style.display = "none";
+            hwWarn.innerHTML = "";
           }
-        } else if (vramMB <= 4096) {
-          if (curLayers > 10 || curLayers === -1) {
-            warnHtml = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span>High layers (${curLayers === -1 ? 'ALL' : curLayers}) on 4GB VRAM! May cause OOM or freeze. Recommended: 8–10 layers.</span>`;
-          }
-        } else if (vramMB <= 6144) {
-          if (curLayers > 20 || curLayers === -1) {
-            warnHtml = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span>High layers (${curLayers === -1 ? 'ALL' : curLayers}) on 6GB VRAM! Will overflow into system RAM and freeze. Recommended: 15 layers.</span>`;
-          }
-        } else if (vramMB <= 8192) {
-          if (curLayers === -1) {
-            warnHtml = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span>Offloading all layers (-1) on 8GB VRAM may conflict with ComfyUI models. Recommended: 20–24 layers.</span>`;
-          }
-        }
-
-        if (warnHtml) {
-          hwWarn.innerHTML = warnHtml;
-          hwWarn.classList.add("is-visible");
-          hwWarn.style.display = "flex";
         } else {
-          hwWarn.classList.remove("is-visible");
-          hwWarn.style.display = "none";
-          hwWarn.innerHTML = "";
+          // Model requires more VRAM than available for 100% offload
+          if (curLayers === -1 || curLayers > plan.safeLayers + 2) {
+            const modelName = modelMeta?.name || "Selected model";
+            hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span><strong>${modelName}</strong> requires ~${plan.totalRequiredGB}GB VRAM for 100% offload, exceeding your ${plan.totalVramGB}GB VRAM. Setting ${curLayers === -1 ? 'ALL' : curLayers} layers will spill into system RAM and slow down. Recommended: <strong>${plan.recommended} layers</strong>.</span>`;
+            hwWarn.classList.add("is-visible");
+            hwWarn.style.display = "flex";
+          } else {
+            hwWarn.classList.remove("is-visible");
+            hwWarn.style.display = "none";
+            hwWarn.innerHTML = "";
+          }
         }
       };
 
       const onTuneClick = () => {
-        bi.n_gpu_layers = recommendedLayers;
-        if (gpuSt) gpuSt.setValue(recommendedLayers);
+        const modelMeta = getSelectedModelMeta();
+        const plan = calcModelPlan(detectedHW, modelMeta, bi.context_length || 4096);
+        bi.n_gpu_layers = plan.recommended;
+        if (gpuSt) gpuSt.setValue(plan.recommended);
         sync();
         updateHWWarn();
       };
@@ -1243,13 +1319,11 @@ function openSenseiGearConfig(node, anchorEl) {
         fetchSenseiHardware().then((hw) => {
           if (!popup.contains(hwBox) || !hw) return;
           detectedHW = hw;
-          recommendedLayers = calcRecommendedLayers(hw);
           const nameSpan = hwCard.querySelector(".ds-sensei-hw-name");
           const btn = hwCard.querySelector(".ds-sensei-autotune-btn");
           if (nameSpan) nameSpan.textContent = formatHWName(hw);
           if (btn) {
             btn.style.display = "inline-flex";
-            btn.textContent = `💡 Auto-Tune (${recommendedLayers === -1 ? 'ALL' : recommendedLayers})`;
             btn.onclick = onTuneClick;
           }
           updateHWWarn();
@@ -1319,6 +1393,7 @@ function openSenseiGearConfig(node, anchorEl) {
         onChange: (v) => {
           bi.context_length = parseInt(v) || 8192;
           sync();
+          updateHWWarn();
         },
       });
       ctxField.appendChild(ctxSt.wrap);

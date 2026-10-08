@@ -386,6 +386,9 @@ def list_builtin_models():
                 key = f"{label}/{rel}"
                 mmproj = find_mmproj_for(full)
                 size_gb = round(size_bytes / GiB, 2)
+                mmproj_size_gb = round(os.path.getsize(mmproj) / GiB, 2) if mmproj and os.path.isfile(mmproj) else 0
+                meta = _read_gguf_arch(full)
+                block_count = int(meta.get("block_count") or 32)
 
                 display_name = f
                 if display_name.lower().endswith(".gguf"):
@@ -400,6 +403,8 @@ def list_builtin_models():
                     "has_vision": bool(mmproj),
                     "mmproj_path": mmproj,
                     "size_gb": size_gb,
+                    "mmproj_size_gb": mmproj_size_gb,
+                    "total_layers": block_count,
                 })
 
     models.sort(key=lambda m: (not m["has_vision"], m["name"].lower()))
