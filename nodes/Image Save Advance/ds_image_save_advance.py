@@ -223,20 +223,31 @@ def _resolve_input_value(prompt, node_id, input_name, depth=0):
 
 
 def _model_from_loader(info):
-    inputs = info.get("inputs") if isinstance(info, dict) else None
-    if not isinstance(inputs, dict):
+    if not isinstance(info, dict):
         return None, None
-    keys = ("ckpt_name", "unet_name", "model_name", "model_path", "checkpoint", "checkpoint_name")
+    inputs = info.get("inputs") or {}
+    ct = str(info.get("class_type", "")).lower()
+    if "sensei" in ct:
+        try:
+            state = json.loads(inputs.get("SenseiState", "{}"))
+            models = state.get("models", {})
+            if isinstance(models, dict) and models.get("model"):
+                return models.get("model"), "model"
+            if state.get("ckpt_name"):
+                return state.get("ckpt_name"), "ckpt_name"
+        except Exception:
+            pass
+    keys = ("ckpt_name", "unet_name", "model_name", "model_path", "checkpoint", "checkpoint_name", "model")
     for key in keys:
         value = inputs.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip(), key
+        if isinstance(value, str) and value.strip() and not _is_link(value):
+            if any(ext in value.lower() for ext in (".safetensors", ".ckpt", ".pt", ".pth", ".bin", ".gguf")):
+                return value.strip(), key
     return None, None
 
 
 def _find_checkpoint(prompt, sampler_id, all_nodes):
-    # Follow ONLY model-carrying inputs from the sampler. This avoids
-    # accidentally selecting a checkpoint that exists only on a separate CLIP/VAE branch.
+    # Follow ONLY model-carrying inputs from the sampler.
     if sampler_id and isinstance(prompt, dict):
         queue = [str(sampler_id)]
         seen = set()
@@ -246,24 +257,19 @@ def _find_checkpoint(prompt, sampler_id, all_nodes):
                 continue
             seen.add(nid)
             info = prompt.get(nid) or {}
-            ct = str(info.get("class_type", "")).lower()
             model, key = _model_from_loader(info)
-            if model and ("checkpoint" in ct or "unet" in ct or "diffusion" in ct or key in ("ckpt_name", "unet_name", "model_name", "model_path")):
+            if model:
                 return model, key
             inputs = info.get("inputs") or {}
             if isinstance(inputs, dict):
                 for name, value in inputs.items():
-                    if name in ("model", "unet", "base_model", "guider", "diffusion_model"):
+                    if name in ("model", "unet", "base_model", "guider", "diffusion_model", "pipe"):
                         src = _link_id(value)
                         if src and src not in seen:
                             queue.append(src)
-    # Safe fallback: search the reachable graph for a recognizable model loader.
     for nid, info, _depth in all_nodes:
         model, key = _model_from_loader(info)
-        if not model:
-            continue
-        ct = str(info.get("class_type", "")).lower()
-        if "checkpoint" in ct or "unet" in ct or "diffusion" in ct or key in ("ckpt_name", "unet_name", "model_name", "model_path"):
+        if model:
             return model, key
     return "", ""
 
@@ -291,7 +297,51 @@ def _sampler_info(prompt, start_id, all_nodes):
     return sampler, out
 
 
-def _prompt_text(prompt, sampler_id):
+def _extract_text_from_node(nid, prompt, seen=None):
+    if seen is None:
+        seen = set()
+    nid = str(nid)
+    if nid in seen or nid not in prompt:
+        return ""
+    seen.add(nid)
+    info = prompt.get(nid) or {}
+    inp = info.get("inputs") or {}
+    ct = str(info.get("class_type", "")).lower()
+
+    if "zeroout" in ct:
+        return ""
+
+    if "sensei" in ct:
+        try:
+            state = json.loads(inp.get("SenseiState", "{}"))
+            for k in ("generated_prompt", "positive_prompt", "prompt", "user_prompt"):
+                val = state.get(k)
+                if isinstance(val, str) and val.strip() and val.strip().lower() != "randomize":
+                    return val.strip()
+        except Exception:
+            pass
+
+    for k in ("text", "prompt", "string", "value", "positive", "conditioning", "pipe"):
+        if k in inp and _is_link(inp[k]):
+            found = _extract_text_from_node(_link_id(inp[k]), prompt, seen)
+            if found:
+                return found
+
+    for k in ("text", "prompt", "string", "value"):
+        val = inp.get(k)
+        if isinstance(val, str) and val.strip() and val.strip().lower() not in ("randomize", "none", "undefined"):
+            return val.strip()
+
+    for name, val in inp.items():
+        if _is_link(val):
+            found = _extract_text_from_node(_link_id(val), prompt, seen)
+            if found:
+                return found
+
+    return ""
+
+
+def _prompt_text(prompt, sampler_id, all_nodes=None):
     positive = negative = ""
     if not isinstance(prompt, dict):
         return positive, negative
@@ -300,60 +350,19 @@ def _prompt_text(prompt, sampler_id):
     pos_id = _link_id(inputs.get("positive")) if isinstance(inputs, dict) else None
     neg_id = _link_id(inputs.get("negative")) if isinstance(inputs, dict) else None
 
-    def read_text(nid, avoid=()):
-        seen = set()
-        queue = [nid] if nid else []
-        while queue and len(seen) < 30:
-            cur = queue.pop(0)
-            if cur in seen or cur not in prompt:
-                continue
-            seen.add(cur)
-            info = prompt.get(cur) or {}
-            inp = info.get("inputs") or {}
-            if isinstance(inp, dict):
-                val = inp.get("text")
-                if isinstance(val, str) and val.strip():
-                    return val
-                for k in ("prompt", "string", "value"):
-                    val = inp.get(k)
-                    if isinstance(val, str) and val.strip():
-                        return val
-                for v in inp.values():
-                    src = _link_id(v)
-                    if src and src not in seen:
-                        ct = str((prompt.get(src) or {}).get("class_type", "")).lower()
-                        if not any(a in ct for a in avoid):
-                            queue.append(src)
-        return ""
-    positive = read_text(pos_id, ("negative",))
-    negative = read_text(neg_id, ("positive",))
-    if not positive and not negative:
-        # Fallback for custom sampler layouts: inspect text encoders but do not
-        # invent a negative prompt.
-        texts = []
-        for _nid, info, _depth in all_nodes:
-            inp = info.get("inputs") or {}
-            ct = str(info.get("class_type", "")).lower()
-            val = inp.get("text") if isinstance(inp, dict) else None
-            if isinstance(val, str) and val.strip() and "textencode" in ct:
-                texts.append(("negative" in ct, val))
-        for is_neg, val in texts:
-            if is_neg and not negative:
-                negative = val
-            elif not positive:
-                positive = val
+    if pos_id:
+        positive = _extract_text_from_node(pos_id, prompt)
+    if neg_id:
+        neg_node = prompt.get(str(neg_id)) or {}
+        ct_neg = str(neg_node.get("class_type", "")).lower()
+        if "zeroout" not in ct_neg:
+            negative = _extract_text_from_node(neg_id, prompt)
+
     return positive, negative
 
 
 def _workflow_fallback(extra_pnginfo):
-    """Extract basic loader/sampler values from the embedded workflow JSON.
-
-    Normally the API PROMPT is authoritative. This fallback exists because some
-    ComfyUI execution paths/extensions can omit the save node from the hidden
-    prompt payload while still providing EXTRA_PNGINFO.workflow. It lets the
-    saver remain useful with ordinary stock loaders instead of requiring DS
-    forwarding nodes.
-    """
+    """Extract basic loader/sampler values from the embedded workflow JSON."""
     out = {"seed": "", "model": "", "model_key": "", "steps": "", "cfg": "", "sampler_name": "", "scheduler": "", "positive_prompt": "", "negative_prompt": ""}
     wf = extra_pnginfo.get("workflow") if isinstance(extra_pnginfo, dict) else None
     nodes = wf.get("nodes") if isinstance(wf, dict) else None
@@ -367,19 +376,25 @@ def _workflow_fallback(extra_pnginfo):
         if not isinstance(vals, list):
             continue
         low = ct.lower()
-        # Stock CheckpointLoaderSimple / CheckpointLoader / UNETLoader and
-        # common model-loader extensions put their model filename in the first
-        # widget. Prefer nodes whose type explicitly identifies the loader.
-        if not out["model"] and any(x in low for x in ("checkpointloader", "unetloader", "diffusionmodelload")):
+        if "sensei" in low and not out["positive_prompt"]:
+            for v in vals:
+                if isinstance(v, str) and len(v) > 20:
+                    try:
+                        state = json.loads(v)
+                        for sk in ("generated_prompt", "positive_prompt", "prompt"):
+                            if state.get(sk) and len(state[sk]) > 10:
+                                out["positive_prompt"] = state[sk]
+                                break
+                    except Exception:
+                        pass
+        if not out["model"] and any(x in low for x in ("checkpointloader", "unetloader", "diffusionmodelload", "sensei")):
             for v in vals:
                 if isinstance(v, str) and v.strip():
-                    if any(ext in v.lower() for ext in (".safetensors", ".ckpt", ".pt", ".pth", ".bin")):
+                    if any(ext in v.lower() for ext in (".safetensors", ".ckpt", ".pt", ".pth", ".bin", ".gguf")):
                         out["model"] = os.path.splitext(os.path.basename(v.replace("\\", "/")))[0]
                         out["model_key"] = "ckpt_name"
                         break
         if "ksampler" in low and not out["seed"]:
-            # KSampler widget order in ComfyUI: seed, steps, cfg, sampler_name,
-            # scheduler, denoise, ...
             if len(vals) > 0 and isinstance(vals[0], (int, float, str)):
                 out["seed"] = str(vals[0])
             if len(vals) > 1: out["steps"] = str(vals[1])
@@ -388,7 +403,7 @@ def _workflow_fallback(extra_pnginfo):
             if len(vals) > 4: out["scheduler"] = str(vals[4])
         if not out["positive_prompt"] and "cliptextencode" in low and isinstance(vals[0] if vals else None, str):
             text = vals[0].strip()
-            if text:
+            if text and text.lower() != "randomize":
                 if "negative" in low:
                     out["negative_prompt"] = text
                 else:
@@ -754,7 +769,7 @@ class DS_ImageSaveAdvance:
             os.makedirs(target_dir, exist_ok=True)
             path = _unique_path(target_dir, leaf, ext)
             metadata = _metadata(prompt, extra_pnginfo, context, width, height, cfg)
-            metadata["parameters"] = _a1111_parameters(context, width, height) if cfg.get("civitai") else None
+            metadata["parameters"] = _a1111_parameters(context, width, height) if (cfg.get("civitai") or cfg.get("embed_workflow")) else None
             _save_image(pil, path, cfg["format"], cfg["quality"], cfg["webp_lossless"], metadata)
             saved.append(path)
 

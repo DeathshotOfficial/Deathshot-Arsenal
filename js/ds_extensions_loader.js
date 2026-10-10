@@ -37,5 +37,12 @@ loadDsExtension("ds_snap.js");
     } catch (error) {
         console.error("[DeathshotArsenal] Failed to load DS Controller frontend:", error);
     }
+    try {
+        await import("./Image Describer/ds_image_describer.js");
+        console.log("[DeathshotArsenal] Loaded DS Image Describer frontend");
+    } catch (error) {
+        console.error("[DeathshotArsenal] Failed to load DS Image Describer frontend:", error);
+    }
 })();
+
 

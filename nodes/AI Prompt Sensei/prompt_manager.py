@@ -68,10 +68,46 @@ def clean_generated_prompt(raw_text: str, system_prompt: str = None) -> str:
 
     text = str(raw_text).strip()
 
-    # 1. Remove thinking / thought blocks and channels
+    # 1. Remove thinking / thought blocks and channels (XML and tagged formats)
     text = re.sub(r"<think>[\s\S]*?(?:</think>|$)", "", text, flags=re.IGNORECASE).strip()
     text = re.sub(r"<thought>[\s\S]*?(?:</thought>|$)", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"<reasoning>[\s\S]*?(?:</reasoning>|$)", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"<analysis>[\s\S]*?(?:</analysis>|$)", "", text, flags=re.IGNORECASE).strip()
     text = re.sub(r"<\|channel\>thought[\s\S]*?(?:<channel\|>|$)", "", text, flags=re.IGNORECASE).strip()
+
+    # 1a. Strip any stray or orphan open/close think tags
+    text = re.sub(r"</?(?:think|thought|reasoning|analysis)>", "", text, flags=re.IGNORECASE).strip()
+
+    # 1b. If output begins with 'Thinking Process:', 'Thought Process:', or 'Reasoning Process:' blocks, strip up to the actual prompt
+    final_prompt_match = re.search(
+        r"(?mi)^\s*(?:(?:\*+|_+)|\#+\s*)?(?:Drafting the Final Prompt|Final Prompt|Rewritten Prompt|Modified Prompt|Generated Prompt|Final Output|Prompt|Output)\s*:?(?:(?:\*+|_+)|\#*)?:?\s*\n*",
+        text,
+    )
+    if final_prompt_match:
+        pre_text = text[:final_prompt_match.start()]
+        if re.search(r"(?i)(thinking|thought|analyze|analysis|breakdown|refinement plan|drafting|constraint)", pre_text):
+            text = text[final_prompt_match.end():].strip()
+
+    # 1c. Block-level extraction: if text begins with Thinking/Thought/Reasoning Process or CoT analysis
+    if re.match(r"(?i)^\s*(?:#+\s*)?(?:\*{0,2})?(?:Thinking|Thought|Reasoning)(?:\s+Process)?:?", text) or re.match(r"(?is)^\s*(?:\d+[\.\)]\s*)?\*{0,2}Analyze\s+(?:the\s+)?Request", text):
+        blocks = re.split(r"\n\s*\n", text)
+        non_cot_blocks = []
+        in_cot = True
+        for b in blocks:
+            b_str = b.strip()
+            if in_cot:
+                if (
+                    re.match(r"^(?:#+\s*)?(?:\*{0,2})?(?:Thinking|Thought|Reasoning)(?:\s+Process)?:?", b_str, re.IGNORECASE)
+                    or re.match(r"^(?:\d+[\.\)]|\*)\s*\*\*(?:Analyze|Task|Role|Constraint|Drafting|Refinement|Step)", b_str, re.IGNORECASE)
+                    or re.match(r"^(?:\d+[\.\)]|\*)\s*(?:Analyze|Task|Role|Constraint|Drafting|Refinement|Plan)", b_str, re.IGNORECASE)
+                    or re.match(r"^\*{1,2}(?:Hair|Skin|Nationality|Eye|Paragraph|Section|Refinement|Drafting)", b_str, re.IGNORECASE)
+                    or re.match(r"^\*\*(?:Analyze|Task|Constraint|Role|Refinement|Drafting)[\s\S]*\*\*:?", b_str, re.IGNORECASE)
+                ):
+                    continue
+                in_cot = False
+            non_cot_blocks.append(b_str)
+        if non_cot_blocks:
+            text = "\n\n".join(non_cot_blocks).strip()
 
     # 2. Strip surrounding markdown code blocks (e.g. ```text ... ``` or ``` ...)
     text = re.sub(r"^`{3,}[a-zA-Z0-9_-]*\s*\n?", "", text).strip()
@@ -104,7 +140,7 @@ def clean_generated_prompt(raw_text: str, system_prompt: str = None) -> str:
     section_match = re.search(r"(?mi)^(?:\*\*)?(?:Prompt|Final Prompt|Generated Prompt|Style|Camera|Composition|Paragraph 1)(?:\s*Check)?\s*:?\s*(?:\*\*)?:?\s*", text)
     if section_match and section_match.start() > 0:
         preamble = text[:section_match.start()]
-        if re.search(r"(?i)(goal|analyze|analysis|identify|elements|thought|plan|checklist|requirement|here is|here's|prompt writer|prompt generator|instructions|rules|strictly)", preamble):
+        if re.search(r"(?i)(goal|analyze|analysis|identify|elements|thought|thinking|plan|checklist|requirement|here is|here's|prompt writer|prompt generator|instructions|rules|strictly)", preamble):
             text = text[section_match.start():].strip()
 
     # 7. Strip leading 'Prompt:' or '**Prompt:**' label if present
@@ -119,13 +155,22 @@ def clean_generated_prompt(raw_text: str, system_prompt: str = None) -> str:
     skipping_meta = True
     for line in lines:
         stripped = line.strip()
-        if skipping_meta and (
-            re.match(r"^[\*\-]?\s*\*\*(?:Goal|Plan|Analysis|Analyze|Note|Objective|Requirement|Task|Identify)[\w\s]*:?\*\*:?", stripped, re.IGNORECASE)
-            or re.match(r"^Here(?:\'s| is) (?:a |the )?(?:thinking process|generated prompt|prompt)[\s\S]*?:?$", stripped, re.IGNORECASE)
-            or re.match(r"^(?:Sure|Certainly|Here is the prompt)[^:\n]*:?$", stripped, re.IGNORECASE)
-        ):
-            continue
-        skipping_meta = False
+        if skipping_meta:
+            if (
+                re.match(r"^[\*\-]?\s*\*\*(?:Goal|Plan|Analysis|Analyze|Note|Objective|Requirement|Task|Identify)[\w\s]*:?\*\*:?", stripped, re.IGNORECASE)
+                or re.match(r"^(?:#+\s*)?(?:\*{0,2})?(?:Thinking Process|Thought Process|Reasoning Process|Refinement Plan|Source Text Breakdown|Drafting Replacements|Drafting the Final Prompt):?", stripped, re.IGNORECASE)
+                or re.match(r"^\d+[\.\)]\s*\*\*(?:Analyze|Task|Role|Constraint|Drafting|Refinement|Step)[\s\S]*", stripped, re.IGNORECASE)
+                or re.match(r"^\*\s*\*(?:Hair|Skin|Nationality|Eye|Paragraph|Section|Refinement|Drafting)[\s\S]*", stripped, re.IGNORECASE)
+                or re.match(r"^Here(?:\'s| is) (?:a |the )?(?:thinking process|generated prompt|prompt)[\s\S]*?:?$", stripped, re.IGNORECASE)
+                or re.match(r"^(?:Sure|Certainly|Here is the prompt)[^:\n]*:?$", stripped, re.IGNORECASE)
+            ):
+                continue
+            # If line is drafting like: *Paragraph 1 (Intro):* "..." -> "..."
+            p_draft_match = re.match(r"^\*Paragraph\s*\d+[^:]*:\*\s*[\"'](.*?)[\"'](?:\s*->\s*[\"']?(.*?)[\"']?)?$", stripped, re.IGNORECASE)
+            if p_draft_match:
+                clean_lines.append(p_draft_match.group(2) or p_draft_match.group(1))
+                continue
+            skipping_meta = False
         clean_lines.append(line)
 
     text = "\n".join(clean_lines).strip()

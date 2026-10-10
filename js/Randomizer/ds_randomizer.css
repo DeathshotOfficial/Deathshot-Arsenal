@@ -136,6 +136,51 @@
   flex-shrink: 0 !important;
 }
 
+/* ================= AI Sliding Shelf & Action Buttons ================= */
+.ds-rand-ai-shelf {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  max-width: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  transform: scaleX(0.7) !important;
+  transform-origin: right center !important;
+  transition: max-width 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.2s ease,
+              transform 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  pointer-events: none !important;
+  white-space: nowrap !important;
+}
+
+.ds-rand-ai-shelf.is-open {
+  max-width: 260px !important;
+  opacity: 1 !important;
+  transform: scaleX(1) !important;
+  pointer-events: auto !important;
+}
+
+.ds-rand-ai-shelf .ds-ui-btn {
+  font-size: 10px !important;
+  padding: 0 6px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  flex-shrink: 0 !important;
+}
+
+.ds-rand-ai-toggle-btn {
+  font-weight: 700 !important;
+  letter-spacing: 0.3px !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.ds-rand-ai-toggle-btn.is-active {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  box-shadow: 0 0 10px rgba(103, 232, 249, 0.4) !important;
+}
+
 /* ================= Card Body ================= */
 .ds-rand-card-body {
   display: flex !important;

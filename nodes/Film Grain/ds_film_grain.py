@@ -141,6 +141,19 @@ void main() {
 """
 
 _glsl_renderer = None
+
+# On Linux the system GLVND may dispatch EGL to MESA first, which requires
+# an X11/Wayland display and hangs forever in headless/surfaceless mode.
+# Force the Nvidia EGL vendor *before* ANGLE imports so the surfaceless
+# EGL context initializes on the Nvidia GPU directly.
+if sys.platform.startswith("linux"):
+    _NVIDIA_EGL_VENDOR = "/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
+    if os.path.isfile(_NVIDIA_EGL_VENDOR):
+        os.environ.setdefault("__EGL_VENDOR_LIBRARY_FILENAMES", _NVIDIA_EGL_VENDOR)
+        logging.info(f"{LOG} Linux+Nvidia: forced EGL vendor to {_NVIDIA_EGL_VENDOR}")
+    else:
+        logging.warning(f"{LOG} Linux: Nvidia EGL vendor JSON not found at {_NVIDIA_EGL_VENDOR}, EGL may hang")
+
 try:
     from comfy_extras.nodes_glsl import _render_shader_batch
     _glsl_renderer = _render_shader_batch

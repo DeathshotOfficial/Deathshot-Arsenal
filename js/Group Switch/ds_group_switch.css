@@ -2,6 +2,13 @@
 /* Deathshot Arsenal — DS Group Switch Stylesheet                            */
 /* ========================================================================= */
 
+/* Container wrappers & DOM Widget styling */
+.dom-widget:has(> .ds-gs-card),
+.dom-widget:has(> [data-ds-ui-shell] > .ds-gs-card),
+.dom-widget:has(.ds-gs-card) {
+  pointer-events: auto !important;
+}
+
 .ds-gs-card {
   width: 100% !important;
   height: 100% !important;
@@ -12,6 +19,12 @@
   overflow: hidden !important;
   user-select: none !important;
   font-family: var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif) !important;
+  pointer-events: auto !important;
+  cursor: grab !important;
+}
+
+.ds-gs-card:active {
+  cursor: grabbing !important;
 }
 
 .ds-gs-card * {
@@ -22,6 +35,8 @@
   flex: 0 0 20px !important;
   height: 20px !important;
   margin-bottom: 8px !important;
+  pointer-events: auto !important;
+  cursor: grab !important;
 }
 
 .ds-gs-card .ds-ui-card-body {
@@ -33,6 +48,62 @@
   width: 100% !important;
   flex: 1 1 auto !important;
   min-height: 0 !important;
+  pointer-events: auto !important;
+  cursor: grab !important;
+}
+
+.ds-gs-node-controls {
+  pointer-events: auto !important;
+  cursor: grab !important;
+}
+
+.ds-gs-node-footer {
+  pointer-events: auto !important;
+  cursor: grab !important;
+}
+
+.ds-gs-node-empty {
+  pointer-events: auto !important;
+  cursor: grab !important;
+}
+
+/* Explicit interactive elements with pointer cursor */
+.ds-gs-tab,
+.ds-gs-node-segment,
+.ds-gs-all-toggle-wrap,
+.ds-gs-all-toggle,
+.ds-gs-all-toggle *,
+.ds-gs-node-list,
+.ds-gs-group-row,
+.ds-gs-group-row *,
+.ds-gs-popup,
+.ds-gs-popup *,
+button,
+input,
+select,
+textarea,
+[role="switch"] {
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+
+.ds-gs-all-toggle-wrap .ds-ui-toggle-label,
+.ds-gs-node-list .ds-ui-toggle-label {
+  cursor: pointer !important;
+}
+
+/* Suppress any ComfyUI badges or external title elements attached to this node */
+.comfy-node-badge:has(+ .ds-gs-card),
+[data-node-id]:has(.ds-gs-card) .comfy-node-badge,
+[data-node-id]:has(.ds-gs-card) .node-badge,
+[data-node-id]:has(.ds-gs-card) .lgraph-node-badge,
+.ds-gs-card ~ .comfy-node-badge,
+.ds-gs-card ~ .node-badge,
+.ds-gs-card ~ .lgraph-node-badge {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* ---------------- Segmented Tabs & Active Tab Indicator ---------------- */

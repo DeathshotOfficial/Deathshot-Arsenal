@@ -135,6 +135,24 @@ class DSGearRegistry {
         },
       };
     }
+    if (
+      node.type === "DS_Randomizer" ||
+      node.comfyClass === "DS_Randomizer" ||
+      typeof node._toggleRandomizerGearPopover === "function" ||
+      typeof node._openRandomizerGearPopover === "function"
+    ) {
+      return {
+        tooltip: "DS Randomizer — AI Settings",
+        onClick: (n, canvas, ev) => {
+          const anchor = ev?.currentTarget || ev?.target;
+          if (typeof n._toggleRandomizerGearPopover === "function") {
+            n._toggleRandomizerGearPopover(anchor);
+          } else if (typeof n._openRandomizerGearPopover === "function") {
+            n._openRandomizerGearPopover(anchor);
+          }
+        },
+      };
+    }
     return null;
   }
 

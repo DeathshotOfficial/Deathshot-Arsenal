@@ -157,7 +157,7 @@ export function Dropdown(options = {}) {
 
       row.addEventListener("click", (e) => {
         e.stopPropagation();
-        currentValue = item.id;
+        currentValue = item.id !== undefined ? item.id : (item.value !== undefined ? item.value : item);
         updateTriggerText();
         popup.hide();
         options.onChange?.(currentValue, item, api);

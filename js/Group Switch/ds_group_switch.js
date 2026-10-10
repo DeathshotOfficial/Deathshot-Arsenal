@@ -600,6 +600,92 @@ function refreshNodeUI(node) {
   renderNodeUI(node);
 }
 
+function makeNodeDraggable(cardRoot, node) {
+  if (!cardRoot || cardRoot._dsDraggableAttached) return;
+  cardRoot._dsDraggableAttached = true;
+
+  cardRoot.addEventListener("pointerdown", (e) => {
+    const isInteractive = e.target?.closest?.(
+      "button, input, select, textarea, [contenteditable=\"true\"], " +
+      ".ds-ui-toggle-row, .ds-ui-toggle-track, .ds-ui-toggle-thumb, .ds-ui-dropdown, " +
+      ".ds-gs-tab, .ds-gs-all-toggle, .ds-gs-all-toggle-wrap, .ds-gs-group-row, " +
+      ".ds-gs-popup, [role=\"switch\"]"
+    );
+    if (isInteractive) {
+      return;
+    }
+    if (e.button !== 0) return;
+
+    const canvas = app?.canvas || window.app?.canvas;
+    if (!canvas) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      if (!canvas.selected_nodes || !canvas.selected_nodes[node.id]) {
+        canvas.selectNode?.(node);
+      }
+    } else {
+      canvas.selectNode?.(node, true);
+    }
+
+    const selectedNodes = canvas.selected_nodes && Object.keys(canvas.selected_nodes).length > 0
+      ? Object.values(canvas.selected_nodes).filter(Boolean)
+      : [node];
+
+    const scale = Number(canvas.ds?.scale) || 1;
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const startPositions = new Map();
+    for (const n of selectedNodes) {
+      if (n && n.pos) {
+        startPositions.set(n, [Number(n.pos[0]) || 0, Number(n.pos[1]) || 0]);
+      }
+    }
+
+    document.body.style.cursor = "grabbing";
+    cardRoot.style.cursor = "grabbing";
+
+    let hasMoved = false;
+
+    const onPointerMove = (moveEvent) => {
+      const dx = (moveEvent.clientX - startX) / scale;
+      const dy = (moveEvent.clientY - startY) / scale;
+
+      if (!hasMoved && (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)) {
+        hasMoved = true;
+      }
+
+      for (const [n, pos] of startPositions.entries()) {
+        n.pos[0] = Math.round(pos[0] + dx);
+        n.pos[1] = Math.round(pos[1] + dy);
+        n.setDirtyCanvas?.(true, true);
+      }
+      canvas.setDirty?.(true, true);
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointerup", onPointerUp, true);
+      window.removeEventListener("pointercancel", onPointerUp, true);
+
+      document.body.style.cursor = "";
+      cardRoot.style.cursor = "";
+
+      if (hasMoved) {
+        canvas.graph?.afterChange?.();
+      }
+      canvas.setDirty?.(true, true);
+    };
+
+    window.addEventListener("pointermove", onPointerMove, true);
+    window.addEventListener("pointerup", onPointerUp, true);
+    window.addEventListener("pointercancel", onPointerUp, true);
+  });
+}
+
 function bindDOMWidget(node) {
   if (node._dsGsDomBound) return;
   node._dsGsDomBound = true;
@@ -607,8 +693,25 @@ function bindDOMWidget(node) {
   node.resizable = true;
   node.flags ||= {};
   node.flags.no_title = true;
+  node.flags.no_badges = true;
+  node.flags.hide_badges = true;
   node.title = "";
   node.badges = [];
+  node.badge = null;
+  node.getBadges = () => [];
+  node.show_badges = false;
+  node.hide_badges = true;
+  node.onDrawTitleBar = () => true;
+  node.drawTitleBar = () => true;
+  node.onDrawTitleText = () => true;
+  node.drawTitleText = () => true;
+  node.onDrawTitle = () => true;
+  node.drawTitle = () => true;
+  node.onDrawBox = () => true;
+  node.drawBox = () => true;
+  node.onDrawBadges = () => true;
+  node.drawBadges = () => true;
+  node.drawNodeBadges = () => true;
 
   const initialH = calculateExactHeight(node);
   node.min_size = [MIN_WIDTH, initialH];
@@ -650,13 +753,15 @@ function bindDOMWidget(node) {
 
     domWidget.onPointerDown = function(pointer, ownerNode, canvas) {
       const target = pointer?.eDown?.target;
-      if (target?.closest?.("button, input, select, textarea, [contenteditable=\"true\"], .ds-ui-toggle-row, .ds-ui-toggle-track, .ds-ui-toggle-thumb, .ds-ui-dropdown, .ds-gs-tab")) {
+      if (target?.closest?.("button, input, select, textarea, [contenteditable=\"true\"], .ds-ui-toggle-row, .ds-ui-toggle-track, .ds-ui-toggle-thumb, .ds-ui-dropdown, .ds-gs-tab, .ds-gs-all-toggle, .ds-gs-group-row")) {
         return true;
       }
       return false;
     };
 
+    makeNodeDraggable(cardRoot, node);
     normalizeDSWidgetHost(cardRoot, node, { shell: false });
+    cardRoot.style.pointerEvents = "auto";
     protectDSResizeCorners(node);
   } else {
     installCanvasFallback(node);
@@ -1058,12 +1163,30 @@ function patchNode(node) {
   if (!node || node.type !== TYPE) return;
   node.flags ||= {};
   node.flags.no_title = true;
+  node.flags.no_badges = true;
+  node.flags.hide_badges = true;
   node.title = "";
   node.resizable = true;
   node._dsNodeBaseOptOut = true;
   node.bgcolor = "transparent";
   node.color = "transparent";
   node.boxcolor = "transparent";
+  node.badges = [];
+  node.badge = null;
+  node.getBadges = () => [];
+  node.show_badges = false;
+  node.hide_badges = true;
+  node.onDrawTitleBar = () => true;
+  node.drawTitleBar = () => true;
+  node.onDrawTitleText = () => true;
+  node.drawTitleText = () => true;
+  node.onDrawTitle = () => true;
+  node.drawTitle = () => true;
+  node.onDrawBox = () => true;
+  node.drawBox = () => true;
+  node.onDrawBadges = () => true;
+  node.drawBadges = () => true;
+  node.drawNodeBadges = () => true;
   bindDOMWidget(node);
   fitNodeHeight(node);
 }
@@ -1098,6 +1221,22 @@ app.registerExtension({
 
     const LG = window.LiteGraph || {};
     nodeType.title_mode = LG.NO_TITLE != null ? LG.NO_TITLE : 1;
+    nodeType.prototype.getBadges = () => [];
+    nodeType.prototype.badges = [];
+    nodeType.prototype.badge = null;
+    nodeType.prototype.show_badges = false;
+    nodeType.prototype.hide_badges = true;
+    nodeType.prototype.onDrawBox = () => true;
+    nodeType.prototype.drawBox = () => true;
+    nodeType.prototype.onDrawTitleBar = () => true;
+    nodeType.prototype.drawTitleBar = () => true;
+    nodeType.prototype.onDrawTitleText = () => true;
+    nodeType.prototype.drawTitleText = () => true;
+    nodeType.prototype.onDrawTitle = () => true;
+    nodeType.prototype.drawTitle = () => true;
+    nodeType.prototype.onDrawBadges = () => true;
+    nodeType.prototype.drawBadges = () => true;
+    nodeType.prototype.drawNodeBadges = () => true;
 
     const oldCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function() {
@@ -1177,6 +1316,32 @@ app.registerExtension({
     await installCSS();
     installGlobals();
     registerGearMenu();
+
+    // Global canvas badge suppression hook for DS Group Switch
+    const suppressBadges = (target) => {
+      if (!target || target._dsGsBadgesSuppressed) return;
+      target._dsGsBadgesSuppressed = true;
+      if (typeof target.drawNodeBadges === "function") {
+        const orig = target.drawNodeBadges;
+        target.drawNodeBadges = function(node, ctx) {
+          if (node?.type === TYPE || node?.type === "DS_GroupSwitch" || node?.comfyClass === "DS_GroupSwitch") return;
+          return orig.apply(this, arguments);
+        };
+      }
+      if (typeof target.drawBadges === "function") {
+        const orig = target.drawBadges;
+        target.drawBadges = function(node, ctx) {
+          if (node?.type === TYPE || node?.type === "DS_GroupSwitch" || node?.comfyClass === "DS_GroupSwitch") return;
+          return orig.apply(this, arguments);
+        };
+      }
+    };
+
+    try {
+      const LGCanvas = window.LGraphCanvas || window.LiteGraph?.LGraphCanvas;
+      if (LGCanvas?.prototype) suppressBadges(LGCanvas.prototype);
+      if (app?.canvas) suppressBadges(app.canvas);
+    } catch {}
 
     window.addEventListener("ds-theme-changed", () => {
       for (const node of graphNodes(null).filter(n => n?.type === TYPE)) {

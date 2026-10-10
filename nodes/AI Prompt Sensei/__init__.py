@@ -246,7 +246,10 @@ def register_prompt_sensei_routes():
                     )
 
                 return web.json_response(result)
-            except Exception as e:
+            except BaseException as e:
+                if type(e).__name__ in ("InterruptProcessingException", "CancelledError"):
+                    logger.info("[Prompt Sensei] Generation cancelled/interrupted by user.")
+                    return web.json_response({"status": "cancelled", "error": "Generation interrupted by user"})
                 logger.error(f"[Prompt Sensei] Generation error: {e}")
                 return web.json_response({"status": "failed", "error": str(e)}, status=500)
 

@@ -15,6 +15,7 @@ import {
   normalizeDSWidgetHost,
   protectDSResizeCorners,
 } from "../UIElements/index.js";
+import { openAISettingsPopover } from "../Shared/ds_ai_settings_popover.js";
 
 installDSUI();
 
@@ -310,6 +311,34 @@ app.registerExtension({
         options: { age_range: { preset: "any" } },
       };
       this.properties.ds_randomizer_preview = this.properties.ds_randomizer_preview || "";
+      this.properties.ds_randomizer_ai_enabled = Boolean(this.properties.ds_randomizer_ai_enabled);
+
+      let preferredModel = "";
+      try {
+        preferredModel = localStorage.getItem("DS_AI_preferred_model") || "";
+      } catch (_) {}
+
+      this.properties.ds_randomizer_ai_settings = this.properties.ds_randomizer_ai_settings || {
+        model: preferredModel,
+        temperature: 0.80,
+        max_tokens: 2048,
+        context_length: 4096,
+        n_gpu_layers: -1,
+        top_p: 0.90,
+        top_k: 40,
+        repetition_penalty: 1.10,
+        seed: 123456,
+        auto_unload: true,
+        auto_load: true,
+        pause_for_edit: false,
+        free_comfy_memory: true,
+        randomize_seed: true,
+        system_prompt: "",
+        require_vision: false,
+        variation_cache: true,
+        cache_size: 10,
+        contextual_coherence: true,
+      };
 
       ensureStateWidget(this);
       hideAllNativeWidgets(this);
@@ -317,6 +346,26 @@ app.registerExtension({
       const self = this;
       let categoriesCatalog = { groups: [], categories: [] };
       let activeGroup = "all";
+
+      // Floating Toolbar Gear Popover hook (via window.DSGearMenu)
+      this._toggleRandomizerGearPopover = function (anchor) {
+        openAISettingsPopover({
+          node: self,
+          anchorEl: anchor,
+          title: "DS Randomizer — AI Settings",
+          getSettings: () => self.properties.ds_randomizer_ai_settings,
+          saveSettings: (newSettings) => {
+            self.properties.ds_randomizer_ai_settings = { ...newSettings };
+            if (newSettings.model) {
+              try {
+                localStorage.setItem("DS_AI_preferred_model", newSettings.model);
+              } catch (_) {}
+            }
+            saveState();
+          },
+        });
+      };
+      this._openRandomizerGearPopover = this._toggleRandomizerGearPopover;
 
       // The Card itself is the visible container surface
       const card = Card({ className: "ds-randomizer-card" });
@@ -356,17 +405,155 @@ app.registerExtension({
           statusNotice.classList.remove("is-visible");
         }, 1600);
       };
+      this._dsShowStatus = showStatus;
 
       const actions = document.createElement("div");
       actions.className = "ds-rand-card-actions";
 
-      // Regenerate / Preview Button
+      // ── AI Action Sliding Shelf (Run, Regenerate, Kill LLM) ──
+      const aiShelf = document.createElement("div");
+      aiShelf.className = "ds-rand-ai-shelf";
+
+      const runAI = async (isRegen = false) => {
+        const targetBtn = isRegen ? rerunBtn : runBtn;
+        try {
+          targetBtn.root.classList.add("is-loading");
+          showStatus("AI Generating...");
+          const promptText = resolveUpstreamPrompt(self) || previewTextarea?.value || "";
+          const shouldRandomize = self.properties.ds_randomizer_ai_settings?.randomize_seed !== false;
+          let runSeed;
+          if (isRegen || shouldRandomize) {
+            runSeed = Math.floor(Math.random() * 2147483647);
+            if (self.properties.ds_randomizer_ai_settings) {
+              self.properties.ds_randomizer_ai_settings.seed = runSeed;
+            }
+          } else {
+            runSeed = Number(self.properties.ds_randomizer_ai_settings?.seed) || 123456;
+          }
+
+          const res = await fetch("/ds/ai/randomize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: promptText,
+              enabled_categories: self.properties.ds_randomizer_state.enabled_categories || [],
+              options: self.properties.ds_randomizer_state.options || {},
+              ai_settings: {
+                ...(self.properties.ds_randomizer_ai_settings || {}),
+                require_vision: false,
+              },
+              seed: runSeed,
+              node_id: String(self.id),
+            }),
+          });
+          const data = await res.json();
+          if (data.ok && data.prompt !== undefined) {
+            if (previewTextarea) previewTextarea.value = data.prompt;
+            self.properties.ds_randomizer_preview = data.prompt;
+            self.properties.ds_randomizer_state.preview_prompt = data.prompt;
+            saveState();
+            // Build status: elapsed + cache badge + repeat note
+            const elapsed = data.elapsed || 0;
+            const cs = data.cache_stats || {};
+            const note = data.status_note || "";
+            let statusMsg = `AI Done (${elapsed}s)`;
+            if (cs.total_entries !== undefined && cs.batch_size) {
+              statusMsg += ` \u00b7 cache ${cs.total_entries}/${cs.batch_size}`;
+            }
+            if (note) statusMsg += note;
+            showStatus(statusMsg);
+          } else {
+            showStatus(data.error ? "AI Error" : "Failed");
+            console.error("[DS Randomizer] AI Error:", data.error);
+          }
+        } catch (e) {
+          console.error("[DS Randomizer] AI Exception:", e);
+          showStatus("AI Failed");
+        } finally {
+          targetBtn.root.classList.remove("is-loading");
+        }
+      };
+
+      const runBtn = Button({
+        label: "Run",
+        icon: "play",
+        variant: "primary",
+        size: "compact",
+        tooltip: "Run AI prompt randomization with selected categories",
+        onClick: () => runAI(false),
+      });
+
+      const rerunBtn = Button({
+        label: "Regen",
+        icon: "refresh-cw",
+        size: "compact",
+        tooltip: "Regenerate with fresh AI random variation",
+        onClick: () => runAI(true),
+      });
+
+      const killBtn = Button({
+        label: "Kill LLM",
+        icon: "trash-2",
+        variant: "danger",
+        size: "compact",
+        tooltip: "Cancel active generation & unload LLM from VRAM",
+        onClick: async () => {
+          showStatus("Unloading...");
+          try {
+            await fetch("/ds/ai/kill", { method: "POST" });
+            await fetch("/ds/ai/unload", { method: "POST" });
+            showStatus("LLM Unloaded");
+          } catch (_) {
+            showStatus("Unload Error");
+          }
+        },
+      });
+
+      aiShelf.append(runBtn.root, rerunBtn.root, killBtn.root);
+
+      // ── AI Toggle Button (Placed before Preview) ──
+      let aiActive = Boolean(self.properties.ds_randomizer_ai_enabled);
+      const aiBtn = Button({
+        label: "AI",
+        icon: "cpu",
+        size: "compact",
+        active: aiActive,
+        className: "ds-rand-ai-toggle-btn",
+        tooltip: "Toggle AI-powered prompt randomization",
+        onClick: () => {
+          aiActive = !aiActive;
+          self.properties.ds_randomizer_ai_enabled = aiActive;
+          aiBtn.setActive(aiActive);
+          if (aiActive) {
+            aiShelf.classList.add("is-open");
+          } else {
+            aiShelf.classList.remove("is-open");
+          }
+          saveState();
+        },
+      });
+
+      if (aiActive) {
+        aiShelf.classList.add("is-open");
+      }
+
+      self._dsUpdateAIUI = () => {
+        aiActive = Boolean(self.properties.ds_randomizer_ai_enabled);
+        aiBtn.setActive(aiActive);
+        if (aiActive) {
+          aiShelf.classList.add("is-open");
+        } else {
+          aiShelf.classList.remove("is-open");
+        }
+      };
+
+      // ── Classical Regenerate / Preview Button ──
       const regenBtn = Button({
         label: "Preview",
         icon: "refresh-cw",
         variant: "primary",
         size: "compact",
-        tooltip: "Generate live randomized preview",
+        tooltip: "Generate live randomized preview (Database)",
         onClick: async () => {
           try {
             regenBtn.root.classList.add("is-loading");
@@ -397,7 +584,7 @@ app.registerExtension({
         },
       });
 
-      actions.appendChild(regenBtn.root);
+      actions.append(aiShelf, aiBtn.root, regenBtn.root);
       head.append(titleGroup, actions);
       cardEl.insertBefore(head, card.body);
 
@@ -447,6 +634,8 @@ app.registerExtension({
           const cur = new Set(self.properties.ds_randomizer_state.enabled_categories || []);
           for (const cid of visibleCats) cur.add(cid);
           self.properties.ds_randomizer_state.enabled_categories = Array.from(cur);
+          self.properties.ds_randomizer_state.preview_prompt = "";
+          self.properties.ds_randomizer_preview = "";
           saveState();
           renderChips();
         },
@@ -462,6 +651,8 @@ app.registerExtension({
             (cid) => !visibleCats.has(cid)
           );
           self.properties.ds_randomizer_state.enabled_categories = cur;
+          self.properties.ds_randomizer_state.preview_prompt = "";
+          self.properties.ds_randomizer_preview = "";
           saveState();
           renderChips();
         },
@@ -566,6 +757,9 @@ app.registerExtension({
       // 3. HELPER METHODS & STATE SYNC
       // -------------------------------------------------------------
       function saveState() {
+        self.properties.ds_randomizer_state = self.properties.ds_randomizer_state || {};
+        self.properties.ds_randomizer_state.ai_enabled = Boolean(self.properties.ds_randomizer_ai_enabled);
+        self.properties.ds_randomizer_state.ai_settings = self.properties.ds_randomizer_ai_settings || {};
         const stateWidget = ensureStateWidget(self);
         if (stateWidget) {
           stateWidget.value = JSON.stringify(self.properties.ds_randomizer_state);
@@ -672,6 +866,8 @@ app.registerExtension({
               } else {
                 self.properties.ds_randomizer_state.enabled_categories = [...list, cat.id];
               }
+              self.properties.ds_randomizer_state.preview_prompt = "";
+              self.properties.ds_randomizer_preview = "";
               saveState();
               renderChips();
             },
@@ -885,6 +1081,18 @@ app.registerExtension({
         stateWidget.value = JSON.stringify(this.properties.ds_randomizer_state);
       }
 
+      if (this.properties?.ds_randomizer_state) {
+        if (typeof this.properties.ds_randomizer_state.ai_enabled === "boolean") {
+          this.properties.ds_randomizer_ai_enabled = this.properties.ds_randomizer_state.ai_enabled;
+        }
+        if (this.properties.ds_randomizer_state.ai_settings) {
+          this.properties.ds_randomizer_ai_settings = { ...this.properties.ds_randomizer_state.ai_settings };
+        }
+      }
+      if (typeof this._dsUpdateAIUI === "function") {
+        this._dsUpdateAIUI();
+      }
+
       if (this.properties?.ds_randomizer_preview && this._dsPreviewTextarea) {
         this._dsPreviewTextarea.value = this.properties.ds_randomizer_preview;
       }
@@ -920,6 +1128,51 @@ app.registerExtension({
     };
   },
 });
+
+// ============================================================
+// Global Execution Listener
+// Listens for backend execution completions and instantly updates
+// canvas DOM textareas and open AI settings popovers.
+// ============================================================
+if (api && !api._dsRandomizerExecutedWrapped) {
+  api._dsRandomizerExecutedWrapped = true;
+  api.addEventListener("executed", ({ detail }) => {
+    if (!detail) return;
+    const allNodes = app.graph?._nodes || app.graph?.nodes || [];
+    for (const n of allNodes) {
+      if (
+        (n.type === "DS_Randomizer" || n.comfyClass === "DS_Randomizer") &&
+        String(n.id) === String(detail.node)
+      ) {
+        const raw =
+          detail.output?.prompt_preview ??
+          detail.output?.ui?.prompt_preview ??
+          detail.output?.text;
+        const preview = Array.isArray(raw) ? raw[0] : raw;
+        if (typeof preview === "string" && preview.trim()) {
+          if (n._dsPreviewTextarea) {
+            n._dsPreviewTextarea.value = preview;
+          }
+          n.properties = n.properties || {};
+          n.properties.ds_randomizer_preview = preview;
+          if (n.properties.ds_randomizer_state) {
+            n.properties.ds_randomizer_state.preview_prompt = preview;
+          }
+          if (typeof n._dsShowStatus === "function") {
+            n._dsShowStatus("Generated");
+          }
+        }
+        const runSeed = detail.output?.seed?.[0] ?? detail.output?.ui?.seed?.[0];
+        if (runSeed && n.properties?.ds_randomizer_ai_settings) {
+          n.properties.ds_randomizer_ai_settings.seed = runSeed;
+          if (window._dsUpdateActiveAIPopover?.node === n) {
+            window._dsUpdateActiveAIPopover.setSeed(runSeed);
+          }
+        }
+      }
+    }
+  });
+}
 
 // ============================================================
 // Multi-Stage & Checkpoint Queue Hook
@@ -980,11 +1233,30 @@ if (api && !api._dsRandomizerQueueWrapped) {
                 const freshSeed = Math.floor(Math.random() * 0x7fffffff) + 1;
                 if (node) {
                   node._dsLastRunSeed = freshSeed;
+                  if (node.properties?.ds_randomizer_ai_settings) {
+                    node.properties.ds_randomizer_ai_settings.seed = freshSeed;
+                  }
+                  if (window._dsUpdateActiveAIPopover?.node === node) {
+                    window._dsUpdateActiveAIPopover.setSeed(freshSeed);
+                  }
                   const seedWidget = (node.widgets || []).find((w) => w?.name === "seed");
                   if (seedWidget) seedWidget.value = freshSeed;
                 }
                 entry.inputs.seed = freshSeed;
               }
+            }
+
+            if (node?.properties?.ds_randomizer_state) {
+              node.properties.ds_randomizer_state.ai_enabled = Boolean(node.properties.ds_randomizer_ai_enabled);
+              node.properties.ds_randomizer_state.ai_settings = node.properties.ds_randomizer_ai_settings || {};
+              const isPauseForEdit = Boolean(node.properties.ds_randomizer_ai_settings?.pause_for_edit);
+              if (isPauseForEdit && node.properties.ds_randomizer_preview) {
+                node.properties.ds_randomizer_state.preview_prompt = node.properties.ds_randomizer_preview;
+              } else if (!isPauseForEdit) {
+                // When pause_for_edit is OFF: clear stale preview so every queue generates fresh AI variation
+                node.properties.ds_randomizer_state.preview_prompt = "";
+              }
+              entry.inputs.randomizer_state = JSON.stringify(node.properties.ds_randomizer_state);
             }
           }
         }

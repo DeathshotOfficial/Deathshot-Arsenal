@@ -12,6 +12,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -773,6 +774,61 @@ def _plan_gpu(model_path, mmproj_path, n_ctx, requested_layers):
     return plan
 
 
+def _enforce_no_thinking_on_llm(llm):
+    """
+    Universally disables chain-of-thought and thinking tokens across all LLM models.
+    Prevents reasoning models (e.g. Qwen 3.5, DeepSeek R1, modern Gemma/Qwen hybrids)
+    from emitting '<think>' blocks, 'Thinking Process:', or wasting token budgets on CoT.
+    Patches Jinja2 template renderers to pass enable_thinking=False and closes any dangling
+    '<think>\\n' in the prompt prefix so reasoning-trained models immediately produce the final answer.
+    """
+    def _patch_template_render(tmpl):
+        if not hasattr(tmpl, "render") or getattr(tmpl, "_no_thinking_patched", False):
+            return
+        orig_render = tmpl.render
+
+        def _patched_render(*args, **kwargs):
+            kwargs.setdefault("enable_thinking", False)
+            res = orig_render(*args, **kwargs)
+            if isinstance(res, str):
+                if res.endswith("<think>\n"):
+                    res = res[:-len("<think>\n")] + "<think>\n\n</think>\n\n"
+                elif res.endswith("<think>"):
+                    res = res[:-len("<think>")] + "<think>\n\n</think>\n\n"
+                elif res.endswith("<thought>\n"):
+                    res = res[:-len("<thought>\n")] + "<thought>\n\n</thought>\n\n"
+                elif res.endswith("<thought>"):
+                    res = res[:-len("<thought>")] + "<thought>\n\n</thought>\n\n"
+            return res
+
+        tmpl.render = _patched_render
+        tmpl._no_thinking_patched = True
+
+    # 1. Patch Jinja templates inside llm._chat_handlers
+    if hasattr(llm, "_chat_handlers") and isinstance(llm._chat_handlers, dict):
+        for h_name, handler_fn in list(llm._chat_handlers.items()):
+            if hasattr(handler_fn, "__closure__") and handler_fn.__closure__:
+                for cell in handler_fn.__closure__:
+                    obj = cell.cell_contents
+                    if hasattr(obj, "_template"):
+                        _patch_template_render(obj._template)
+            if hasattr(handler_fn, "_template"):
+                _patch_template_render(handler_fn._template)
+
+    # 2. Patch llm.chat_handler if present
+    if hasattr(llm, "chat_handler") and llm.chat_handler is not None:
+        handler = llm.chat_handler
+        if hasattr(handler, "__closure__") and handler.__closure__:
+            for cell in handler.__closure__:
+                obj = cell.cell_contents
+                if hasattr(obj, "_template"):
+                    _patch_template_render(obj._template)
+        if hasattr(handler, "_template"):
+            _patch_template_render(handler._template)
+        if hasattr(handler, "enable_thinking"):
+            handler.enable_thinking = False
+
+
 def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False, require_vision=False):
     """Loads GGUF model and mmproj vision projector if present and required."""
     with _lock:
@@ -781,7 +837,12 @@ def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False, require_
             if require_vision and not _state.get("has_vision"):
                 logger.info(f"[Builtin LLM] Image provided; attaching vision projector for {key}...")
                 _unload_locked()
+            # If vision is NOT required now but was loaded previously, unload to discard vision projector and free VRAM/RAM
+            elif not require_vision and _state.get("has_vision"):
+                logger.info(f"[Builtin LLM] Pure text task; unloading vision projector for {key} to free VRAM/RAM...")
+                _unload_locked()
             else:
+                _enforce_no_thinking_on_llm(_state["llm"])
                 return _state["llm"]
         else:
             _unload_locked()
@@ -887,10 +948,6 @@ def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False, require_
                 return {"use_mmap": False}
             return {}
 
-        # Attempt ladder. The first one is the exact config that worked on Windows.
-        # If llama.cpp refuses to create a context (common on Linux: CUDA/cuBLAS
-        # quirks, VRAM pressure, mmap/batch/flash-attn differences) we progressively
-        # fall back to safer settings instead of failing outright.
         ladder = [
             ("default", {"n_batch": UBATCH, "n_ubatch": UBATCH, "n_gpu_layers": gpu_layers}, True),
             ("safe batch + mmap + no flash-attn",
@@ -911,10 +968,11 @@ def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False, require_
             lk = {
                 "model_path": ascii_path(model_path),
                 "n_ctx": n_ctx,
-                # Verbose on retries so llama.cpp prints the REAL failure reason to the console.
                 "verbose": idx == 1,
             }
             lk.update({k: v for k, v in extra.items() if k in llama_params})
+            if "chat_template_kwargs" in llama_params:
+                lk["chat_template_kwargs"] = {"enable_thinking": False}
             if no_mmap:
                 lk.update(_mmap_kwargs())
             if handler is not None:
@@ -974,6 +1032,9 @@ def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False, require_
         if model_name.lower().endswith(".gguf"):
             model_name = model_name[:-5]
 
+        # Enforce no thinking / CoT across all model templates and handlers
+        _enforce_no_thinking_on_llm(llm)
+
         _state.update(
             llm=llm,
             handler=handler,
@@ -989,7 +1050,7 @@ def load_model(key: str, n_ctx=4096, n_gpu_layers=-1, free_comfy=False, require_
 
 def generate_chat(
     messages,
-    max_tokens=512,
+    max_tokens=2048,
     temperature=0.7,
     seed=-1,
     top_p=0.95,
@@ -1008,6 +1069,9 @@ def generate_chat(
         if llm is None:
             raise RuntimeError("[Builtin LLM] No model loaded. Select and load a model first.")
 
+        # Re-enforce thinking suppression on loaded model
+        _enforce_no_thinking_on_llm(llm)
+
         _state["abort"] = False
         t0 = time.perf_counter()
         parts = []
@@ -1017,20 +1081,48 @@ def generate_chat(
             "top_p": top_p,
             "repeat_penalty": repeat_penalty,
         }
-        if "reasoning_budget" in inspect.signature(llm.create_chat_completion).parameters:
+        chat_params = inspect.signature(llm.create_chat_completion).parameters
+        has_varkw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in chat_params.values())
+        if "reasoning_budget" in chat_params or has_varkw:
             sampling["reasoning_budget"] = 0
+            sampling["reasoning_start"] = "<think>"
+            sampling["reasoning_end"] = "</think>"
+            sampling["reasoning_start_in_prompt"] = True
+        if "enable_thinking" in chat_params:
+            sampling["enable_thinking"] = False
+        if "chat_template_kwargs" in chat_params or has_varkw:
+            sampling["chat_template_kwargs"] = {"enable_thinking": False}
+        if "extra_body" in chat_params:
+            sampling["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
 
-        stream = llm.create_chat_completion(
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            seed=None if (seed is None or seed < 0) else seed,
-            stream=True,
-            **sampling,
-        )
+        def _call_create_chat(extra_args):
+            return llm.create_chat_completion(
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                seed=None if (seed is None or seed < 0) else seed,
+                stream=True,
+                **extra_args,
+            )
+
+        try:
+            stream = _call_create_chat(sampling)
+        except TypeError as e:
+            logger.debug(f"[Builtin LLM] create_chat_completion retry with base kwargs: {e}")
+            safe_sampling = {
+                k: v for k, v in sampling.items()
+                if k in ("top_k", "top_p", "repeat_penalty")
+            }
+            if "reasoning_budget" in chat_params:
+                safe_sampling["reasoning_budget"] = 0
+                safe_sampling["reasoning_start"] = "<think>"
+                safe_sampling["reasoning_end"] = "</think>"
+                safe_sampling["reasoning_start_in_prompt"] = True
+            stream = _call_create_chat(safe_sampling)
 
         last_progress_time = t0
         token_count = 0
+        in_think_block = False
         try:
             for chunk in stream:
                 if _state["abort"]:
@@ -1039,31 +1131,48 @@ def generate_chat(
                     check_interrupt()
                 delta = chunk["choices"][0].get("delta") or {}
                 piece = delta.get("content") or ""
-                if piece:
-                    parts.append(piece)
-                    token_count += 1
-                    if on_text:
-                        on_text(piece)
-                    now = time.perf_counter()
-                    if now - last_progress_time >= 0.1:
-                        last_progress_time = now
-                        elapsed_so_far = max(0.1, round(now - t0, 1))
-                        tk_s = round(token_count / elapsed_so_far, 1)
-                        try:
-                            import server
-                            server.PromptServer.instance.send_sync("ds_sensei_progress", {
-                                "stage": "generating",
-                                "message": f"Writing prompt: {token_count} tokens ({elapsed_so_far}s · {tk_s} Tk/s)...",
-                                "tokens": token_count,
-                                "speed": tk_s,
-                                "elapsed": elapsed_so_far,
-                            })
-                        except Exception:
-                            pass
+                if not piece:
+                    continue
+
+                # Defensive streaming filter: intercept and drop <think> tags or CoT blocks
+                if "<think>" in piece or "<thought>" in piece or "<reasoning>" in piece:
+                    in_think_block = True
+                if in_think_block:
+                    if "</think>" in piece or "</thought>" in piece or "</reasoning>" in piece:
+                        in_think_block = False
+                    continue
+
+                # Strip any stray closing tags emitted at the start or during generation
+                if "</think>" in piece or "</thought>" in piece or "<think>" in piece or "</reasoning>" in piece:
+                    piece = re.sub(r"</?(?:think|thought|reasoning|analysis)>", "", piece)
+                    if not piece.strip():
+                        continue
+
+                parts.append(piece)
+                token_count += 1
+                if on_text:
+                    on_text(piece)
+                now = time.perf_counter()
+                if now - last_progress_time >= 0.1:
+                    last_progress_time = now
+                    elapsed_so_far = max(0.1, round(now - t0, 1))
+                    tk_s = round(token_count / elapsed_so_far, 1)
+                    try:
+                        import server
+                        server.PromptServer.instance.send_sync("ds_sensei_progress", {
+                            "stage": "generating",
+                            "message": f"Writing prompt: {token_count} tokens ({elapsed_so_far}s · {tk_s} Tk/s)...",
+                            "tokens": token_count,
+                            "speed": tk_s,
+                            "elapsed": elapsed_so_far,
+                        })
+                    except Exception:
+                        pass
         finally:
             stream.close()
 
         raw_text = "".join(parts).strip()
+        raw_text = re.sub(r"^\s*</?(?:think|thought|reasoning|analysis)>\s*", "", raw_text).strip()
         elapsed = max(0.01, round(time.perf_counter() - t0, 2))
 
         try:
@@ -1281,9 +1390,15 @@ def generate_prompt_builtin(
             "model": loaded_model_name() or os.path.basename(model_key),
             "seed": seed,
         }
-    except Exception as e:
-        logger.error(f"[Builtin LLM] Generation error: {e}")
-        result = {"status": "failed", "error": str(e)}
+    except BaseException as e:
+        if type(e).__name__ in ("InterruptProcessingException", "CancelledError"):
+            logger.info("[Builtin LLM] Generation cancelled/interrupted by user.")
+            result = {"status": "cancelled", "error": "Generation interrupted by user"}
+        elif isinstance(e, Exception):
+            logger.error(f"[Builtin LLM] Generation error: {e}")
+            result = {"status": "failed", "error": str(e)}
+        else:
+            raise
     finally:
         if auto_unload:
             time.sleep(0.3)

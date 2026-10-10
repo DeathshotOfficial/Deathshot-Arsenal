@@ -83,7 +83,9 @@ try:
 except Exception:
     HAS_PYNVML = False
 
-_HERE = os.path.dirname(__file__)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
 
 
 def _load_node_pkg(tag, folder_name):
@@ -374,6 +376,16 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_Interpolation: {e}", flush=True)
     DS_Interpolation = None
 
+# DS Centralized AI Core
+try:
+    try:
+        from .core.ai import register_ai_routes
+    except Exception:
+        from core.ai import register_ai_routes
+    register_ai_routes()
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to register centralized AI routes: {e}", flush=True)
+
 # DS AI Prompt Sensei
 try:
     _mod = _load_node_pkg("ai_prompt_sensei", "AI Prompt Sensei")
@@ -429,6 +441,17 @@ try:
 except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_DevSpawner: {e}", flush=True)
     DS_DevSpawner = None
+
+# DS Image Describer
+try:
+    _mod = _load_node_pkg("image_describer", "Image Describer")
+    DS_ImageDescriber = _mod.DS_ImageDescriber
+    if hasattr(_mod, "register_image_describer_routes"):
+        _mod.register_image_describer_routes()
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_ImageDescriber: {e}", flush=True)
+    DS_ImageDescriber = None
+
 
 
 
@@ -719,6 +742,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_ThePurger": DS_ThePurger} if DS_ThePurger is not None else {}),
     **({"DS_DevSpawner": DS_DevSpawner} if DS_DevSpawner is not None else {}),
     **({"DS_Controller": DS_Controller} if DS_Controller is not None else {}),
+    **({"DS_ImageDescriber": DS_ImageDescriber} if DS_ImageDescriber is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -760,6 +784,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_ThePurger": "DS The Purger"} if DS_ThePurger is not None else {}),
     **({"DS_DevSpawner": "DS Dev Spawner"} if DS_DevSpawner is not None else {}),
     **({"DS_Controller": "DS Controller"} if DS_Controller is not None else {}),
+    **({"DS_ImageDescriber": "DS Image Describer"} if DS_ImageDescriber is not None else {}),
 }
 
 WEB_DIRECTORY = "js"
