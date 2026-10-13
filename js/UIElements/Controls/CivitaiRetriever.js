@@ -152,8 +152,10 @@ export function openCivitaiRetrieverModal(options = {}) {
   } = options;
 
   if (_activeCivitaiModal) {
-    _activeCivitaiModal.close();
+    const wasSameAnchor = anchorEl && _activeCivitaiModal.anchorEl === anchorEl;
+    _activeCivitaiModal.close(true);
     _activeCivitaiModal = null;
+    if (wasSameAnchor) return null;
   }
 
   const settings = getCivitaiSettings();
@@ -618,7 +620,7 @@ export function openCivitaiRetrieverModal(options = {}) {
   };
 
   const escHandler = (e) => {
-    if (e.key === "Escape") {
+    if (e.key === "Escape" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
       closeModal(true);
     }
   };
@@ -633,7 +635,8 @@ export function openCivitaiRetrieverModal(options = {}) {
   const modalHelper = {
     modal,
     panel,
-    close: () => closeModal(false),
+    anchorEl,
+    close: (apply = true) => closeModal(apply),
   };
   _activeCivitaiModal = modalHelper;
 

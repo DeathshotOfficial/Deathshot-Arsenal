@@ -3,6 +3,7 @@
 // exact row-center alignment, exclusive single-toggle selection, and inline text editing.
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 
 const TYPE = "DS_Switch";
 const EXTENSION = "DeathshotArsenal.DSSwitch";
@@ -631,6 +632,7 @@ app.registerExtension({
 
     const origCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const r = origCreated?.apply(this, arguments);
       setupNode(this);
 

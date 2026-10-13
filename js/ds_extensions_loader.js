@@ -43,6 +43,12 @@ loadDsExtension("ds_snap.js");
     } catch (error) {
         console.error("[DeathshotArsenal] Failed to load DS Image Describer frontend:", error);
     }
+    try {
+        await import("./GIF Generator/ds_gif_generator.js?v=2.2.0&t=" + Date.now());
+        console.log("[DeathshotArsenal] Loaded DS GIF Generator frontend");
+    } catch (error) {
+        console.error("[DeathshotArsenal] Failed to load DS GIF Generator frontend:", error);
+    }
 })();
 
 

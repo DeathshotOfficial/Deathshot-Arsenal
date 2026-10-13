@@ -1,5 +1,6 @@
 // DeathshotArsenal/js/Load Images From Folder/ds_load_images_from_folder.js
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   installDSUI,
@@ -745,6 +746,7 @@ app.registerExtension({
     nodeType.prototype.comfyClass = "DS_LoadImagesFromFolder";
   },
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node.comfyClass === "DS_LoadImagesFromFolder" || node.type === "DS_LoadImagesFromFolder") {
       setupNode(node);
     }

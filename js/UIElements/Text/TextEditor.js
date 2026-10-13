@@ -4,6 +4,7 @@
  */
 
 import { DSIcon } from "../../Icons/index.js";
+import { attachTextHistory, attachNodeShortcuts } from "../shortcuts.js";
 
 export function TextEditor(options = {}) {
   const root = document.createElement("div");
@@ -72,12 +73,19 @@ export function TextEditor(options = {}) {
 
   root.appendChild(textarea);
 
+  attachTextHistory(textarea, (val) => options.onChange?.(val, api));
+  attachNodeShortcuts(null, root);
+
   const api = {
     root,
     textarea,
     getValue: () => textarea.value,
     setValue(val) {
       textarea.value = val || "";
+      if (textarea.__ds_text_history) {
+        textarea.__ds_text_history.stack.push(textarea.value);
+        textarea.__ds_text_history.index = textarea.__ds_text_history.stack.length - 1;
+      }
     },
     setReadOnly(ro) {
       textarea.readOnly = Boolean(ro);

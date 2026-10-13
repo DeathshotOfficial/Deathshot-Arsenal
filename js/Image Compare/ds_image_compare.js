@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
     Card,
@@ -488,13 +489,19 @@ function drawCanvasPreview(ctx, node) {
     const baseImg = imgA || imgB;
     const box = getAspectFitBox(baseImg, previewW, previewH);
 
-    if (node.mode === "a") {
+    if (typeof node.mode === "string") {
+        node.compareMode = node.mode;
+        node.mode = 0;
+    }
+    const cmpMode = node.compareMode || "split";
+
+    if (cmpMode === "a") {
         ctx.drawImage(imgA, previewX + box.x, previewY + box.y, box.w, box.h);
         drawBadge(ctx, previewX + 8, previewY + 8, `● ${labelA}`, theme.accent);
-    } else if (node.mode === "b") {
+    } else if (cmpMode === "b") {
         ctx.drawImage(imgB, previewX + box.x, previewY + box.y, box.w, box.h);
         drawBadge(ctx, previewX + previewW - 40, previewY + 8, `● ${labelB}`, theme.accent);
-    } else if (node.mode === "diff") {
+    } else if (cmpMode === "diff") {
         ctx.drawImage(imgA, previewX + box.x, previewY + box.y, box.w, box.h);
         ctx.globalCompositeOperation = "difference";
         ctx.drawImage(imgB, previewX + box.x, previewY + box.y, box.w, box.h);
@@ -584,6 +591,21 @@ function drawCanvasPreview(ctx, node) {
 app.registerExtension({
     name: "Deathshot.ImageCompare",
     setup() {
+        const sanitizeCompareNodes = () => {
+            const nodes = app.graph?._nodes || app.graph?.nodes || [];
+            for (const n of nodes) {
+                if (n && (n.type === "DS_ImageCompare" || n.comfyClass === "DS_ImageCompare") && typeof n.mode === "string") {
+                    n.compareMode = n.mode;
+                    n.mode = 0;
+                }
+            }
+        };
+        setTimeout(sanitizeCompareNodes, 50);
+        setTimeout(sanitizeCompareNodes, 500);
+        setTimeout(sanitizeCompareNodes, 2000);
+        api.addEventListener("execution_start", sanitizeCompareNodes);
+        api.addEventListener("graphChanged", sanitizeCompareNodes);
+
         api.addEventListener("executed", (e) => {
             const data = e.detail;
             const output = data?.output;
@@ -639,6 +661,7 @@ app.registerExtension({
 
         const onNodeCreated = nodeType.prototype.onNodeCreated;
         nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
             onNodeCreated?.apply(this, arguments);
             activeNodes.add(this);
 
@@ -646,7 +669,11 @@ app.registerExtension({
             this.setSize([512, 512]);
 
             this.ratio = 0.5;
-            this.mode = "split";
+            this.compareMode = "split";
+            if (typeof this.mode === "string") {
+                this.compareMode = this.mode;
+                this.mode = 0;
+            }
             this.autoSnap = true;
             this._swapped = false;
             this.dragging = false;
@@ -720,7 +747,7 @@ app.registerExtension({
                         icon: "refresh-cw",
                         tooltip: "Reset to Center (50%)",
                         onClick: () => {
-                            this.mode = "split";
+                            this.compareMode = "split";
                             syncToolbar();
                             this.ratio = 0.5;
                             this._dsRender?.();
@@ -761,7 +788,7 @@ app.registerExtension({
                 size: "compact",
                 active: true,
                 onClick: () => {
-                    this.mode = "split";
+                    this.compareMode = "split";
                     syncToolbar();
                     this._dsRender?.();
                     this.setDirtyCanvas?.(true, false);
@@ -774,7 +801,7 @@ app.registerExtension({
                 size: "compact",
                 active: false,
                 onClick: () => {
-                    this.mode = "diff";
+                    this.compareMode = "diff";
                     syncToolbar();
                     this._dsRender?.();
                     this.setDirtyCanvas?.(true, false);
@@ -786,7 +813,7 @@ app.registerExtension({
                 size: "compact",
                 active: false,
                 onClick: () => {
-                    this.mode = "a";
+                    this.compareMode = "a";
                     syncToolbar();
                     this._dsRender?.();
                     this.setDirtyCanvas?.(true, false);
@@ -798,7 +825,7 @@ app.registerExtension({
                 size: "compact",
                 active: false,
                 onClick: () => {
-                    this.mode = "b";
+                    this.compareMode = "b";
                     syncToolbar();
                     this._dsRender?.();
                     this.setDirtyCanvas?.(true, false);
@@ -814,7 +841,7 @@ app.registerExtension({
                 label: "0%",
                 size: "compact",
                 onClick: () => {
-                    this.mode = "split";
+                    this.compareMode = "split";
                     this.ratio = 0;
                     syncToolbar();
                     this._dsRender?.();
@@ -826,7 +853,7 @@ app.registerExtension({
                 label: "50%",
                 size: "compact",
                 onClick: () => {
-                    this.mode = "split";
+                    this.compareMode = "split";
                     this.ratio = 0.5;
                     syncToolbar();
                     this._dsRender?.();
@@ -838,7 +865,7 @@ app.registerExtension({
                 label: "100%",
                 size: "compact",
                 onClick: () => {
-                    this.mode = "split";
+                    this.compareMode = "split";
                     this.ratio = 1;
                     syncToolbar();
                     this._dsRender?.();
@@ -921,11 +948,12 @@ app.registerExtension({
             const badgeBText = badgeB.querySelector(".ds-compare-badge-text");
 
             const syncToolbar = () => {
-                btnSplit.setActive(this.mode === "split");
-                btnDiff.setActive(this.mode === "diff");
-                btnA.setActive(this.mode === "a");
-                btnB.setActive(this.mode === "b");
-                viewport.style.cursor = this.mode === "split" ? "ew-resize" : "default";
+                const m = this.compareMode || "split";
+                btnSplit.setActive(m === "split");
+                btnDiff.setActive(m === "diff");
+                btnA.setActive(m === "a");
+                btnB.setActive(m === "b");
+                viewport.style.cursor = m === "split" ? "ew-resize" : "default";
             };
 
             const applyModeAndSplit = () => {
@@ -992,7 +1020,9 @@ app.registerExtension({
                     return;
                 }
 
-                if (this.mode === "a") {
+                const m = this.compareMode || "split";
+
+                if (m === "a") {
                     imgElementA.style.display = "block";
                     imgElementA.style.clipPath = "none";
                     imgElementA.style.mixBlendMode = "normal";
@@ -1006,7 +1036,7 @@ app.registerExtension({
                     return;
                 }
 
-                if (this.mode === "b") {
+                if (m === "b") {
                     imgElementB.style.display = "block";
                     imgElementB.style.clipPath = "none";
                     imgElementB.style.mixBlendMode = "normal";
@@ -1020,7 +1050,7 @@ app.registerExtension({
                     return;
                 }
 
-                if (this.mode === "diff") {
+                if (m === "diff") {
                     imgElementA.style.display = "block";
                     imgElementA.style.clipPath = "none";
                     imgElementA.style.mixBlendMode = "normal";
@@ -1108,7 +1138,7 @@ app.registerExtension({
             this._dsRender = updateLayout;
 
             const snapToCenter = () => {
-                if (!this.autoSnap || this.mode !== "split") return;
+                if (!this.autoSnap || (this.compareMode || "split") !== "split") return;
                 const startRatio = this.ratio;
                 const targetRatio = 0.5;
                 if (Math.abs(startRatio - targetRatio) < 0.001) {
@@ -1150,7 +1180,7 @@ app.registerExtension({
 
             viewport.addEventListener("pointerdown", (e) => {
                 if (e.button !== 0) return;
-                if (this.mode !== "split") return;
+                if ((this.compareMode || "split") !== "split") return;
 
                 this.dragging = true;
                 divider.classList.add("is-dragging");
@@ -1160,7 +1190,7 @@ app.registerExtension({
             });
 
             viewport.addEventListener("pointermove", (e) => {
-                if (this.mode !== "split") return;
+                if ((this.compareMode || "split") !== "split") return;
 
                 if (this.dragging) {
                     updateSplitFromPointer(e.clientX);
@@ -1201,7 +1231,7 @@ app.registerExtension({
             });
 
             viewport.addEventListener("dblclick", () => {
-                this.mode = "split";
+                this.compareMode = "split";
                 syncToolbar();
                 this.ratio = 0.5;
                 applyModeAndSplit();
@@ -1272,10 +1302,32 @@ app.registerExtension({
             return onRemoved?.apply(this, arguments);
         };
 
+        const onSerialize = nodeType.prototype.onSerialize;
+        nodeType.prototype.onSerialize = function (o) {
+            onSerialize?.apply(this, arguments);
+            if (typeof this.mode === "string") {
+                this.compareMode = this.mode;
+                this.mode = 0;
+            }
+            if (o) {
+                o.mode = typeof this.mode === "number" ? this.mode : 0;
+                o.properties = o.properties || {};
+                o.properties.compareMode = this.compareMode || "split";
+            }
+        };
+
         const onConfigure = nodeType.prototype.onConfigure;
         nodeType.prototype.onConfigure = function () {
             onConfigure?.apply(this, arguments);
             activeNodes.add(this);
+
+            if (typeof this.mode === "string") {
+                this.compareMode = this.mode;
+                this.mode = 0;
+            }
+            if (this.properties?.compareMode) {
+                this.compareMode = this.properties.compareMode;
+            }
 
             for (const input of this.inputs || []) {
                 input.label = input.name;

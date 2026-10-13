@@ -236,7 +236,7 @@ class CategoryDetector:
             "bust_size": r"\b(?:large\s+hanging\s+breasts|heavy\s+breasts|voluptuous\s+bust|busty|large\s+breasts|perky\s+breasts|ample\s+cleavage)\b",
             "female_clothing": r"\b(?:wearing\s+only|wearing|dressed\s+in|clad\s+in)\s+(?:only\s+)?(?:[\w\s-]+ )?(?:high heels|heels|dress|skirt|babydoll|lingerie|bikini|swimsuit|robe|pumps)\b|\b(?:completely naked|fully nude)\b",
             "male_clothing": r"\b(?:wearing|dressed\s+in|clad\s+in)\s+(?:a |an )?(?:[\w\s-]+ )?(?:jeans|pants|trousers|suit|shirt|jacket|boxers|sweatpants)\b|\bshirtless\b",
-            "clothing": r"\b(?:wearing|dressed\s+in|clad\s+in)\s+(?:only\s+)?(?:[\w\s-]+ )?(?:blazer|sweater|jacket|dress|shirt|suit|hoodie|coat|panties|lingerie|bra|underwear|top|pants|trousers|skirt|jeans|swimsuit|bikini|heels|boots)\b",
+            "clothing": r"\b(?:wearing|dressed\s+in|clad\s+in)\s+(?:only\s+)?(?:[\w\s-]+ )?(?:blazer|sweater|jacket|dress|shirt|suit|hoodie|coat|panties|lingerie|bra|underwear|top|pants|trousers|skirt|jeans|swimsuit|bikini|heels|boots|armor|robes|robe|gown|kimono|costume|attire|outfit|vest|tunic|uniform)\b",
             "location": r"\b(?:[\w-]+\s+){0,3}(?:beach|coastline|shore|bedroom|living room|apartment|hotel room|hotel suite|loft|penthouse|cabin|cottage|library|study|art gallery|gallery|studio|greenhouse|terrace|balcony|rooftop|alleyway|street|cafe|restaurant|bar|speakeasy|dungeon|sauna|bathhouse|onsen|pool|poolside|garden|forest|woods|courtyard|kitchen|bathroom)(?:\s+(?:setting|scene|interior|atmosphere|environment))?(?:\s+with\s+[^,.;\n]+)?\b",
             "camera_angle": r"\b(?:strict front-facing|front-facing|straight angle shot|straight-on angle|low-angle|high-angle|eye-level|dutch angle|top-down|overhead)\b(?:\s*(?:shot|angle|view))?",
             "lens_focal": r"\b(?:Photo shot on\s+)?(?:ultra-wide-angle\s+)?(?:\d{2,3}mm\s+(?:f/[\d.]+\s+)?(?:GM|prime|lens)?|16mm lens|24mm lens|35mm lens|50mm lens|85mm lens|105mm lens|135mm lens)\b",
@@ -659,6 +659,7 @@ class DSRandomizerPipeline:
         category_options: Optional[Dict[str, Any]] = None,
         node_id: str = "default_node",
         seed: Optional[int] = None,
+        override_values: Optional[Dict[str, str]] = None,
     ) -> str:
         """
         Executes the full semantic prompt variation process:
@@ -730,23 +731,26 @@ class DSRandomizerPipeline:
                 if not current_span:
                     continue
 
-                # Decouple location selection from stale scene environment tags being replaced
-                tags_for_sel = set(active_tags)
-                if cat_id in ("location", "room_environment"):
-                    tags_for_sel.difference_update({"indoor", "outdoor", "beach", "coastal", "nature"})
+                if override_values and cat_id in override_values and override_values[cat_id]:
+                    chosen_text = str(override_values[cat_id]).strip()
+                    chosen_entry = {"text": chosen_text, "tags": list(extract_context_tags(chosen_text))}
+                else:
+                    # Decouple location selection from stale scene environment tags being replaced
+                    tags_for_sel = set(active_tags)
+                    if cat_id in ("location", "room_environment"):
+                        tags_for_sel.difference_update({"indoor", "outdoor", "beach", "coastal", "nature"})
 
-                chosen_entry = self.selector.select(
-                    node_id=node_id,
-                    category_id=cat_id,
-                    options=category_options.get(cat_id) or category_options,
-                    rng=rng,
-                    seed=seed,
-                    active_tags=tags_for_sel,
-                )
-                if not chosen_entry or "text" not in chosen_entry:
-                    continue
-
-                chosen_text = chosen_entry["text"]
+                    chosen_entry = self.selector.select(
+                        node_id=node_id,
+                        category_id=cat_id,
+                        options=category_options.get(cat_id) or category_options,
+                        rng=rng,
+                        seed=seed,
+                        active_tags=tags_for_sel,
+                    )
+                    if not chosen_entry or "text" not in chosen_entry:
+                        continue
+                    chosen_text = chosen_entry["text"]
                 # Adapt clothing if intimate scene to avoid clipping through genitals
                 if intimate_scene and cat_id in ("clothing", "female_clothing", "male_clothing", "footwear", "top", "bottom"):
                     is_f = cat_id == "female_clothing"
@@ -774,22 +778,25 @@ class DSRandomizerPipeline:
         # 2. Perform insertions
         for cat_id in to_insert:
             try:
-                tags_for_sel = set(active_tags)
-                if cat_id in ("location", "room_environment"):
-                    tags_for_sel.difference_update({"indoor", "outdoor", "beach", "coastal", "nature"})
+                if override_values and cat_id in override_values and override_values[cat_id]:
+                    chosen_text = str(override_values[cat_id]).strip()
+                    chosen_entry = {"text": chosen_text, "tags": list(extract_context_tags(chosen_text))}
+                else:
+                    tags_for_sel = set(active_tags)
+                    if cat_id in ("location", "room_environment"):
+                        tags_for_sel.difference_update({"indoor", "outdoor", "beach", "coastal", "nature"})
 
-                chosen_entry = self.selector.select(
-                    node_id=node_id,
-                    category_id=cat_id,
-                    options=category_options.get(cat_id) or category_options,
-                    rng=rng,
-                    seed=seed,
-                    active_tags=tags_for_sel,
-                )
-                if not chosen_entry or "text" not in chosen_entry:
-                    continue
-
-                chosen_text = chosen_entry["text"]
+                    chosen_entry = self.selector.select(
+                        node_id=node_id,
+                        category_id=cat_id,
+                        options=category_options.get(cat_id) or category_options,
+                        rng=rng,
+                        seed=seed,
+                        active_tags=tags_for_sel,
+                    )
+                    if not chosen_entry or "text" not in chosen_entry:
+                        continue
+                    chosen_text = chosen_entry["text"]
                 # Adapt clothing if intimate scene to avoid clipping through genitals
                 if intimate_scene and cat_id in ("clothing", "female_clothing", "male_clothing", "footwear", "top", "bottom"):
                     is_f = cat_id == "female_clothing"

@@ -887,7 +887,15 @@
 
 .ds-sensei-prompt-area {
   min-height: 80px;
+  transition: border-color var(--ds-transition, 120ms ease), box-shadow var(--ds-transition, 120ms ease);
 }
+
+.ds-sensei-prompt-area.is-generating {
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  box-shadow: 0 0 0 1px var(--ds-color-accent, #67e8f9), 0 0 10px rgba(103, 232, 249, 0.25) !important;
+  background: var(--ds-color-panel, rgba(15, 23, 42, 0.6)) !important;
+}
+
 
 /* ========================================================================= */
 /* 13. Status Bar & Status Badges                                           */

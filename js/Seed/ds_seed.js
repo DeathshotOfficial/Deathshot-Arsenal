@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import { Card, protectDSResizeCorners } from "../UIElements/index.js";
 import { DSIcon } from "../Icons/index.js";
@@ -920,6 +921,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = oldCreated?.apply(this, arguments);
       installNode(this);
       if (this.size) {

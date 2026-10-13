@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 
 const TYPE = "DS_RunTimer";
@@ -978,6 +979,7 @@ app.registerExtension({
     const oldRemoved = nodeType.prototype.onRemoved;
 
     nodeType.prototype.onNodeCreated = function() {
+      attachNodeShortcuts(this);
       oldCreated?.apply(this, arguments);
       this.flags = this.flags || {}; this.flags.no_title = true; this.title = ""; this.badges = []; this.resizable = true; this._dsNodeBaseOptOut = true; this.bgcolor = "transparent"; this.color = "transparent"; this.boxcolor = "transparent";
       this.min_size = [130, 34];
@@ -1114,6 +1116,7 @@ app.registerExtension({
     };
   },
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node.type !== TYPE && node.comfyClass !== TYPE) return;
     node.flags = node.flags || {}; node.flags.no_title = true; node.title = ""; node.resizable = true; node._dsNodeBaseOptOut = true; node.bgcolor = "transparent"; node.color = "transparent"; node.boxcolor = "transparent";
     node.min_size = [130, 34];

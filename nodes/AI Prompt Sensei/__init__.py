@@ -205,6 +205,8 @@ def register_prompt_sensei_routes():
                     else:
                         context["has_image"] = False
 
+                node_id = data.get("node_id")
+
                 if provider == "built_in":
                     try:
                         from .builtin_llm import generate_prompt_builtin
@@ -223,6 +225,7 @@ def register_prompt_sensei_routes():
                         image_path=image_path,
                         builtin_config=builtin_cfg,
                         context=context,
+                        node_id=node_id,
                     )
                     return web.json_response(result)
 
@@ -235,6 +238,7 @@ def register_prompt_sensei_routes():
                     lm_studio_config=lm_studio_cfg,
                     context=context,
                     task_id=task_id,
+                    node_id=node_id,
                 )
 
                 # Auto-unload model if requested

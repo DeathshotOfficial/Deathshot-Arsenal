@@ -1061,6 +1061,18 @@ export async function openAISettingsPopover({
       });
       randBox.appendChild(coherenceToggle.root);
 
+      // Feature C: Attribute-only replacement vs full prompt rewrite
+      const attrOnlyToggle = Toggle({
+        label: "Attribute Replacement Only (Fast)",
+        description: "Only generates new attributes and swaps them in-place (~1s), preserving the exact rest of your prompt intact. When OFF, rewrites the entire prompt.",
+        checked: currentSettings.attributes_only !== false,
+        onChange: (checked) => {
+          currentSettings.attributes_only = checked;
+          sync();
+        },
+      });
+      randBox.appendChild(attrOnlyToggle.root);
+
       scroll.appendChild(randBox);
 
       // Clear Cache button — wired to new route, separate from DB shuffle-bag reset

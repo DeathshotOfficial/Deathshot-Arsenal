@@ -1004,13 +1004,20 @@ class DSSnapHistoryManager {
 }
 
 export const snapHistory = new DSSnapHistoryManager();
+if (typeof window !== "undefined") {
+  window.__ds_snap_history = snapHistory;
+}
 
 // ---------------------------------------------------------------------------
 // 6. KEYBOARD SHORTCUTS & PRECISION ARROW MOVEMENT
 // ---------------------------------------------------------------------------
-function isKeyboardFocusProtected() {
+function isKeyboardFocusProtected(key, isCtrlOrMeta) {
   const el = document.activeElement;
   if (!el) return false;
+  // If user presses Ctrl+Z or Ctrl+Y or Ctrl+Enter, let shortcuts engine handle it
+  if (isCtrlOrMeta && (key === "z" || key === "Z" || key === "y" || key === "Y" || key === "Enter")) {
+    return false;
+  }
   const tag = el.tagName?.toUpperCase();
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
   if (el.isContentEditable) return true;
@@ -1021,16 +1028,26 @@ function isKeyboardFocusProtected() {
 }
 
 function handleGlobalKeyDown(e) {
-  if (isKeyboardFocusProtected()) return;
-
   const isCtrlOrMeta = e.ctrlKey || e.metaKey;
   const key = e.key;
+
+  if (isKeyboardFocusProtected(key, isCtrlOrMeta)) return;
 
   // Undo shortcut: Ctrl+Z / Cmd+Z (without Shift)
   if (isCtrlOrMeta && !e.shiftKey && (key === "z" || key === "Z")) {
     if (snapHistory.undo(app?.canvas)) {
       e.preventDefault();
       e.stopPropagation();
+      return;
+    }
+    // Fallback to universal graph undo even if snap is OFF
+    if (typeof window.__ds_executeUndo === "function") {
+      window.__ds_executeUndo().then((ok) => {
+        if (ok) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
       return;
     }
   }
@@ -1040,6 +1057,16 @@ function handleGlobalKeyDown(e) {
     if (snapHistory.redo(app?.canvas)) {
       e.preventDefault();
       e.stopPropagation();
+      return;
+    }
+    // Fallback to universal graph redo even if snap is OFF
+    if (typeof window.__ds_executeRedo === "function") {
+      window.__ds_executeRedo().then((ok) => {
+        if (ok) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
       return;
     }
   }

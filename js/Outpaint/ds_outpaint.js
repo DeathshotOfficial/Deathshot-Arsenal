@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import { Card, ColorPicker, normalizeDSWidgetHost, protectDSResizeCorners, installDSUI, DSIcon } from "../UIElements/index.js";
 import { createPreview } from "./outpaint_canvas.js";
@@ -499,6 +500,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = oldCreated?.apply(this, arguments);
       try {
         removeHiddenSockets(this);

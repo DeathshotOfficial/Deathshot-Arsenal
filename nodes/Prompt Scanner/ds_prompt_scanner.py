@@ -86,9 +86,37 @@ def _graph_prompt(graph: dict) -> str:
         if "sensei" in typ:
             try:
                 state = json.loads(inp.get("SenseiState", "{}"))
-                for k in ("generated_prompt", "positive_prompt", "prompt", "user_prompt"):
+                loras = state.get("loras") or []
+                keys = ("custom_text", "generated_prompt", "positive_prompt", "prompt", "user_prompt") if state.get("mode") == "custom" else ("generated_prompt", "positive_prompt", "prompt", "user_prompt", "custom_text")
+                for k in keys:
                     val = state.get(k)
                     if isinstance(val, str) and val.strip() and val.strip().lower() != "randomize":
+                        triggers = []
+                        if isinstance(loras, list):
+                            for row in loras:
+                                if not isinstance(row, dict) or row.get("enabled", True) is False:
+                                    continue
+                                for t in row.get("selectedTriggers", []):
+                                    t_clean = str(t).strip()
+                                    if t_clean and t_clean.lower() not in [x.lower() for x in triggers]:
+                                        triggers.append(t_clean)
+                        if triggers:
+                            clean_val = val.strip().lstrip(",").strip()
+                            changed = True
+                            while changed and clean_val:
+                                changed = False
+                                for t in triggers:
+                                    if clean_val.lower() == t.strip().lower():
+                                        clean_val = ""
+                                        changed = True
+                                        break
+                                    m = re.match(r'^' + re.escape(t.strip()) + r'\s*,\s*', clean_val, re.IGNORECASE)
+                                    if m:
+                                        clean_val = clean_val[m.end():].lstrip(",").strip()
+                                        changed = True
+                                        break
+                            prefix = ", ".join(triggers).strip().rstrip(",")
+                            return f"{prefix}, {clean_val}" if clean_val else prefix
                         return val.strip()
             except Exception:
                 pass

@@ -41,6 +41,7 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 
 ### 🎬 Video & Frame Interpolation
 - **DS Video Save & Load Video**: Fast, reliable video export and reading with PyAV and FFmpeg. See [DS Video Save](docs/DS%20Video%20Save.md) and [DS Load Video](docs/DS%20Load%20Video.md).
+- **DS GIF Generator**: High-speed animated GIF, WebP, and APNG encoder with multithreaded FFmpeg streaming, real-time `1.0×` playback speed synchronization, adaptive palette quantization, live calibrated file-size estimation, and interactive looping preview. See [DS GIF Generator Documentation](docs/DS%20GIF%20Generator.md).
 - **DS Frame Interpolation (RIFE)**: High-quality AI frame interpolation using RIFE 4.9 (auto-downloads models on first run). See [DS Interpolation Documentation](docs/DS%20Interpolation.md).
 - **DS Video Timing**: Precise FPS, frame count, and duration calculations. See [DS Video Timing Documentation](docs/DS%20Video%20Timing.md).
 

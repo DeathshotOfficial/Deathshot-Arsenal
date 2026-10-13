@@ -203,55 +203,6 @@
 }
 
 /* ------------------------------------------------------------------------- */
-/* DeathshotArsenal Custom Toggle Switch (Zero Native Controls)              */
-/* ------------------------------------------------------------------------- */
-.ds-purger-switch {
-  position: relative;
-  width: 32px !important;
-  min-width: 32px !important;
-  max-width: 32px !important;
-  height: 18px !important;
-  min-height: 18px !important;
-  max-height: 18px !important;
-  border-radius: 999px;
-  background: var(--ds-panel-2, #181c24);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.18));
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
-  overflow: hidden;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.ds-purger-switch-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--ds-text-muted, #94a3b8);
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease;
-  box-sizing: border-box !important;
-  pointer-events: none;
-}
-
-.ds-purger-switch.is-on,
-.ds-purger-switch.is-checked {
-  background: color-mix(in srgb, var(--ds-accent, #67e8f9) 25%, var(--ds-panel-2, #181c24));
-  border-color: var(--ds-accent, #67e8f9);
-}
-
-.ds-purger-switch.is-on .ds-purger-switch-thumb,
-.ds-purger-switch.is-checked .ds-purger-switch-thumb {
-  transform: translateX(14px);
-  background: var(--ds-accent, #67e8f9);
-  box-shadow: 0 0 6px var(--ds-accent, #67e8f9);
-}
-
-/* ------------------------------------------------------------------------- */
 /* Popover Footer                                                            */
 /* ------------------------------------------------------------------------- */
 .ds-purger-popover-footer {
@@ -280,4 +231,203 @@
   background: var(--ds-btn-hover, #222733);
   border-color: var(--ds-accent, #67e8f9);
   color: var(--ds-text, #f8fafc);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Button Row & Action Buttons                                              */
+/* ------------------------------------------------------------------------- */
+.ds-purger-buttons-row {
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 5px !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  pointer-events: none !important;
+}
+
+.ds-purger-buttons-row > * {
+  box-sizing: border-box !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+}
+
+.ds-purger-btn {
+  box-sizing: border-box !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 24px !important;
+  padding: 0 4px !important;
+  font-family: var(--ds-font, "Inter", system-ui, sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  background: var(--ds-btn-bg, #161a23) !important;
+  color: var(--ds-color-text, #e5e7eb) !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  outline: none !important;
+  transition: all var(--ds-transition, 120ms ease) !important;
+}
+
+.ds-purger-btn:hover {
+  background: var(--ds-btn-hover, #1e2433) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.ds-purger-btn:active,
+.ds-purger-btn.is-active,
+.ds-purger-btn.is-selected {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-color: var(--ds-color-accent, #67e8f9) !important;
+  color: var(--ds-color-on-accent, #0a0c10) !important;
+  font-weight: 800 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* In-built Status Bar below buttons */
+.dsui-card .ds-ui-status-bar,
+.ds-purger-card .ds-ui-status-bar {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  padding: 0 8px !important;
+  background: var(--ds-color-panel-2, #161a23) !important;
+  border: 1px solid var(--ds-color-border, #242a36) !important;
+  border-radius: var(--ds-radius-control, 5px) !important;
+  font-family: var(--ds-font, "Inter", system-ui, sans-serif) !important;
+  font-size: 10px !important;
+  color: var(--ds-color-muted-text, #9ca3af) !important;
+  user-select: none !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  transition: all var(--ds-transition, 120ms ease) !important;
+}
+
+.dsui-card .ds-ui-status-dot,
+.ds-purger-card .ds-ui-status-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: var(--ds-color-muted-text, #9ca3af) !important;
+  flex-shrink: 0 !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.ds-purger-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-dot {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  box-shadow: 0 0 6px var(--ds-color-accent, #67e8f9) !important;
+  animation: ds-status-pulse 1.2s infinite ease-in-out !important;
+}
+
+.ds-purger-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-dot {
+  background: var(--ds-color-accent, #67e8f9) !important;
+  box-shadow: 0 0 5px var(--ds-color-accent, #67e8f9) !important;
+}
+
+.dsui-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-dot,
+.ds-purger-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-dot {
+  background: var(--ds-color-danger, #ef4444) !important;
+  box-shadow: 0 0 5px var(--ds-color-danger, #ef4444) !important;
+}
+
+.dsui-card .ds-ui-status-label,
+.ds-purger-card .ds-ui-status-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  flex-shrink: 1 !important;
+  min-width: 0 !important;
+}
+
+.dsui-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-label,
+.ds-purger-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-label {
+  color: var(--ds-color-accent, #67e8f9) !important;
+}
+
+.dsui-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-label,
+.ds-purger-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-label {
+  color: var(--ds-color-text, #e5e7eb) !important;
+}
+
+.dsui-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-label,
+.ds-purger-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-label {
+  color: var(--ds-color-danger, #ef4444) !important;
+}
+
+.dsui-card .ds-ui-status-track,
+.ds-purger-card .ds-ui-status-track {
+  flex: 1 1 0 !important;
+  min-width: 24px !important;
+  height: 3.5px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  display: none !important;
+}
+
+.dsui-card .ds-ui-status-fill,
+.ds-purger-card .ds-ui-status-fill {
+  height: 100% !important;
+  width: 0% !important;
+  background: var(--ds-color-accent, #67e8f9) !important;
+  border-radius: 2px !important;
+  transition: width 0.15s ease !important;
+}
+
+.dsui-card .ds-ui-status-fill.is-indeterminate,
+.ds-purger-card .ds-ui-status-fill.is-indeterminate {
+  width: 100% !important;
+  background: linear-gradient(90deg, transparent, var(--ds-color-accent, #67e8f9), transparent) !important;
+  background-size: 200% 100% !important;
+  animation: ds-status-shimmer 1.5s infinite linear !important;
+}
+
+.dsui-card .ds-ui-status-percent,
+.ds-purger-card .ds-ui-status-percent {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  color: var(--ds-color-accent, #67e8f9) !important;
+  margin-left: 2px !important;
+  flex-shrink: 0 !important;
+}
+
+@keyframes ds-status-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.6;
+  }
+}
+
+@keyframes ds-status-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }

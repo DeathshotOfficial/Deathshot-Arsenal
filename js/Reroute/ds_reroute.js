@@ -4,6 +4,7 @@
    ============================================================ */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 
 const EXTENSION_NAME = "DeathshotArsenal.DSReroute";
 const NODE_TYPE = "DS_Reroute";
@@ -464,6 +465,7 @@ app.registerExtension({
   },
 
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node.type === NODE_TYPE || node.constructor?.name === "DSRerouteNode") {
       node.isVirtualNode = true;
       node.comfyClass = NODE_TYPE;

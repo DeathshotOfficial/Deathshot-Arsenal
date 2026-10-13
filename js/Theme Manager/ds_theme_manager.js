@@ -7,10 +7,13 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
+import { registerCardNode, LAYOUT } from "../UIElements/card_layout.js";
+import { Button, Dropdown, Slider, Stepper, Toggle, Card, Field, Section, DSIcon } from "../UIElements/index.js";
 
 // Ensure CSS is loaded — version stamp forces browser to fetch fresh CSS on each ComfyUI restart
-const DS_TM_BUILD = "20260926_04";
+const DS_TM_BUILD = "20261012_01";
 
 const DS_UI_CSS_ID = "ds-ui-system-css";
 const _existingUiCss = document.getElementById(DS_UI_CSS_ID);
@@ -275,7 +278,7 @@ function getSmartContrastVars(accentHex, cardHex, bgHex) {
   };
 }
 
-function applyThemeVariables(target, tokens) {
+function applyThemeVariables(target, tokens, themeObj = null) {
   if (!target || !tokens) return;
   const style = target.style || target;
   if (!style || typeof style.setProperty !== "function") return;
@@ -322,6 +325,13 @@ function applyThemeVariables(target, tokens) {
   style.setProperty("--ds-on-accent-shadow", smart.onAccentShadow);
   if (tokens.socketFill) style.setProperty("--ds-socket-fill", tokens.socketFill);
   if (tokens.wireAccent) style.setProperty("--ds-wire-accent", tokens.wireAccent);
+
+  // Apply complete set of variables if themeObj provided
+  if (themeObj?.vars) {
+    for (const [k, v] of Object.entries(themeObj.vars)) {
+      style.setProperty(k, v);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -595,7 +605,7 @@ class DSHSVColorPicker {
 class DSThemeManagerDashboard {
   constructor() {
     this.isOpen = false;
-    this.activeTab = "customization";
+    this.activeTab = "themes";
     this.activeSubTab = "title";
 
     // Data State
@@ -685,9 +695,9 @@ class DSThemeManagerDashboard {
             <span class="ds-tm-brand-title">Theme Manager</span>
           </div>
           <div class="ds-tm-tabs-nav">
-            <button type="button" class="ds-tm-tab-btn active" data-tab="customization">Customization</button>
-            <button type="button" class="ds-tm-tab-btn" data-tab="themes">DS Themes</button>
+            <button type="button" class="ds-tm-tab-btn active" data-tab="themes">DS Themes (50)</button>
             <button type="button" class="ds-tm-tab-btn" data-tab="typography">Typography</button>
+            <button type="button" class="ds-tm-tab-btn" data-tab="customization">Canvas / Native Nodes</button>
           </div>
           <button type="button" class="ds-tm-close-btn" data-el="closeBtn" title="Close (Esc)">✕</button>
         </div>
@@ -697,21 +707,21 @@ class DSThemeManagerDashboard {
           <div class="ds-tm-target-left">
             <span class="ds-tm-target-pill" data-el="targetPill">
               <span class="ds-tm-target-dot"></span>
-              <span data-el="targetText">Scope: Canvas Defaults</span>
+              <span data-el="targetText">Target: All DS Nodes on Canvas</span>
             </span>
           </div>
           <div class="ds-tm-target-right">
-            <button type="button" class="ds-tm-pill-btn primary" data-el="applySelectedBtn">Apply to Target</button>
-            <button type="button" class="ds-tm-pill-btn" data-el="applyGlobalBtn">Set as Default / Global</button>
-            <button type="button" class="ds-tm-pill-btn" data-el="revertNativeBtn" title="Revert selected node(s) to ComfyUI native styling">Revert to Native</button>
-            <button type="button" class="ds-tm-pill-btn danger" data-el="resetDefaultsBtn">Reset Tab to Defaults</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-primary ds-tm-scope-btn" data-el="applySelectedBtn">Apply to All DS Nodes</button>
+            <button type="button" class="ds-ui-btn ds-tm-scope-btn" data-el="applyGlobalBtn">Set as Default / Global</button>
+            <button type="button" class="ds-ui-btn ds-tm-scope-btn" data-el="revertNativeBtn" title="Revert selected node(s) to ComfyUI native styling">Revert to Native</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-danger ds-tm-scope-btn" data-el="resetDefaultsBtn">Reset Tab to Defaults</button>
           </div>
         </div>
 
         <!-- Content Body (Tabs) -->
         <div class="ds-tm-content-body">
-          <!-- TAB 1: CUSTOMIZATION -->
-          <div class="ds-tm-tab-panel active" data-panel="customization">
+          <!-- TAB 1: CUSTOMIZATION (Native / Canvas) -->
+          <div class="ds-tm-tab-panel" data-panel="customization">
             <div class="ds-tm-cust-layout">
               <!-- Left Picker & Presets Column -->
               <div class="ds-tm-cust-left">
@@ -775,14 +785,24 @@ class DSThemeManagerDashboard {
             </div>
           </div>
 
-          <!-- TAB 2: DS THEMES -->
-          <div class="ds-tm-tab-panel" data-panel="themes">
+          <!-- TAB 2: DS THEMES (Default Tab) -->
+          <div class="ds-tm-tab-panel active" data-panel="themes">
             <div class="ds-tm-themes-layout">
               <!-- Left Catalog Column -->
               <div class="ds-tm-theme-catalog">
-                <div class="ds-tm-section-heading">
-                  <span>Foundational Presets</span>
-                  <span style="font-size:9px; color:var(--ds-text-muted);">Built-in Themes</span>
+                <div class="ds-tm-catalog-header">
+                  <div class="ds-tm-section-heading" style="margin-bottom:6px;">
+                    <span>Theme Library</span>
+                    <span style="font-size:9px; color:var(--ds-text-muted);" data-el="themeCountLabel">50 Themes</span>
+                  </div>
+                  <div class="ds-tm-cat-filter-row">
+                    <button type="button" class="ds-tm-cat-filter-btn active" data-filter="all">All (50)</button>
+                    <button type="button" class="ds-tm-cat-filter-btn" data-filter="animated">✨ Live (10)</button>
+                    <button type="button" class="ds-tm-cat-filter-btn" data-filter="static">🎨 Static (40)</button>
+                  </div>
+                  <div class="ds-tm-search-wrap">
+                    <input type="text" class="ds-tm-search-input" placeholder="Search themes..." data-el="themeSearchInput" />
+                  </div>
                 </div>
                 <div class="ds-tm-theme-chip-list" data-el="dsThemeCatalog"></div>
               </div>
@@ -835,7 +855,7 @@ class DSThemeManagerDashboard {
             </div>
           </div>
 
-          <!-- TAB 3: TYPOGRAPHY -->
+          <!-- TAB 3: TYPOGRAPHY (Overhauled with UI Elements) -->
           <div class="ds-tm-tab-panel" data-panel="typography">
             <div class="ds-tm-typo-layout">
               <!-- Left Font Controls -->
@@ -843,90 +863,49 @@ class DSThemeManagerDashboard {
                 <!-- Typography Preset Pairings -->
                 <div class="ds-tm-card-section">
                   <div class="ds-tm-section-heading">
-                    <span>Typography Presets</span>
+                    <span>Curated Typography Presets</span>
                   </div>
-                  <div class="ds-tm-tag-list" data-el="typoPresetList"></div>
+                  <div class="ds-tm-preset-chips-row" data-el="typoPresetList"></div>
                 </div>
 
-                <!-- Font Family & Controls -->
+                <!-- Font Family & Metrics -->
                 <div class="ds-tm-card-section">
                   <div class="ds-tm-section-heading">
                     <span>Font Family & Metrics</span>
                   </div>
+
                   <div class="ds-tm-control-group">
                     <label class="ds-tm-control-label">Font Family</label>
-                    <div class="ds-tm-dropdown" data-el="fontFamilyDropdown" style="width:100%;">
-                      <div class="ds-tm-dropdown-trigger" data-el="fontDropdownTrigger">
-                        <span data-el="fontDropdownVal">Inter</span>
-                        <span class="ds-tm-dropdown-arrow">${SVG_ICONS.chevronDown}</span>
-                      </div>
-                      <div class="ds-tm-dropdown-menu" data-el="fontDropdownMenu"></div>
-                    </div>
+                    <div data-el="fontFamilySlot"></div>
                   </div>
 
-                  <!-- Cyber-Tactical Slider: Base Font Size -->
-                  <div class="ds-tm-cyber-slider-block" style="margin-top:6px;">
-                    <div class="ds-tm-cyber-slider-head">
-                      <div class="ds-tm-cyber-slider-label">
-                        <span>Base Font Size</span>
-                        <span class="ds-tm-cyber-slider-badge">SCALE</span>
-                      </div>
+                  <div class="ds-tm-control-group" style="margin-top:8px;">
+                    <label class="ds-tm-control-label">Font Weight</label>
+                    <div data-el="fontWeightSlot"></div>
+                  </div>
+
+                  <div class="ds-tm-control-group" style="margin-top:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label class="ds-tm-control-label" style="margin:0;">Base Font Size</label>
                       <span class="ds-tm-cyber-slider-val-pill" data-el="fontSizeVal">14px</span>
                     </div>
-                    <div class="ds-tm-cyber-slider-row">
-                      <div class="ds-tm-slider-host" data-el="fontSizeSlider"></div>
-                      <div class="ds-tm-cyber-stepper">
-                        <button type="button" class="ds-tm-cyber-step-btn" data-step="down" data-for="fontSize" title="Decrease font size">${SVG_ICONS.chevronSmallDown}</button>
-                        <input type="number" data-el="fontSizeInput" value="14" min="10" max="24" />
-                        <button type="button" class="ds-tm-cyber-step-btn" data-step="up" data-for="fontSize" title="Increase font size">${SVG_ICONS.chevronUp}</button>
-                      </div>
+                    <div class="ds-tm-slider-stepper-row">
+                      <div class="ds-tm-slider-cell" data-el="fontSizeSliderSlot"></div>
+                      <div class="ds-tm-stepper-cell" data-el="fontSizeStepperSlot"></div>
                     </div>
-                    <div class="ds-tm-cyber-chips" data-el="fontSizeQuickChips">
-                      <span class="ds-tm-cyber-chip" data-size="11">11px</span>
-                      <span class="ds-tm-cyber-chip" data-size="12">12px</span>
-                      <span class="ds-tm-cyber-chip" data-size="13">13px</span>
-                      <span class="ds-tm-cyber-chip active" data-size="14">14px</span>
-                      <span class="ds-tm-cyber-chip" data-size="16">16px</span>
-                      <span class="ds-tm-cyber-chip" data-size="18">18px</span>
-                      <span class="ds-tm-cyber-chip" data-size="20">20px</span>
-                    </div>
+                    <div class="ds-tm-quick-chips-row" data-el="fontSizeQuickChips"></div>
                   </div>
 
-                  <div class="ds-tm-control-group" style="margin-top:6px;">
-                    <label class="ds-tm-control-label">Font Weight</label>
-                    <div class="ds-tm-dropdown" data-el="fontWeightDropdown" style="width:100%;">
-                      <div class="ds-tm-dropdown-trigger" data-el="fontWeightTrigger">
-                        <span data-el="fontWeightVal">500 (Medium)</span>
-                        <span class="ds-tm-dropdown-arrow">${SVG_ICONS.chevronDown}</span>
-                      </div>
-                      <div class="ds-tm-dropdown-menu" data-el="fontWeightMenu"></div>
+                  <div class="ds-tm-control-group" style="margin-top:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label class="ds-tm-control-label" style="margin:0;">Letter Spacing (Tracking)</label>
+                      <span class="ds-tm-cyber-slider-val-pill" data-el="trackingVal">0.0px</span>
                     </div>
-                  </div>
-
-                  <!-- Cyber-Tactical Slider: Letter Spacing -->
-                  <div class="ds-tm-cyber-slider-block" style="margin-top:6px;">
-                    <div class="ds-tm-cyber-slider-head">
-                      <div class="ds-tm-cyber-slider-label">
-                        <span>Letter Spacing</span>
-                        <span class="ds-tm-cyber-slider-badge">TRACKING</span>
-                      </div>
-                      <span class="ds-tm-cyber-slider-val-pill" data-el="trackingVal">0px</span>
+                    <div class="ds-tm-slider-stepper-row">
+                      <div class="ds-tm-slider-cell" data-el="trackingSliderSlot"></div>
+                      <div class="ds-tm-stepper-cell" data-el="trackingStepperSlot"></div>
                     </div>
-                    <div class="ds-tm-cyber-slider-row">
-                      <div class="ds-tm-slider-host" data-el="trackingSlider"></div>
-                      <div class="ds-tm-cyber-stepper">
-                        <button type="button" class="ds-tm-cyber-step-btn" data-step="down" data-for="tracking" title="Tighten letter spacing">${SVG_ICONS.chevronSmallDown}</button>
-                        <input type="text" data-el="trackingInput" value="0.0" style="width:38px; text-align:center;" readonly />
-                        <button type="button" class="ds-tm-cyber-step-btn" data-step="up" data-for="tracking" title="Widen letter spacing">${SVG_ICONS.chevronUp}</button>
-                      </div>
-                    </div>
-                    <div class="ds-tm-cyber-chips" data-el="trackingQuickChips">
-                      <span class="ds-tm-cyber-chip" data-tracking="-0.5">-0.5px</span>
-                      <span class="ds-tm-cyber-chip active" data-tracking="0">0px</span>
-                      <span class="ds-tm-cyber-chip" data-tracking="0.6">+0.6px</span>
-                      <span class="ds-tm-cyber-chip" data-tracking="1.2">+1.2px</span>
-                      <span class="ds-tm-cyber-chip" data-tracking="2">+2.0px</span>
-                    </div>
+                    <div class="ds-tm-quick-chips-row" data-el="trackingQuickChips"></div>
                   </div>
                 </div>
 
@@ -934,42 +913,51 @@ class DSThemeManagerDashboard {
                 <div class="ds-tm-card-section">
                   <div class="ds-tm-section-heading">
                     <span>Google & Web Font Loader</span>
-                    ${window.queryLocalFonts ? `<button type="button" class="ds-tm-pill-btn" data-el="queryLocalFontsBtn">System Fonts</button>` : ""}
+                    ${window.queryLocalFonts ? `<button type="button" class="ds-ui-btn ds-ui-btn-compact" data-el="queryLocalFontsBtn">System Fonts</button>` : ""}
                   </div>
                   <div class="ds-tm-download-box">
                     <input type="text" class="ds-tm-input" data-el="webFontInput" placeholder="Font name (e.g. Outfit) or URL" />
-                    <button type="button" class="ds-tm-pill-btn primary" data-el="loadWebFontBtn">Load</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-primary" data-el="loadWebFontBtn">Load</button>
                   </div>
                   <div class="ds-tm-tag-list" data-el="installedWebFonts" style="margin-top:4px;"></div>
                 </div>
               </div>
 
-              <!-- Right Live Preview Card -->
+              <!-- Right Live Specimen Card -->
               <div class="ds-tm-typo-right">
-                <div class="ds-tm-live-font-preview" data-el="typoLivePreview">
-                  <div class="ds-tm-font-h1" data-el="previewH1">DeathshotArsenal Typography</div>
-                  <div class="ds-tm-font-h2" data-el="previewH2">High-Density Workflow Interface & Synthesis System</div>
-                  <div class="ds-tm-font-body" data-el="previewBody">
+                <div class="ds-tm-specimen-card" data-el="typoLivePreview">
+                  <div class="ds-tm-specimen-header">
+                    <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--ds-color-accent, var(--ds-accent));">Live Typography Specimen</span>
+                    <span class="ds-tm-specimen-stack" data-el="fallbackHierarchyText">"Inter", system-ui, sans-serif</span>
+                  </div>
+                  <div class="ds-tm-specimen-h1" data-el="previewH1">Deathshot Arsenal Pro</div>
+                  <div class="ds-tm-specimen-h2" data-el="previewH2">High-Density Workflow Interface & Synthesis Engine</div>
+                  <div class="ds-tm-specimen-body" data-el="previewBody">
                     The quick brown fox jumps over the lazy dog. 0123456789.
-                    Precision styling with dynamic font scaling, smart contrast tokens, and zero native OS scrollbar bleed.
+                    Precision typography across every node surface with real-time font scaling, zero native scrollbar artifacts, and smart contrast tokens.
                   </div>
-                  <div class="ds-tm-font-mono" data-el="previewMono">
+                  <div class="ds-tm-specimen-code" data-el="previewMono">
                     const theme = window.DSGlobalTheme.getTheme("deathshot_dark");<br/>
-                    const ratio = 1920 / 1080; // 16:9 aspect fit
+                    await engine.render({ seed: 789423589, steps: 30, cfg: 7.0 });
                   </div>
-                  <div class="ds-tm-font-counters">
-                    <div class="ds-tm-counter-pill"><span style="color:var(--ds-accent);">SEED</span> <span>789423589</span></div>
-                    <div class="ds-tm-counter-pill"><span style="color:var(--ds-accent);">DIMS</span> <span>1024 × 1536 (2:3)</span></div>
-                    <div class="ds-tm-counter-pill"><span style="color:var(--ds-accent);">STEPS</span> <span>30</span></div>
+                  <div class="ds-tm-specimen-controls">
+                    <button type="button" class="ds-ui-btn ds-ui-btn-primary ds-ui-btn-compact" data-el="specimenBtnPrimary">Execute Queue</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact" data-el="specimenBtnSecondary">Options</button>
+                    <div class="ds-tm-specimen-counters">
+                      <div class="ds-tm-counter-pill"><span style="color:var(--ds-color-accent, var(--ds-accent));">CFG</span> <span>7.0</span></div>
+                      <div class="ds-tm-counter-pill"><span style="color:var(--ds-color-accent, var(--ds-accent));">STEPS</span> <span>30</span></div>
+                    </div>
                   </div>
                 </div>
 
-                <div class="ds-tm-card-section">
+                <div class="ds-tm-card-section" style="margin-top:12px;">
                   <div class="ds-tm-section-heading">
-                    <span>Fallback Hierarchy</span>
+                    <span>Typography Hierarchy Guide</span>
                   </div>
-                  <div class="ds-tm-font-mono" data-el="fallbackHierarchyText" style="font-size:10px;">
-                    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
+                  <div style="font-size:11px; line-height:1.6; color:var(--ds-color-muted-text, var(--ds-text-muted));">
+                    <div>• <b>Headers (H1/H2):</b> Scaled automatically from Base Font Size (1.5× and 1.0×).</div>
+                    <div>• <b>Card Labels & Text:</b> Rendered at Base Font Size with configured weight.</div>
+                    <div>• <b>Tracking:</b> Controls letter spacing for improved high-DPI legibility.</div>
                   </div>
                 </div>
               </div>
@@ -1033,13 +1021,27 @@ class DSThemeManagerDashboard {
     this._refreshTargetSelection();
     this.overlay.classList.add("open");
     this.isOpen = true;
-    this._syncMockPreviews();
+
+    // Immediately synchronize modal with active theme upon opening
+    const activeId = this.activeThemeId
+      || window.DSGlobalTheme?.getConfig?.()?.theme
+      || safeLoad("DS_THEME_ACTIVE_ID", "deathshot_dark");
+    const activeTheme = this._catalogThemes?.[activeId]
+      || window.DSGlobalTheme?.getTheme?.(activeId);
+    if (activeTheme) {
+      this._applyThemeToPopup(activeTheme, activeId, false);
+    } else {
+      this._syncMockPreviews();
+    }
   }
 
   close() {
     if (!this.isOpen) return;
     this.overlay.classList.remove("open");
     this.isOpen = false;
+    if (this._pendingThemeId) {
+      this._persistTheme(this._pendingThemeId);
+    }
   }
 
   toggle() {
@@ -1376,6 +1378,24 @@ class DSThemeManagerDashboard {
     this.el.exportThemeBtn.addEventListener("click", () => this._exportCurrentDSTheme());
     this.el.importThemeBtn.addEventListener("click", () => this.el.importFileInput.click());
     this.el.importFileInput.addEventListener("change", (e) => this._importDSTheme(e));
+
+    // Category Filter Buttons
+    this.overlay.querySelectorAll(".ds-tm-cat-filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        this.overlay.querySelectorAll(".ds-tm-cat-filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        this._activeThemeFilter = btn.dataset.filter || "all";
+        this._renderThemesList();
+      });
+    });
+
+    // Theme Search Filter
+    if (this.el.themeSearchInput) {
+      this.el.themeSearchInput.addEventListener("input", (e) => {
+        this._themeSearchQuery = (e.target.value || "").toLowerCase().trim();
+        this._renderThemesList();
+      });
+    }
   }
 
   async _loadThemesCatalog() {
@@ -1393,106 +1413,223 @@ class DSThemeManagerDashboard {
       } catch (_) {}
     }
 
+    this._catalogThemes = themesObj;
+    this._activeThemeFilter = "all";
+    this._themeSearchQuery = "";
+    this._renderThemesList();
+
+    // Rehydrate and apply active theme immediately to the modal window
+    const activeThemeId = window.DSGlobalTheme?.getConfig?.()?.theme
+      || safeLoad("DS_THEME_ACTIVE_ID", "deathshot_dark");
+    const activeTheme = this._catalogThemes[activeThemeId] || this._catalogThemes.deathshot_dark;
+    if (activeTheme) {
+      this._applyThemeToPopup(activeTheme, activeThemeId, false);
+    }
+  }
+
+  _renderThemesList() {
     const container = this.el.dsThemeCatalog;
-    if (!container) return;
-    container.innerHTML = "";
+    if (!container || !this._catalogThemes) return;
 
-    const activeThemeId = window.DSGlobalTheme?.getConfig?.()?.theme || "deathshot_dark";
+    const activeThemeId = this.activeThemeId
+      || window.DSGlobalTheme?.getConfig?.()?.theme
+      || safeLoad("DS_THEME_ACTIVE_ID", "deathshot_dark");
 
-    Object.entries(themesObj).forEach(([id, t]) => {
-      const row = document.createElement("div");
-      row.className = `ds-tm-theme-chip-row ${id === activeThemeId ? "active" : ""}`;
-      const v = t.vars || {};
-      const swatches = [
-        v["--ds-bg"] || "#0b0d12",
-        v["--ds-accent"] || "#67e8f9",
-        v["--ds-panel"] || "#12151c",
-        v["--ds-text"] || "#e5e7eb",
-      ];
+    const entries = Object.entries(this._catalogThemes);
+    const filter = this._activeThemeFilter || "all";
+    const q = this._themeSearchQuery || "";
 
-      row.innerHTML = `
-        <span class="ds-tm-theme-chip-name">${t.name || id}</span>
-        <div class="ds-tm-theme-swatches-mini">
-          ${swatches.map(c => `<span style="background:${c};"></span>`).join("")}
-        </div>
-      `;
-
-      row.addEventListener("click", async () => {
-        container.querySelectorAll(".ds-tm-theme-chip-row").forEach(r => r.classList.remove("active"));
-        row.classList.add("active");
-
-        // Populate micro-tokens from theme (supporting modern and legacy variables)
-        this.dsTokens.accent       = v["--ds-color-accent"] || v["--ds-accent"]       || "#67e8f9";
-        this.dsTokens.surface      = v["--ds-color-card"]   || v["--ds-panel"]        || "#12151c";
-        this.dsTokens.surface2     = v["--ds-color-panel-2"]|| v["--ds-panel-2"]      || "#161a23";
-        this.dsTokens.headerBg     = v["--ds-color-base"]   || v["--ds-bg"]           || "#0b0d12";
-        this.dsTokens.btnBg        = v["--ds-btn-bg"]       || v["--ds-color-panel-2"]|| v["--ds-panel-2"] || "#161a23";
-        this.dsTokens.btnHover     = v["--ds-btn-hover"]    || "#1c2130";
-        this.dsTokens.border       = v["--ds-color-border"] || v["--ds-color-card-border"] || v["--ds-border"] || "#242a36";
-        this.dsTokens.borderActive = v["--ds-color-border-hover"] || v["--ds-border-active"] || this.dsTokens.accent;
-        this.dsTokens.text         = v["--ds-color-text"]   || v["--ds-text"]         || "#e5e7eb";
-        this.dsTokens.textMuted    = v["--ds-color-muted-text"] || v["--ds-text-muted"] || "#9ca3af";
-        this.dsTokens.socketFill   = v["--ds-socket-fill"]  || this.dsTokens.socketFill;
-        this.dsTokens.wireAccent   = v["--ds-wire-accent"]  || this.dsTokens.accent;
-
-        this._renderMicroElementRows();
-        this._syncMockPreviews();
-
-        // Apply both modern and legacy variables to :root instantly
-        applyThemeVariables(document.documentElement, this.dsTokens);
-
-        // Persist through the global theme engine first, then mirror the exact
-        // resulting config locally. The old code fired this async save and then
-        // immediately overwrote localStorage with a reduced object, which caused
-        // the saved custom theme values to disappear on the next browser reload.
-        let persistedConfig = null;
-        if (window.DSGlobalTheme) {
-          const currentConfig = window.DSGlobalTheme.getConfig?.() || {};
-          const result = await window.DSGlobalTheme.apply(
-            {
-              theme: id,
-              font: this.typoState.font,
-              fontSize: this.typoState.fontSize,
-              custom: currentConfig.custom || {},
-            },
-            { save: true }
-          );
-          persistedConfig = result?.config || window.DSGlobalTheme.getConfig?.() || null;
+    if (!this._themeRowMap || this._themeRowMap.size === 0) {
+      container.innerHTML = "";
+      this._themeRowMap = new Map();
+      entries.forEach(([id, t]) => {
+        const row = document.createElement("div");
+        row.className = `ds-tm-theme-chip-row ${id === activeThemeId ? "active" : ""}`;
+        row.dataset.themeId = id;
+        if (t.animated) {
+          row.dataset.animated = "true";
+          if (t.animationType) row.dataset.dsThemeAnim = t.animationType;
         }
-        if (persistedConfig) {
-          safeSave(STORAGE_GLOBAL_CONFIG, persistedConfig);
-        } else {
-          const existingCfg = safeLoad(STORAGE_GLOBAL_CONFIG, {});
-          safeSave(STORAGE_GLOBAL_CONFIG, {
-            ...existingCfg,
-            theme: id,
-            font: this.typoState.font,
-            fontSize: this.typoState.fontSize,
-          });
-        }
-        safeSave("DS_THEME_ACTIVE_ID", id);
-        safeSave("DS_THEME_ACTIVE_TOKENS", this.dsTokens);
+        const v = t.vars || {};
+        const swatches = [
+          v["--ds-color-base"] || v["--ds-bg"] || "#0b0d12",
+          v["--ds-color-accent"] || v["--ds-accent"] || "#67e8f9",
+          v["--ds-color-card"] || v["--ds-panel"] || "#12151c",
+          v["--ds-color-text"] || v["--ds-text"] || "#e5e7eb",
+        ];
 
-        // Apply immediately to ALL DS nodes currently on canvas so none are left behind
+        row.innerHTML = `
+          <div class="ds-tm-theme-chip-info">
+            <span class="ds-tm-theme-chip-name">${t.name || id}</span>
+            ${t.animated ? `<span class="ds-tm-chip-anim-badge">✨ LIVE</span>` : ""}
+          </div>
+          <div class="ds-tm-theme-swatches-mini ${t.animated ? "anim-preview" : ""}">
+            ${swatches.map(c => `<span style="background:${c};"></span>`).join("")}
+          </div>
+        `;
+
+        row.addEventListener("click", () => {
+          this._themeRowMap.forEach(({ row: r }) => r.classList.remove("active"));
+          row.classList.add("active");
+          this._applyThemeToPopup(t, id, true);
+        });
+
+        container.appendChild(row);
+        this._themeRowMap.set(id, { row, t });
+      });
+    }
+
+    let visibleCount = 0;
+    this._themeRowMap.forEach(({ row, t }, id) => {
+      let visible = true;
+      if (filter === "animated" && !t.animated) visible = false;
+      if (filter === "static" && t.animated) visible = false;
+      if (visible && q) {
+        const name = (t.name || id).toLowerCase();
+        const desc = (t.description || "").toLowerCase();
+        if (!name.includes(q) && !desc.includes(q) && !id.toLowerCase().includes(q)) {
+          visible = false;
+        }
+      }
+      row.style.display = visible ? "" : "none";
+      row.classList.toggle("active", id === (this.activeThemeId || activeThemeId));
+      if (visible) visibleCount++;
+    });
+
+    if (this.el.themeCountLabel) {
+      this.el.themeCountLabel.textContent = `${visibleCount} of ${entries.length} Themes`;
+    }
+  }
+
+  _applyThemeToPopup(t, id, shouldSyncCanvas = true) {
+    if (!t) return;
+    const v = t.vars || {};
+
+    // 1. Populate micro-tokens
+    this.dsTokens.accent       = v["--ds-color-accent"] || v["--ds-accent"]       || "#67e8f9";
+    this.dsTokens.surface      = v["--ds-color-card"]   || v["--ds-panel"]        || "#12151c";
+    this.dsTokens.surface2     = v["--ds-color-panel-2"]|| v["--ds-panel-2"]      || "#161a23";
+    this.dsTokens.headerBg     = v["--ds-color-base"]   || v["--ds-bg"]           || "#0b0d12";
+    this.dsTokens.btnBg        = v["--ds-btn-bg"]       || v["--ds-color-panel-2"]|| v["--ds-panel-2"] || "#161a23";
+    this.dsTokens.btnHover     = v["--ds-btn-hover"]    || "#1c2130";
+    this.dsTokens.border       = v["--ds-color-border"] || v["--ds-color-card-border"] || v["--ds-border"] || "#242a36";
+    this.dsTokens.borderActive = v["--ds-color-border-hover"] || v["--ds-border-active"] || this.dsTokens.accent;
+    this.dsTokens.text         = v["--ds-color-text"]   || v["--ds-text"]         || "#e5e7eb";
+    this.dsTokens.textMuted    = v["--ds-color-muted-text"] || v["--ds-text-muted"] || "#9ca3af";
+    this.dsTokens.socketFill   = v["--ds-socket-fill"]  || this.dsTokens.accent;
+    this.dsTokens.wireAccent   = v["--ds-wire-accent"]  || this.dsTokens.accent;
+    this.activeThemeId         = id;
+
+    // 2. Apply theme variables directly to window and overlay for instant 0ms popup theming
+    if (this.el.window) {
+      applyThemeVariables(this.el.window, this.dsTokens, t);
+      this.el.window.dataset.dsTheme = id;
+    }
+    if (this.overlay) {
+      applyThemeVariables(this.overlay, this.dsTokens, t);
+      this.overlay.dataset.dsTheme = id;
+    }
+
+    // 3. Set animation attributes on popup and mock card
+    const animType = t.animationType || (t.animated ? "cyber_pulse" : null);
+    if (animType) {
+      if (this.el.window) this.el.window.dataset.dsThemeAnim = animType;
+      if (this.overlay) this.overlay.dataset.dsThemeAnim = animType;
+      if (this.el.dsMockCard) this.el.dsMockCard.dataset.dsThemeAnim = animType;
+      if (this.el.mockNode) this.el.mockNode.dataset.dsThemeAnim = animType;
+    } else {
+      if (this.el.window) delete this.el.window.dataset.dsThemeAnim;
+      if (this.overlay) delete this.overlay.dataset.dsThemeAnim;
+      if (this.el.dsMockCard) delete this.el.dsMockCard.dataset.dsThemeAnim;
+      if (this.el.mockNode) delete this.el.mockNode.dataset.dsThemeAnim;
+    }
+
+    // 4. Update live previews and micro-tokens without DOM destruction
+    this._syncMockPreviews();
+    this._syncMicroElementRows();
+
+    // 5. Apply to documentElement so canvas and background elements inherit instantly
+    applyThemeVariables(document.documentElement, this.dsTokens, t);
+    if (animType) document.documentElement.dataset.dsThemeAnim = animType;
+    else delete document.documentElement.dataset.dsThemeAnim;
+
+    // 6. Fast non-blocking canvas nodes sync in throttled rAF
+    if (shouldSyncCanvas && !this._canvasUpdatePending) {
+      this._canvasUpdatePending = true;
+      requestAnimationFrame(() => {
+        this._canvasUpdatePending = false;
         if (app.graph?._nodes) {
           app.graph._nodes.filter(isDSNode).forEach(n => {
             const domRoot = n._dsSeedRoot || n.domWidget?.element || n.rootEl || (n.widgets && n.widgets.find(w => w?.element)?.element);
             if (domRoot) {
-              applyThemeVariables(domRoot, this.dsTokens);
+              applyThemeVariables(domRoot, this.dsTokens, t);
+              if (animType) domRoot.dataset.dsThemeAnim = animType;
+              else delete domRoot.dataset.dsThemeAnim;
             }
             n.bgcolor = this.dsTokens.surface;
             n.boxcolor = this.dsTokens.border;
             n.color = this.dsTokens.surface || this.dsTokens.headerBg;
             n.setDirtyCanvas?.(true, true);
           });
+          dirtyCanvas();
         }
-        dirtyCanvas();
-
-        this.showToast(`Applied DS Theme: ${t.name || id}`, "success");
       });
+    }
 
-      container.appendChild(row);
+    // Cache pending theme ID for persistence on modal close or explicit apply
+    this._pendingThemeId = id;
+  }
+
+  _persistTheme(themeId) {
+    if (!themeId) return;
+    safeSave("DS_THEME_ACTIVE_ID", themeId);
+    safeSave("DS_THEME_ACTIVE_TOKENS", this.dsTokens);
+    const existingCfg = safeLoad(STORAGE_GLOBAL_CONFIG, {});
+    safeSave(STORAGE_GLOBAL_CONFIG, {
+      ...existingCfg,
+      theme: themeId,
+      font: this.typoState.font,
+      fontSize: this.typoState.fontSize,
+      fontWeight: this.typoState.fontWeight,
+      tracking: this.typoState.tracking,
     });
+    this._debounceSaveServerConfig(themeId);
+  }
+
+  _debounceSaveServerConfig(themeId) {
+    if (this._serverSaveTimer) clearTimeout(this._serverSaveTimer);
+    this._serverSaveTimer = setTimeout(async () => {
+      try {
+        if (window.DSGlobalTheme?.apply) {
+          const currentConfig = window.DSGlobalTheme.getConfig?.() || {};
+          await window.DSGlobalTheme.apply(
+            {
+              theme: themeId,
+              font: this.typoState.font,
+              fontSize: this.typoState.fontSize,
+              fontWeight: this.typoState.fontWeight,
+              tracking: this.typoState.tracking,
+              custom: currentConfig.custom || {},
+            },
+            { save: true }
+          );
+        } else {
+          await fetch("/ds/theme/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              config: {
+                theme: themeId,
+                font: this.typoState.font,
+                fontSize: this.typoState.fontSize,
+                fontWeight: this.typoState.fontWeight,
+                tracking: this.typoState.tracking,
+              }
+            }),
+          });
+        }
+      } catch (_) {}
+    }, 300);
   }
 
   _renderMicroElementRows() {
@@ -1531,11 +1668,29 @@ class DSThemeManagerDashboard {
 
       const trigger = row.querySelector(".ds-tm-element-picker-trigger");
       trigger.addEventListener("click", () => {
-        // Open a popup with our HSV color picker
-        this._openElementColorPopover(trigger, elem.id, elem.color);
+        this._openElementColorPopover(trigger, elem.id, this.dsTokens[elem.id] || elem.color);
       });
 
       container.appendChild(row);
+    });
+  }
+
+  _syncMicroElementRows() {
+    const container = this.el.dsElementRows;
+    if (!container) return;
+    if (container.children.length === 0) {
+      this._renderMicroElementRows();
+      return;
+    }
+    const triggers = container.querySelectorAll(".ds-tm-element-picker-trigger");
+    triggers.forEach(trigger => {
+      const id = trigger.dataset.id;
+      if (id && this.dsTokens[id]) {
+        const swatch = trigger.querySelector(".ds-tm-element-swatch");
+        const hex = trigger.querySelector(".ds-tm-element-hex");
+        if (swatch) swatch.style.backgroundColor = this.dsTokens[id];
+        if (hex) hex.textContent = String(this.dsTokens[id]).toUpperCase();
+      }
     });
   }
 
@@ -1734,132 +1889,192 @@ class DSThemeManagerDashboard {
   }
 
   // -------------------------------------------------------------------------
-  // Tab 3: Typography Implementation
+  // Tab 3: Typography Implementation (Redesigned with DS UIElements)
   // -------------------------------------------------------------------------
   _initTypographyTab() {
     this._renderTypographyPresets();
-    this._setupFontDropdown();
-    this._setupFontWeightDropdown();
 
-    // Typography sliders use the same DS UI Slider component as every node UI.
-    const sizeHost = this.el.fontSizeSlider;
-    const sizeInput = this.el.fontSizeInput;
-    const sizeVal = this.el.fontSizeVal;
-    const trackingHost = this.el.trackingSlider;
-    const trackingInput = this.el.trackingInput;
-    const trackingVal = this.el.trackingVal;
-
-    const setSize = (sz, source = "program") => {
-      sz = clamp(Number(sz), 10, 24);
-      this.typoState.fontSize = sz;
-      this.fontSizeSlider?.setValue(sz, false);
-      if (sizeInput) sizeInput.value = sz;
-      if (sizeVal) sizeVal.textContent = `${sz}px`;
-
-      this.el.fontSizeQuickChips?.querySelectorAll(".ds-tm-cyber-chip").forEach(chip => {
-        chip.classList.toggle("active", parseInt(chip.dataset.size, 10) === sz);
-      });
-
-      this._updateTypoPreview();
-    };
-
-    const setTracking = (value) => {
-      const val = clamp(Math.round(Number(value) * 10) / 10, -1, 3);
-      const trStr = `${val >= 0 ? "+" : ""}${val.toFixed(1)}px`;
-      this.typoState.tracking = trStr;
-      this.trackingSlider?.setValue(val, false);
-      if (trackingInput) trackingInput.value = `${val >= 0 ? "+" : ""}${val.toFixed(1)}`;
-      if (trackingVal) trackingVal.textContent = trStr;
-
-      this.el.trackingQuickChips?.querySelectorAll(".ds-tm-cyber-chip").forEach(chip => {
-        const cVal = parseFloat(chip.dataset.tracking);
-        chip.classList.toggle("active", Math.abs(cVal - val) < 0.15);
-      });
-
-      this._updateTypoPreview();
-    };
-
-    // Build the actual DS sliders asynchronously. The Theme Manager modal
-    // itself is allowed to open even if the shared control takes a moment to load.
-    loadDSThemeSlider().then(Slider => {
-      if (sizeHost && sizeHost.isConnected) {
-        this.fontSizeSlider = Slider({
-          min: 10,
-          max: 24,
-          step: 1,
-          value: this.typoState.fontSize || 14,
-          label: "FONT SIZE",
-          showNumber: false,
-          onChange: value => setSize(value, "slider"),
-          className: "ds-tm-embedded-slider",
-        });
-        sizeHost.replaceWith(this.fontSizeSlider.root);
-        this.el.fontSizeSlider = this.fontSizeSlider;
+    // 1. Font Family Dropdown
+    const fontOptions = STANDARD_FONTS.map(f => ({ id: f, label: f }));
+    this.fontFamilyDropdown = Dropdown({
+      options: fontOptions,
+      value: this.typoState.font || "Inter",
+      searchable: true,
+      onChange: (val) => {
+        this.typoState.font = val;
+        this._updateTypoPreview();
       }
+    });
+    this.el.fontFamilySlot?.replaceChildren(this.fontFamilyDropdown.root);
 
-      if (trackingHost && trackingHost.isConnected) {
-        this.trackingSlider = Slider({
-          min: -1,
-          max: 3,
-          step: 0.2,
-          value: parseFloat(this.typoState.tracking) || 0,
-          label: "LETTER SPACING",
-          showNumber: false,
-          onChange: value => setTracking(value),
-          className: "ds-tm-embedded-slider",
-        });
-        trackingHost.replaceWith(this.trackingSlider.root);
-        this.el.trackingSlider = this.trackingSlider;
+    // 2. Font Weight Dropdown
+    const weightOptions = [
+      { id: "300", label: "300 (Light)" },
+      { id: "400", label: "400 (Regular)" },
+      { id: "500", label: "500 (Medium)" },
+      { id: "600", label: "600 (Semi-Bold)" },
+      { id: "700", label: "700 (Bold)" },
+    ];
+    this.fontWeightDropdown = Dropdown({
+      options: weightOptions,
+      value: String(this.typoState.fontWeight || "500"),
+      searchable: false,
+      onChange: (val) => {
+        this.typoState.fontWeight = val;
+        this._updateTypoPreview();
       }
-    }).catch(error => {
-      console.error("[DeathshotArsenal] Theme Manager Slider failed to load:", error);
     });
+    this.el.fontWeightSlot?.replaceChildren(this.fontWeightDropdown.root);
 
-    if (sizeInput) sizeInput.addEventListener("change", () => setSize(parseInt(sizeInput.value, 10)));
-
-    this.overlay.querySelectorAll('[data-for="fontSize"]').forEach(btn => {
-      btn.addEventListener("click", () => {
-        const delta = btn.dataset.step === "up" ? 1 : -1;
-        setSize(this.fontSizeSlider?.getValue?.() + delta, "stepper");
-      });
+    // 3. Base Font Size (Slider + Stepper)
+    const curSize = clamp(Number(this.typoState.fontSize || 14), 10, 24);
+    this.fontSizeSlider = Slider({
+      min: 10,
+      max: 24,
+      step: 1,
+      value: curSize,
+      label: "SCALE",
+      showNumber: false,
+      onChange: (val) => {
+        const sz = clamp(Math.round(val), 10, 24);
+        this.typoState.fontSize = sz;
+        if (this.el.fontSizeVal) this.el.fontSizeVal.textContent = `${sz}px`;
+        this.fontSizeStepper?.setValue(sz, false);
+        this._syncFontSizeChips(sz);
+        this._updateTypoPreview();
+      }
     });
+    this.el.fontSizeSliderSlot?.replaceChildren(this.fontSizeSlider.root);
 
-    this.el.fontSizeQuickChips?.querySelectorAll(".ds-tm-cyber-chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        const sz = parseInt(chip.dataset.size, 10);
-        if (!isNaN(sz)) setSize(sz, "chip");
-      });
+    this.fontSizeStepper = Stepper({
+      min: 10,
+      max: 24,
+      step: 1,
+      value: curSize,
+      compact: true,
+      onChange: (val) => {
+        const sz = clamp(Math.round(val), 10, 24);
+        this.typoState.fontSize = sz;
+        if (this.el.fontSizeVal) this.el.fontSizeVal.textContent = `${sz}px`;
+        this.fontSizeSlider?.setValue(sz, false);
+        this._syncFontSizeChips(sz);
+        this._updateTypoPreview();
+      }
     });
+    this.el.fontSizeStepperSlot?.replaceChildren(this.fontSizeStepper.root);
+    this._renderFontSizeChips(curSize);
 
-    this.overlay.querySelectorAll('[data-for="tracking"]').forEach(btn => {
-      btn.addEventListener("click", () => {
-        const cur = this.trackingSlider?.getValue?.() ?? 0;
-        const delta = btn.dataset.step === "up" ? 0.2 : -0.2;
-        setTracking(cur + delta);
-      });
+    // 4. Letter Spacing / Tracking (Slider + Stepper)
+    const curTracking = parseFloat(this.typoState.tracking) || 0;
+    this.trackingSlider = Slider({
+      min: -1,
+      max: 3,
+      step: 0.1,
+      value: curTracking,
+      label: "SPACING",
+      showNumber: false,
+      onChange: (val) => {
+        const tr = clamp(Math.round(val * 10) / 10, -1, 3);
+        const trStr = `${tr >= 0 ? "+" : ""}${tr.toFixed(1)}px`;
+        this.typoState.tracking = trStr;
+        if (this.el.trackingVal) this.el.trackingVal.textContent = trStr;
+        this.trackingStepper?.setValue(tr, false);
+        this._syncTrackingChips(tr);
+        this._updateTypoPreview();
+      }
     });
+    this.el.trackingSliderSlot?.replaceChildren(this.trackingSlider.root);
 
-    this.el.trackingQuickChips?.querySelectorAll(".ds-tm-cyber-chip").forEach(chip => {
-      chip.addEventListener("click", () => {
-        const tr = parseFloat(chip.dataset.tracking);
-        if (!isNaN(tr)) setTracking(tr);
-      });
+    this.trackingStepper = Stepper({
+      min: -1,
+      max: 3,
+      step: 0.1,
+      decimals: 1,
+      value: curTracking,
+      compact: true,
+      onChange: (val) => {
+        const tr = clamp(Math.round(val * 10) / 10, -1, 3);
+        const trStr = `${tr >= 0 ? "+" : ""}${tr.toFixed(1)}px`;
+        this.typoState.tracking = trStr;
+        if (this.el.trackingVal) this.el.trackingVal.textContent = trStr;
+        this.trackingSlider?.setValue(tr, false);
+        this._syncTrackingChips(tr);
+        this._updateTypoPreview();
+      }
     });
+    this.el.trackingStepperSlot?.replaceChildren(this.trackingStepper.root);
+    this._renderTrackingChips(curTracking);
 
-    // Web Font Download / Loader
+    // 5. Web Font Loader
     this.el.loadWebFontBtn?.addEventListener("click", () => this._loadWebFont());
     this.el.webFontInput?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") this._loadWebFont();
     });
 
-    // Local Fonts Query API
     if (this.el.queryLocalFontsBtn) {
       this.el.queryLocalFontsBtn.addEventListener("click", () => this._queryLocalFonts());
     }
 
-    setSize(this.typoState.fontSize || 14);
-    setTracking(parseFloat(this.typoState.tracking) || 0);
     this._updateTypoPreview();
+  }
+
+  _renderFontSizeChips(activeSize) {
+    const container = this.el.fontSizeQuickChips;
+    if (!container) return;
+    container.innerHTML = "";
+    [11, 12, 13, 14, 16, 18, 20].forEach(sz => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = `ds-ui-btn ds-ui-btn-compact ${sz === activeSize ? "is-active" : ""}`;
+      chip.textContent = `${sz}px`;
+      chip.dataset.size = sz;
+      chip.addEventListener("click", () => {
+        this.typoState.fontSize = sz;
+        if (this.el.fontSizeVal) this.el.fontSizeVal.textContent = `${sz}px`;
+        this.fontSizeSlider?.setValue(sz, false);
+        this.fontSizeStepper?.setValue(sz, false);
+        this._syncFontSizeChips(sz);
+        this._updateTypoPreview();
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  _syncFontSizeChips(activeSize) {
+    this.el.fontSizeQuickChips?.querySelectorAll(".ds-ui-btn").forEach(chip => {
+      chip.classList.toggle("is-active", parseInt(chip.dataset.size, 10) === activeSize);
+    });
+  }
+
+  _renderTrackingChips(activeTracking) {
+    const container = this.el.trackingQuickChips;
+    if (!container) return;
+    container.innerHTML = "";
+    [-0.5, 0, 0.6, 1.2, 2.0].forEach(tr => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      const isAct = Math.abs(tr - activeTracking) < 0.15;
+      chip.className = `ds-ui-btn ds-ui-btn-compact ${isAct ? "is-active" : ""}`;
+      chip.textContent = `${tr >= 0 ? "+" : ""}${tr}px`;
+      chip.dataset.tracking = tr;
+      chip.addEventListener("click", () => {
+        const trStr = `${tr >= 0 ? "+" : ""}${tr.toFixed(1)}px`;
+        this.typoState.tracking = trStr;
+        if (this.el.trackingVal) this.el.trackingVal.textContent = trStr;
+        this.trackingSlider?.setValue(tr, false);
+        this.trackingStepper?.setValue(tr, false);
+        this._syncTrackingChips(tr);
+        this._updateTypoPreview();
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  _syncTrackingChips(activeTracking) {
+    this.el.trackingQuickChips?.querySelectorAll(".ds-ui-btn").forEach(chip => {
+      const tr = parseFloat(chip.dataset.tracking);
+      chip.classList.toggle("is-active", Math.abs(tr - activeTracking) < 0.15);
+    });
   }
 
   _renderTypographyPresets() {
@@ -1868,108 +2083,41 @@ class DSThemeManagerDashboard {
     list.innerHTML = "";
 
     TYPOGRAPHY_PRESETS.forEach(p => {
-      const tag = document.createElement("span");
-      tag.className = "ds-tm-tag";
-      tag.textContent = p.name;
-      tag.addEventListener("click", () => {
-        list.querySelectorAll(".ds-tm-tag").forEach(t => t.classList.remove("active"));
-        tag.classList.add("active");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ds-ui-btn ds-ui-btn-compact";
+      btn.textContent = p.name;
+      btn.addEventListener("click", () => {
+        list.querySelectorAll(".ds-ui-btn").forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
         this.typoState.font = p.font;
         this.typoState.fontWeight = p.weight;
+        this.typoState.fontSize = p.size || 14;
+        this.typoState.tracking = p.tracking || "0.0px";
 
-        this.el.fontDropdownVal.textContent = p.font;
-        this.el.fontWeightVal.textContent = p.weight;
+        this.fontFamilyDropdown?.setValue(p.font, false);
+        this.fontWeightDropdown?.setValue(p.weight, false);
 
-        const sz = p.size || 14;
-        const tr = parseFloat(p.tracking) || 0;
-        if (this.fontSizeSlider) {
-          this.typoState.fontSize = sz;
-          this.fontSizeSlider.setValue(sz, false);
-          this.el.fontSizeInput.value = sz;
-          this.el.fontSizeVal.textContent = `${sz}px`;
-        }
-        if (this.trackingSlider) {
-          this.typoState.tracking = p.tracking;
-          this.trackingSlider.setValue(tr, false);
-          if (this.el.trackingInput) this.el.trackingInput.value = `${tr >= 0 ? "+" : ""}${tr.toFixed(1)}`;
-          this.el.trackingVal.textContent = p.tracking;
-        }
+        if (this.fontSizeSlider) this.fontSizeSlider.setValue(this.typoState.fontSize, false);
+        if (this.fontSizeStepper) this.fontSizeStepper.setValue(this.typoState.fontSize, false);
+        if (this.el.fontSizeVal) this.el.fontSizeVal.textContent = `${this.typoState.fontSize}px`;
+        this._syncFontSizeChips(this.typoState.fontSize);
+
+        const trVal = parseFloat(p.tracking) || 0;
+        if (this.trackingSlider) this.trackingSlider.setValue(trVal, false);
+        if (this.trackingStepper) this.trackingStepper.setValue(trVal, false);
+        if (this.el.trackingVal) this.el.trackingVal.textContent = p.tracking;
+        this._syncTrackingChips(trVal);
 
         this._updateTypoPreview();
-        this.showToast(`Applied typography: ${p.name}`, "success");
+        this.showToast(`Applied preset: ${p.name}`, "success");
       });
-      list.appendChild(tag);
-    });
-  }
-
-  _setupFontDropdown() {
-    const dropdown = this.el.fontFamilyDropdown;
-    const trigger = this.el.fontDropdownTrigger;
-    const menu = this.el.fontDropdownMenu;
-
-    trigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle("open");
-    });
-
-    document.addEventListener("pointerdown", (e) => {
-      if (!dropdown.contains(e.target)) dropdown.classList.remove("open");
-    });
-
-    menu.innerHTML = "";
-    STANDARD_FONTS.forEach(f => {
-      const item = document.createElement("div");
-      item.className = "ds-tm-dropdown-item";
-      item.textContent = f;
-      item.addEventListener("click", () => {
-        this.typoState.font = f;
-        this.el.fontDropdownVal.textContent = f;
-        dropdown.classList.remove("open");
-        this._updateTypoPreview();
-      });
-      menu.appendChild(item);
-    });
-  }
-
-  _setupFontWeightDropdown() {
-    const dropdown = this.el.fontWeightDropdown;
-    const trigger = this.el.fontWeightTrigger;
-    const menu = this.el.fontWeightMenu;
-
-    trigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle("open");
-    });
-
-    document.addEventListener("pointerdown", (e) => {
-      if (!dropdown.contains(e.target)) dropdown.classList.remove("open");
-    });
-
-    const weights = [
-      { val: "300", label: "300 (Light)" },
-      { val: "400", label: "400 (Regular)" },
-      { val: "500", label: "500 (Medium)" },
-      { val: "600", label: "600 (Semi-Bold)" },
-      { val: "700", label: "700 (Bold)" },
-    ];
-
-    menu.innerHTML = "";
-    weights.forEach(w => {
-      const item = document.createElement("div");
-      item.className = "ds-tm-dropdown-item";
-      item.textContent = w.label;
-      item.addEventListener("click", () => {
-        this.typoState.fontWeight = w.val;
-        this.el.fontWeightVal.textContent = w.label;
-        dropdown.classList.remove("open");
-        this._updateTypoPreview();
-      });
-      menu.appendChild(item);
+      list.appendChild(btn);
     });
   }
 
   async _loadWebFont() {
-    const raw = (this.el.webFontInput.value || "").trim();
+    const raw = (this.el.webFontInput?.value || "").trim();
     if (!raw) return;
 
     let fontName = raw;
@@ -1995,8 +2143,8 @@ class DSThemeManagerDashboard {
       link.href = url;
 
       this.typoState.font = fontName;
-      this.el.fontDropdownVal.textContent = fontName;
-      this.el.webFontInput.value = "";
+      this.fontFamilyDropdown?.setValue(fontName, false);
+      if (this.el.webFontInput) this.el.webFontInput.value = "";
       this._updateTypoPreview();
       this.showToast(`Font "${fontName}" loaded`, "success");
     } catch (e) {
@@ -2009,19 +2157,8 @@ class DSThemeManagerDashboard {
     try {
       const fonts = await window.queryLocalFonts();
       const unique = Array.from(new Set(fonts.map(f => f.family))).slice(0, 40);
-      const menu = this.el.fontDropdownMenu;
-      unique.forEach(f => {
-        const item = document.createElement("div");
-        item.className = "ds-tm-dropdown-item";
-        item.textContent = `💻 ${f}`;
-        item.addEventListener("click", () => {
-          this.typoState.font = f;
-          this.el.fontDropdownVal.textContent = f;
-          this.el.fontFamilyDropdown.classList.remove("open");
-          this._updateTypoPreview();
-        });
-        menu.appendChild(item);
-      });
+      const newOptions = unique.map(f => ({ id: f, label: `💻 ${f}` }));
+      this.fontFamilyDropdown?.setOptions([...(this.fontFamilyDropdown.options || []), ...newOptions]);
       this.showToast(`Loaded ${unique.length} local system fonts`, "success");
     } catch (e) {
       this.showToast("Local font permission denied", "error");
@@ -2037,11 +2174,19 @@ class DSThemeManagerDashboard {
     preview.style.fontWeight = this.typoState.fontWeight;
     preview.style.letterSpacing = this.typoState.tracking;
 
-    this.el.previewH1.style.fontSize = `${Math.round(this.typoState.fontSize * 1.5)}px`;
-    this.el.previewH2.style.fontSize = `${this.typoState.fontSize}px`;
-    this.el.previewBody.style.fontSize = `${Math.max(10, this.typoState.fontSize - 2)}px`;
+    if (this.el.previewH1) {
+      this.el.previewH1.style.fontSize = `${Math.round(this.typoState.fontSize * 1.5)}px`;
+    }
+    if (this.el.previewH2) {
+      this.el.previewH2.style.fontSize = `${this.typoState.fontSize}px`;
+    }
+    if (this.el.previewBody) {
+      this.el.previewBody.style.fontSize = `${Math.max(10, this.typoState.fontSize - 2)}px`;
+    }
 
-    this.el.fallbackHierarchyText.textContent = `"${this.typoState.font}", Inter, system-ui, -apple-system, sans-serif`;
+    if (this.el.fallbackHierarchyText) {
+      this.el.fallbackHierarchyText.textContent = `"${this.typoState.font}", Inter, system-ui, -apple-system, sans-serif`;
+    }
   }
 
   applyToActiveSelection() {
@@ -2125,7 +2270,7 @@ class DSThemeManagerDashboard {
     const existingCustom = currentConfig?.custom || {};
     const fullConfig = {
       ...currentConfig,
-      theme: currentConfig.theme || "deathshot_dark",
+      theme: this.activeThemeId || currentConfig.theme || "deathshot_dark",
       font: this.typoState.font,
       fontSize: this.typoState.fontSize,
       fontWeight: this.typoState.fontWeight,
@@ -2173,13 +2318,16 @@ class DSThemeManagerDashboard {
       this.typoState.fontSize = 14;
       this.typoState.fontWeight = "500";
       this.typoState.tracking = "0px";
-      this.el.fontDropdownVal.textContent = "Inter";
+      this.fontFamilyDropdown?.setValue("Inter", false);
+      this.fontWeightDropdown?.setValue("500", false);
       this.fontSizeSlider?.setValue(14, false);
-      this.el.fontSizeInput.value = 14;
-      this.el.fontSizeVal.textContent = "14px";
-      this.el.fontWeightVal.textContent = "500 (Medium)";
+      this.fontSizeStepper?.setValue(14, false);
+      if (this.el.fontSizeVal) this.el.fontSizeVal.textContent = "14px";
+      this._syncFontSizeChips(14);
       this.trackingSlider?.setValue(0, false);
-      this.el.trackingVal.textContent = "0px";
+      this.trackingStepper?.setValue(0, false);
+      if (this.el.trackingVal) this.el.trackingVal.textContent = "0.0px";
+      this._syncTrackingChips(0);
       this._updateTypoPreview();
       this.showToast("Reset Typography tab to defaults");
     }
@@ -2433,6 +2581,7 @@ app.registerExtension({
   ],
 
   async setup() {
+    attachNodeShortcuts(null, document.body);
     // Keyboard Shortcut: Alt + T
     window.addEventListener("keydown", (e) => {
       if (e.altKey && (e.key === "t" || e.key === "T")) {
@@ -2537,3 +2686,132 @@ app.registerExtension({
     return items;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Card Node Integration (Deathshot Card Layout Engine)
+// ---------------------------------------------------------------------------
+registerCardNode(
+  "DS_ThemeManager",
+  (node, card) => {
+    // 1. Hide native LiteGraph widgets
+    for (const w of node.widgets || []) {
+      w.type = "hidden";
+      w.computeSize = () => [0, -4];
+    }
+
+    const themeWidget = node.widgets?.find(w => w.name === "theme");
+
+    // 2. Load themes list
+    const catalog = window.DSGlobalTheme?.getThemes?.() || {};
+    const entries = Object.entries(catalog);
+    let themeOptions = entries.map(([id, t]) => ({
+      id,
+      label: t.name || id,
+      subtitle: t.animated ? "✨ Live" : "🎨 Theme",
+    }));
+
+    if (themeOptions.length === 0) {
+      themeOptions = [
+        { id: "deathshot_dark", label: "Deathshot Dark" },
+        { id: "synthwave_84", label: "Synthwave 1984" },
+        { id: "cyber_plum", label: "Cyberpunk Plum" },
+        { id: "nordic_slate", label: "Nordic Polar Slate" },
+      ];
+    }
+
+    const initialTheme = themeWidget?.value || "deathshot_dark";
+
+    // 3. Status Bar: Current theme & live badge
+    const statusRow = document.createElement("div");
+    statusRow.className = "ds-ui-status-bar ds-tm-card-status";
+    statusRow.style.cssText = "display:flex; align-items:center; justify-content:space-between; font-size:11px; padding:2px 4px; color:var(--ds-color-muted-text);";
+
+    function updateCardStatus(themeId) {
+      const t = catalog[themeId] || window.DSGlobalTheme?.getTheme?.(themeId);
+      const isLive = Boolean(t?.animated);
+      statusRow.innerHTML = `
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span style="width:8px; height:8px; border-radius:50%; background:var(--ds-color-accent); box-shadow:0 0 8px var(--ds-color-accent);"></span>
+          <span style="font-weight:700; color:var(--ds-color-text);">${t?.name || themeId}</span>
+        </span>
+        <span style="font-size:9px; font-weight:600; color:var(--ds-color-muted-text);">${isLive ? "✨ LIVE" : "🎨 50 THEMES"}</span>
+      `;
+    }
+
+    // 4. Theme Dropdown
+    const themeDropdown = Dropdown({
+      options: themeOptions,
+      value: initialTheme,
+      label: "THEME",
+      searchable: true,
+      onChange: (newThemeId) => {
+        if (themeWidget) {
+          card.set(themeWidget, newThemeId);
+        }
+        if (window.DSGlobalTheme?.apply) {
+          window.DSGlobalTheme.apply({ theme: newThemeId }, { save: true });
+        }
+        updateCardStatus(newThemeId);
+      }
+    });
+
+    // 5. Button Row
+    const openDashBtn = Button({
+      label: "Open Dashboard",
+      icon: "palette",
+      variant: "primary",
+      onClick: () => {
+        openThemeManager();
+      }
+    });
+
+    const nextBtn = Button({
+      label: "Next",
+      icon: "chevron-right",
+      variant: "secondary",
+      tooltip: "Cycle to next theme",
+      onClick: () => {
+        const cat = window.DSGlobalTheme?.getThemes?.() || catalog;
+        const keys = Object.keys(cat);
+        if (keys.length === 0) return;
+        const cur = themeDropdown.getValue();
+        const curIdx = keys.indexOf(cur);
+        const nextId = keys[(curIdx + 1) % keys.length];
+        themeDropdown.setValue(nextId, true);
+      }
+    });
+    nextBtn.root.style.flex = "0 0 76px";
+
+    // 6. Assemble into card
+    card.fixed(themeDropdown.root);
+    card.row([openDashBtn.root, nextBtn.root]);
+    card.fixed(statusRow, { height: 20, interactive: false });
+
+    updateCardStatus(initialTheme);
+    card.relayout({ shrink: true });
+
+    // 7. Subscribe to global theme changes so card updates if user switches theme in modal
+    if (window.DSGlobalTheme?.subscribe) {
+      const unsub = window.DSGlobalTheme.subscribe((detail) => {
+        const active = detail?.config?.theme;
+        if (active && active !== themeDropdown.getValue()) {
+          themeDropdown.setValue(active, false);
+          if (themeWidget) themeWidget.value = active;
+          updateCardStatus(active);
+        }
+      });
+      const oldOnRemoved = node.onRemoved;
+      node.onRemoved = function() {
+        unsub?.();
+        return oldOnRemoved?.apply(this, arguments);
+      };
+    }
+  },
+  {
+    minWidth: 280,
+    width: 320,
+    lockHeight: true,
+    title: "Theme Manager",
+    icon: "palette"
+  }
+);

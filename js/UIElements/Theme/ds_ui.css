@@ -86,6 +86,14 @@
   min-height: 0 !important;
 }
 
+/* Canvas Drag / Pan Active Passthrough */
+body.ds-canvas-dragging .dom-widget,
+body.ds-canvas-dragging .dom-widget *,
+body.ds-canvas-dragging [data-ds-ui-host="true"],
+body.ds-canvas-dragging [data-ds-ui-host="true"] * {
+  pointer-events: none !important;
+}
+
 /* ========================================================================= */
 /* 2. Core: Card, Field, Section                                             */
 /* ========================================================================= */
@@ -2407,4 +2415,144 @@ input[type="number"]::-webkit-outer-spin-button {
   padding-top: 10px;
   border-top: 1px solid var(--ds-color-border, #242a36);
   flex-shrink: 0;
+}
+
+/* ============================================================
+   DS System — 60FPS Modern Theme Animations for DS Nodes
+   ============================================================ */
+
+/* 1. Cyber Pulse */
+@keyframes ds-anim-cyber-pulse {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.4), inset 0 0 12px rgba(0, 240, 255, 0.12);
+    border-color: rgba(0, 240, 255, 0.65);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(255, 0, 127, 0.45), inset 0 0 14px rgba(255, 0, 127, 0.15);
+    border-color: rgba(255, 0, 127, 0.65);
+  }
+}
+[data-ds-theme-anim="cyber_pulse"] {
+  animation: ds-anim-cyber-pulse 3.8s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 2. Aurora Borealis */
+@keyframes ds-anim-aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes ds-anim-aurora-glow {
+  0%, 100% { box-shadow: 0 0 18px rgba(0, 255, 179, 0.25); border-color: rgba(0, 255, 179, 0.5); }
+  50% { box-shadow: 0 0 26px rgba(56, 189, 248, 0.35); border-color: rgba(56, 189, 248, 0.6); }
+}
+[data-ds-theme-anim="aurora"] {
+  animation: ds-anim-aurora-glow 6s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 3. Matrix Stream */
+@keyframes ds-anim-matrix-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(0, 255, 102, 0.25); border-color: rgba(0, 255, 102, 0.4); }
+  50% { box-shadow: 0 0 24px rgba(0, 255, 102, 0.5); border-color: rgba(0, 255, 102, 0.75); }
+}
+[data-ds-theme-anim="matrix"] {
+  animation: ds-anim-matrix-glow 4s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 4. Nebula Flow */
+@keyframes ds-anim-nebula {
+  0% { background-position: 0% 50%; box-shadow: 0 0 18px rgba(168, 85, 247, 0.28); border-color: rgba(168, 85, 247, 0.45); }
+  50% { background-position: 100% 50%; box-shadow: 0 0 28px rgba(236, 72, 153, 0.35); border-color: rgba(236, 72, 153, 0.6); }
+  100% { background-position: 0% 50%; box-shadow: 0 0 18px rgba(168, 85, 247, 0.28); border-color: rgba(168, 85, 247, 0.45); }
+}
+[data-ds-theme-anim="nebula"] {
+  animation: ds-anim-nebula 8s ease infinite;
+  will-change: box-shadow, border-color, background-position;
+}
+
+/* 5. Electric Shimmer */
+@keyframes ds-anim-electric-glow {
+  0%, 100% { box-shadow: 0 0 14px rgba(56, 189, 248, 0.25); border-color: rgba(56, 189, 248, 0.4); }
+  50% { box-shadow: 0 0 24px rgba(129, 140, 248, 0.4); border-color: rgba(129, 140, 248, 0.65); }
+}
+[data-ds-theme-anim="electric"] {
+  animation: ds-anim-electric-glow 3.5s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 6. Synthwave 1984 */
+@keyframes ds-anim-synthwave {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(255, 42, 133, 0.35);
+    border-color: rgba(255, 42, 133, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(255, 153, 0, 0.42);
+    border-color: rgba(255, 153, 0, 0.65);
+  }
+}
+[data-ds-theme-anim="synthwave"] {
+  animation: ds-anim-synthwave 4.5s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 7. Molten Magma */
+@keyframes ds-anim-magma-pulse {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(255, 59, 0, 0.3);
+    border-color: rgba(255, 59, 0, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(255, 170, 0, 0.5);
+    border-color: rgba(255, 170, 0, 0.7);
+  }
+}
+[data-ds-theme-anim="magma"] {
+  animation: ds-anim-magma-pulse 4.2s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 8. Quantum Flux */
+@keyframes ds-anim-quantum {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.35);
+    border-color: rgba(0, 229, 255, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(217, 70, 239, 0.42);
+    border-color: rgba(217, 70, 239, 0.65);
+  }
+}
+[data-ds-theme-anim="quantum"] {
+  animation: ds-anim-quantum 5s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 9. Bioluminescent Deep */
+@keyframes ds-anim-biolum {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(0, 245, 196, 0.22);
+    border-color: rgba(0, 245, 196, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 26px rgba(0, 245, 196, 0.5), 0 0 45px rgba(2, 132, 199, 0.2);
+    border-color: rgba(0, 245, 196, 0.7);
+  }
+}
+[data-ds-theme-anim="biolum"] {
+  animation: ds-anim-biolum 5.5s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/* 10. Imperial Gold Sheen */
+@keyframes ds-anim-gold-glow {
+  0%, 100% { box-shadow: 0 0 14px rgba(234, 179, 8, 0.25); border-color: rgba(234, 179, 8, 0.4); }
+  50% { box-shadow: 0 0 24px rgba(254, 240, 138, 0.42); border-color: rgba(254, 240, 138, 0.65); }
+}
+[data-ds-theme-anim="gold_sheen"] {
+  animation: ds-anim-gold-glow 4.8s ease-in-out infinite;
+  will-change: box-shadow, border-color;
 }

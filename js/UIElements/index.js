@@ -14,8 +14,12 @@ import { Section } from "./Core/Section.js";
 import { Popup } from "./Core/Popup.js";
 import { normalizeDSWidgetHost, protectDSResizeCorners } from "./Core/system.js";
 
+// Containers
+import { Panel } from "./Containers/Panel.js";
+
 // Controls
 import { Button } from "./Controls/Button.js";
+import { Input } from "./Controls/Input.js";
 import { Dropdown } from "./Controls/Dropdown.js";
 import { Slider } from "./Controls/Slider.js";
 import { Stepper, Spinbox } from "./Controls/Stepper.js";
@@ -41,6 +45,31 @@ import { VideoPlayerModal } from "./Preview/VideoPlayerModal.js";
 
 // Status
 import { StatusBar } from "./Status/StatusBar.js";
+import { StatusLabel } from "./Status/StatusLabel.js";
+
+// Shortcuts & History Engine
+import {
+  executeUndo,
+  executeRedo,
+  executeCommand,
+  recordCanvasChange,
+  captureChange,
+  executeQueuePrompt,
+  executeCopy,
+  executePaste,
+  executeDuplicate,
+  executeDelete,
+  executeSelectAll,
+  executeDeselectAll,
+  executeToggleMute,
+  executeToggleBypass,
+  executeMoveSelected,
+  isEditableTarget,
+  attachTextHistory,
+  handleNodeKeyDown,
+  attachNodeShortcuts,
+  installGlobalShortcuts,
+} from "./shortcuts.js";
 
 export {
   DSIcon,
@@ -51,12 +80,14 @@ export {
   computeSmartContrast,
   getRelativeLuminance,
   Card,
+  Panel,
   Field,
   Section,
   Popup,
   normalizeDSWidgetHost,
   protectDSResizeCorners,
   Button,
+  Input,
   Dropdown,
   Slider,
   Stepper,
@@ -75,6 +106,27 @@ export {
   VideoPreview,
   VideoPlayerModal,
   StatusBar,
+  StatusLabel,
+  executeUndo,
+  executeRedo,
+  executeCommand,
+  recordCanvasChange,
+  captureChange,
+  executeQueuePrompt,
+  executeCopy,
+  executePaste,
+  executeDuplicate,
+  executeDelete,
+  executeSelectAll,
+  executeDeselectAll,
+  executeToggleMute,
+  executeToggleBypass,
+  executeMoveSelected,
+  isEditableTarget,
+  attachTextHistory,
+  handleNodeKeyDown,
+  attachNodeShortcuts,
+  installGlobalShortcuts,
 };
 
 let stylesInstalled = false;
@@ -120,10 +172,12 @@ if (typeof window !== "undefined") {
   window.DSUI.cssVars = DS_CSS_VARS;
   window.DSUI.Icon = DSIcon;
   window.DSUI.Card = Card;
+  window.DSUI.Panel = Panel;
   window.DSUI.Field = Field;
   window.DSUI.Section = Section;
   window.DSUI.Popup = Popup;
   window.DSUI.Button = Button;
+  window.DSUI.Input = Input;
   window.DSUI.Dropdown = Dropdown;
   window.DSUI.Slider = Slider;
   window.DSUI.Stepper = Stepper;
@@ -137,6 +191,7 @@ if (typeof window !== "undefined") {
   window.DSUI.VideoPreview = VideoPreview;
   window.DSUI.VideoPlayerModal = VideoPlayerModal;
   window.DSUI.StatusBar = StatusBar;
+  window.DSUI.StatusLabel = StatusLabel;
   window.DSUI.normalizeWidgetHost = normalizeDSWidgetHost;
   window.DSUI.protectResizeCorners = protectDSResizeCorners;
   window.DSUI.install = installDSUI;

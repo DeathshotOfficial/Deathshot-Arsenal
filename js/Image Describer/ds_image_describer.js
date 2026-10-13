@@ -6,6 +6,7 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   DSIcon,
@@ -309,6 +310,7 @@ app.registerExtension({
 
     const onNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function (...args) {
+      attachNodeShortcuts(this);
       const r = onNodeCreated?.apply(this, args);
       const node = this;
 

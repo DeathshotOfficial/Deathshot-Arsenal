@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import { DSIcon } from "../Icons/index.js";
 import { installDSUI } from "../UIElements/index.js";
@@ -1559,6 +1560,7 @@ function patchType(nodeType, nodeData) {
 
   const created = nodeType.prototype.onNodeCreated;
   nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
     const r = created?.apply(this, arguments);
     install(this);
     return r;

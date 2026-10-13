@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 
 const TYPE = "DS_DevSpawner";
 const EXT_NAME = "DeathshotArsenal.DS_DevSpawner";
@@ -197,6 +198,7 @@ app.registerExtension({
 
     const origOnNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const res = origOnNodeCreated?.apply(this, arguments);
 
       this.size = this.size || [300, 220];

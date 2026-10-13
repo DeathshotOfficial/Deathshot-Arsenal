@@ -1059,6 +1059,8 @@ def generate_chat(
     check_interrupt=None,
     on_text=None,
     system_prompt=None,
+    node_id=None,
+    event_prefix="ds_sensei",
 ):
     """
     Generate chat completion through the loaded model with streaming and interrupt support.
@@ -1153,18 +1155,34 @@ def generate_chat(
                 if on_text:
                     on_text(piece)
                 now = time.perf_counter()
-                if now - last_progress_time >= 0.1:
-                    last_progress_time = now
-                    elapsed_so_far = max(0.1, round(now - t0, 1))
-                    tk_s = round(token_count / elapsed_so_far, 1)
+                elapsed_so_far = max(0.01, round(now - t0, 1))
+                tk_s = round(token_count / elapsed_so_far, 1)
+
+                if event_prefix:
                     try:
                         import server
-                        server.PromptServer.instance.send_sync("ds_sensei_progress", {
+                        server.PromptServer.instance.send_sync(f"{event_prefix}_stream", {
+                            "node_id": str(node_id) if node_id is not None else None,
+                            "chunk": piece,
+                            "text": "".join(parts),
+                            "tokens": token_count,
+                            "speed": tk_s,
+                            "elapsed": elapsed_so_far,
+                        })
+                    except Exception:
+                        pass
+
+                if event_prefix and (now - last_progress_time >= 0.1):
+                    last_progress_time = now
+                    try:
+                        import server
+                        server.PromptServer.instance.send_sync(f"{event_prefix}_progress", {
                             "stage": "generating",
                             "message": f"Writing prompt: {token_count} tokens ({elapsed_so_far}s · {tk_s} Tk/s)...",
                             "tokens": token_count,
                             "speed": tk_s,
                             "elapsed": elapsed_so_far,
+                            "node_id": str(node_id) if node_id is not None else None,
                         })
                     except Exception:
                         pass
@@ -1188,17 +1206,19 @@ def generate_chat(
         tokens = len(llm.tokenize(cleaned_text.encode("utf-8"), add_bos=False, special=False)) if cleaned_text else 0
         speed = round(tokens / elapsed, 1) if elapsed > 0 else 0.0
 
-        try:
-            import server
-            server.PromptServer.instance.send_sync("ds_sensei_progress", {
-                "stage": "completed",
-                "message": f"Prompt generated ({tokens} tokens in {elapsed}s · {speed} Tk/s)",
-                "tokens": tokens,
-                "speed": speed,
-                "elapsed": elapsed,
-            })
-        except Exception:
-            pass
+        if event_prefix:
+            try:
+                import server
+                server.PromptServer.instance.send_sync(f"{event_prefix}_progress", {
+                    "stage": "completed",
+                    "message": f"Prompt generated ({tokens} tokens in {elapsed}s · {speed} Tk/s)",
+                    "tokens": tokens,
+                    "speed": speed,
+                    "elapsed": elapsed,
+                    "node_id": str(node_id) if node_id is not None else None,
+                })
+            except Exception:
+                pass
 
         return cleaned_text, tokens, elapsed
 
@@ -1212,6 +1232,7 @@ def generate_prompt_builtin(
     context: dict = None,
     check_interrupt = None,
     on_text = None,
+    node_id: str = None,
 ):
     """
     Unified prompt generation entry point for the Built-In LLM backend.
@@ -1252,6 +1273,7 @@ def generate_prompt_builtin(
             "tokens": 0,
             "speed": 0.0,
             "elapsed": 0.0,
+            "node_id": node_id,
         })
     except Exception:
         pass
@@ -1278,6 +1300,7 @@ def generate_prompt_builtin(
                 "tokens": 0,
                 "speed": 0.0,
                 "elapsed": 0.0,
+                "node_id": node_id,
             })
         except Exception:
             pass
@@ -1379,6 +1402,7 @@ def generate_prompt_builtin(
             check_interrupt=actual_interrupt,
             on_text=on_text,
             system_prompt=system_prompt,
+            node_id=node_id,
         )
         speed = round(tokens / elapsed, 1) if elapsed > 0 else 0.0
         result = {
@@ -1410,6 +1434,7 @@ def generate_prompt_builtin(
                     "tokens": result.get("tokens", 0),
                     "speed": result.get("speed", 0.0),
                     "elapsed": result.get("elapsed", 0.0),
+                    "node_id": node_id,
                 })
             except Exception:
                 pass
@@ -1429,6 +1454,8 @@ def generate_prompt_builtin(
                 "speed": spd,
                 "elapsed": ela,
                 "model": mod,
+                "prompt": result.get("prompt", ""),
+                "node_id": node_id,
             })
         except Exception:
             pass

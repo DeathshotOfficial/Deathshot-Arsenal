@@ -3,6 +3,7 @@
 // the node still exposes two normal INT outputs.
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { Card, Stepper, Field, protectDSResizeCorners, normalizeDSWidgetHost } from "../UIElements/index.js";
 import { DSIcon } from "../Icons/index.js";
 
@@ -269,6 +270,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = oldCreated ? oldCreated.apply(this, arguments) : undefined;
 
       this.resizable = true;

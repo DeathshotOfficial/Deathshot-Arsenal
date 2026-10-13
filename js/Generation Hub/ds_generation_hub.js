@@ -1,5 +1,6 @@
 // Deathshot Arsenal — DS Generation Hub Frontend
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   Card,
   Stepper,
@@ -2048,6 +2049,7 @@ app.registerExtension({
 
     const origCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       origCreated?.apply(this, arguments);
 
       this._dsInitialized = false;

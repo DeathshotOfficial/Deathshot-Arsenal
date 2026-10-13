@@ -241,17 +241,23 @@ def compose_final_prompt(manual_prompt, loras_list):
     if not text:
         return trigger_str
 
-    # Avoid duplicate trigger inclusions if already in manual prompt
-    filtered_triggers = []
-    for t in triggers:
-        pattern = r'(?:\b|_)' + re.escape(t.strip()) + r'(?:\b|_)'
-        if not re.search(pattern, text, re.IGNORECASE):
-            filtered_triggers.append(t)
-
-    if not filtered_triggers:
-        return text
-    triggers_prefix = ", ".join(filtered_triggers).strip().rstrip(",")
     clean_text = text.strip().lstrip(",").strip()
+    # Strip any selected triggers that are already prepended as leading comma-separated tags
+    changed = True
+    while changed and clean_text:
+        changed = False
+        for t in triggers:
+            if clean_text.lower() == t.strip().lower():
+                clean_text = ""
+                changed = True
+                break
+            m = re.match(r'^' + re.escape(t.strip()) + r'\s*,\s*', clean_text, re.IGNORECASE)
+            if m:
+                clean_text = clean_text[m.end():].lstrip(",").strip()
+                changed = True
+                break
+
+    triggers_prefix = ", ".join(triggers).strip().rstrip(",")
     return f"{triggers_prefix}, {clean_text}" if clean_text else triggers_prefix
 
 class DS_GenerationHub:

@@ -271,11 +271,17 @@ async def theme_font_presets(_request):
 class DS_ThemeManager:
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {}}
+        return {
+            "required": {},
+            "optional": {
+                "theme": ("STRING", {"default": "deathshot_dark"}),
+            }
+        }
 
     RETURN_TYPES = ()
     FUNCTION = "noop"
     CATEGORY = "☠️ Deathshot Arsenal/🎨 UI"
+    OUTPUT_NODE = True
 
-    def noop(self):
+    def noop(self, theme="deathshot_dark"):
         return ()

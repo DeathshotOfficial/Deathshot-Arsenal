@@ -585,6 +585,7 @@ def generate_prompt_lm_studio(
     lm_studio_config=None,
     context=None,
     task_id=None,
+    node_id=None,
 ):
     """Generate prompt using LM Studio chat completions endpoint."""
     t0 = time.perf_counter()
@@ -694,7 +695,7 @@ def generate_prompt_lm_studio(
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": max(0.0, min(2.0, temperature)),
-        "stream": False,
+        "stream": True,
     }
 
     used_seed = None
@@ -718,6 +719,7 @@ def generate_prompt_lm_studio(
         data=req_data,
         headers={
             "Content-Type": "application/json",
+            "Accept": "text/event-stream",
             "User-Agent": "DeathshotArsenal-Sensei",
         },
         method="POST",
@@ -725,21 +727,133 @@ def generate_prompt_lm_studio(
 
     result_text = None
     completion_tokens = 0
+    parts = []
+    in_think_block = False
+    last_progress_time = t0
 
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        try:
+            resp_context = urllib.request.urlopen(req, timeout=timeout)
+        except urllib.error.HTTPError as he:
+            if payload.get("stream"):
+                payload["stream"] = False
+                req_data = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(
+                    endpoint,
+                    data=req_data,
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "DeathshotArsenal-Sensei",
+                    },
+                    method="POST",
+                )
+                resp_context = urllib.request.urlopen(req, timeout=timeout)
+            else:
+                raise he
+
+        with resp_context as resp:
             if is_cancelled(task_id):
                 return {"status": "cancelled", "prompt": notes}
 
             if resp.status == 200:
-                body = json.loads(resp.read().decode("utf-8"))
-                choices = body.get("choices", [])
-                if choices and isinstance(choices, list):
-                    msg = choices[0].get("message", {})
-                    result_text = msg.get("content", "").strip()
+                try:
+                    if hasattr(resp, "fp") and hasattr(resp.fp, "raw") and hasattr(resp.fp.raw, "_sock"):
+                        with _ACTIVE_GENERATION["lock"]:
+                            _ACTIVE_GENERATION["active_sock"] = resp.fp.raw._sock
+                except Exception:
+                    pass
 
-                usage = body.get("usage", {})
-                completion_tokens = usage.get("completion_tokens") or 0
+                content_type = str(resp.headers.get("Content-Type", "")).lower()
+                is_sse = "text/event-stream" in content_type or payload.get("stream")
+
+                if is_sse:
+                    for raw_line in resp:
+                        if is_cancelled(task_id):
+                            return {"status": "cancelled", "prompt": notes}
+
+                        line = raw_line.decode("utf-8", errors="replace").strip()
+                        if not line:
+                            continue
+
+                        if line.startswith("data:"):
+                            data_str = line[5:].strip()
+                            if data_str == "[DONE]":
+                                break
+
+                            try:
+                                chunk_data = json.loads(data_str)
+                            except Exception:
+                                continue
+
+                            choices = chunk_data.get("choices", [])
+                            if not choices or not isinstance(choices, list):
+                                continue
+
+                            delta = choices[0].get("delta", {})
+                            piece = delta.get("content") or ""
+                            if not piece:
+                                continue
+
+                            if "<think>" in piece or "<thought>" in piece or "<reasoning>" in piece:
+                                in_think_block = True
+                            if in_think_block:
+                                if "</think>" in piece or "</thought>" in piece or "</reasoning>" in piece:
+                                    in_think_block = False
+                                continue
+
+                            if "</think>" in piece or "</thought>" in piece or "<think>" in piece or "</reasoning>" in piece:
+                                piece = re.sub(r"</?(?:think|thought|reasoning|analysis)>", "", piece)
+                                if not piece.strip():
+                                    continue
+
+                            parts.append(piece)
+                            completion_tokens += 1
+                            now = time.perf_counter()
+                            elapsed_so_far = max(0.01, round(now - t0, 1))
+                            tk_s = round(completion_tokens / elapsed_so_far, 1)
+
+                            try:
+                                import server
+                                server.PromptServer.instance.send_sync("ds_sensei_stream", {
+                                    "node_id": node_id,
+                                    "chunk": piece,
+                                    "text": "".join(parts),
+                                    "tokens": completion_tokens,
+                                    "speed": tk_s,
+                                    "elapsed": elapsed_so_far,
+                                })
+                            except Exception:
+                                pass
+
+                            if now - last_progress_time >= 0.1:
+                                last_progress_time = now
+                                try:
+                                    import server
+                                    server.PromptServer.instance.send_sync("ds_sensei_progress", {
+                                        "stage": "generating",
+                                        "message": f"Writing prompt: {completion_tokens} tokens ({elapsed_so_far}s · {tk_s} Tk/s)...",
+                                        "tokens": completion_tokens,
+                                        "speed": tk_s,
+                                        "elapsed": elapsed_so_far,
+                                        "node_id": node_id,
+                                    })
+                                except Exception:
+                                    pass
+
+                    if parts:
+                        result_text = "".join(parts).strip()
+                        result_text = re.sub(r"^\s*</?(?:think|thought|reasoning|analysis)>\s*", "", result_text).strip()
+
+                if not result_text:
+                    raw_body = resp.read().decode("utf-8") if not parts else ""
+                    if raw_body:
+                        body = json.loads(raw_body)
+                        choices = body.get("choices", [])
+                        if choices and isinstance(choices, list):
+                            msg = choices[0].get("message", {})
+                            result_text = msg.get("content", "").strip()
+                        usage = body.get("usage", {})
+                        completion_tokens = usage.get("completion_tokens") or 0
             else:
                 return {
                     "status": "failed",
@@ -830,6 +944,21 @@ def generate_prompt_lm_studio(
     with _ACTIVE_GENERATION["lock"]:
         if _ACTIVE_GENERATION["task_id"] == task_id:
             _ACTIVE_GENERATION["task_id"] = None
+
+    try:
+        import server
+        server.PromptServer.instance.send_sync("ds_sensei_progress", {
+            "stage": "completed",
+            "message": f"Prompt generated ({completion_tokens} tokens in {elapsed}s · {speed} Tk/s)",
+            "tokens": completion_tokens,
+            "speed": speed,
+            "elapsed": elapsed,
+            "model": selected_model,
+            "prompt": result_text,
+            "node_id": node_id,
+        })
+    except Exception:
+        pass
 
     return {
         "status": "completed",

@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   Card,
   Stepper,
@@ -955,6 +956,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const r = originalCreated?.apply(this, arguments);
       this.resizable = true;
       this.widgets_start_y = WIDGET_START_Y;

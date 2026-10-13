@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   normalizeDSWidgetHost,
@@ -1222,6 +1223,7 @@ app.registerExtension({
 
     const oldCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const r = oldCreated?.apply(this, arguments);
       patchNode(this);
       return r;
@@ -1283,6 +1285,7 @@ app.registerExtension({
   },
 
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     patchNode(node);
   },
 

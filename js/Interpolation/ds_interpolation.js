@@ -4,6 +4,7 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   installDSUI,
@@ -738,6 +739,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = originalCreated ? originalCreated.apply(this, arguments) : undefined;
 
       this.resizable = true;
@@ -794,6 +796,7 @@ app.registerExtension({
   },
 
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node?.type === TYPE) {
       hideWidgets(node);
       node._controller?.syncState();

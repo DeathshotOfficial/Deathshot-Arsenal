@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   DSIconMarkup,
   protectDSResizeCorners,
@@ -260,6 +261,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = originalCreated
         ? originalCreated.apply(this, arguments)
         : undefined;

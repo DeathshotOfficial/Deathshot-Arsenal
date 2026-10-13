@@ -135,14 +135,31 @@ class DS_Randomizer:
 
     @classmethod
     def IS_CHANGED(cls, prompt="", text=None, seed=0, randomizer_state="{}", unique_id=None, **kwargs):
+        node_id = str(unique_id or "default_randomizer")
         try:
             state = json.loads(randomizer_state) if isinstance(randomizer_state, str) else (randomizer_state or {})
+            if not isinstance(state, dict):
+                state = {}
         except Exception:
             state = {}
 
+        is_checkpoint_continue = bool(state.get("is_checkpoint_continue", False))
         is_ai = bool(state.get("ai_enabled", False) or state.get("ai_mode", False))
         ai_cfg = state.get("ai_settings", {})
         randomize_seed = bool(ai_cfg.get("randomize_seed", True))
+
+        active = text if (text is not None and str(text).strip()) else prompt
+
+        # If continuing from an image checkpoint:
+        # Return stable key so ComfyUI skips re-running this node
+        if is_checkpoint_continue:
+            if node_id in _NODE_PROMPT_CACHE:
+                cached = _NODE_PROMPT_CACHE[node_id]
+                cached_key = cached.get("is_changed_key")
+                if cached_key:
+                    return cached_key
+            effective_seed = seed or 1
+            return f"{node_id}:checkpoint_continue:{effective_seed}:{active}"
 
         if is_ai and randomize_seed:
             # The JS queue hook writes a fresh random seed for every new Queue run,
@@ -151,16 +168,14 @@ class DS_Randomizer:
             # so that ComfyUI treats identical seeds (Continue) as unchanged while
             # treating new seeds (fresh Queue) as changed.
             if seed:
-                active = text if (text is not None and str(text).strip()) else prompt
-                return f"{unique_id or 'default'}:ai:{seed}:{active}"
+                return f"{node_id}:ai:{seed}:{active}"
             # No seed committed yet (shouldn't happen after the queue hook runs, but be safe)
             return float("nan")
 
         if not seed:
             return float("nan")
 
-        active = text if (text is not None and str(text).strip()) else prompt
-        return f"{unique_id or 'default'}:{seed}:{active}:{randomizer_state}"
+        return f"{node_id}:{seed}:{active}:{randomizer_state}"
 
     def randomize(
         self,
@@ -203,6 +218,29 @@ class DS_Randomizer:
         ai_settings = state.get("ai_settings", {})
         should_randomize_seed = bool(ai_settings.get("randomize_seed", True)) if is_ai_mode else (seed == 0)
 
+        # 0. Checkpoint Continue: IMMEDIATELY reuse the last generated prompt.
+        # Avoids executing the LLM or classical generator again when the checkpoint continues.
+        is_checkpoint_continue = bool(state.get("is_checkpoint_continue", False))
+        if is_checkpoint_continue:
+            if node_id in _NODE_PROMPT_CACHE and _NODE_PROMPT_CACHE[node_id].get("prompt"):
+                cached_prompt = _NODE_PROMPT_CACHE[node_id]["prompt"]
+                cached_seed = _NODE_PROMPT_CACHE[node_id].get("seed", seed)
+                logger.info(
+                    f"[DS Randomizer] Checkpoint Continue pass: Reusing last generated prompt for node '{node_id}' "
+                    f"without re-running generator."
+                )
+                return {
+                    "ui": {"prompt_preview": [cached_prompt], "seed": [cached_seed]},
+                    "result": (cached_prompt,),
+                }
+            manual_preview = str(state.get("preview_prompt") or "").strip()
+            if manual_preview:
+                logger.info(f"[DS Randomizer] Checkpoint Continue pass: Reusing preview prompt for node '{node_id}'.")
+                return {
+                    "ui": {"prompt_preview": [manual_preview], "seed": [seed]},
+                    "result": (manual_preview,),
+                }
+
         # 0a. Primary multi-stage cache: non-AI or AI with fixed seed
         #     Only reuse if NOT randomizing seed AND seed != 0 AND full state matches
         if not should_randomize_seed and seed != 0 and node_id in _NODE_PROMPT_CACHE:
@@ -216,15 +254,13 @@ class DS_Randomizer:
                 cached_prompt = cached["prompt"]
                 logger.info(f"[DS Randomizer] Multi-stage pass detected for node '{node_id}' (seed {seed}). Reusing active prompt to prevent upscale artifacts.")
                 return {
-                    "ui": {"prompt_preview": [cached_prompt]},
+                    "ui": {"prompt_preview": [cached_prompt], "seed": [seed]},
                     "result": (cached_prompt,),
                 }
 
-        # 0b. AI Continue cache: when randomize_seed=True the JS queue hook still writes
-        #     a stable seed (_dsLastRunSeed) for Continue runs.  Match on seed + active_prompt
-        #     only — randomizer_state is intentionally different on Continue because
-        #     the queue hook clears preview_prompt before sending.
-        if is_ai_mode and should_randomize_seed and seed != 0 and node_id in _NODE_PROMPT_CACHE:
+        # 0b. AI Continue cache fallback:
+        #     Match on seed + active_prompt
+        if is_ai_mode and seed != 0 and node_id in _NODE_PROMPT_CACHE:
             cached = _NODE_PROMPT_CACHE[node_id]
             if (
                 cached.get("seed") == seed
@@ -234,7 +270,7 @@ class DS_Randomizer:
                 cached_prompt = cached["prompt"]
                 logger.info(f"[DS Randomizer] AI Continue pass detected for node '{node_id}' (seed {seed}). Reusing cached AI prompt.")
                 return {
-                    "ui": {"prompt_preview": [cached_prompt]},
+                    "ui": {"prompt_preview": [cached_prompt], "seed": [seed]},
                     "result": (cached_prompt,),
                 }
 
@@ -306,12 +342,19 @@ class DS_Randomizer:
             )
             actual_seed = seed
 
+        # Compute is_changed_key for subsequent checkpoint continue matching
+        if is_ai_mode and should_randomize_seed:
+            is_changed_key = f"{node_id}:ai:{actual_seed}:{active_prompt}"
+        else:
+            is_changed_key = f"{node_id}:{actual_seed}:{active_prompt}:{randomizer_state}"
+
         # Save to cache so downstream checkpoints and multi-stage continue passes receive the exact executed prompt
         _NODE_PROMPT_CACHE[node_id] = {
             "seed": actual_seed,
             "prompt": final_prompt,
             "active_prompt": active_prompt,
             "state": randomizer_state,
+            "is_changed_key": is_changed_key,
         }
 
         return {

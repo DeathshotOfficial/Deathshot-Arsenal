@@ -105,7 +105,7 @@ any_type = AnyType("*")
 # ---------------------------------------------------------------------------
 def _get_vram_usage() -> Dict[str, int]:
     """Returns VRAM usage in bytes if CUDA/MPS is available."""
-    usage = {"allocated": 0, "reserved": 0, "total": 0}
+    usage = {"allocated": 0, "reserved": 0, "total": 0, "free": 0}
     try:
         if torch is not None and torch.cuda.is_available():
             dev = torch.cuda.current_device()
@@ -113,6 +113,13 @@ def _get_vram_usage() -> Dict[str, int]:
             usage["reserved"] = torch.cuda.memory_reserved(dev)
             props = torch.cuda.get_device_properties(dev)
             usage["total"] = getattr(props, "total_memory", 0)
+            try:
+                free_b, total_b = torch.cuda.mem_get_info(dev)
+                usage["free"] = free_b
+                if total_b > 0:
+                    usage["total"] = total_b
+            except Exception:
+                pass
     except Exception:
         pass
     return usage
@@ -202,6 +209,21 @@ def purge_models() -> Tuple[bool, str]:
     except Exception:
         pass
 
+    # 5. Eject Deathshot Centralized AI Core LLM/VLM models if loaded in VRAM
+    try:
+        from core.ai import llama_service
+        if hasattr(llama_service, "unload_model"):
+            if llama_service.unload_model():
+                details.append("ai llm ejected")
+    except Exception:
+        try:
+            from ...core.ai import llama_service
+            if hasattr(llama_service, "unload_model"):
+                if llama_service.unload_model():
+                    details.append("ai llm ejected")
+        except Exception:
+            pass
+
     msg = ", ".join(details) if details else "models checked"
     return (True if success or not details else True, msg)
 
@@ -222,11 +244,20 @@ def purge_cache() -> Tuple[bool, str]:
     except Exception as e:
         details.append(f"soft_empty_cache notice: {e}")
 
-    # 2. PyTorch CUDA cache
+    # 2. PyTorch CUDA cache & IPC
     try:
         if torch is not None and torch.cuda.is_available():
             torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
             details.append("cuda cache cleared")
+    except Exception:
+        pass
+
+    # 3. Python garbage collection
+    try:
+        collected = gc.collect(2)
+        if collected > 0:
+            details.append(f"gc {collected}")
     except Exception:
         pass
 
@@ -296,7 +327,7 @@ def purge_ram() -> Tuple[bool, str]:
     return (True, msg)
 
 
-def execute_purge_operation(action: str) -> Dict[str, Any]:
+def execute_purge_operation(action: str, node_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Executes a requested purge operation under thread-safe synchronization.
     Measures memory metrics before & after, without fabricating numbers.
@@ -371,8 +402,16 @@ def execute_purge_operation(action: str) -> Dict[str, Any]:
     vram_released = max(0, vram_before["reserved"] - vram_after["reserved"])
     if vram_released == 0:
         vram_released = max(0, vram_before["allocated"] - vram_after["allocated"])
+    if vram_released == 0 and vram_before.get("free", 0) > 0 and vram_after.get("free", 0) > 0:
+        vram_released = max(0, vram_after["free"] - vram_before["free"])
 
     ram_released = max(0, ram_before - ram_after)
+
+    vram_total = vram_after.get("total", 0)
+    vram_free = vram_after.get("free", 0)
+    if vram_free == 0 and vram_total > 0:
+        vram_reserved = vram_after.get("reserved", 0)
+        vram_free = max(0, vram_total - vram_reserved)
 
     # Determine status: PURGED vs PARTIAL vs FAILED
     total_stages = len(stages_results)
@@ -442,27 +481,36 @@ def execute_purge_operation(action: str) -> Dict[str, Any]:
         summary_text = " | ".join(summary_parts) + f" ({elapsed_ms}ms)"
 
     result_payload = {
+        "node_id": str(node_id) if node_id else "",
         "status": overall_status,
         "action": act,
         "message": summary_text,
         "elapsed_ms": elapsed_ms,
         "vram_released": vram_released,
         "vram_released_str": _format_bytes(vram_released) if vram_released > 0 else "0 MB",
+        "vram_free": vram_free,
+        "vram_free_str": _format_bytes(vram_free) if vram_free > 0 else "",
+        "vram_total": vram_total,
+        "vram_total_str": _format_bytes(vram_total) if vram_total > 0 else "",
         "ram_released": ram_released,
         "ram_released_str": _format_bytes(ram_released) if ram_released > 0 else "0 MB",
         "stages": stages_results,
         "timestamp": time.time(),
     }
 
-    # Broadcast live status to frontend via ComfyUI PromptServer if running
-    try:
-        import server
+    # Broadcast live status to frontend via ComfyUI PromptServer if running and targeted
+    if node_id:
+        try:
+            import server
 
-        prompt_server = server.PromptServer.instance
-        if prompt_server is not None:
-            prompt_server.send_sync("ds_purger_status", result_payload)
-    except Exception:
-        pass
+            prompt_server = server.PromptServer.instance
+            if prompt_server is not None:
+                prompt_server.send_sync("ds_purger_status", result_payload)
+        except Exception:
+            pass
+
+    logger.info(f"[DS The Purger] {act} result: {overall_status} - {summary_text}")
+    return result_payload
 
     logger.info(f"[DS The Purger] {act} result: {overall_status} - {summary_text}")
     return result_payload
@@ -536,25 +584,7 @@ class DS_ThePurger:
             act = "ALL"
 
         try:
-            res = execute_purge_operation(act)
-            try:
-                import server
-
-                server.PromptServer.instance.send_sync(
-                    "ds_purger_status",
-                    {
-                        "node_id": str(unique_id) if unique_id is not None else "",
-                        "status": res.get("status", "PURGED"),
-                        "action": act,
-                        "message": res.get("message", f"{act} completed"),
-                        "vram_released_str": res.get("vram_released_str", ""),
-                        "ram_released_str": res.get("ram_released_str", ""),
-                        "elapsed_ms": res.get("elapsed_ms", 0),
-                        "timestamp": time.time(),
-                    },
-                )
-            except Exception:
-                pass
+            res = execute_purge_operation(act, node_id=str(unique_id) if unique_id is not None else "")
         except Exception as e:
             logger.error(f"[DS The Purger] Exception during execution purge: {e}")
             try:
@@ -572,9 +602,9 @@ class DS_ThePurger:
                 )
             except Exception:
                 pass
-        finally:
-            # Absolute passthrough guarantee
-            return (value,)
+
+        # Absolute passthrough guarantee
+        return (value,)
 
 
 # ---------------------------------------------------------------------------
@@ -593,7 +623,8 @@ def register_purger_routes():
             except Exception:
                 body = {}
             action = body.get("action", "ALL")
-            res = execute_purge_operation(action)
+            node_id = body.get("node_id", "")
+            res = execute_purge_operation(action, node_id=str(node_id) if node_id else "")
             return web.json_response(res)
 
         @routes.get("/ds/purger/config")

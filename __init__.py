@@ -376,6 +376,14 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_Interpolation: {e}", flush=True)
     DS_Interpolation = None
 
+# DS GIF Generator
+try:
+    _mod = _load_node_pkg("gif_generator", "GIF Generator")
+    DS_GifGenerator = _mod.DSGifGenerator
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_GifGenerator: {e}", flush=True)
+    DS_GifGenerator = None
+
 # DS Centralized AI Core
 try:
     try:
@@ -743,6 +751,8 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_DevSpawner": DS_DevSpawner} if DS_DevSpawner is not None else {}),
     **({"DS_Controller": DS_Controller} if DS_Controller is not None else {}),
     **({"DS_ImageDescriber": DS_ImageDescriber} if DS_ImageDescriber is not None else {}),
+    **({"DS_ThemeManager": DS_ThemeManager} if DS_ThemeManager is not None else {}),
+    **({"DS_GifGenerator": DS_GifGenerator} if DS_GifGenerator is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -785,6 +795,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_DevSpawner": "DS Dev Spawner"} if DS_DevSpawner is not None else {}),
     **({"DS_Controller": "DS Controller"} if DS_Controller is not None else {}),
     **({"DS_ImageDescriber": "DS Image Describer"} if DS_ImageDescriber is not None else {}),
+    **({"DS_ThemeManager": "DS Theme Manager"} if DS_ThemeManager is not None else {}),
+    **({"DS_GifGenerator": "DS GIF Generator"} if DS_GifGenerator is not None else {}),
 }
 
 WEB_DIRECTORY = "js"

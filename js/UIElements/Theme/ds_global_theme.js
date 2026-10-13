@@ -10,7 +10,11 @@
 
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
-import { normalizeDSWidgetHost } from "../Core/system.js";
+import {
+  normalizeDSWidgetHost,
+  protectDSResizeCorners,
+  installDSCanvasNavigationBridge,
+} from "../Core/system.js";
 import { installDSUI } from "../index.js";
 
 const DS_NODE_PREFIX = "DS_";
@@ -106,7 +110,10 @@ function getTheme(id) {
 }
 
 function isDSNode(node) {
+  const name = String(node?.comfyClass || node?.type || node?.constructor?.name || node?.constructor?.type || "");
   return Boolean(
+    name.startsWith(DS_NODE_PREFIX) ||
+    name.startsWith("DSGif") ||
     node?.comfyClass?.startsWith(DS_NODE_PREFIX) ||
     node?.type?.startsWith(DS_NODE_PREFIX) ||
     node?.constructor?.name?.startsWith(DS_NODE_PREFIX) ||
@@ -594,7 +601,9 @@ function styleNodeDomWidgets(node, palette) {
 }
 
 function applyNodeBaseTheme(node, theme = getTheme(config.theme)) {
-  if (!theme || !isDSNode(node) || node._dsNodeBaseOptOut) return;
+  if (!isDSNode(node)) return;
+  try { protectDSResizeCorners(node); } catch (_) {}
+  if (!theme || node._dsNodeBaseOptOut) return;
 
   const palette = getNodeBasePalette(theme);
   const chromeless = nodeHidesChrome(node);
@@ -717,7 +726,8 @@ function patchNodeSerialize(node) {
 }
 
 function wrapDSNodeCreated(nodeType, nodeData) {
-  if (!nodeData.name?.startsWith(DS_NODE_PREFIX)) return;
+  const name = String(nodeData?.name || "");
+  if (!name.startsWith(DS_NODE_PREFIX) && !name.startsWith("DSGif")) return;
 
   nodeType.prototype.onDrawTitleText = function (ctx, titleHeight, size, scale, fontStyle, isSelected) {
     drawSmartTitleText(this, ctx, titleHeight, size, scale, fontStyle, isSelected);
@@ -775,6 +785,11 @@ function applyVarsToElement(el, theme, cfg) {
   el.style.fontSize = sizePx;
   el.dataset.dsTheme = cfg.theme;
   el.dataset.dsThemed = "true";
+  if (theme.animated) {
+    el.dataset.dsThemeAnim = theme.animationType || "animated";
+  } else {
+    delete el.dataset.dsThemeAnim;
+  }
 
   if (theme.glass) {
     el.style.setProperty("--ds-glass-blur", `${theme.glass.blur || 0}px`);
@@ -785,6 +800,12 @@ function applyVarsToElement(el, theme, cfg) {
 function applyToAllRoots(cfg = config) {
   const theme = getTheme(cfg.theme);
   if (!theme) return;
+
+  if (theme.animated) {
+    document.documentElement.dataset.dsThemeAnim = theme.animationType || "animated";
+  } else {
+    delete document.documentElement.dataset.dsThemeAnim;
+  }
 
   document.querySelectorAll(DS_ROOT_SELECTOR).forEach((el) => {
     applyVarsToElement(el, theme, cfg);
@@ -1386,6 +1407,7 @@ const DSGlobalTheme = {
   getSmartPalette: (theme = null) => getNodeBasePalette(theme || getTheme(config.theme)),
   getSmartTitleTextColor: (node, isSelected) => getSmartTitleTextColor(node, isSelected, getTheme(config.theme)),
   drawSmartTitleText: (node, ctx, ...args) => drawSmartTitleText(node, ctx, ...args),
+  applyNodeBaseTheme: (node, theme = null) => applyNodeBaseTheme(node, theme || getTheme(config.theme)),
 };
 
 window.DSGlobalTheme = DSGlobalTheme;
@@ -1399,6 +1421,7 @@ app.registerExtension({
 
   nodeCreated(node) {
     if (isDSNode(node)) {
+      try { protectDSResizeCorners(node); } catch (_) {}
       scheduleNodeBaseApply(node);
       patchNodeSerialize(node);
       const theme = getTheme(config.theme);
@@ -1485,6 +1508,7 @@ app.registerExtension({
     }
 
     installDSUI();
+    installDSCanvasNavigationBridge();
     await fetchThemes();
     // Always reconcile server config with localStorage. fetchConfig() merges them with
     // local values taking precedence, while the server fills any missing fields.

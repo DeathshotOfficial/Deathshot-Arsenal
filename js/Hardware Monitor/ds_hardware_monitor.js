@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 
 const NODE_NAME = "DS_HardwareMonitor";
@@ -1096,6 +1097,7 @@ app.registerExtension({
     const oldGetExtraMenuOptions = nodeType.prototype.getExtraMenuOptions;
 
     nodeType.prototype.onNodeCreated = function() {
+      attachNodeShortcuts(this);
       oldCreated?.apply(this, arguments);
       this.flags = this.flags || {};
       this.flags.no_title = true;
@@ -1241,6 +1243,7 @@ app.registerExtension({
     };
   },
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node.type !== NODE_NAME && node.comfyClass !== NODE_NAME) return;
     registerGearMenu();
     node.flags = node.flags || {};

@@ -15,6 +15,7 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   DSIconMarkup,
   installDSUI,
@@ -135,6 +136,7 @@ app.registerExtension({
     const onConfigure = nodeType.prototype.onConfigure;
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
 
       this.inputs = [];

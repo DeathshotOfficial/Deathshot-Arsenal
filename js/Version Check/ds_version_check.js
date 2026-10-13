@@ -1,5 +1,6 @@
 // DeathshotArsenal/js/Version Check/ds_version_check.js
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 
 const TYPE = "DS_VersionCheck";
 const EXT = "DeathshotArsenal.DS_VersionCheck";
@@ -378,6 +379,7 @@ app.registerExtension({
     const oldMouseUp = nodeType.prototype.onMouseUp;
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       oldCreated?.apply(this, arguments);
       this.flags = this.flags || {};
       this.flags.no_title = true;
@@ -473,6 +475,7 @@ app.registerExtension({
     };
   },
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node.type !== TYPE && node.comfyClass !== TYPE) return;
     node.flags = node.flags || {};
     node.flags.no_title = true;

@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   Card,
   normalizeDSWidgetHost,
@@ -1240,6 +1241,7 @@ app.registerExtension({
 
     const oldCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function() {
+      attachNodeShortcuts(this);
       const result = oldCreated ? oldCreated.apply(this, arguments) : undefined;
       patchNode(this);
       fitNodeHeight(this);
@@ -1299,6 +1301,7 @@ app.registerExtension({
   },
 
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node?.type === TYPE) {
       patchNode(node);
       fitNodeHeight(node);

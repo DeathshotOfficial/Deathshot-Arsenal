@@ -1,6 +1,7 @@
 // DS AI Prompt Sensei — Deathshot Arsenal
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   Card,
@@ -337,17 +338,27 @@ function composePromptWithTriggers(text, loras) {
     }
   }
   if (!triggers.length) return promptText;
-  const filteredTriggers = [];
-  for (const t of triggers) {
-    const escaped = t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const reg = new RegExp(`(?:\\b|_)${escaped}(?:\\b|_)`, "i");
-    if (!reg.test(promptText)) {
-      filteredTriggers.push(t);
+  let cleanP = promptText.trim().replace(/^,+/, "").trim();
+  let changed = true;
+  while (changed && cleanP) {
+    changed = false;
+    for (const t of triggers) {
+      if (cleanP.toLowerCase() === t.trim().toLowerCase()) {
+        cleanP = "";
+        changed = true;
+        break;
+      }
+      const escaped = t.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const reg = new RegExp(`^${escaped}\\s*,\\s*`, "i");
+      const m = cleanP.match(reg);
+      if (m) {
+        cleanP = cleanP.slice(m[0].length).replace(/^,+/, "").trim();
+        changed = true;
+        break;
+      }
     }
   }
-  if (!filteredTriggers.length) return promptText;
-  const prefix = filteredTriggers.join(", ").trim().replace(/,+$/, "");
-  const cleanP = promptText.trim().replace(/^,+/, "").trim();
+  const prefix = triggers.join(", ").trim().replace(/,+$/, "");
   return cleanP ? `${prefix}, ${cleanP}` : prefix;
 }
 
@@ -1870,13 +1881,54 @@ function installSenseiQueueHooks() {
     else triggerSenseiNodeUpdates();
   });
 
-  api.addEventListener("ds_sensei_executed", ({ detail }) => {
-    if (!detail) return;
+  api.addEventListener("ds_sensei_stream", ({ detail }) => {
+    if (!detail || !detail.node_id) return;
     const allNodes = app.graph?._nodes || app.graph?.nodes || [];
     for (const n of allNodes) {
-      if (n.type === NODE_TYPE || n.comfyClass === NODE_TYPE) {
+      if ((n.type === NODE_TYPE || n.comfyClass === NODE_TYPE) && String(n.id) === String(detail.node_id)) {
+        const incomingText = detail.text !== undefined
+          ? detail.text
+          : ((n._sstate?.generated_prompt || "") + (detail.chunk || ""));
+
+        if (n._sstate) {
+          n._sstate.generated_prompt = incomingText;
+          n._sstate.status = "generating";
+          if (detail.tokens) {
+            if (!n._sstate.telemetry) n._sstate.telemetry = {};
+            n._sstate.telemetry.tokens = detail.tokens;
+            if (detail.speed) n._sstate.telemetry.speed = detail.speed;
+            if (detail.elapsed) n._sstate.telemetry.elapsed = detail.elapsed;
+          }
+        }
+
+        const ta = n._promptTA || n._domContainer?.querySelector(".ds-sensei-prompt-area");
+        if (ta) {
+          ta.value = incomingText;
+          ta.classList.add("is-generating");
+          ta.scrollTop = ta.scrollHeight;
+        }
+
+        const count = incomingText.trim().split(/\s+/).filter(Boolean).length;
+        if (n._wcBadge) {
+          n._wcBadge.textContent = `${count} words`;
+        }
+
+        n._updateLlmMonitor?.();
+      }
+    }
+  });
+
+  api.addEventListener("ds_sensei_executed", ({ detail }) => {
+    if (!detail || !detail.node_id) return;
+    const allNodes = app.graph?._nodes || app.graph?.nodes || [];
+    for (const n of allNodes) {
+      if ((n.type === NODE_TYPE || n.comfyClass === NODE_TYPE) && String(n.id) === String(detail.node_id)) {
         if (detail.prompt) {
           n._sstate.generated_prompt = detail.prompt;
+          if (n._promptTA) {
+            n._promptTA.value = detail.prompt;
+            n._promptTA.classList.remove("is-generating");
+          }
           if (detail.speed && detail.elapsed) {
             n._sstate.telemetry = {
               tokens: detail.tokens || n._sstate.telemetry?.tokens || 0,
@@ -1902,6 +1954,10 @@ function installSenseiQueueHooks() {
         const promptText = detail.output?.prompt?.[0];
         if (promptText) {
           n._sstate.generated_prompt = promptText;
+          if (n._promptTA) {
+            n._promptTA.value = promptText;
+            n._promptTA.classList.remove("is-generating");
+          }
           const newSpeed = detail.output.speed?.[0];
           const newElapsed = detail.output.elapsed?.[0];
           if (newSpeed && newElapsed) {
@@ -1923,10 +1979,10 @@ function installSenseiQueueHooks() {
   });
 
   api.addEventListener("ds_sensei_progress", ({ detail }) => {
-    if (!detail) return;
+    if (!detail || !detail.node_id) return;
     const allNodes = app.graph?._nodes || app.graph?.nodes || [];
     for (const n of allNodes) {
-      if (n.type === NODE_TYPE || n.comfyClass === NODE_TYPE) {
+      if ((n.type === NODE_TYPE || n.comfyClass === NODE_TYPE) && String(n.id) === String(detail.node_id)) {
         n._livePromptStatus = detail.message;
         if (detail.tokens) {
           if (!n._sstate.telemetry) n._sstate.telemetry = {};
@@ -1935,10 +1991,27 @@ function installSenseiQueueHooks() {
           if (detail.elapsed) n._sstate.telemetry.elapsed = detail.elapsed;
           if (detail.model) n._sstate.telemetry.model = detail.model;
         }
-        if (detail.stage === "loading") {
+        if (detail.stage === "loading" || detail.stage === "generating") {
           n._sstate.status = "generating";
+          if (n._promptTA) {
+            n._promptTA.classList.add("is-generating");
+          }
         } else if (detail.stage === "completed" || detail.stage === "finished") {
           n._sstate.status = "completed";
+          if (n._promptTA) {
+            n._promptTA.classList.remove("is-generating");
+          }
+          if (detail.prompt) {
+            n._sstate.generated_prompt = detail.prompt.trim();
+            if (n._promptTA) {
+              n._promptTA.value = n._sstate.generated_prompt;
+            }
+            if (n._wcBadge) {
+              const count = n._sstate.generated_prompt.split(/\s+/).filter(Boolean).length;
+              n._wcBadge.textContent = `${count} words`;
+            }
+            n._syncState?.();
+          }
         }
         n._updateLlmMonitor?.();
       }
@@ -1996,7 +2069,7 @@ function defaultState() {
     },
     gear_tab: "lm_studio",
     models: { model: "", video_vae: "", audio_vae: "", text_enc: "", clip_type: "auto", attention: "default" },
-    loras: [{ name: "", strength: 1.0, enabled: true }],
+    loras: [{ name: "", strength: 1.0, enabled: true, selectedTriggers: [] }],
     lora_expanded: false,
     collapsed: {
       image: false,
@@ -3792,7 +3865,7 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
         tooltip: "Copy Prompt to Clipboard",
         onClick: async () => {
           if (s.generated_prompt) {
-            try { await navigator.clipboard.writeText(s.generated_prompt); } catch (_) { }
+            try { await navigator.clipboard.writeText(composePromptWithTriggers(s.generated_prompt, s.loras)); } catch (_) { }
           }
         }
       },
@@ -3933,10 +4006,9 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
       errBox.appendChild(errActions);
       cardPrompt.append(errBox);
     }
-
     promptTA = document.createElement("textarea");
-    promptTA.className = "ds-sensei-textarea ds-sensei-prompt-area";
-    promptTA.placeholder = "Generated prompt. Edit freely before clicking Continue.";
+    promptTA.className = "ds-sensei-textarea ds-sensei-prompt-area" + (s.status === "generating" ? " is-generating" : "");
+    promptTA.placeholder = s.status === "generating" ? "Sensei is writing prompt..." : "Generated prompt. Edit freely before clicking Continue.";
     promptTA.value = s.generated_prompt || "";
     if (s.prompt_height) promptTA.style.height = s.prompt_height;
     promptTA.oninput = () => {
@@ -3945,6 +4017,10 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
       const count = (s.generated_prompt || "").trim().split(/\s+/).filter(Boolean).length;
       wcBadge.textContent = `${count} words`;
     };
+
+    node._promptTA = promptTA;
+    node._wcBadge = wcBadge;
+    node._domContainer = container;
 
     let _skipPromptInit = true;
     if (window.ResizeObserver) {
@@ -4002,6 +4078,18 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
         node._isGeneratingPrompt = true;
         s.status = "generating";
         s.error_msg = null;
+
+        // Clear prompt text area immediately for live typing feedback
+        s.generated_prompt = "";
+        if (promptTA) {
+          promptTA.value = "";
+          promptTA.placeholder = "Sensei is writing prompt...";
+          promptTA.classList.add("is-generating");
+        }
+        if (wcBadge) {
+          wcBadge.textContent = "0 words";
+        }
+
         if (s.provider === "built_in") {
           if (s.built_in?.randomize_seed !== false) {
             s.built_in.seed = Math.floor(Math.random() * 2147483647);
@@ -4020,6 +4108,7 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
           const r = await fetch("/ds/prompt_sensei/generate", {
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              node_id: String(node.id),
               mode: s.mode || "i2v",
               provider: s.provider || "lm_studio",
               custom_text: s.custom_text || "",
@@ -4051,9 +4140,19 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
               s.status = "failed";
               s.error_msg = d.error || "Generation failed";
             } else {
-              s.generated_prompt = composePromptWithTriggers(d.prompt || "", s.loras);
+              // Store clean prompt (do NOT bake triggers into generated_prompt)
+              s.generated_prompt = (d.prompt || s.generated_prompt || "").trim();
               s.status = "completed";
               s.error_msg = null;
+              if (promptTA) {
+                promptTA.value = s.generated_prompt;
+                promptTA.placeholder = "Generated prompt. Edit freely before clicking Continue.";
+                promptTA.classList.remove("is-generating");
+              }
+              const finalCount = s.generated_prompt.split(/\s+/).filter(Boolean).length;
+              if (wcBadge) {
+                wcBadge.textContent = `${finalCount} words`;
+              }
               if (d.seed !== undefined && d.seed !== null) {
                 if (isBuiltIn) {
                   if (s.built_in) s.built_in.seed = d.seed;
@@ -4079,6 +4178,9 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
           node._isGeneratingPrompt = false;
           rerollBtn.setDisabled(false);
           rerollBtn.setLabel(s.mode === "custom" ? "Sync Prompt" : "Reroll");
+          if (promptTA) {
+            promptTA.classList.remove("is-generating");
+          }
           sync();
           node._updateLlmMonitor?.();
           rerender();
@@ -4176,16 +4278,30 @@ function registerSenseiProgressListener() {
 
   api.addEventListener("ds_sensei_progress", (e) => {
     const d = e?.detail;
-    if (!d) return;
+    if (!d || !d.node_id) return;
 
     for (const n of app.graph?._nodes || []) {
-      if (n?.type === NODE_TYPE && (n._isGeneratingPrompt || n._sstate?.status === "generating" || _activeSenseiNode === n)) {
+      if (n?.type === NODE_TYPE && String(n.id) === String(d.node_id)) {
         n._livePromptStatus = d.message;
         n._livePromptStage = d.stage;
         n._livePromptProgress = d;
 
         if (d.stage === "completed" || d.stage === "finished") {
           n._isGeneratingPrompt = false;
+          if (n._promptTA) {
+            n._promptTA.classList.remove("is-generating");
+          }
+          if (d.prompt) {
+            n._sstate.generated_prompt = d.prompt.trim();
+            if (n._promptTA) {
+              n._promptTA.value = n._sstate.generated_prompt;
+            }
+            if (n._wcBadge) {
+              const count = n._sstate.generated_prompt.split(/\s+/).filter(Boolean).length;
+              n._wcBadge.textContent = `${count} words`;
+            }
+            n._syncState?.();
+          }
           if (n._sstate) {
             n._sstate.status = "completed";
             n._sstate.telemetry = {
@@ -4207,15 +4323,25 @@ function registerSenseiProgressListener() {
       for (const n of app.graph?._nodes || []) {
         if (n?.type === NODE_TYPE) {
           n._isGeneratingPrompt = false;
+          n._promptTA?.classList.remove("is-generating");
           n._updateLlmMonitor?.();
         }
       }
+      _activeSenseiNode = null;
       return;
     }
     for (const n of app.graph?._nodes || []) {
-      if (n?.type === NODE_TYPE && String(n.id) === String(executingId)) {
-        n._isGeneratingPrompt = true;
-        _activeSenseiNode = n;
+      if (n?.type === NODE_TYPE) {
+        if (String(n.id) === String(executingId)) {
+          n._isGeneratingPrompt = true;
+          _activeSenseiNode = n;
+        } else {
+          n._isGeneratingPrompt = false;
+          n._promptTA?.classList.remove("is-generating");
+          if (_activeSenseiNode === n) {
+            _activeSenseiNode = null;
+          }
+        }
         n._updateLlmMonitor?.();
       }
     }
@@ -4233,6 +4359,7 @@ app.registerExtension({
 
     const origCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       origCreated?.apply(this, arguments);
       loadCSS();
       registerGearMenu();

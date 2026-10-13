@@ -5,6 +5,7 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   Card,
@@ -170,6 +171,15 @@ function resolveUpstreamPrompt(node) {
   if (origin.properties?.ds_randomizer_preview) {
     return String(origin.properties.ds_randomizer_preview).trim();
   }
+  if (origin.properties?.ds_sensei_state?.generated_prompt) {
+    return String(origin.properties.ds_sensei_state.generated_prompt).trim();
+  }
+  if (origin._sstate?.generated_prompt) {
+    return String(origin._sstate.generated_prompt).trim();
+  }
+  if (origin._promptTA && typeof origin._promptTA.value === "string" && origin._promptTA.value.trim()) {
+    return origin._promptTA.value.trim();
+  }
   const textWidget = (origin.widgets || []).find(
     (w) => w?.name === "text" || w?.name === "prompt"
   );
@@ -178,6 +188,12 @@ function resolveUpstreamPrompt(node) {
   }
   if (origin._dsRoot) {
     const ta = origin._dsRoot.querySelector("textarea");
+    if (ta && ta.value && ta.value.trim()) {
+      return ta.value.trim();
+    }
+  }
+  if (origin._domContainer) {
+    const ta = origin._domContainer.querySelector("textarea");
     if (ta && ta.value && ta.value.trim()) {
       return ta.value.trim();
     }
@@ -293,6 +309,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       if (originalCreated) originalCreated.apply(this, arguments);
 
       cleanupObsoleteInputs(this);
@@ -338,6 +355,7 @@ app.registerExtension({
         variation_cache: true,
         cache_size: 10,
         contextual_coherence: true,
+        attributes_only: true,
       };
 
       ensureStateWidget(this);
@@ -1163,10 +1181,51 @@ if (api && !api._dsRandomizerExecutedWrapped) {
           }
         }
         const runSeed = detail.output?.seed?.[0] ?? detail.output?.ui?.seed?.[0];
-        if (runSeed && n.properties?.ds_randomizer_ai_settings) {
-          n.properties.ds_randomizer_ai_settings.seed = runSeed;
-          if (window._dsUpdateActiveAIPopover?.node === n) {
-            window._dsUpdateActiveAIPopover.setSeed(runSeed);
+        if (runSeed) {
+          n._dsLastRunSeed = runSeed;
+          n.properties = n.properties || {};
+          n.properties.ds_randomizer_last_seed = runSeed;
+          if (n.properties?.ds_randomizer_ai_settings) {
+            n.properties.ds_randomizer_ai_settings.seed = runSeed;
+            if (window._dsUpdateActiveAIPopover?.node === n) {
+              window._dsUpdateActiveAIPopover.setSeed(runSeed);
+            }
+          }
+        }
+      }
+    }
+  });
+
+  api.addEventListener("ds_randomizer_stream", ({ detail }) => {
+    if (!detail || !detail.node_id) return;
+    const allNodes = app.graph?._nodes || app.graph?.nodes || [];
+    for (const n of allNodes) {
+      if (
+        (n.type === "DS_Randomizer" || n.comfyClass === "DS_Randomizer") &&
+        String(n.id) === String(detail.node_id)
+      ) {
+        if (typeof n._dsShowStatus === "function") {
+          n._dsShowStatus(`Generating (${detail.tokens || 0} tokens · ${detail.speed || 0} tk/s)...`);
+        }
+      }
+    }
+  });
+
+  api.addEventListener("ds_randomizer_progress", ({ detail }) => {
+    if (!detail || !detail.node_id) return;
+    const allNodes = app.graph?._nodes || app.graph?.nodes || [];
+    for (const n of allNodes) {
+      if (
+        (n.type === "DS_Randomizer" || n.comfyClass === "DS_Randomizer") &&
+        String(n.id) === String(detail.node_id)
+      ) {
+        if (detail.stage === "completed") {
+          if (typeof n._dsShowStatus === "function") {
+            n._dsShowStatus(`AI Done (${detail.elapsed || 0}s)`);
+          }
+        } else if (detail.stage === "generating") {
+          if (typeof n._dsShowStatus === "function") {
+            n._dsShowStatus(`Generating (${detail.tokens || 0} tokens)...`);
           }
         }
       }
@@ -1186,17 +1245,19 @@ if (api && !api._dsRandomizerQueueWrapped) {
     try {
       const out = args[1]?.output;
       if (out) {
-        let isContinuing = false;
-        for (const id in out) {
-          const entry = out[id];
-          if (entry?.class_type === "DS_ImageCheckpoint") {
-            try {
-              const state = JSON.parse(entry.inputs?.PauseState || "{}");
-              if (state?.mode === "continue") {
-                isContinuing = true;
-                break;
-              }
-            } catch (_) {}
+        let isContinuing = Boolean(window._dsCheckpointContinuing);
+        if (!isContinuing) {
+          for (const id in out) {
+            const entry = out[id];
+            if (entry?.class_type === "DS_ImageCheckpoint") {
+              try {
+                const state = JSON.parse(entry.inputs?.PauseState || "{}");
+                if (state?.mode === "continue") {
+                  isContinuing = true;
+                  break;
+                }
+              } catch (_) {}
+            }
           }
         }
         if (!isContinuing && app?.graph) {
@@ -1224,15 +1285,32 @@ if (api && !api._dsRandomizerQueueWrapped) {
             const node = randIndex.get(String(id));
             entry.inputs = entry.inputs || {};
 
+            const lastPrompt =
+              node?.properties?.ds_randomizer_preview ||
+              node?._dsPreviewTextarea?.value ||
+              node?.properties?.ds_randomizer_state?.preview_prompt ||
+              "";
+
             const isWiredSeed = Array.isArray(entry.inputs.seed);
             if (!isWiredSeed) {
               if (isContinuing) {
-                const stableSeed = node?._dsLastRunSeed || entry.inputs.seed || 1;
+                const stableSeed =
+                  node?._dsLastRunSeed ||
+                  node?.properties?.ds_randomizer_last_seed ||
+                  entry.inputs.seed ||
+                  1;
+                if (node) {
+                  node._dsLastRunSeed = stableSeed;
+                  node.properties = node.properties || {};
+                  node.properties.ds_randomizer_last_seed = stableSeed;
+                }
                 entry.inputs.seed = stableSeed;
               } else {
                 const freshSeed = Math.floor(Math.random() * 0x7fffffff) + 1;
                 if (node) {
                   node._dsLastRunSeed = freshSeed;
+                  node.properties = node.properties || {};
+                  node.properties.ds_randomizer_last_seed = freshSeed;
                   if (node.properties?.ds_randomizer_ai_settings) {
                     node.properties.ds_randomizer_ai_settings.seed = freshSeed;
                   }
@@ -1250,11 +1328,20 @@ if (api && !api._dsRandomizerQueueWrapped) {
               node.properties.ds_randomizer_state.ai_enabled = Boolean(node.properties.ds_randomizer_ai_enabled);
               node.properties.ds_randomizer_state.ai_settings = node.properties.ds_randomizer_ai_settings || {};
               const isPauseForEdit = Boolean(node.properties.ds_randomizer_ai_settings?.pause_for_edit);
-              if (isPauseForEdit && node.properties.ds_randomizer_preview) {
-                node.properties.ds_randomizer_state.preview_prompt = node.properties.ds_randomizer_preview;
-              } else if (!isPauseForEdit) {
-                // When pause_for_edit is OFF: clear stale preview so every queue generates fresh AI variation
-                node.properties.ds_randomizer_state.preview_prompt = "";
+              if (isContinuing) {
+                // Checkpoint continue: send last generated prompt so ComfyUI skips re-running Randomizer
+                if (lastPrompt) {
+                  node.properties.ds_randomizer_state.preview_prompt = lastPrompt;
+                }
+                node.properties.ds_randomizer_state.is_checkpoint_continue = true;
+              } else {
+                node.properties.ds_randomizer_state.is_checkpoint_continue = false;
+                if (isPauseForEdit && node.properties.ds_randomizer_preview) {
+                  node.properties.ds_randomizer_state.preview_prompt = node.properties.ds_randomizer_preview;
+                } else if (!isPauseForEdit) {
+                  // When pause_for_edit is OFF: clear stale preview so every queue generates fresh AI variation
+                  node.properties.ds_randomizer_state.preview_prompt = "";
+                }
               }
               entry.inputs.randomizer_state = JSON.stringify(node.properties.ds_randomizer_state);
             }

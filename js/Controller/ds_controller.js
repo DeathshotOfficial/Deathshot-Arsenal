@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { Slider, Toggle, Dropdown, protectDSResizeCorners } from "../UIElements/index.js";
 import { Popup } from "../UIElements/Core/Popup.js";
 
@@ -1261,6 +1262,7 @@ app.registerExtension({
 
     const origOnNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       origOnNodeCreated?.apply(this, arguments);
 
       this._openControllerGearPopover = (anchorEl) => this.openSettings?.(anchorEl);

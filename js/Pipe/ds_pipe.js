@@ -1,5 +1,6 @@
 // js/ds_pipe.js
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 
 // --- Smart Naming Map ---
 const SHORT_NAME_MAP = {
@@ -53,6 +54,7 @@ app.registerExtension({
             
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
                 if (onNodeCreated) onNodeCreated.apply(this, arguments);
                 
                 this.properties = this.properties || {};
@@ -162,6 +164,7 @@ app.registerExtension({
             
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
                 if (onNodeCreated) onNodeCreated.apply(this, arguments);
                 this.properties = this.properties || {};
                 

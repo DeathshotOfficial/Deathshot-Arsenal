@@ -235,17 +235,23 @@ def compose_final_prompt(manual_prompt, loras_list):
     if not text:
         return trigger_str
 
-    # Avoid duplicate trigger inclusions if already in prompt text
-    filtered_triggers = []
-    for t in triggers:
-        pattern = r'(?:\b|_)' + re.escape(t.strip()) + r'(?:\b|_)'
-        if not re.search(pattern, text, re.IGNORECASE):
-            filtered_triggers.append(t)
-
-    if not filtered_triggers:
-        return text
-    triggers_prefix = ", ".join(filtered_triggers).strip().rstrip(",")
     clean_text = text.strip().lstrip(",").strip()
+    # Strip any selected triggers that are already prepended as leading comma-separated tags
+    changed = True
+    while changed and clean_text:
+        changed = False
+        for t in triggers:
+            if clean_text.lower() == t.strip().lower():
+                clean_text = ""
+                changed = True
+                break
+            m = re.match(r'^' + re.escape(t.strip()) + r'\s*,\s*', clean_text, re.IGNORECASE)
+            if m:
+                clean_text = clean_text[m.end():].lstrip(",").strip()
+                changed = True
+                break
+
+    triggers_prefix = ", ".join(triggers).strip().rstrip(",")
     return f"{triggers_prefix}, {clean_text}" if clean_text else triggers_prefix
 
 
@@ -654,7 +660,7 @@ class DS_AIPromptSensei:
             ).strip()
             final_prompt = compose_final_prompt(prompt_text, loras)
             return {
-                "ui": {"prompt": [final_prompt]},
+                "ui": {"prompt": [prompt_text]},
                 "result": (
                     image_tensor,
                     model,
@@ -698,6 +704,7 @@ class DS_AIPromptSensei:
                         image_tensor=target_img_tensor,
                         builtin_config=bi_cfg,
                         context=video_cfg,
+                        node_id=str(unique_id) if unique_id is not None else None,
                     )
                     if res.get("status") == "completed" and res.get("prompt"):
                         prompt_text = res["prompt"].strip()
@@ -713,6 +720,7 @@ class DS_AIPromptSensei:
                             image_path=target_img_path,
                             lm_studio_config=lm_cfg,
                             context=video_cfg,
+                            node_id=str(unique_id) if unique_id is not None else None,
                         )
                         if res.get("status") == "completed" and res.get("prompt"):
                             prompt_text = res["prompt"].strip()
@@ -727,11 +735,11 @@ class DS_AIPromptSensei:
         if unique_id is not None:
             node_id_str = str(unique_id)
             if not prompt_in_state and prompt_text:
-                _AUTO_GENERATED_PROMPTS[node_id_str] = final_prompt
+                _AUTO_GENERATED_PROMPTS[node_id_str] = prompt_text
             else:
                 _AUTO_GENERATED_PROMPTS[node_id_str] = ""
 
-        ui_data = {"prompt": [final_prompt]}
+        ui_data = {"prompt": [prompt_text]}
         if "res" in locals() and isinstance(res, dict) and res.get("status") == "completed":
             tokens_count = int(res.get("tokens", 0))
             speed_val = float(res.get("speed", 0.0))
@@ -748,7 +756,9 @@ class DS_AIPromptSensei:
                 server.PromptServer.instance.send_sync(
                     "ds_sensei_executed",
                     {
-                        "prompt": final_prompt,
+                        "node_id": str(unique_id) if unique_id is not None else None,
+                        "prompt": prompt_text,
+                        "final_prompt": final_prompt,
                         "tokens": tokens_count,
                         "speed": speed_val,
                         "elapsed": elapsed_val,

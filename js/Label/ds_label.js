@@ -5,6 +5,7 @@
 // non-native steppers with continuous hold, live preview, and full persistence.
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 
 const EXTENSION_NAME = "DeathshotArsenal.DSLabel";
 const NODE_TYPE = "DS_Label";
@@ -2257,6 +2258,7 @@ app.registerExtension({
   },
 
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node.type === NODE_TYPE || node.constructor?.name === "DSLabelNode") {
       node.isVirtualNode = true;
       node.comfyClass = NODE_TYPE;

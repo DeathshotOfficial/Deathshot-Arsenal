@@ -3,6 +3,7 @@
 // Default: 2 inputs. Click the green + in the title bar to add another.
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 
 const TYPE = "DS_AnySwitch";
 const EXTENSION = "DeathshotArsenal.DSAnySwitch";
@@ -230,6 +231,7 @@ app.registerExtension({
     // title bar and node base remain visible and functional.
     const oldCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = oldCreated?.apply(this, arguments);
       this.resizable = true;
       this._dsAnyType = "*";

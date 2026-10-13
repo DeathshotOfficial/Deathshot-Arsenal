@@ -4,6 +4,7 @@
    ============================================================ */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   Card,
   Button,
@@ -245,6 +246,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const res = origCreated ? origCreated.apply(this, arguments) : undefined;
 
       this.resizable = true;

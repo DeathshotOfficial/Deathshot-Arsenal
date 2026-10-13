@@ -1,28 +1,26 @@
 /**
  * Deathshot Arsenal — DS The Purger Frontend
- * Ultra-compact baseless workflow passthrough & safe resource cleanup utility.
- * Pure Canvas2D rendering for the node surface, zero native browser widgets,
- * execution-time cleanup trigger, and toolbar gear popover synchronization.
+ * Overhauled Card-based UI architecture with built-in live status bar
+ * and targeted resource cleanup.
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
+import { createCard } from "../UIElements/card_layout.js";
+import { StatusBar, Toggle } from "../UIElements/index.js";
 
 const TYPE = "DS_ThePurger";
 const DISPLAY_NAME = "DS The Purger";
 const EXT_NAME = "DeathshotArsenal.DS_ThePurger";
 const CSS_URL = "/extensions/DeathshotArsenal/The%20Purger/ds_the_purger.css";
 
-const DEFAULT_W = 390;
-const NODE_H = 32;
-const SOCKET_MARGIN = 16; // Clearance for connection socket dots
-
 const ACTION_DESCRIPTIONS = {
-  ALL: "Coordinated purge of all eligible models, caches, VRAM, and RAM",
-  VRAM: "Release GPU memory allocations and flush CUDA/MPS cache",
-  RAM: "Collect Python garbage and release system memory",
-  MODELS: "Unload unreferenced resident models from memory",
-  CACHE: "Flush disposable framework and node caches",
+  ALL: "Coordinated ejection of all models, caches, VRAM, and RAM",
+  VRAM: "Flush CUDA/MPS caches and release GPU memory allocations",
+  RAM: "Force Python garbage collection and trim system working set",
+  MODELS: "Eject ComfyUI diffusion models and Deathshot AI LLM/VLM from VRAM",
+  CACHE: "Flush disposable framework, LoRA, and node execution caches",
 };
 
 // ---------------------------------------------------------------------------
@@ -51,66 +49,6 @@ function ensureCSS() {
     link.rel = "stylesheet";
     link.href = `${CSS_URL}?v=${Date.now()}`;
     document.head.appendChild(link);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Helpers: Theme, Drawing & Dimensions
-// ---------------------------------------------------------------------------
-function themeVar(name, fallback) {
-  try {
-    return window.DSGlobalTheme?.getVar?.(name, fallback) || fallback;
-  } catch (_) {
-    return fallback;
-  }
-}
-
-function palette() {
-  const cfg = window.DSGlobalTheme?.getConfig?.() || {};
-  const activeTheme = window.DSGlobalTheme?.getTheme?.(cfg.theme);
-  const smart = window.DSGlobalTheme?.getSmartContrastVars?.(activeTheme) || {};
-  return {
-    bg: themeVar("--ds-bg", "#0b0d12"),
-    panel: themeVar("--ds-panel", "#12151c"),
-    panel2: themeVar("--ds-panel-2", "#161a23"),
-    btnBg: themeVar("--ds-btn-bg", themeVar("--ds-panel-2", "#161a23")),
-    btnHover: themeVar("--ds-btn-hover", "#1e2433"),
-    text: themeVar("--ds-text", "#e5e7eb"),
-    muted: themeVar("--ds-text-muted", "#9ca3af"),
-    border: themeVar("--ds-border", "#242a36"),
-    borderActive: themeVar("--ds-border-active", "rgba(255, 255, 255, 0.3)"),
-    accent: themeVar("--ds-accent", "#67e8f9"),
-    onAccent: smart["--ds-on-accent"] || themeVar("--ds-on-accent", "#0a0c10"),
-    onAccentShadow: smart["--ds-on-accent-shadow"] || themeVar("--ds-on-accent-shadow", "none"),
-    warning: themeVar("--ds-warning", "#f59e0b"),
-    danger: themeVar("--ds-danger", "#ef4444"),
-  };
-}
-
-let scratchCanvasCtx = null;
-function getScratchCanvas() {
-  if (!scratchCanvasCtx) {
-    const cv = document.createElement("canvas");
-    scratchCanvasCtx = cv.getContext("2d");
-  }
-  return scratchCanvasCtx;
-}
-
-function rr(ctx, x, y, w, h, r, fill, stroke, lw = 1) {
-  ctx.beginPath();
-  if (typeof ctx.roundRect === "function") {
-    ctx.roundRect(x, y, w, h, [r]);
-  } else {
-    ctx.rect(x, y, w, h);
-  }
-  if (fill) {
-    ctx.fillStyle = fill;
-    ctx.fill();
-  }
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lw;
-    ctx.stroke();
   }
 }
 
@@ -144,12 +82,9 @@ async function saveConfig(newConfig) {
 
 function syncAllNodes() {
   for (const node of activePurgerNodes) {
-    const minW = computeRequiredWidth(node);
-    const savedW = Number(node.properties?.custom_width) || (Array.isArray(node.size) ? Number(node.size[0]) : 0);
-    const finalW = Math.max(minW, savedW > 0 ? savedW : minW);
-    node.size = [finalW, NODE_H];
-    node.min_size = [minW, NODE_H];
-    node.setDirtyCanvas?.(true, true);
+    if (node._dsRefreshButtons) {
+      node._dsRefreshButtons();
+    }
   }
 }
 
@@ -157,74 +92,6 @@ function getVisibleButtons() {
   const list = globalConfig.buttons || ["ALL", "VRAM", "RAM", "MODELS", "CACHE"];
   const enabledMap = globalConfig.enabled || {};
   return list.filter((act) => enabledMap[act] !== false);
-}
-
-function computeSnugMetrics(node, targetW = null) {
-  const visible = getVisibleButtons();
-  const cfg = window.DSGlobalTheme?.getConfig?.() || {};
-  const fontName = cfg.font || window.DSGlobalTheme?.getVar?.("--ds-font", "Inter") || "Inter";
-
-  const scratch = getScratchCanvas();
-  scratch.font = `700 11px "${fontName}", Inter, system-ui, sans-serif`;
-
-  const naturalButtons = [];
-  let totalNaturalBtnW = 0;
-  for (const act of visible) {
-    const textW = scratch.measureText(act).width;
-    const w = Math.max(44, Math.round(textW + 18));
-    naturalButtons.push({ action: act, naturalW: w });
-    totalNaturalBtnW += w;
-  }
-
-  const btnGap = 5;
-  const totalGaps = Math.max(0, visible.length - 1) * btnGap;
-  const st = node?._dsPurgerState || { status: "READY" };
-  const statusStr = (st.status || "READY").toUpperCase();
-  const statusTextW = scratch.measureText(statusStr).width;
-  const statusW = Math.max(74, Math.round(statusTextW + 24));
-  const gapToStatus = 8;
-  const socketMargin = SOCKET_MARGIN;
-  const minRequiredW = socketMargin * 2 + totalNaturalBtnW + totalGaps + gapToStatus + statusW;
-
-  const currentW = targetW != null && Number(targetW) > 0 ? Math.round(Number(targetW)) : minRequiredW;
-  const finalW = Math.max(minRequiredW, currentW);
-
-  // If node is wider than minimum, distribute extra space across buttons evenly
-  const extraSpace = finalW - minRequiredW;
-  const perBtnExtra = visible.length > 0 ? Math.floor(extraSpace / visible.length) : 0;
-  let remainderExtra = visible.length > 0 ? (extraSpace % visible.length) : 0;
-
-  const buttonsLayout = [];
-  let curX = socketMargin;
-  for (const nb of naturalButtons) {
-    let extra = perBtnExtra;
-    if (remainderExtra > 0) {
-      extra += 1;
-      remainderExtra -= 1;
-    }
-    const w = nb.naturalW + extra;
-    buttonsLayout.push({
-      action: nb.action,
-      x: curX,
-      w: w,
-    });
-    curX += w + btnGap;
-  }
-
-  const statusX = finalW - socketMargin - statusW;
-
-  return {
-    w: finalW,
-    minW: minRequiredW,
-    buttons: buttonsLayout,
-    statusX: statusX,
-    statusW: statusW,
-    statusStr: statusStr,
-  };
-}
-
-function computeRequiredWidth(node) {
-  return computeSnugMetrics(node).minW;
 }
 
 // ---------------------------------------------------------------------------
@@ -247,7 +114,6 @@ function resolveUpstreamType(node) {
     if (!prevNode) break;
 
     const prevType = prevNode.type || prevNode.constructor?.type || "";
-    // If upstream is a passthrough (Reroute or another Purger)
     if (prevType.includes("Reroute") || prevType === TYPE) {
       const slotType = prevNode.outputs?.[l.origin_slot]?.type;
       if (slotType && slotType !== "*" && slotType !== "0") {
@@ -315,17 +181,14 @@ function stabilizePurger(node) {
     node.outputs[0].type = resolvedType;
   }
 
-  // Update wire / link colors in LiteGraph
   const LG = window.LiteGraph;
   if (LG && LG.LGraphCanvas && graph && graph.links) {
     const color = LG.LGraphCanvas.link_type_colors?.[resolvedType] || (resolvedType === "*" ? null : undefined);
 
-    // Incoming link
     if (node.inputs?.[0]?.link != null) {
       const l = graph.links[node.inputs[0].link];
       if (l) l.color = color;
     }
-    // Outgoing links
     if (node.outputs?.[0]?.links) {
       for (const linkId of node.outputs[0].links) {
         const l = graph.links[linkId];
@@ -337,251 +200,191 @@ function stabilizePurger(node) {
   node.setDirtyCanvas?.(true, true);
 }
 
-function ensureNodeState(node) {
+// ---------------------------------------------------------------------------
+// Resource Cleanup Execution & Status Formatting
+// ---------------------------------------------------------------------------
+function formatPurgeSummary(detail) {
+  const act = detail.action || "ALL";
+  const elapsed = detail.elapsed_ms || 0;
+  const status = detail.status || "PURGED";
+
+  if (status === "FAILED") {
+    return `${act} Failed: ${detail.message || "Error"}`;
+  }
+
+  const vramReleased = (detail.vram_released_str && detail.vram_released_str !== "0 MB")
+    ? detail.vram_released_str
+    : "";
+  const ramReleased = (detail.ram_released_str && detail.ram_released_str !== "0 MB")
+    ? detail.ram_released_str
+    : "";
+  const freePart = detail.vram_free_str ? ` • ${detail.vram_free_str} Free` : "";
+
+  if (vramReleased && ramReleased) {
+    return `Freed: ${vramReleased} VRAM, ${ramReleased} RAM${freePart} (${elapsed}ms)`;
+  } else if (vramReleased) {
+    return `Freed: ${vramReleased} VRAM${freePart} (${elapsed}ms)`;
+  } else if (ramReleased) {
+    return `Freed: ${ramReleased} RAM${freePart} (${elapsed}ms)`;
+  } else {
+    return `${act} Clean${freePart} (${elapsed}ms)`;
+  }
+}
+
+function handlePurgeResult(node, detail) {
+  if (!node || !detail) return;
+  const statusBar = node._dsStatusBar;
+  if (!statusBar) return;
+
+  const text = formatPurgeSummary(detail);
+  const status = detail.status || "PURGED";
+  const state = (status === "FAILED") ? "error" : "success";
+
+  statusBar.setStatus(text, state);
+  if (statusBar.root) {
+    statusBar.root.title = detail.message ? `${text}\n${detail.message}` : text;
+  }
+
+  node.properties = node.properties || {};
+  node.properties.last_purge_text = text;
+  node.properties.last_purge_state = state;
+  node.properties.last_purge_info = {
+    ...detail,
+    summary_text: text,
+    timestamp: Date.now(),
+  };
+
+  node.setDirtyCanvas?.(true, true);
+}
+
+async function triggerEject(node, action) {
+  if (!node) return;
+  const act = (action || node.properties?.selected_action || "ALL").toUpperCase().trim();
+
+  node.properties = node.properties || {};
+  node.properties.selected_action = act;
+  if (node._dsUpdateActiveButton) {
+    node._dsUpdateActiveButton(act);
+  }
+
+  const statusBar = node._dsStatusBar;
+  if (statusBar) {
+    statusBar.setStatus(`Ejecting ${act}...`, "running");
+  }
+
+  app.canvas?.emitBeforeChange?.();
+  try {
+    const res = await fetch("/ds/purger/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: act, node_id: String(node.id) }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      handlePurgeResult(node, data);
+    } else {
+      if (statusBar) {
+        statusBar.setStatus(`Eject failed (${res.status})`, "error");
+      }
+    }
+  } catch (err) {
+    if (statusBar) {
+      statusBar.setStatus(`Eject error: ${err.message || err}`, "error");
+    }
+  } finally {
+    app.canvas?.emitAfterChange?.();
+    node.setDirtyCanvas?.(true, true);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Card UI Builder
+// ---------------------------------------------------------------------------
+function buildPurgerCard(node) {
   node.properties = node.properties || {};
   if (!node.properties.selected_action) {
     node.properties.selected_action = "ALL";
   }
 
-  if (!node._dsPurgerState) {
-    node._dsPurgerState = {
-      status: "READY",
-      action: node.properties.selected_action,
-      message: "Ready to purge",
-      vram_released_str: "",
-      ram_released_str: "",
-      elapsed_ms: 0,
-      timestamp: Date.now(),
-    };
-  }
+  const card = createCard(node, {
+    minWidth: 280,
+    width: 320,
+    lockHeight: true,
+  });
 
-  // 1. Suppress native widgets
-  if (Array.isArray(node.widgets) && node.widgets.length > 0) {
-    node.widgets.length = 0;
-  }
-  node.serialize_widgets = false;
+  const buttonMap = new Map();
+  const btnRowItem = card.row([], { height: 26 });
+  const btnRow = btnRowItem.el;
 
-  // 2. Enforce single input and single output slot
-  if (!Array.isArray(node.inputs) || node.inputs.length === 0) {
-    node.addInput(" ", node._dsPurgerType || "*");
-  } else if (node.inputs.length > 1) {
-    while (node.inputs.length > 1) {
-      node.removeInput(node.inputs.length - 1);
+  function renderButtons() {
+    btnRow.replaceChildren();
+    buttonMap.clear();
+
+    const visible = getVisibleButtons();
+    const currentAction = node.properties.selected_action || "ALL";
+
+    for (const act of visible) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ds-ui-btn ds-ui-btn-compact ds-purger-btn";
+      btn.textContent = act;
+      btn.dataset.action = act;
+      btn.title = ACTION_DESCRIPTIONS[act] || `Eject ${act}`;
+
+      const isActive = (act === currentAction);
+      if (isActive) {
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-pressed", "true");
+      }
+
+      btn.addEventListener("pointerdown", (e) => e.stopPropagation());
+      btn.addEventListener("mousedown", (e) => e.stopPropagation());
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerEject(node, act);
+      });
+
+      btnRow.appendChild(btn);
+      buttonMap.set(act, btn);
     }
   }
 
-  if (!Array.isArray(node.outputs) || node.outputs.length === 0) {
-    node.addOutput(" ", node._dsPurgerType || "*");
-  } else if (node.outputs.length > 1) {
-    while (node.outputs.length > 1) {
-      node.removeOutput(node.outputs.length - 1);
-    }
-  }
-
-  // 3. Keep slot names valid for prompt mapping while suppressing visual canvas labels
-  if (node.inputs?.[0]) {
-    node.inputs[0].name = "value";
-    node.inputs[0].label = " ";
-    if (node._dsPurgerType) node.inputs[0].type = node._dsPurgerType;
-  }
-  if (node.outputs?.[0]) {
-    node.outputs[0].name = "value";
-    node.outputs[0].label = " ";
-    if (node._dsPurgerType) node.outputs[0].type = node._dsPurgerType;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Pure Canvas2D Rendering for Baseless Surface
-// ---------------------------------------------------------------------------
-function paintPurgerCanvas(node, ctx) {
-  if (!ctx || node.flags?.collapsed) return;
-
-  ensureNodeState(node);
-
-  const minW = computeRequiredWidth(node);
-  const currentW = Array.isArray(node.size) && node.size[0] > 0
-    ? Number(node.size[0])
-    : (Number(node.properties?.custom_width) || minW);
-  const targetW = Math.max(minW, currentW);
-  const metrics = computeSnugMetrics(node, targetW);
-  const w = metrics.w;
-  const h = NODE_H;
-
-  // Enforce locked height and width
-  if (!node.size || node.size[0] !== w || node.size[1] !== h) {
-    node.size = [w, h];
-  }
-  node.properties = node.properties || {};
-  node.properties.custom_width = w;
-  node.min_size = [minW, NODE_H];
-
-  const c = palette();
-  const st = node._dsPurgerState || { status: "READY" };
-  const currentAction = node.properties.selected_action || "ALL";
-
-  ctx.save();
-
-  // 1. Draw outer baseless container
-  const isSelected = Boolean(node.is_selected);
-  const isPurging = st.status === "PURGING";
-  const borderColor = isPurging ? c.accent : (isSelected ? c.accent : c.border);
-  const borderWidth = (isPurging || isSelected) ? 1.5 : 1;
-
-  rr(ctx, 0, 0, w, h, 6, c.panel, borderColor, borderWidth);
-
-  // 2. Buttons Row
-  const btnH = 22;
-  const btnY = Math.round((h - btnH) * 0.5); // 5px
-
-  node._dsButtonHits = [];
-
-  const cfg = window.DSGlobalTheme?.getConfig?.() || {};
-  const fontName = cfg.font || window.DSGlobalTheme?.getVar?.("--ds-font", "Inter") || "Inter";
-  ctx.font = `700 11px "${fontName}", Inter, system-ui, sans-serif`;
-
-  for (const item of metrics.buttons) {
-    const act = item.action;
-    const btnX = item.x;
-    const btnW = item.w;
-    const isActive = (act === currentAction);
-    const isHovered = (act === node._dsHoveredAction);
-
-    let btnBg, btnBorder, btnText;
-    if (isActive) {
-      btnBg = c.accent;
-      btnBorder = c.accent;
-      btnText = c.onAccent;
-    } else if (isHovered) {
-      btnBg = c.btnHover;
-      btnBorder = c.accent;
-      btnText = c.accent;
-    } else {
-      btnBg = c.btnBg;
-      btnBorder = c.border;
-      btnText = c.text;
-    }
-
-    rr(ctx, btnX, btnY, btnW, btnH, 5, btnBg, btnBorder, 1);
-
-    // Button text
-    ctx.fillStyle = btnText;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(act, btnX + Math.round(btnW * 0.5), btnY + Math.round(btnH * 0.5));
-
-    node._dsButtonHits.push({
-      action: act,
-      x: btnX,
-      y: btnY,
-      w: btnW,
-      h: btnH,
-    });
-  }
-
-  // 3. Status Indicator Pill on the Right
-  const statusStr = metrics.statusStr;
-  const statusW = metrics.statusW;
-  const statusX = metrics.statusX;
-
-  let statusTextColor = c.text;
-  let dotColor = c.muted;
-  let statusBorderColor = c.border;
-  let statusBg = c.panel2;
-
-  if (statusStr === "PURGING") {
-    statusTextColor = c.accent;
-    dotColor = c.accent;
-    statusBorderColor = c.accent;
-  } else if (statusStr === "PURGED") {
-    statusTextColor = c.accent;
-    dotColor = c.accent;
-  } else if (statusStr === "PARTIAL") {
-    statusTextColor = c.warning;
-    dotColor = c.warning;
-  } else if (statusStr === "FAILED") {
-    statusTextColor = c.danger;
-    dotColor = c.danger;
-  }
-
-  // Status background pill
-  rr(ctx, statusX, btnY, statusW, btnH, 5, statusBg, statusBorderColor, 1);
-
-  // Status dot
-  const dotX = statusX + 11;
-  const dotY = btnY + Math.round(btnH * 0.5);
-  ctx.beginPath();
-  ctx.arc(dotX, dotY, 3.5, 0, Math.PI * 2);
-  ctx.fillStyle = dotColor;
-  ctx.fill();
-
-  // Status text
-  ctx.fillStyle = statusTextColor;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(statusStr, statusX + 21, dotY);
-
-  node._dsStatusHit = {
-    x: statusX,
-    y: btnY,
-    w: statusW,
-    h: btnH,
+  node._dsRefreshButtons = () => {
+    renderButtons();
   };
 
-  // 4. Hover Tooltip (Metrics & Diagnostics)
-  const tooltipInfo = (st.status !== "READY" && st.message) ? st : node._dsLastPurgeInfo;
-  if (node._dsHoveredStatus && tooltipInfo && (tooltipInfo.message || tooltipInfo.vram_released_str || tooltipInfo.ram_released_str)) {
-    drawHoverTooltip(ctx, node, statusX, btnY, tooltipInfo, c, fontName);
-  }
+  node._dsUpdateActiveButton = (activeAct) => {
+    node.properties = node.properties || {};
+    node.properties.selected_action = activeAct;
+    for (const [act, btn] of buttonMap.entries()) {
+      const isActive = (act === activeAct);
+      btn.classList.toggle("is-active", isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+    node.setDirtyCanvas?.(true, true);
+  };
 
-  ctx.restore();
-}
+  renderButtons();
 
-function drawHoverTooltip(ctx, node, anchorX, anchorY, st, c, fontName) {
-  const isCurrent = (node._dsPurgerState?.status !== "READY");
-  const prefix = isCurrent ? "" : "Last Run: ";
-  const line1 = `${prefix}${st.action || "PURGE"} • ${st.status || "PURGED"}`;
-  const line2 = st.message || "";
-  const parts = [];
-  if (st.vram_released_str && st.vram_released_str !== "0 MB") parts.push(`VRAM: ${st.vram_released_str}`);
-  if (st.ram_released_str && st.ram_released_str !== "0 MB") parts.push(`RAM: ${st.ram_released_str}`);
-  if (st.elapsed_ms > 0) parts.push(`${st.elapsed_ms}ms`);
-  const line3 = parts.join(" • ");
+  const statusBar = StatusBar({
+    state: node.properties?.last_purge_state || "idle",
+    text: node.properties?.last_purge_text || "Ready to eject",
+  });
 
-  ctx.save();
-  ctx.font = `600 10.5px "${fontName}", Inter, system-ui, sans-serif`;
-  const tw = Math.max(
-    ctx.measureText(line1).width,
-    ctx.measureText(line2).width,
-    ctx.measureText(line3).width,
-    140
-  );
-  const boxW = Math.round(tw + 18);
-  const boxH = line3 ? 48 : 34;
-  const boxX = Math.min(anchorX + 10, node.size[0] - boxW - 4);
-  const boxY = anchorY - boxH - 6;
+  statusBar.root.addEventListener("pointerdown", (e) => e.stopPropagation());
+  statusBar.root.addEventListener("mousedown", (e) => e.stopPropagation());
 
-  rr(ctx, boxX, boxY, boxW, boxH, 5, c.panel, c.border, 1);
+  node._dsStatusBar = statusBar;
+  card.fixed(statusBar.root, { height: 22 });
 
-  ctx.fillStyle = c.accent;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(line1, boxX + 9, boxY + 7);
-
-  ctx.font = `500 9.5px "${fontName}", Inter, system-ui, sans-serif`;
-  ctx.fillStyle = c.text;
-  ctx.fillText(line2, boxX + 9, boxY + 21);
-
-  if (line3) {
-    ctx.fillStyle = c.muted;
-    ctx.fillText(line3, boxX + 9, boxY + 34);
-  }
-
-  ctx.restore();
+  node._dsPurgerCard = card;
+  return card;
 }
 
 // ---------------------------------------------------------------------------
-// Toolbar DS Gear Menu Popover (Deathshot Custom UI)
+// Toolbar DS Gear Menu Popover
 // ---------------------------------------------------------------------------
 function closeGearPopover() {
   if (activeGearPopover) {
@@ -606,7 +409,6 @@ function openPurgerGearPopover(targetNode, anchorEl) {
   const renderPopoverContent = () => {
     popover.innerHTML = "";
 
-    // Header
     const head = document.createElement("div");
     head.className = "ds-purger-popover-head";
     head.innerHTML = `
@@ -614,7 +416,7 @@ function openPurgerGearPopover(targetNode, anchorEl) {
         <div class="ds-purger-brand-badge">DS</div>
         <div>
           <div class="ds-purger-popover-title">DS The Purger</div>
-          <div class="ds-purger-popover-desc">Enable, disable, and reorder purge actions</div>
+          <div class="ds-purger-popover-desc">Enable, disable, and reorder eject actions</div>
         </div>
       </div>
       <button type="button" class="ds-purger-popover-close" title="Close">✕</button>
@@ -626,7 +428,6 @@ function openPurgerGearPopover(targetNode, anchorEl) {
 
     popover.appendChild(head);
 
-    // List of Actions
     const list = document.createElement("div");
     list.className = "ds-purger-actions-list";
 
@@ -637,7 +438,6 @@ function openPurgerGearPopover(targetNode, anchorEl) {
       const row = document.createElement("div");
       row.className = "ds-purger-settings-row";
 
-      // Info
       const info = document.createElement("div");
       info.className = "ds-purger-settings-row-text";
       info.innerHTML = `
@@ -645,7 +445,6 @@ function openPurgerGearPopover(targetNode, anchorEl) {
         <span class="ds-purger-settings-row-desc">${ACTION_DESCRIPTIONS[act] || act}</span>
       `;
 
-      // Right controls: Order buttons + Custom DS Switch
       const rightGroup = document.createElement("div");
       rightGroup.className = "ds-purger-settings-row-right";
 
@@ -688,31 +487,22 @@ function openPurgerGearPopover(targetNode, anchorEl) {
 
       orderControls.append(upBtn, downBtn);
 
-      // Custom Deathshot Toggle Switch
       const isEnabled = enabledMap[act] !== false;
-      const toggle = document.createElement("div");
-      toggle.className = `ds-purger-switch${isEnabled ? " is-on" : ""}`;
-      toggle.title = isEnabled ? `Disable ${act}` : `Enable ${act}`;
-
-      const thumb = document.createElement("div");
-      thumb.className = "ds-purger-switch-thumb";
-      toggle.appendChild(thumb);
-
-      toggle.addEventListener("click", (e) => {
-        e.stopPropagation();
-        globalConfig.enabled[act] = !isEnabled;
-        saveConfig(globalConfig);
-        renderPopoverContent();
+      const toggle = Toggle({
+        checked: isEnabled,
+        onChange: (checked) => {
+          globalConfig.enabled[act] = checked;
+          saveConfig(globalConfig);
+        },
       });
 
-      rightGroup.append(orderControls, toggle);
+      rightGroup.append(orderControls, toggle.root);
       row.append(info, rightGroup);
       list.appendChild(row);
     });
 
     popover.appendChild(list);
 
-    // Footer: Reset & Enable All
     const foot = document.createElement("div");
     foot.className = "ds-purger-popover-footer";
 
@@ -749,7 +539,6 @@ function openPurgerGearPopover(targetNode, anchorEl) {
   document.body.appendChild(popover);
   activeGearPopover = popover;
 
-  // Positioning
   const pw = 340;
   if (anchorEl && typeof anchorEl.getBoundingClientRect === "function") {
     const rect = anchorEl.getBoundingClientRect();
@@ -768,7 +557,6 @@ function openPurgerGearPopover(targetNode, anchorEl) {
     popover.style.top = `${Math.round(window.innerHeight / 2 - 160)}px`;
   }
 
-  // Click outside to dismiss
   const onOutsideClick = (e) => {
     if (!popover.contains(e.target) && (!anchorEl || !anchorEl.contains(e.target))) {
       closeGearPopover();
@@ -782,7 +570,46 @@ function openPurgerGearPopover(targetNode, anchorEl) {
 }
 
 // ---------------------------------------------------------------------------
-// Extension Registration & Patching
+// Node Installation
+// ---------------------------------------------------------------------------
+function installPurgerNode(node) {
+  if (node._dsPurgerInstalled) return;
+  node._dsPurgerInstalled = true;
+  node.resizable = true;
+
+  if (!Array.isArray(node.inputs) || node.inputs.length === 0) {
+    node.addInput("value", node._dsPurgerType || "*");
+  } else if (node.inputs.length > 1) {
+    while (node.inputs.length > 1) {
+      node.removeInput(node.inputs.length - 1);
+    }
+  }
+
+  if (!Array.isArray(node.outputs) || node.outputs.length === 0) {
+    node.addOutput("value", node._dsPurgerType || "*");
+  } else if (node.outputs.length > 1) {
+    while (node.outputs.length > 1) {
+      node.removeOutput(node.outputs.length - 1);
+    }
+  }
+
+  if (node.inputs?.[0]) {
+    node.inputs[0].name = "value";
+  }
+  if (node.outputs?.[0]) {
+    node.outputs[0].name = "value";
+  }
+
+  buildPurgerCard(node);
+  activePurgerNodes.add(node);
+
+  requestAnimationFrame(() => {
+    stabilizePurger(node);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// ComfyUI Extension Registration
 // ---------------------------------------------------------------------------
 app.registerExtension({
   name: EXT_NAME,
@@ -791,7 +618,6 @@ app.registerExtension({
     ensureCSS();
     fetchConfig();
 
-    // Register with Deathshot Arsenal Floating Action Toolbar
     if (window.DSGearMenu?.register) {
       const gearConfig = {
         tooltip: "DS The Purger Settings",
@@ -804,97 +630,36 @@ app.registerExtension({
       window.DSGearMenu.register(DISPLAY_NAME, gearConfig);
     }
 
-    // 1. WebSocket listener for live purge result from workflow execution
+    // 1. WebSocket listener for live purge result targeted by node_id
     api.addEventListener("ds_purger_status", ({ detail }) => {
-      if (!detail) return;
-      const targetId = detail.node_id ? String(detail.node_id) : null;
+      if (!detail || !detail.node_id) return;
+      const targetId = String(detail.node_id);
       for (const node of activePurgerNodes) {
-        if (!targetId || String(node.id) === targetId) {
-          if (node._dsResetTimer) {
-            clearTimeout(node._dsResetTimer);
-            node._dsResetTimer = null;
-          }
-
-          node._dsPurgerState = {
-            status: detail.status || "PURGED",
-            action: detail.action || node.properties?.selected_action || "ALL",
-            message: detail.message || "Completed",
-            vram_released_str: detail.vram_released_str || "",
-            ram_released_str: detail.ram_released_str || "",
-            elapsed_ms: detail.elapsed_ms || 0,
-            timestamp: Date.now(),
-          };
-
-          // Cache last purge metrics for persistent hover inspection
-          node._dsLastPurgeInfo = { ...node._dsPurgerState };
-
+        if (String(node.id) === targetId) {
+          handlePurgeResult(node, detail);
           node.setDirtyCanvas?.(true, true);
-
-          // Auto-reset back to READY after 3.5 seconds so subsequent runs are clearly signaled
-          node._dsResetTimer = setTimeout(() => {
-            node._dsResetTimer = null;
-            if (node._dsPurgerState && node._dsPurgerState.status !== "PURGING") {
-              node._dsPurgerState.status = "READY";
-              node._dsPurgerState.message = "Ready to purge";
-              node.setDirtyCanvas?.(true, true);
-            }
-          }, 3500);
         }
       }
     });
 
-    // 2. ComfyUI workflow execution event listener
+    // 2. ComfyUI workflow execution event listener: target only active node
     api.addEventListener("executing", ({ detail }) => {
       if (detail === null) {
-        // Workflow finished
         return;
       }
       const executingId = String(detail);
       for (const node of activePurgerNodes) {
         if (String(node.id) === executingId) {
-          // Execution just reached this DS The Purger node!
-          if (node._dsResetTimer) {
-            clearTimeout(node._dsResetTimer);
-            node._dsResetTimer = null;
+          const act = node.properties?.selected_action || "ALL";
+          if (node._dsStatusBar) {
+            node._dsStatusBar.setStatus(`Ejecting ${act}...`, "running");
           }
-          node._dsPurgerState = {
-            status: "PURGING",
-            action: node.properties?.selected_action || "ALL",
-            message: `Purging ${node.properties?.selected_action || "ALL"}...`,
-            vram_released_str: "",
-            ram_released_str: "",
-            elapsed_ms: 0,
-            timestamp: Date.now(),
-          };
           node.setDirtyCanvas?.(true, true);
         }
       }
     });
 
-    // 3. Reset to READY whenever a new workflow queue execution starts
-    api.addEventListener("execution_start", () => {
-      for (const node of activePurgerNodes) {
-        if (node._dsResetTimer) {
-          clearTimeout(node._dsResetTimer);
-          node._dsResetTimer = null;
-        }
-        if (node._dsPurgerState && node._dsPurgerState.status !== "PURGING") {
-          node._dsPurgerState.status = "READY";
-          node._dsPurgerState.message = "Ready to purge";
-          node.setDirtyCanvas?.(true, true);
-        }
-      }
-    });
-
-    // 4. Config sync event listener
-    api.addEventListener("ds_purger_config_updated", ({ detail }) => {
-      if (detail && detail.buttons && detail.enabled) {
-        globalConfig = detail;
-        syncAllNodes();
-      }
-    });
-
-    // 5. Global graph topology listener to refresh link colors & types
+    // 3. Global graph topology listener to refresh link colors & types
     api.addEventListener("graphChanged", () => {
       for (const node of activePurgerNodes) {
         stabilizePurger(node);
@@ -911,93 +676,37 @@ app.registerExtension({
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData?.name !== TYPE) return;
 
-    // Baseless node setup
-    const LG = window.LiteGraph || {};
-    nodeType.title_mode = LG.NO_TITLE != null ? LG.NO_TITLE : 1;
-
     const oldCreated = nodeType.prototype.onNodeCreated;
     const oldConfigure = nodeType.prototype.onConfigure;
-    const oldResize = nodeType.prototype.onResize;
     const oldRemoved = nodeType.prototype.onRemoved;
-    const oldMouseDown = nodeType.prototype.onMouseDown;
-    const oldMouseMove = nodeType.prototype.onMouseMove;
     const oldConnectionsChange = nodeType.prototype.onConnectionsChange;
 
-    function applyBaselessFlags(node) {
-      node.flags = node.flags || {};
-      node.flags.no_title = true;
-      node.flags.no_box = true;
-      node.flags.no_header = true;
-      node.title = "";
-      node.badges = [];
-      node.hideSlotLabels = true;
-      node.shape = 0;
-      node.color = "transparent";
-      node.bgcolor = "transparent";
-      node.boxcolor = "transparent";
-      node.resizable = true;
-      node._dsNodeBaseOptOut = true;
-
-      // Clear native widgets
-      if (Array.isArray(node.widgets)) {
-        node.widgets.length = 0;
-      }
-      node.serialize_widgets = false;
-
-      // Blank slot labels
-      if (Array.isArray(node.inputs)) {
-        for (const inp of node.inputs) inp.label = " ";
-      }
-      if (Array.isArray(node.outputs)) {
-        for (const out of node.outputs) out.label = " ";
-      }
-
-      const minW = computeRequiredWidth(node);
-      const savedW = Number(node.properties?.custom_width) || (Array.isArray(node.size) ? Number(node.size[0]) : 0);
-      const finalW = Math.max(minW, savedW > 0 ? savedW : minW);
-      node.size = [finalW, NODE_H];
-      node.min_size = [minW, NODE_H];
-    }
-
     nodeType.prototype.onNodeCreated = function () {
-      oldCreated?.apply(this, arguments);
-
-      ensureNodeState(this);
-      applyBaselessFlags(this);
-      activePurgerNodes.add(this);
-
-      // Subscribe to central theme updates
-      if (!this._dsThemeSubscribed && window.DSGlobalTheme?.subscribe) {
-        this._dsThemeSubscribed = true;
-        window.DSGlobalTheme.subscribe(() => {
-          this.setDirtyCanvas?.(true, true);
-        });
-      }
-
-      setTimeout(() => stabilizePurger(this), 10);
-      this.setDirtyCanvas?.(true, true);
+      attachNodeShortcuts(this);
+      const r = oldCreated?.apply(this, arguments);
+      installPurgerNode(this);
+      return r;
     };
 
     nodeType.prototype.onConfigure = function (info) {
       const r = oldConfigure?.apply(this, arguments);
-
-      ensureNodeState(this);
-      applyBaselessFlags(this);
-
-      const minW = computeRequiredWidth(this);
-      const savedW = Number(this.properties?.custom_width) ||
-        (Array.isArray(info?.size) ? Number(info.size[0]) : (Array.isArray(this.size) ? Number(this.size[0]) : 0));
-      const finalW = Math.max(minW, savedW > 0 ? savedW : minW);
-      this.size = [finalW, NODE_H];
-      this.min_size = [minW, NODE_H];
-
-      activePurgerNodes.add(this);
-      setTimeout(() => stabilizePurger(this), 10);
-      this.setDirtyCanvas?.(true, true);
+      installPurgerNode(this);
+      if (this.properties?.selected_action && this._dsUpdateActiveButton) {
+        this._dsUpdateActiveButton(this.properties.selected_action);
+      }
+      if (this.properties?.last_purge_text && this._dsStatusBar) {
+        this._dsStatusBar.setStatus(
+          this.properties.last_purge_text,
+          this.properties.last_purge_state || "success"
+        );
+      }
+      setTimeout(() => {
+        stabilizePurger(this);
+      }, 10);
       return r;
     };
 
-    nodeType.prototype.onConnectionsChange = function (type, slotIndex, isConnected, link, ioSlot) {
+    nodeType.prototype.onConnectionsChange = function () {
       const r = oldConnectionsChange?.apply(this, arguments);
       clearTimeout(this._dsStabilizeTimer);
       this._dsStabilizeTimer = setTimeout(() => {
@@ -1006,160 +715,11 @@ app.registerExtension({
       return r;
     };
 
-    nodeType.prototype.computeSize = function () {
-      const minW = computeRequiredWidth(this);
-      return [minW, NODE_H];
-    };
-
-    nodeType.prototype.onResize = function (size) {
-      const minW = computeRequiredWidth(this);
-      const w = Math.max(minW, Math.round(size[0]));
-      size[0] = w;
-      size[1] = NODE_H; // Strictly lock height to 32px
-      this.properties = this.properties || {};
-      this.properties.custom_width = w;
-      this.min_size = [minW, NODE_H];
-      const r = oldResize?.apply(this, arguments);
-      this.setDirtyCanvas?.(true, false);
-      return r;
-    };
-
     nodeType.prototype.onRemoved = function () {
-      if (this._dsResetTimer) {
-        clearTimeout(this._dsResetTimer);
-        this._dsResetTimer = null;
-      }
       activePurgerNodes.delete(this);
       if (oldRemoved) return oldRemoved.apply(this, arguments);
     };
 
-    // Stubs to suppress native ComfyUI box, badges, and title bar rendering
-    nodeType.prototype.onDrawBox = () => true;
-    nodeType.prototype.drawBox = () => true;
-    nodeType.prototype.onDrawTitleBar = () => true;
-    nodeType.prototype.drawTitleBar = () => true;
-    nodeType.prototype.onDrawTitleText = () => true;
-    nodeType.prototype.drawTitleText = () => true;
-    nodeType.prototype.getBadges = () => [];
-
-    // Sockets positioning: precisely centered vertically on left and right outer edges
-    nodeType.prototype.getConnectionPos = function (is_input, slot_number, out) {
-      out = out || new Float32Array(2);
-      const [w, h] = this.size;
-      const cy = Math.round(h * 0.5); // 16px
-      out[0] = this.pos[0] + (is_input ? 0 : w);
-      out[1] = this.pos[1] + cy;
-      return out;
-    };
-
-    nodeType.prototype.getInputPos = function (slot, out) {
-      return this.getConnectionPos(true, slot, out);
-    };
-
-    nodeType.prototype.getOutputPos = function (slot, out) {
-      return this.getConnectionPos(false, slot, out);
-    };
-
-    // Pure Canvas2D background & button painting
-    nodeType.prototype.onDrawBackground = function (ctx) {
-      paintPurgerCanvas(this, ctx);
-    };
-
-    // Suppress foreground painting
-    nodeType.prototype.onDrawForeground = function () {};
-
-    // Action button selection
-    nodeType.prototype.onMouseDown = function (e, pos) {
-      if (pos && Array.isArray(this._dsButtonHits)) {
-        for (const hit of this._dsButtonHits) {
-          if (
-            pos[0] >= hit.x &&
-            pos[0] <= hit.x + hit.w &&
-            pos[1] >= hit.y &&
-            pos[1] <= hit.y + hit.h
-          ) {
-            // Update selected purge action
-            this.properties.selected_action = hit.action;
-            if (this._dsResetTimer) {
-              clearTimeout(this._dsResetTimer);
-              this._dsResetTimer = null;
-            }
-            if (this._dsPurgerState && this._dsPurgerState.status !== "PURGING") {
-              this._dsPurgerState.status = "READY";
-              this._dsPurgerState.action = hit.action;
-              this._dsPurgerState.message = "Ready to purge";
-            }
-            this.setDirtyCanvas?.(true, true);
-            return true;
-          }
-        }
-      }
-      return oldMouseDown ? oldMouseDown.apply(this, arguments) : false;
-    };
-
-    // Hover detection for buttons and status pill
-    nodeType.prototype.onMouseMove = function (e, pos) {
-      let changed = false;
-      if (pos && Array.isArray(this._dsButtonHits)) {
-        let hoveredAct = null;
-        for (const hit of this._dsButtonHits) {
-          if (
-            pos[0] >= hit.x &&
-            pos[0] <= hit.x + hit.w &&
-            pos[1] >= hit.y &&
-            pos[1] <= hit.y + hit.h
-          ) {
-            hoveredAct = hit.action;
-            break;
-          }
-        }
-        if (this._dsHoveredAction !== hoveredAct) {
-          this._dsHoveredAction = hoveredAct;
-          changed = true;
-        }
-      } else if (this._dsHoveredAction) {
-        this._dsHoveredAction = null;
-        changed = true;
-      }
-
-      if (pos && this._dsStatusHit) {
-        const isHover = (
-          pos[0] >= this._dsStatusHit.x &&
-          pos[0] <= this._dsStatusHit.x + this._dsStatusHit.w &&
-          pos[1] >= this._dsStatusHit.y &&
-          pos[1] <= this._dsStatusHit.y + this._dsStatusHit.h
-        );
-        if (this._dsHoveredStatus !== isHover) {
-          this._dsHoveredStatus = isHover;
-          changed = true;
-        }
-      } else if (this._dsHoveredStatus) {
-        this._dsHoveredStatus = false;
-        changed = true;
-      }
-
-      if (changed) {
-        this.setDirtyCanvas?.(true, false);
-      }
-      return oldMouseMove ? oldMouseMove.apply(this, arguments) : false;
-    };
-
-    nodeType.prototype.onMouseLeave = function () {
-      let changed = false;
-      if (this._dsHoveredAction) {
-        this._dsHoveredAction = null;
-        changed = true;
-      }
-      if (this._dsHoveredStatus) {
-        this._dsHoveredStatus = false;
-        changed = true;
-      }
-      if (changed) {
-        this.setDirtyCanvas?.(true, false);
-      }
-    };
-
-    // Toolbar gear popover trigger methods
     nodeType.prototype._openPurgerGearPopover = function (anchorEl) {
       openPurgerGearPopover(this, anchorEl);
     };

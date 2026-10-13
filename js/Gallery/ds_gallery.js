@@ -5,6 +5,7 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   normalizeDSWidgetHost,
   protectDSResizeCorners,
@@ -152,6 +153,7 @@ app.registerExtension({
 
     const origOnNodeCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       origOnNodeCreated?.apply(this, arguments);
 
       // Create hidden state widget synchronously for workflow persistence

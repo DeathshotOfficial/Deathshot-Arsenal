@@ -1,4 +1,5 @@
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { Card, Slider, normalizeDSWidgetHost, protectDSResizeCorners, installDSUI } from "../UIElements/index.js";
 
 const TYPE = "DS_OutpaintStitch";
@@ -226,6 +227,7 @@ app.registerExtension({
     };
 
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const result = originalCreated ? originalCreated.apply(this, arguments) : undefined;
 
       this.resizable = true;

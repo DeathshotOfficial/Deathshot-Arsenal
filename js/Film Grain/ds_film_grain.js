@@ -4,6 +4,7 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { Card, Slider, normalizeDSWidgetHost, protectDSResizeCorners } from "../UIElements/index.js";
 
 const TYPE = "DS_FilmGrain";
@@ -338,6 +339,7 @@ app.registerExtension({
 
     const oldCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const res = oldCreated?.apply(this, arguments);
       install(this);
       return res;

@@ -4,6 +4,7 @@
  */
 
 import { app } from "/scripts/app.js";
+import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   installDSUI,
@@ -1259,6 +1260,7 @@ app.registerExtension({
 
     const origCreated = nodeType.prototype.onNodeCreated;
     nodeType.prototype.onNodeCreated = function () {
+      attachNodeShortcuts(this);
       const r = origCreated?.apply(this, arguments);
       patchNode(this);
       restoreState(this);
@@ -1283,6 +1285,7 @@ app.registerExtension({
   },
 
   nodeCreated(node) {
+    attachNodeShortcuts(node);
     if (node?.type === TYPE) {
       patchNode(node);
       restoreState(node);

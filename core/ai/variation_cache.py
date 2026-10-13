@@ -53,21 +53,44 @@ def _is_near_duplicate(a: str, b: str) -> bool:
     True when two category values are near-duplicates.
     Strategies:
       1. Exact normalised match
-      2. One is a substring of the other (e.g. 'ponytail' in 'high ponytail')
-      3. Shared word ratio > 0.6 (catches colour adjective swaps)
+      2. Multi-word phrase containment (min 10 chars, min 2 words each)
+      3. Shared significant word ratio >= 0.75 (ignoring common stopwords)
     """
     na, nb = _normalize(a), _normalize(b)
+    if not na or not nb:
+        return False
     if na == nb:
         return True
-    if na in nb or nb in na:
-        return True
+
     wa = set(na.split())
     wb = set(nb.split())
     if not wa or not wb:
         return False
-    overlap = len(wa & wb)
-    ratio = overlap / max(len(wa), len(wb))
-    return ratio >= 0.60
+
+    # Stopwords to ignore in word-overlap ratio
+    stopwords = {
+        "and", "with", "the", "a", "an", "of", "in", "on", "at", "to", "for",
+        "hair", "cut", "style", "skin", "tone", "color", "eyes", "eye", "look", "type"
+    }
+    sig_wa = wa - stopwords
+    sig_wb = wb - stopwords
+
+    # If all significant words match exactly
+    if sig_wa and sig_wb and sig_wa == sig_wb:
+        return True
+
+    # Multi-word phrase containment: require multi-word phrases and reasonable length
+    # so single words like 'black', 'blue', 'asian' don't falsely match compound phrases
+    if len(wa) >= 2 and len(wb) >= 2 and min(len(na), len(nb)) >= 10:
+        if na in nb or nb in na:
+            return True
+
+    if not sig_wa or not sig_wb:
+        return False
+
+    overlap = len(sig_wa & sig_wb)
+    ratio = overlap / max(len(sig_wa), len(sig_wb))
+    return ratio >= 0.75
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +113,22 @@ def _load_from_disk():
             with open(_CACHE_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, dict):
-                _cache = data
+                # Sanitize and deduplicate on load
+                cleaned: Dict[str, Dict[str, List[str]]] = {}
+                for nid, cats in data.items():
+                    if isinstance(cats, dict):
+                        cleaned[nid] = {}
+                        for cid, vals in cats.items():
+                            if isinstance(vals, list):
+                                seen = set()
+                                uvals = []
+                                for v in vals:
+                                    nv = _normalize(str(v))
+                                    if nv and nv not in seen:
+                                        seen.add(nv)
+                                        uvals.append(str(v).strip())
+                                cleaned[nid][cid] = uvals[-_DEFAULT_BATCH_SIZE:]
+                _cache = cleaned
                 logger.debug(f"[VariationCache] Loaded from disk ({len(_cache)} node(s)).")
                 return
     except Exception as e:
@@ -140,9 +178,7 @@ def record_run(
 ):
     """
     Record the LLM's chosen value for each category after a successful run.
-
-    Batch rule: when a category's history reaches batch_size, keep only the
-    last entry (the most recent), then begin a new batch from there.
+    Uses a sliding window of batch_size entries with deduplication.
     """
     if not chosen_values:
         return
@@ -152,10 +188,16 @@ def record_run(
         for cat, val in chosen_values.items():
             if not val or not isinstance(val, str):
                 continue
+            clean_val = val.strip()
+            if not clean_val:
+                continue
             history = node_cache.setdefault(cat, [])
-            history.append(val.strip())
-            if len(history) >= batch_size:
-                node_cache[cat] = [history[-1]]
+            # Deduplicate against existing entries in history
+            history = [h for h in history if _normalize(h) != _normalize(clean_val)]
+            history.append(clean_val)
+            if len(history) > batch_size:
+                history = history[-batch_size:]
+            node_cache[cat] = history
         _save_to_disk()
 
 

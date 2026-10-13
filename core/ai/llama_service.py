@@ -128,6 +128,8 @@ def generate_text_completion(
     seed: int = -1,
     auto_unload: bool = True,
     require_vision: bool = False,
+    node_id: Optional[str] = None,
+    event_prefix: Optional[str] = "ds_randomizer",
 ) -> Tuple[str, Dict[str, Any]]:
     """
     Executes a chat completion against the specified GGUF model.
@@ -162,6 +164,8 @@ def generate_text_completion(
                 top_p=top_p,
                 top_k=top_k,
                 repeat_penalty=repetition_penalty,
+                node_id=node_id,
+                event_prefix=event_prefix,
             )
 
             meta = {
