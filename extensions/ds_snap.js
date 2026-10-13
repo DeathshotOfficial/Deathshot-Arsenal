@@ -123,30 +123,35 @@ export const snapStore = new DSSnapStore();
 // ---------------------------------------------------------------------------
 function isGroup(item) {
   if (!item || typeof item !== "object") return false;
-  const p = item.pos;
-  const s = item.size;
-  if (!p || !s) return false;
-  if (typeof p[0] !== "number" || typeof p[1] !== "number") return false;
-  if (typeof s[0] !== "number" || typeof s[1] !== "number") return false;
-
-  if (item.constructor?.name === "LGraphGroup") return true;
+  // If it has node-specific properties, it is a node, not a group
+  if (typeof item.type === "string" && item.id !== undefined) return false;
+  if (item.constructor?.name === "LGraphNode") return false;
   const LG = window.LiteGraph || globalThis.LiteGraph;
+  if (LG?.LGraphNode && item instanceof LG.LGraphNode) return false;
+
+  // True group indicators
+  if (item.constructor?.name === "LGraphGroup") return true;
   if (LG?.LGraphGroup && item instanceof LG.LGraphGroup) return true;
-  if (item._children instanceof Set || Array.isArray(item._nodes)) return true;
+  if (item.is_group === true || item.isGroup === true) return true;
   if (typeof item.recomputeInsideNodes === "function") return true;
-  if (item.boundingRect !== undefined || typeof item.isInResize === "function") return true;
+  if (item._children instanceof Set || (Array.isArray(item._nodes) && !Array.isArray(item.inputs))) return true;
   return false;
 }
 
 function isNode(item) {
   if (!item || typeof item !== "object") return false;
   if (isGroup(item)) return false;
+  if (item.constructor?.name === "LGraphNode") return true;
+  const LG = window.LiteGraph || globalThis.LiteGraph;
+  if (LG?.LGraphNode && item instanceof LG.LGraphNode) return true;
+  if (typeof item.type === "string" && item.id !== undefined) return true;
+
   const p = item.pos;
   const s = item.size;
   if (!p || !s) return false;
   if (typeof p[0] !== "number" || typeof p[1] !== "number") return false;
   if (typeof s[0] !== "number" || typeof s[1] !== "number") return false;
-  return item.id !== undefined;
+  return item.id !== undefined || item.type !== undefined;
 }
 
 function isGraphItem(item) {
@@ -155,9 +160,10 @@ function isGraphItem(item) {
 
 function isPinned(item) {
   if (!item || typeof item !== "object") return false;
-  if (Boolean(item.pinned)) return true;
   if (item.flags && Boolean(item.flags.pinned)) return true;
-  if (Boolean(item.is_pinned)) return true;
+  if (item.flags && item.flags.allow_interaction === false) return true;
+  if (typeof item.pinned === "boolean" && item.pinned) return true;
+  if (typeof item.is_pinned === "boolean" && item.is_pinned) return true;
   return false;
 }
 
@@ -308,13 +314,16 @@ function getSelectedNodes(canvas = app?.canvas) {
     }
   }
 
-  if (result.size === 0) {
-    const graph = canvas?.graph || app?.graph;
-    if (graph?.nodes) {
-      for (const node of graph.nodes) {
-        if (node?.selected && isNode(node)) result.add(node);
-      }
+  const graph = canvas?.graph || app?.graph;
+  if (result.size === 0 && graph) {
+    const allNodes = graph.nodes || graph._nodes || [];
+    for (const node of allNodes) {
+      if ((node?.selected || node?.is_selected) && isNode(node)) result.add(node);
     }
+  }
+
+  if (result.size === 0 && canvas?.current_node && isNode(canvas.current_node)) {
+    result.add(canvas.current_node);
   }
 
   return [...result];
@@ -343,6 +352,8 @@ function getPrimarySelectedNode(canvas = app?.canvas) {
   const nodes = getOrderedSelectedNodes(canvas);
   if (nodes.length > 0) return nodes[0];
   if (canvas?.current_node && isNode(canvas.current_node)) return canvas.current_node;
+  const anySelected = getSelectedNodes(canvas);
+  if (anySelected.length > 0) return anySelected[0];
   return null;
 }
 
@@ -1660,9 +1671,14 @@ function handleGlobalKeyDown(e) {
 // 6. MULTI-NODE ARRANGEMENT (ROW & COLUMN)
 // ---------------------------------------------------------------------------
 export function arrangeNodesInRow(canvas = app?.canvas) {
+  const allSelected = getSelectedNodes(canvas);
+  if (allSelected.length < 2) {
+    snapEngine.showToast("Select 2 or more nodes to arrange in a row");
+    return;
+  }
   const nodes = getOrderedSelectedNodes(canvas).filter((n) => !isPinned(n));
   if (nodes.length < 2) {
-    snapEngine.showToast("Select 2 or more unpinned nodes to arrange in a row");
+    snapEngine.showToast("Need 2 or more unpinned nodes to arrange in a row");
     return;
   }
 
@@ -1701,9 +1717,14 @@ export function arrangeNodesInRow(canvas = app?.canvas) {
 }
 
 export function arrangeNodesInColumn(canvas = app?.canvas) {
+  const allSelected = getSelectedNodes(canvas);
+  if (allSelected.length < 2) {
+    snapEngine.showToast("Select 2 or more nodes to arrange in a column");
+    return;
+  }
   const nodes = getOrderedSelectedNodes(canvas).filter((n) => !isPinned(n));
   if (nodes.length < 2) {
-    snapEngine.showToast("Select 2 or more unpinned nodes to arrange in a column");
+    snapEngine.showToast("Need 2 or more unpinned nodes to arrange in a column");
     return;
   }
 
@@ -1754,7 +1775,8 @@ export function measureSelectedNode(canvas = app?.canvas) {
   const w = Math.round(node.size[0]);
   const h = Math.round(node.size[1]);
   snapStore.update({ measuredWidth: w, measuredHeight: h });
-  snapEngine.showToast(`Measured: ${w} × ${h} px`);
+  const title = node.title || node.type || "Node";
+  snapEngine.showToast(`Measured "${title}": ${w} × ${h} px`);
 }
 
 export function applyDimensionsToSelected(mode = "both", canvas = app?.canvas) {
@@ -1764,9 +1786,15 @@ export function applyDimensionsToSelected(mode = "both", canvas = app?.canvas) {
     return;
   }
 
-  const nodes = getSelectedNodes(canvas).filter((n) => !isPinned(n));
+  const allSelected = getSelectedNodes(canvas);
+  if (allSelected.length === 0) {
+    snapEngine.showToast("Select target node(s) to apply dimensions");
+    return;
+  }
+
+  const nodes = allSelected.filter((n) => !isPinned(n));
   if (nodes.length === 0) {
-    snapEngine.showToast("Select unpinned target node(s) to apply dimensions");
+    snapEngine.showToast("Selected node(s) are pinned and cannot be resized");
     return;
   }
 
@@ -2254,10 +2282,13 @@ function installGlobalPointerListeners() {
       const canvas = app?.canvas;
       if (canvas?.graph_mouse && canvas.graph?.getNodeOnPos) {
         lastPointerDownNode = canvas.graph.getNodeOnPos(canvas.graph_mouse[0], canvas.graph_mouse[1]) || null;
+        if (lastPointerDownNode && isNode(lastPointerDownNode)) {
+          recordNodeSelection(lastPointerDownNode.id, isMulti);
+        }
       }
     }
 
-    if (!isMulti && !vueNodeEl && target !== app?.canvas?.canvas) {
+    if (!isMulti && !vueNodeEl && !lastPointerDownNode && target === app?.canvas?.canvas) {
       selectionHistory = [];
     }
   }, true);

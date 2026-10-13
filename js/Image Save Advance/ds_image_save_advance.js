@@ -635,6 +635,17 @@ function buildCard(node) {
   const rightGroup = document.createElement("div");
   rightGroup.className = "ds-isa-header-actions";
 
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "ds-isa-delete-btn";
+  deleteBtn.title = "Delete last saved image";
+  deleteBtn.appendChild(DSIcon("trash-2", { size: 13 }));
+  deleteBtn.addEventListener("pointerdown", stop);
+  deleteBtn.addEventListener("click", (e) => {
+    stop(e);
+    deleteLast(node);
+  });
+
   const collapseBtn = document.createElement("button");
   collapseBtn.type = "button";
   collapseBtn.className = "ds-isa-collapse-btn";
@@ -646,7 +657,7 @@ function buildCard(node) {
     toggleCollapse(node);
   });
 
-  rightGroup.appendChild(collapseBtn);
+  rightGroup.append(deleteBtn, collapseBtn);
   header.append(leftGroup, rightGroup);
   card.appendChild(header);
 
@@ -668,10 +679,29 @@ function buildCard(node) {
   const dirInput = document.createElement("input");
   dirInput.className = "ds-isa-input";
   dirInput.placeholder = "ComfyUI output folder...";
+  const cleanDirInput = () => {
+    let val = dirInput.value.trim();
+    while (
+      val.length >= 2 &&
+      ((val[0] === '"' && val[val.length - 1] === '"') ||
+        (val[0] === "'" && val[val.length - 1] === "'") ||
+        (val[0] === "`" && val[val.length - 1] === "`"))
+    ) {
+      val = val.slice(1, -1).trim();
+    }
+    val = val.replace(/^["'`]+|["'`]+$/g, "").trim();
+    if (dirInput.value !== val) {
+      dirInput.value = val;
+    }
+    state(node).save_dir = val;
+    persist(node);
+  };
   dirInput.addEventListener("input", () => {
     state(node).save_dir = dirInput.value;
     persist(node);
   });
+  dirInput.addEventListener("change", cleanDirInput);
+  dirInput.addEventListener("paste", () => setTimeout(cleanDirInput, 0));
 
   const browseBtn = document.createElement("button");
   browseBtn.type = "button";
@@ -1041,6 +1071,38 @@ function lastPath(node) {
   return node._isaLastPath || "";
 }
 
+async function deleteLast(node) {
+  const p = lastPath(node);
+  if (!p) return toast(node, "No saved image to delete");
+  try {
+    const r = await fetch(url("/ds/image_save_advance/delete"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: p, node_id: node.id }),
+    });
+    const d = await r.json();
+    if (d.success || r.status === 404) {
+      const paths = node._isaLastPaths || [];
+      const idx = paths.indexOf(p);
+      if (idx !== -1) paths.splice(idx, 1);
+      const prevPath = paths.length ? paths[paths.length - 1] : "";
+      node._isaLastPath = prevPath;
+      if (!paths.length && state(node).counter > 1) {
+        state(node).counter = Math.max(1, Number(state(node).counter) - 1);
+      }
+      persist(node);
+      render(node);
+      updatePreview(node);
+      toast(node, d.success ? "Image deleted" : "File removed");
+    } else {
+      toast(node, d.error || "Delete failed");
+    }
+  } catch (e) {
+    console.warn("[DS Image Save Advance] delete failed:", e);
+    toast(node, "Delete failed");
+  }
+}
+
 async function openLast(node) {
   const p = lastPath(node);
   if (!p) return toast(node, "No saved image yet");
@@ -1059,8 +1121,7 @@ async function openLast(node) {
 }
 
 async function openFolder(node) {
-  const p = lastPath(node) || state(node).save_dir;
-  if (!p) return toast(node, "No output folder set");
+  const p = lastPath(node) || node._isaLastDir || state(node).save_dir || "";
   try {
     const r = await fetch(url("/ds/image_save_advance/folder"), {
       method: "POST",
@@ -1251,12 +1312,15 @@ app.registerExtension({
     nodeType.prototype.onExecuted = function (message) {
       const path = unwrap(message?.last_path) || unwrap(message?.paths)?.at?.(-1);
       if (path) this._isaLastPath = String(path);
+      const rawPaths = unwrap(message?.paths);
+      if (Array.isArray(rawPaths)) this._isaLastPaths = [...rawPaths];
+      else if (path) this._isaLastPaths = [String(path)];
       const next = Number(unwrap(message?.next_counter));
       if (Number.isFinite(next) && next > 0) state(this).counter = next;
       const fmt = unwrap(message?.format);
       if (fmt) state(this).format = String(fmt);
       const dir = unwrap(message?.dir);
-      if (dir) state(this).save_dir = String(dir);
+      if (dir) this._isaLastDir = String(dir);
       persist(this);
       render(this);
       this.setDirtyCanvas?.(true, true);
@@ -1325,9 +1389,7 @@ app.registerExtension({
         if (n?.type === TYPE) {
           const st = saved?.nodes?.[String(n.id)];
           if (st?.last_path) n._isaLastPath = st.last_path;
-          if (!state(n).save_dir && saved?.default_dir) {
-            state(n).save_dir = saved.default_dir;
-          }
+          if (Array.isArray(st?.last_paths)) n._isaLastPaths = [...st.last_paths];
           render(n);
           syncWidgets(n);
         }

@@ -61,18 +61,69 @@ def _save_state():
 
 
 def _clean_path(value):
-    value = str(value or "").strip().strip('"').strip("'")
-    return os.path.normpath(os.path.expanduser(value)) if value else ""
+    val = str(value or "").strip()
+    while len(val) >= 2 and ((val[0] == val[-1] and val[0] in ('"', "'", '`'))):
+        val = val[1:-1].strip()
+    val = val.strip('"\'`').strip()
+    if not val:
+        return ""
+    try:
+        val = os.path.expanduser(val)
+    except Exception:
+        pass
+    if os.name != "nt":
+        val = val.replace("\\", "/")
+    return os.path.normpath(val) if val else ""
 
 
 def _resolve_save_dir(value):
-    value = _clean_path(value)
-    output = os.path.abspath(folder_paths.get_output_directory())
-    if not value or value.lower() in {"output", ".", "default"}:
-        return output
-    if os.path.isabs(value) or (len(value) >= 2 and value[1] == ":"):
-        return os.path.abspath(value)
-    return os.path.abspath(os.path.join(output, value))
+    output_base = os.path.abspath(folder_paths.get_output_directory())
+    val = str(value or "").strip()
+    while len(val) >= 2 and ((val[0] == val[-1] and val[0] in ('"', "'", '`'))):
+        val = val[1:-1].strip()
+    val = val.strip('"\'`').strip()
+
+    if not val:
+        return output_base
+
+    try:
+        val = os.path.expanduser(val)
+    except Exception:
+        pass
+
+    if val.lower() in {"output", ".", "default", "./", ".\\"}:
+        return output_base
+
+    # Check if absolute path (Windows drive letter e.g. C:\ or D:/ or UNC path \\server\share)
+    has_win_drive = bool(re.match(r"^[a-zA-Z]:[\\/]", val) or (len(val) >= 2 and val[1] == ":"))
+    is_unc = val.startswith(r"\\") or val.startswith("//")
+    if has_win_drive or is_unc:
+        return os.path.abspath(os.path.normpath(val))
+
+    # Standardize slash representation for component inspection
+    unified = val.replace("\\", "/")
+    if unified.startswith("./"):
+        unified = unified[2:]
+
+    # Check if user prefixed with "output/" or "/output/" or "\output\"
+    # Examples: "output/Krea T2I", "/output/Krea T2I", "output\Krea T2I", "\output\Krea T2I"
+    clean_rel = unified.lstrip("/")
+    if clean_rel.lower() == "output" or clean_rel.lower() == "output/":
+        return output_base
+    if clean_rel.lower().startswith("output/"):
+        clean_rel = clean_rel[7:]
+    elif os.name != "nt" and unified.startswith("/") and not unified.lower().startswith("/output/"):
+        # On Linux/macOS, check if it's a real absolute path (e.g., /home, /mnt, /tmp, /media)
+        first_comp = unified.strip("/").split("/")[0].lower()
+        if first_comp != "output":
+            return os.path.abspath(val)
+
+    # Relative to ComfyUI output folder
+    parts = [p for p in clean_rel.split("/") if p and p != "."]
+    if not parts:
+        return output_base
+
+    return os.path.abspath(os.path.join(output_base, *parts))
 
 
 def _safe_component(value, fallback="untitled"):
@@ -670,17 +721,54 @@ async def image_save_advance_open(request):
 async def image_save_advance_folder(request):
     try:
         data = await request.json()
-        path = _clean_path(data.get("path", ""))
-        if not path or not os.path.exists(path):
-            return web.json_response({"success": False, "error": "Folder not found"}, status=404)
-        folder = path if os.path.isdir(path) else os.path.dirname(path)
+        raw = data.get("path", "")
+        cleaned = _clean_path(raw)
+        if cleaned and os.path.isfile(cleaned):
+            folder = os.path.dirname(cleaned)
+        else:
+            folder = _resolve_save_dir(raw)
+        if not folder:
+            folder = os.path.abspath(folder_paths.get_output_directory())
+        os.makedirs(folder, exist_ok=True)
         if os.name == "nt":
             os.startfile(folder)
         elif os.uname().sysname == "Darwin":
             subprocess.Popen(["open", folder])
         else:
             subprocess.Popen(["xdg-open", folder])
-        return web.json_response({"success": True})
+        return web.json_response({"success": True, "folder": folder})
+    except Exception as e:
+        return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+@server.PromptServer.instance.routes.post("/ds/image_save_advance/delete")
+async def image_save_advance_delete(request):
+    try:
+        data = await request.json()
+        path = _clean_path(data.get("path", ""))
+        node_id = str(data.get("node_id", ""))
+        if not path or not os.path.isfile(path):
+            return web.json_response({"success": False, "error": "File not found"}, status=404)
+        try:
+            os.remove(path)
+        except Exception as e:
+            return web.json_response({"success": False, "error": f"Failed to delete: {e}"}, status=500)
+
+        with STATE_LOCK:
+            if node_id and node_id in LAST_STATE:
+                st = LAST_STATE[node_id]
+                if isinstance(st, dict):
+                    paths = st.get("last_paths")
+                    if isinstance(paths, list) and path in paths:
+                        paths.remove(path)
+                        st["last_path"] = paths[-1] if paths else ""
+                    elif st.get("last_path") == path:
+                        st["last_path"] = ""
+                    if not st.get("last_path") and st.get("counter", 1) > 1:
+                        st["counter"] = max(1, int(st["counter"]) - 1)
+                _save_state()
+        print(f"[DS Image Save Advance] deleted {path}", flush=True)
+        return web.json_response({"success": True, "path": path})
     except Exception as e:
         return web.json_response({"success": False, "error": str(e)}, status=500)
 
