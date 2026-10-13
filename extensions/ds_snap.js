@@ -55,7 +55,7 @@ class DSSnapStore {
   constructor() {
     this.state = {
       enabled: true,
-      snapThreshold: 12,
+      snapThreshold: 10,
       minMarginEnabled: true,
       minMarginX: 20,
       minMarginY: 20,
@@ -119,16 +119,53 @@ class DSSnapStore {
 export const snapStore = new DSSnapStore();
 
 // ---------------------------------------------------------------------------
-// 3. TRUE VISUAL NODE BOUNDS (ACCURATE EDGE & TITLE MEASUREMENT)
+// 3. TRUE VISUAL BOUNDS & GRAPH ITEM DETECTION (NODES & GROUPS)
 // ---------------------------------------------------------------------------
-function isNode(item) {
+function isGroup(item) {
   if (!item || typeof item !== "object") return false;
   const p = item.pos;
   const s = item.size;
   if (!p || !s) return false;
   if (typeof p[0] !== "number" || typeof p[1] !== "number") return false;
   if (typeof s[0] !== "number" || typeof s[1] !== "number") return false;
+
+  if (item.constructor?.name === "LGraphGroup") return true;
+  const LG = window.LiteGraph || globalThis.LiteGraph;
+  if (LG?.LGraphGroup && item instanceof LG.LGraphGroup) return true;
+  if (item._children instanceof Set || Array.isArray(item._nodes)) return true;
+  if (typeof item.recomputeInsideNodes === "function") return true;
+  if (item.boundingRect !== undefined || typeof item.isInResize === "function") return true;
+  return false;
+}
+
+function isNode(item) {
+  if (!item || typeof item !== "object") return false;
+  if (isGroup(item)) return false;
+  const p = item.pos;
+  const s = item.size;
+  if (!p || !s) return false;
+  if (typeof p[0] !== "number" || typeof p[1] !== "number") return false;
+  if (typeof s[0] !== "number" || typeof s[1] !== "number") return false;
   return item.id !== undefined;
+}
+
+function isGraphItem(item) {
+  return isNode(item) || isGroup(item);
+}
+
+function isPinned(item) {
+  if (!item || typeof item !== "object") return false;
+  if (Boolean(item.pinned)) return true;
+  if (item.flags && Boolean(item.flags.pinned)) return true;
+  if (Boolean(item.is_pinned)) return true;
+  return false;
+}
+
+function getGraphGroups(graph = app?.graph || app?.canvas?.graph) {
+  if (!graph) return [];
+  if (Array.isArray(graph.groups)) return graph.groups;
+  if (Array.isArray(graph._groups)) return graph._groups;
+  return [];
 }
 
 /**
@@ -138,13 +175,14 @@ function isNode(item) {
 function getNodeTitleHeight(node) {
   const LG = window.LiteGraph || globalThis.LiteGraph || app?.canvas?.constructor;
   const noTitle = LG?.NO_TITLE ?? 1;
+  const transparentTitle = LG?.TRANSPARENT_TITLE ?? 2;
   const titleMode = node.title_mode !== undefined ? node.title_mode : node.constructor?.title_mode;
   if (
     node.flags?.no_header ||
     node.flags?.no_title ||
     node.flags?.no_box ||
     titleMode === noTitle ||
-    titleMode === 2 ||
+    titleMode === transparentTitle ||
     titleMode === "none"
   ) {
     return 0;
@@ -153,58 +191,106 @@ function getNodeTitleHeight(node) {
 }
 
 /**
- * Calculates the exact rendered visual bounds of a node.
- * Uses LiteGraph's getBounding() when available (which accounts for title bar and collapsed state).
- * Falls back to pos and size with exact title height calculation.
+ * Calculates the exact visual bounds of a node at a given (posX, posY).
+ * Derived purely from the node geometry, size, title bar, and collapsed state.
+ * Never relies on cached/stale LiteGraph getBounding() rectangles.
  */
-function getNodeVisualBounds(node) {
-  const x = Number(node.pos?.[0]) || 0;
-  const y = Number(node.pos?.[1]) || 0;
+function getNodeVisualBoundsAt(node, posX, posY) {
+  const x = Number(posX) || 0;
+  const y = Number(posY) || 0;
   const w = Math.max(10, Number(node.size?.[0]) || 60);
   const bodyH = Math.max(10, Number(node.size?.[1]) || 40);
+  const titleH = getNodeTitleHeight(node);
+  const isCollapsed = Boolean(node.flags?.collapsed);
 
-  let top = y;
-  let bottom = y + bodyH;
-  let titleH = 30;
-
-  // 1. Try LiteGraph's native getBounding
-  let nativeB = null;
-  try {
-    if (typeof node.getBounding === "function") {
-      nativeB = node.getBounding();
-    }
-  } catch (_) {}
-
-  if (nativeB && nativeB.length >= 4 && !isNaN(nativeB[1]) && !isNaN(nativeB[3])) {
-    top = Number(nativeB[1]);
-    bottom = top + Number(nativeB[3]);
-    titleH = Math.max(0, y - top);
-  } else {
-    titleH = getNodeTitleHeight(node);
-    top = y - titleH;
-    bottom = y + (node.flags?.collapsed ? 0 : bodyH);
-  }
-
-  if (top > bottom) {
-    const tmp = top;
-    top = bottom;
-    bottom = tmp;
-  }
+  const left = x;
+  const right = x + (isCollapsed ? (Number(node.collapsed_width) || 100) : w);
+  const top = y - titleH;
+  const bottom = y + (isCollapsed ? 0 : bodyH);
 
   return {
+    item: node,
     node,
+    group: null,
     id: node.id,
+    title: node.title || `Node #${node.id}`,
     titleH,
-    left: x,
-    top: top,
-    right: x + w,
-    bottom: bottom,
-    width: w,
+    isCollapsed,
+    isGroup: false,
+    isNode: true,
+    left,
+    right,
+    top,
+    bottom,
+    width: right - left,
     height: bottom - top,
     bodyHeight: bodyH,
-    centerX: x + w / 2,
+    centerX: (left + right) / 2,
     centerY: (top + bottom) / 2,
   };
+}
+
+/**
+ * Calculates the exact visual bounds of an LGraphGroup at a given (posX, posY).
+ * In LiteGraph / ComfyUI, a group rectangle is drawn starting at [pos[0], pos[1]]
+ * with dimensions [size[0], size[1]].
+ */
+function getGroupVisualBoundsAt(group, posX, posY) {
+  const x = Number(posX) || 0;
+  const y = Number(posY) || 0;
+  const w = Math.max(10, Number(group.size?.[0]) || 140);
+  const h = Math.max(10, Number(group.size?.[1]) || 80);
+
+  const left = x;
+  const right = x + w;
+  const top = y;
+  const bottom = y + h;
+
+  return {
+    item: group,
+    node: null,
+    group,
+    id: group.id ?? `group_${Math.round(x)}_${Math.round(y)}`,
+    title: group.title || "Group",
+    titleH: 0,
+    isCollapsed: false,
+    isGroup: true,
+    isNode: false,
+    left,
+    right,
+    top,
+    bottom,
+    width: w,
+    height: h,
+    bodyHeight: h,
+    centerX: (left + right) / 2,
+    centerY: (top + bottom) / 2,
+  };
+}
+
+/**
+ * Returns visual bounds for either a node or a group at given position.
+ */
+function getItemVisualBoundsAt(item, posX, posY) {
+  if (isGroup(item)) {
+    return getGroupVisualBoundsAt(item, posX, posY);
+  }
+  return getNodeVisualBoundsAt(item, posX, posY);
+}
+
+function getItemVisualBounds(item) {
+  if (!item) return null;
+  return getItemVisualBoundsAt(item, item.pos?.[0], item.pos?.[1]);
+}
+
+function getNodeVisualBounds(node) {
+  return getItemVisualBounds(node);
+}
+
+function getBoundingBoxDistance(a, b) {
+  const dx = Math.max(0, a.left - b.right, b.left - a.right);
+  const dy = Math.max(0, a.top - b.bottom, b.top - a.bottom);
+  return Math.hypot(dx, dy);
 }
 
 function getSelectedNodes(canvas = app?.canvas) {
@@ -232,6 +318,25 @@ function getSelectedNodes(canvas = app?.canvas) {
   }
 
   return [...result];
+}
+
+function getSelectedGroups(canvas = app?.canvas) {
+  const result = new Set();
+  if (canvas?.selected_group && isGroup(canvas.selected_group)) {
+    result.add(canvas.selected_group);
+  }
+  if (canvas?.selectedItems) {
+    for (const item of canvas.selectedItems) {
+      if (isGroup(item)) result.add(item);
+    }
+  }
+  return [...result];
+}
+
+function getSelectedGraphItems(canvas = app?.canvas) {
+  const nodes = getSelectedNodes(canvas);
+  const groups = getSelectedGroups(canvas);
+  return [...new Set([...nodes, ...groups])];
 }
 
 function getPrimarySelectedNode(canvas = app?.canvas) {
@@ -316,10 +421,10 @@ class DSSnapEngine {
     this.activeGuides = [];
     this.resizingGuides = [];
 
-    // Drag tracking & hysteresis state
-    this.draggedNode = null;
-    this.lastSnappedX = null;
-    this.lastSnappedY = null;
+    // Active drag session tracking
+    this.dragSession = null;
+    // Active resize session tracking
+    this.resizeSession = null;
 
     // Toast feedback notification
     this._toastTimer = null;
@@ -358,25 +463,101 @@ class DSSnapEngine {
     }, duration);
   }
 
-  onDragStart(canvas, node) {
-    if (!node || !isNode(node)) return;
-    this.draggedNode = node;
-    this.lastSnappedX = null;
-    this.lastSnappedY = null;
+  onDragStart(canvas, primaryItem, allSelectedItems = []) {
+    if (!primaryItem || !isGraphItem(primaryItem) || isPinned(primaryItem)) return;
+
+    const selectedSet = new Set();
+    const addWithChildren = (item) => {
+      if (!item || selectedSet.has(item) || isPinned(item)) return;
+      selectedSet.add(item);
+      if (isGroup(item)) {
+        // Collect all inside nodes and nested children so they move in lockstep
+        if (item.children && typeof item.children.forEach === "function") {
+          item.children.forEach((c) => {
+            if (!isPinned(c)) addWithChildren(c);
+          });
+        }
+        if (item._children && typeof item._children.forEach === "function") {
+          item._children.forEach((c) => {
+            if (!isPinned(c)) addWithChildren(c);
+          });
+        }
+        if (Array.isArray(item._nodes)) {
+          for (const n of item._nodes) {
+            if (!isPinned(n)) addWithChildren(n);
+          }
+        }
+        if (Array.isArray(item.nodes)) {
+          for (const n of item.nodes) {
+            if (!isPinned(n)) addWithChildren(n);
+          }
+        }
+      }
+    };
+
+    addWithChildren(primaryItem);
+    for (const it of allSelectedItems) {
+      if (!isPinned(it)) addWithChildren(it);
+    }
+
+    const mouseX = canvas?.graph_mouse ? canvas.graph_mouse[0] : (Number(primaryItem.pos[0]) || 0);
+    const mouseY = canvas?.graph_mouse ? canvas.graph_mouse[1] : (Number(primaryItem.pos[1]) || 0);
+
+    this.dragSession = {
+      primaryItem,
+      primaryNode: isNode(primaryItem) ? primaryItem : null,
+      lastGraphMouseX: mouseX,
+      lastGraphMouseY: mouseY,
+      records: Array.from(selectedSet).filter((it) => isGraphItem(it) && !isPinned(it)).map((it) => {
+        const posX = Number(it.pos[0]) || 0;
+        const posY = Number(it.pos[1]) || 0;
+        return {
+          item: it,
+          node: isNode(it) ? it : null,
+          startX: posX,
+          startY: posY,
+          naturalX: posX,
+          naturalY: posY,
+        };
+      }),
+      snapDeltaX: 0,
+      snapDeltaY: 0,
+    };
+
     this.activeGuides = [];
   }
 
   onDragEnd(canvas) {
-    this.draggedNode = null;
-    this.lastSnappedX = null;
-    this.lastSnappedY = null;
+    if (this.dragSession) {
+      // Re-affirm final positions on all nodes and groups
+      for (const rec of this.dragSession.records) {
+        const it = rec.item || rec.node;
+        if (it && it.pos && !isPinned(it)) {
+          it.pos[0] = rec.naturalX + this.dragSession.snapDeltaX;
+          it.pos[1] = rec.naturalY + this.dragSession.snapDeltaY;
+          it.setDirtyCanvas?.(true, true);
+        }
+      }
+      this.dragSession = null;
+    }
     if (this.activeGuides.length > 0) {
       this.activeGuides = [];
-      canvas?.setDirty?.(true, true);
     }
+    canvas?.setDirty?.(true, true);
   }
 
   onResizeEnd(canvas) {
+    if (this.resizeSession) {
+      const { item, width, height } = this.resizeSession;
+      if (item && item.size && !isPinned(item)) {
+        if (width != null) item.size[0] = width;
+        if (height != null) item.size[1] = height;
+        item.setSize?.(item.size);
+        item.onResize?.(item.size);
+        item.setDirtyCanvas?.(true, true);
+      }
+      this.resizeSession = null;
+    }
     if (this.resizingGuides.length > 0) {
       this.resizingGuides = [];
       canvas?.setDirty?.(true, true);
@@ -384,13 +565,13 @@ class DSSnapEngine {
   }
 
   /**
-   * Process node position during drag.
-   * Compares visual bounds of dragged node against candidate target nodes,
-   * snaps into alignment, stabilizes via hysteresis, and registers guide lines.
+   * Process graph item (node or group) position during drag.
+   * Compares visual bounds against candidate target nodes and groups,
+   * snaps cleanly into alignment, prioritizes close neighbors, and registers guide lines.
    */
-  processNodeDrag(canvas, node, pointerEvent = null) {
+  processItemDrag(canvas, activeItem, pointerEvent = null) {
     const state = this.store.state;
-    if (!state.enabled || !node) {
+    if (!state.enabled || !activeItem || !isGraphItem(activeItem) || isPinned(activeItem)) {
       this.activeGuides = [];
       return;
     }
@@ -398,93 +579,115 @@ class DSSnapEngine {
     // Alt key completely bypasses snapping for effortless 100% freeform placement
     if (pointerEvent?.altKey) {
       this.activeGuides = [];
-      this.lastSnappedX = null;
-      this.lastSnappedY = null;
+      if (this.dragSession) {
+        for (const rec of this.dragSession.records) {
+          const it = rec.item || rec.node;
+          if (it && it.pos && !isPinned(it)) {
+            it.pos[0] = rec.naturalX;
+            it.pos[1] = rec.naturalY;
+          }
+        }
+        this.dragSession.snapDeltaX = 0;
+        this.dragSession.snapDeltaY = 0;
+      }
       return;
     }
 
     // Ghost node, connecting node, or search box active — never snap
     if (isPlacementOrSearchActive()) {
       this.activeGuides = [];
-      this.lastSnappedX = null;
-      this.lastSnappedY = null;
       return;
     }
 
     const graph = canvas?.graph || app?.graph;
-    if (!graph || !Array.isArray(graph.nodes)) return;
+    if (!graph) return;
 
-    const selectedList = getSelectedNodes(canvas);
-    const selectedSet = new Set(selectedList);
-    selectedSet.add(node);
-    const selectedIds = new Set(Array.from(selectedSet).map((n) => n.id));
+    // Ensure active dragSession
+    if (!this.dragSession || this.dragSession.primaryItem !== activeItem) {
+      const selected = getSelectedGraphItems(canvas);
+      this.onDragStart(canvas, activeItem, selected);
+    }
 
-    const vBounds = getNodeVisualBounds(node);
+    // Update natural positions based on graph_mouse displacement
+    const currentMouseX = canvas?.graph_mouse ? canvas.graph_mouse[0] : (Number(activeItem.pos[0]) || 0);
+    const currentMouseY = canvas?.graph_mouse ? canvas.graph_mouse[1] : (Number(activeItem.pos[1]) || 0);
+    const dGraphX = currentMouseX - this.dragSession.lastGraphMouseX;
+    const dGraphY = currentMouseY - this.dragSession.lastGraphMouseY;
+    this.dragSession.lastGraphMouseX = currentMouseX;
+    this.dragSession.lastGraphMouseY = currentMouseY;
 
-    // Build candidate list — only VISIBLE nodes, prioritizing topmost (last in graph.nodes = front)
-    // LiteGraph node.mode: 0 = always, 1 = on event, 2 = never (hidden), 3 = bypass, 4 = always no exec
-    const HIDDEN_MODES = new Set([2, 3]);   // never-draw and bypassed
-    const totalNodes = graph.nodes.length;
+    for (const rec of this.dragSession.records) {
+      rec.naturalX += dGraphX;
+      rec.naturalY += dGraphY;
+    }
+
+    const primaryRec =
+      this.dragSession.records.find((r) => r.item === activeItem) || this.dragSession.records[0];
+    const naturalX = primaryRec.naturalX;
+    const naturalY = primaryRec.naturalY;
+
+    // Compute natural bounds of activeItem
+    const vBounds = getItemVisualBoundsAt(activeItem, naturalX, naturalY);
+
+    // Build candidate list — visible nodes and groups not in current dragging session
+    const draggedItemsSet = new Set(this.dragSession.records.map((r) => r.item));
+    const draggedIdsSet = new Set(
+      this.dragSession.records.map((r) => r.item?.id).filter((id) => id !== undefined)
+    );
 
     const candidates = [];
-    for (let i = 0; i < graph.nodes.length; i++) {
-      const other = graph.nodes[i];
-      if (!isNode(other) || other === node || selectedSet.has(other) || selectedIds.has(other.id)) continue;
-      // Skip hidden / bypassed nodes
-      if (HIDDEN_MODES.has(other.mode)) continue;
-      // Skip collapsed nodes that have no visible body (they mislead alignment)
-      // (collapsed nodes still have a title bar so keep them — but they're small)
-      const b = getNodeVisualBounds(other);
-      const dist = Math.hypot(b.centerX - vBounds.centerX, b.centerY - vBounds.centerY);
-      if (dist < 1400) {
-        // depthScore: nodes later in the array are rendered on top → lower score = higher priority
-        const depthScore = (totalNodes - 1 - i) / totalNodes;  // 0.0 = topmost, ~1.0 = bottommost
-        candidates.push({ ...b, dist, depthScore });
+
+    // 1. Candidate nodes
+    if (Array.isArray(graph.nodes)) {
+      for (let i = 0; i < graph.nodes.length; i++) {
+        const other = graph.nodes[i];
+        if (!isNode(other) || draggedItemsSet.has(other) || draggedIdsSet.has(other.id)) continue;
+        if (other.mode === 2 || other.mode === 3) continue;
+
+        const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
+        const boxDist = getBoundingBoxDistance(cb, vBounds);
+        if (boxDist < 1400) {
+          candidates.push({ ...cb, boxDist, dist: boxDist });
+        }
+      }
+    }
+
+    // 2. Candidate groups
+    const graphGroups = getGraphGroups(graph);
+    for (let i = 0; i < graphGroups.length; i++) {
+      const other = graphGroups[i];
+      if (!isGroup(other) || draggedItemsSet.has(other) || draggedIdsSet.has(other.id)) continue;
+
+      const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
+      const boxDist = getBoundingBoxDistance(cb, vBounds);
+      if (boxDist < 1600) {
+        candidates.push({ ...cb, boxDist, dist: boxDist });
       }
     }
 
     if (candidates.length === 0) {
       this.activeGuides = [];
-      this.lastSnappedX = null;
-      this.lastSnappedY = null;
+      for (const rec of this.dragSession.records) {
+        const it = rec.item || rec.node;
+        if (it && it.pos && !isPinned(it)) {
+          it.pos[0] = rec.naturalX;
+          it.pos[1] = rec.naturalY;
+        }
+      }
+      this.dragSession.snapDeltaX = 0;
+      this.dragSession.snapDeltaY = 0;
       return;
     }
 
-    // CRITICAL: Sort candidates by distance ascending (nearest neighbor first!)
-    // Then apply a secondary sort bonus for topmost (lowest depthScore) nodes.
-    candidates.sort((a, b) => {
-      // Primary: distance; Secondary: z-order (topmost first)
-      const distDiff = a.dist - b.dist;
-      if (Math.abs(distDiff) > 40) return distDiff;  // clearly different distance → pure distance sort
-      return a.depthScore - b.depthScore;              // similar distance → prefer topmost node
-    });
+    const candidatePool = candidates;
 
-    const baseThreshold = Number(state.snapThreshold) || 10;
-    const scale = canvas?.ds?.scale || 1.0;
+    const baseThreshold = Number(state.snapThreshold) || 8;
+    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
+    // Snap threshold in graph space: capped between 4 and 12 graph pixels so it stays crisp
+    const threshold = Math.min(12, Math.max(4, baseThreshold / scale));
 
-    // -------------------------------------------------------------------------
-    // TWO-ZONE GUIDE SYSTEM
-    // -------------------------------------------------------------------------
-    // visualThreshold  = outer zone: guide LINE is drawn, NO position change.
-    //                    This is the "suggestion" zone.
-    // snapZone         = inner zone (very tight): position actually adjusts — once.
-    //                    Spacing/margin guides get an even tighter inner zone so
-    //                    they're purely visual unless you're pixel-perfect.
-    // latch            = once we snap, we mark it as latched and apply zero delta
-    //                    on subsequent frames until the node escapes hysteresis.
-    //                    This prevents the "held in place" accumulation problem.
-    // -------------------------------------------------------------------------
-    const visualThreshold = Math.min(18, Math.max(8, baseThreshold / Math.max(0.2, scale)));
-    const snapZone        = 3;   // px: only actually move node when this close
-    const spacingSnapZone = 2;   // px: spacing/margin guides are even less grabby
-    const hysteresis      = visualThreshold * 1.6;  // must move this far to break latch
-
-    const minMarginX = state.minMarginEnabled ? state.minMarginX : 0;
-    const minMarginY = state.minMarginEnabled ? state.minMarginY : 0;
-
-    // Separate into distance tiers: Close neighbors (< 550px) vs Farther nodes
-    const closeCandidates = candidates.filter((c) => c.dist <= 550);
-    const candidatePool = closeCandidates.length > 0 ? closeCandidates : candidates;
+    const minMarginX = state.minMarginEnabled ? (Number(state.minMarginX) || 20) : 0;
+    const minMarginY = state.minMarginEnabled ? (Number(state.minMarginY) || 20) : 0;
 
     // --- HORIZONTAL ALIGNMENT (Matching Y coordinates / horizontal guide lines) ---
     let bestYMatch = null;
@@ -494,37 +697,88 @@ class DSSnapEngine {
       const tests = [];
 
       if (state.alignEdges) {
-        tests.push({ targetY: t.top,    sourceY: vBounds.top,    delta: t.top    - vBounds.top,    label: "Top Align",    isEdge: true });
-        tests.push({ targetY: t.bottom, sourceY: vBounds.bottom, delta: t.bottom - vBounds.bottom, label: "Bottom Align", isEdge: true });
+        // Direct Edge-to-Edge alignments (Priority 1)
+        tests.push({
+          targetY: t.top,
+          sourceY: vBounds.top,
+          diff: t.top - vBounds.top,
+          label: "Top Align",
+          priority: 1,
+        });
+        tests.push({
+          targetY: t.bottom,
+          sourceY: vBounds.bottom,
+          diff: t.bottom - vBounds.bottom,
+          label: "Bottom Align",
+          priority: 1,
+        });
+
+        // Flush Edge-to-Edge alignments (Priority 2)
+        tests.push({
+          targetY: t.top,
+          sourceY: vBounds.bottom,
+          diff: t.top - vBounds.bottom,
+          label: "Edge Align",
+          priority: 2,
+        });
+        tests.push({
+          targetY: t.bottom,
+          sourceY: vBounds.top,
+          diff: t.bottom - vBounds.top,
+          label: "Edge Align",
+          priority: 2,
+        });
       }
 
       if (state.alignSpacing && state.minMarginEnabled && minMarginY > 0) {
-        tests.push({ targetY: t.bottom + minMarginY, sourceY: vBounds.top,    delta: (t.bottom + minMarginY) - vBounds.top,    label: `${minMarginY}px Gap`, isSpacing: true, spacingY: t.bottom });
-        tests.push({ targetY: t.top    - minMarginY, sourceY: vBounds.bottom, delta: (t.top    - minMarginY) - vBounds.bottom, label: `${minMarginY}px Gap`, isSpacing: true, spacingY: t.top    });
+        tests.push({
+          targetY: t.bottom + minMarginY,
+          sourceY: vBounds.top,
+          diff: (t.bottom + minMarginY) - vBounds.top,
+          label: `${minMarginY}px Gap`,
+          priority: 3,
+        });
+        tests.push({
+          targetY: t.top - minMarginY,
+          sourceY: vBounds.bottom,
+          diff: (t.top - minMarginY) - vBounds.bottom,
+          label: `${minMarginY}px Gap`,
+          priority: 3,
+        });
       }
 
       if (state.alignCenters) {
-        tests.push({ targetY: t.centerY, sourceY: vBounds.centerY, delta: t.centerY - vBounds.centerY, label: "Center Align", isCenter: true });
+        tests.push({
+          targetY: t.centerY,
+          sourceY: vBounds.centerY,
+          diff: t.centerY - vBounds.centerY,
+          label: "Center Align",
+          priority: 4,
+        });
       }
 
-      for (const test of tests) {
-        const absDiff = Math.abs(test.delta);
-        // Use hysteresis window when already latched to this anchor, visual threshold otherwise
-        const isLatched = this.lastSnappedY?.targetId === t.id && this.lastSnappedY?.label === test.label;
-        const limit = isLatched ? hysteresis : visualThreshold;
+      // Perpendicular distance (horizontal distance along the alignment line)
+      const perpDist = Math.max(0, vBounds.left - t.right, t.left - vBounds.right);
+      // Distance penalty ensures close neighbors ALWAYS win over far-away candidates
+      const distPenalty = (perpDist / 30) * 6.0 + ((t.boxDist || 0) / 50) * 3.0;
 
-        if (absDiff <= limit) {
-          const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0) + t.depthScore * 6;
+      for (const test of tests) {
+        const absDiff = Math.abs(test.diff);
+        if (absDiff <= threshold) {
+          const typeAffinity = (vBounds.isGroup === t.isGroup) ? -2.0 : 0;
+          const score =
+            absDiff * 3.0 +
+            (test.priority - 1) * 4.0 +
+            distPenalty +
+            typeAffinity;
+
           if (score < bestYScore) {
             bestYScore = score;
             bestYMatch = {
-              targetNode: t,
-              coordY: test.targetY,
-              deltaY: test.delta,
+              targetItem: t,
+              guideY: test.targetY,
+              snapDeltaY: test.diff,
               label: test.label,
-              isSpacing: test.isSpacing || false,
-              isLatched,
-              spacingY: test.spacingY,
             };
           }
         }
@@ -539,97 +793,135 @@ class DSSnapEngine {
       const tests = [];
 
       if (state.alignEdges) {
-        tests.push({ targetX: t.left,  sourceX: vBounds.left,  delta: t.left  - vBounds.left,  label: "Left Align",  isEdge: true });
-        tests.push({ targetX: t.right, sourceX: vBounds.right, delta: t.right - vBounds.right, label: "Right Align", isEdge: true });
+        // Direct Edge-to-Edge alignments (Priority 1)
+        tests.push({
+          targetX: t.left,
+          sourceX: vBounds.left,
+          diff: t.left - vBounds.left,
+          label: "Left Align",
+          priority: 1,
+        });
+        tests.push({
+          targetX: t.right,
+          sourceX: vBounds.right,
+          diff: t.right - vBounds.right,
+          label: "Right Align",
+          priority: 1,
+        });
+
+        // Flush Edge-to-Edge alignments (Priority 2)
+        tests.push({
+          targetX: t.left,
+          sourceX: vBounds.right,
+          diff: t.left - vBounds.right,
+          label: "Edge Align",
+          priority: 2,
+        });
+        tests.push({
+          targetX: t.right,
+          sourceX: vBounds.left,
+          diff: t.right - vBounds.left,
+          label: "Edge Align",
+          priority: 2,
+        });
       }
 
       if (state.alignSpacing && state.minMarginEnabled && minMarginX > 0) {
-        tests.push({ targetX: t.right + minMarginX, sourceX: vBounds.left,  delta: (t.right + minMarginX) - vBounds.left,  label: `${minMarginX}px Gap`, isSpacing: true, spacingX: t.right });
-        tests.push({ targetX: t.left  - minMarginX, sourceX: vBounds.right, delta: (t.left  - minMarginX) - vBounds.right, label: `${minMarginX}px Gap`, isSpacing: true, spacingX: t.left  });
+        tests.push({
+          targetX: t.right + minMarginX,
+          sourceX: vBounds.left,
+          diff: (t.right + minMarginX) - vBounds.left,
+          label: `${minMarginX}px Gap`,
+          priority: 3,
+        });
+        tests.push({
+          targetX: t.left - minMarginX,
+          sourceX: vBounds.right,
+          diff: (t.left - minMarginX) - vBounds.right,
+          label: `${minMarginX}px Gap`,
+          priority: 3,
+        });
       }
 
       if (state.alignCenters) {
-        tests.push({ targetX: t.centerX, sourceX: vBounds.centerX, delta: t.centerX - vBounds.centerX, label: "Center Align", isCenter: true });
+        tests.push({
+          targetX: t.centerX,
+          sourceX: vBounds.centerX,
+          diff: t.centerX - vBounds.centerX,
+          label: "Center Align",
+          priority: 4,
+        });
       }
 
-      for (const test of tests) {
-        const absDiff = Math.abs(test.delta);
-        const isLatched = this.lastSnappedX?.targetId === t.id && this.lastSnappedX?.label === test.label;
-        const limit = isLatched ? hysteresis : visualThreshold;
+      // Perpendicular distance (vertical distance along the alignment line)
+      const perpDist = Math.max(0, vBounds.top - t.bottom, t.top - vBounds.bottom);
+      // Distance penalty ensures close neighbors ALWAYS win over far-away candidates
+      const distPenalty = (perpDist / 30) * 6.0 + ((t.boxDist || 0) / 50) * 3.0;
 
-        if (absDiff <= limit) {
-          const score = absDiff + (t.dist / 300) * 3 + (test.isCenter ? 4 : 0) + t.depthScore * 6;
+      for (const test of tests) {
+        const absDiff = Math.abs(test.diff);
+        if (absDiff <= threshold) {
+          const typeAffinity = (vBounds.isGroup === t.isGroup) ? -2.0 : 0;
+          const score =
+            absDiff * 3.0 +
+            (test.priority - 1) * 4.0 +
+            distPenalty +
+            typeAffinity;
+
           if (score < bestXScore) {
             bestXScore = score;
             bestXMatch = {
-              targetNode: t,
-              coordX: test.targetX,
-              deltaX: test.delta,
+              targetItem: t,
+              guideX: test.targetX,
+              snapDeltaX: test.diff,
               label: test.label,
-              isSpacing: test.isSpacing || false,
-              isLatched,
-              spacingX: test.spacingX,
             };
           }
         }
       }
     }
 
-    // -------------------------------------------------------------------------
-    // APPLY POSITION CHANGES  (two-zone: visual = no move, snap zone = move once)
-    // -------------------------------------------------------------------------
-    // Rule: if already latched to this guide → apply ZERO delta (guide is visual only).
-    //       If newly entering snap zone (absDiff ≤ snapZone) → apply EXACT delta once.
-    //       If in visual zone only (absDiff > snapZone) → apply ZERO delta.
-    // This means the guide line shows up early as a hint, but only snaps when truly close.
+    // Apply snap deltas
+    const snapDeltaX = bestXMatch ? bestXMatch.snapDeltaX : 0;
+    const snapDeltaY = bestYMatch ? bestYMatch.snapDeltaY : 0;
+
+    this.dragSession.snapDeltaX = snapDeltaX;
+    this.dragSession.snapDeltaY = snapDeltaY;
+
+    for (const rec of this.dragSession.records) {
+      const it = rec.item || rec.node;
+      if (it && it.pos && !isPinned(it)) {
+        it.pos[0] = rec.naturalX + snapDeltaX;
+        it.pos[1] = rec.naturalY + snapDeltaY;
+      }
+    }
+
+    const snappedBounds = getItemVisualBoundsAt(
+      activeItem,
+      primaryRec.naturalX + snapDeltaX,
+      primaryRec.naturalY + snapDeltaY
+    );
+
     const guides = [];
 
     if (bestYMatch) {
-      const absDY = Math.abs(bestYMatch.deltaY);
-      const innerZone = bestYMatch.isSpacing ? spacingSnapZone : snapZone;
-      if (!bestYMatch.isLatched && absDY <= innerZone) {
-        // First entry into snap zone: move exactly to alignment
-        for (const sn of selectedSet) {
-          sn.pos[1] += bestYMatch.deltaY;
-        }
-      }
-      // If already latched or only in visual zone: zero position change — guide line only
-      this.lastSnappedY = { targetId: bestYMatch.targetNode.id, label: bestYMatch.label };
-
       guides.push({
         type: "horizontal",
-        y: bestYMatch.coordY,
-        sourceNode: node,
-        targetNode: bestYMatch.targetNode,
+        y: bestYMatch.guideY,
+        sourceBounds: snappedBounds,
+        targetBounds: bestYMatch.targetItem,
         label: bestYMatch.label,
-        isSpacing: bestYMatch.isSpacing,
-        spacingY: bestYMatch.spacingY,
       });
-    } else {
-      this.lastSnappedY = null;
     }
 
     if (bestXMatch) {
-      const absDX = Math.abs(bestXMatch.deltaX);
-      const innerZone = bestXMatch.isSpacing ? spacingSnapZone : snapZone;
-      if (!bestXMatch.isLatched && absDX <= innerZone) {
-        for (const sn of selectedSet) {
-          sn.pos[0] += bestXMatch.deltaX;
-        }
-      }
-      this.lastSnappedX = { targetId: bestXMatch.targetNode.id, label: bestXMatch.label };
-
       guides.push({
         type: "vertical",
-        x: bestXMatch.coordX,
-        sourceNode: node,
-        targetNode: bestXMatch.targetNode,
+        x: bestXMatch.guideX,
+        sourceBounds: snappedBounds,
+        targetBounds: bestXMatch.targetItem,
         label: bestXMatch.label,
-        isSpacing: bestXMatch.isSpacing,
-        spacingX: bestXMatch.spacingX,
       });
-    } else {
-      this.lastSnappedX = null;
     }
 
     this.activeGuides = guides;
@@ -637,75 +929,459 @@ class DSSnapEngine {
   }
 
   /**
-   * Process node resizing in real-time.
+   * Compatibility wrapper for node dragging.
    */
-  processNodeResize(canvas, node) {
+  processNodeDrag(canvas, activeNode, pointerEvent = null) {
+    return this.processItemDrag(canvas, activeNode, pointerEvent);
+  }
+
+  /**
+   * Process group resizing in real-time with edge alignment and visual guides.
+   */
+  processGroupResize(canvas, group) {
     const state = this.store.state;
-    if (!state.enabled || !state.resizeSnap || !node) {
+    if (!state.enabled || !state.resizeSnap || !group || !isGroup(group) || isPinned(group)) {
       this.resizingGuides = [];
+      this.resizeSession = null;
       return;
     }
 
     const graph = canvas?.graph || app?.graph;
-    if (!graph || !Array.isArray(graph.nodes)) return;
+    if (!graph) return;
 
-    const threshold = state.snapThreshold;
-    const candidates = graph.nodes
-      .filter((n) => isNode(n) && n !== node)
-      .map(getNodeVisualBounds);
-
-    if (candidates.length === 0) {
+    // Alt key completely bypasses resize snapping
+    const pointerEvent = canvas?.pointer?.eMove || window.event;
+    if (pointerEvent?.altKey) {
       this.resizingGuides = [];
+      this.resizeSession = null;
       return;
     }
 
-    const currentW = node.size[0];
-    const currentH = node.size[1];
-    const guides = [];
+    const allCandidates = [
+      ...getGraphGroups(graph).filter((g) => g !== group).map((g) => getItemVisualBoundsAt(g, g.pos[0], g.pos[1])),
+      ...(graph.nodes || []).filter(isNode).map((n) => getItemVisualBoundsAt(n, n.pos[0], n.pos[1])),
+    ];
 
-    // Width Dimension Matching
-    let bestWDiff = Infinity;
-    let bestWTarget = null;
+    if (allCandidates.length === 0) {
+      this.resizingGuides = [];
+      this.resizeSession = null;
+      return;
+    }
 
-    for (const t of candidates) {
-      const diffW = Math.abs(currentW - t.width);
-      if (diffW <= threshold && diffW < bestWDiff) {
-        bestWDiff = diffW;
-        bestWTarget = t;
+    const baseThreshold = Number(state.snapThreshold) || 10;
+    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
+    const threshold = Math.max(4, baseThreshold / scale);
+
+    const minMarginX = state.minMarginEnabled ? (Number(state.minMarginX) || 20) : 0;
+    const minMarginY = state.minMarginEnabled ? (Number(state.minMarginY) || 20) : 0;
+
+    const posX = Number(group.pos[0]) || 0;
+    const posY = Number(group.pos[1]) || 0;
+    const currentW = Math.max(140, Number(group.size[0]) || 140);
+    const currentH = Math.max(80, Number(group.size[1]) || 80);
+    const currentRight = posX + currentW;
+    const currentBottom = posY + currentH;
+
+    const minW = 140;
+    const minH = 80;
+
+    let bestRightDiff = Infinity;
+    let bestRightTarget = null;
+    let bestRightLabel = "Right Align";
+    let bestRightW = currentW;
+    let bestRightGuideX = currentRight;
+
+    let bestBottomDiff = Infinity;
+    let bestBottomTarget = null;
+    let bestBottomLabel = "Bottom Align";
+    let bestBottomH = currentH;
+    let bestBottomGuideY = currentBottom;
+
+    for (const t of allCandidates) {
+      // 1. Right-to-Right Edge Align
+      const diffRR = Math.abs(currentRight - t.right);
+      if (diffRR <= threshold && diffRR < bestRightDiff && (t.right - posX) >= minW) {
+        bestRightDiff = diffRR;
+        bestRightTarget = t;
+        bestRightLabel = "Right Align";
+        bestRightW = t.right - posX;
+        bestRightGuideX = t.right;
+      }
+
+      // 2. Right-to-Left Edge Align / Margin
+      if (t.left > posX) {
+        const diffRL = Math.abs(currentRight - t.left);
+        if (diffRL <= threshold && diffRL < bestRightDiff && (t.left - posX) >= minW) {
+          bestRightDiff = diffRL;
+          bestRightTarget = t;
+          bestRightLabel = "Edge Align";
+          bestRightW = t.left - posX;
+          bestRightGuideX = t.left;
+        }
+        if (minMarginX > 0) {
+          const diffGap = Math.abs(currentRight - (t.left - minMarginX));
+          if (diffGap <= threshold && diffGap < bestRightDiff && (t.left - minMarginX - posX) >= minW) {
+            bestRightDiff = diffGap;
+            bestRightTarget = t;
+            bestRightLabel = `${minMarginX}px Gap`;
+            bestRightW = t.left - minMarginX - posX;
+            bestRightGuideX = t.left - minMarginX;
+          }
+        }
+      }
+
+      // 3. Bottom-to-Bottom Edge Align
+      const diffBB = Math.abs(currentBottom - t.bottom);
+      if (diffBB <= threshold && diffBB < bestBottomDiff && (t.bottom - posY) >= minH) {
+        bestBottomDiff = diffBB;
+        bestBottomTarget = t;
+        bestBottomLabel = "Bottom Align";
+        bestBottomH = t.bottom - posY;
+        bestBottomGuideY = t.bottom;
+      }
+
+      // 4. Bottom-to-Top Edge Align / Margin
+      if (t.top > posY) {
+        const diffBT = Math.abs(currentBottom - t.top);
+        if (diffBT <= threshold && diffBT < bestBottomDiff && (t.top - posY) >= minH) {
+          bestBottomDiff = diffBT;
+          bestBottomTarget = t;
+          bestBottomLabel = "Edge Align";
+          bestBottomH = t.top - posY;
+          bestBottomGuideY = t.top;
+        }
+        if (minMarginY > 0) {
+          const diffGap = Math.abs(currentBottom - (t.top - minMarginY));
+          if (diffGap <= threshold && diffGap < bestBottomDiff && (t.top - minMarginY - posY) >= minH) {
+            bestBottomDiff = diffGap;
+            bestBottomTarget = t;
+            bestBottomLabel = `${minMarginY}px Gap`;
+            bestBottomH = t.top - minMarginY - posY;
+            bestBottomGuideY = t.top - minMarginY;
+          }
+        }
       }
     }
 
-    if (bestWTarget) {
-      node.size[0] = bestWTarget.width;
-      node.onResize?.(node.size);
+    const finalW = bestRightTarget ? Math.max(minW, Math.round(bestRightW)) : currentW;
+    const finalH = bestBottomTarget ? Math.max(minH, Math.round(bestBottomH)) : currentH;
+
+    if (bestRightTarget || bestBottomTarget) {
+      group.size[0] = finalW;
+      group.size[1] = finalH;
+      group.setDirtyCanvas?.(false, true);
+
+      this.resizeSession = {
+        item: group,
+        width: bestRightTarget ? finalW : null,
+        height: bestBottomTarget ? finalH : null,
+      };
+    } else {
+      this.resizeSession = null;
+    }
+
+    const updatedGroupBounds = getGroupVisualBoundsAt(group, posX, posY);
+    const guides = [];
+
+    if (bestRightTarget) {
       guides.push({
         type: "vertical",
-        x: node.pos[0] + bestWTarget.width,
-        label: `Width ${Math.round(bestWTarget.width)}px`,
-        isDimensionMatch: true,
+        x: bestRightGuideX,
+        sourceBounds: updatedGroupBounds,
+        targetBounds: bestRightTarget,
+        label: bestRightLabel,
+        isResizeGuide: true,
       });
     }
 
-    // Height Dimension Matching
-    let bestHDiff = Infinity;
-    let bestHTarget = null;
+    if (bestBottomTarget) {
+      guides.push({
+        type: "horizontal",
+        y: bestBottomGuideY,
+        sourceBounds: updatedGroupBounds,
+        targetBounds: bestBottomTarget,
+        label: bestBottomLabel,
+        isResizeGuide: true,
+      });
+    }
 
-    for (const t of candidates) {
-      const diffH = Math.abs(currentH - t.height);
-      if (diffH <= threshold && diffH < bestHDiff) {
-        bestHDiff = diffH;
-        bestHTarget = t;
+    this.resizingGuides = guides;
+    canvas?.setDirty?.(true, true);
+  }
+
+  /**
+   * Process node resizing in real-time with edge alignment, dimension matching, and guidelines.
+   */
+  processNodeResize(canvas, node) {
+    const state = this.store.state;
+    if (!state.enabled || !state.resizeSnap || !node || !isNode(node) || isPinned(node)) {
+      this.resizingGuides = [];
+      this.resizeSession = null;
+      return;
+    }
+
+    const graph = canvas?.graph || app?.graph;
+    if (!graph) return;
+
+    // Alt key completely bypasses resize snapping
+    const pointerEvent = canvas?.pointer?.eMove || window.event;
+    if (pointerEvent?.altKey) {
+      this.resizingGuides = [];
+      this.resizeSession = null;
+      return;
+    }
+
+    const baseThreshold = Number(state.snapThreshold) || 10;
+    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
+    const threshold = Math.max(4, baseThreshold / scale);
+
+    const minMarginX = state.minMarginEnabled ? (Number(state.minMarginX) || 20) : 0;
+    const minMarginY = state.minMarginEnabled ? (Number(state.minMarginY) || 20) : 0;
+
+    const posX = Number(node.pos[0]) || 0;
+    const posY = Number(node.pos[1]) || 0;
+    const currentW = Math.max(10, Number(node.size[0]) || 60);
+    const currentH = Math.max(10, Number(node.size[1]) || 40);
+    const nodeVBounds = getNodeVisualBoundsAt(node, posX, posY);
+
+    // Minimum node dimensions
+    const computedMin = typeof node.computeSize === "function" ? node.computeSize() : [60, 30];
+    const minW = Math.max(Number(node.min_width) || 40, computedMin[0] || 60);
+    const minH = Math.max(Number(node.min_height) || 30, computedMin[1] || 30);
+
+    // Collect all candidate nodes and groups
+    const candidates = [];
+
+    if (Array.isArray(graph.nodes)) {
+      for (let i = 0; i < graph.nodes.length; i++) {
+        const other = graph.nodes[i];
+        if (!isNode(other) || other === node) continue;
+        if (other.mode === 2 || other.mode === 3) continue;
+
+        const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
+        const boxDist = getBoundingBoxDistance(cb, nodeVBounds);
+        if (boxDist < 1400) {
+          candidates.push({ ...cb, boxDist });
+        }
       }
     }
 
-    if (bestHTarget) {
-      node.size[1] = bestHTarget.height;
+    const graphGroups = getGraphGroups(graph);
+    for (let i = 0; i < graphGroups.length; i++) {
+      const other = graphGroups[i];
+      if (!isGroup(other)) continue;
+
+      const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
+      const boxDist = getBoundingBoxDistance(cb, nodeVBounds);
+      if (boxDist < 1600) {
+        candidates.push({ ...cb, boxDist });
+      }
+    }
+
+    if (candidates.length === 0) {
+      this.resizingGuides = [];
+      this.resizeSession = null;
+      return;
+    }
+
+    const resizeDir = canvas?.pointer?.resizeDirection || "SE";
+    const affectsRight = resizeDir.includes("E") || resizeDir === "SE" || !resizeDir;
+    const affectsBottom = resizeDir.includes("S") || resizeDir === "SE" || !resizeDir;
+
+    let bestWidthMatch = null;
+    let bestWidthScore = Infinity;
+
+    let bestHeightMatch = null;
+    let bestHeightScore = Infinity;
+
+    // Evaluate candidates
+    for (const t of candidates) {
+      // --- WIDTH / RIGHT EDGE ALIGNMENT ---
+      if (affectsRight) {
+        const widthTests = [];
+
+        // 1. Right-to-Right Edge Align (Priority 1)
+        const targetW_R = t.right - posX;
+        if (targetW_R >= minW) {
+          widthTests.push({
+            targetW: targetW_R,
+            guideX: t.right,
+            diff: targetW_R - currentW,
+            label: "Right Align",
+            priority: 1,
+          });
+        }
+
+        // 2. Right-to-Left Edge Flush or Margin Gap (Priority 2)
+        if (t.left > posX) {
+          const targetW_L = t.left - posX;
+          if (targetW_L >= minW) {
+            widthTests.push({
+              targetW: targetW_L,
+              guideX: t.left,
+              diff: targetW_L - currentW,
+              label: "Edge Align",
+              priority: 2,
+            });
+          }
+          if (minMarginX > 0 && targetW_L - minMarginX >= minW) {
+            widthTests.push({
+              targetW: targetW_L - minMarginX,
+              guideX: t.left - minMarginX,
+              diff: (targetW_L - minMarginX) - currentW,
+              label: `${minMarginX}px Gap`,
+              priority: 2,
+            });
+          }
+        }
+
+        // 3. Exact Width Dimension Match (Priority 3)
+        if (t.width >= minW) {
+          widthTests.push({
+            targetW: t.width,
+            guideX: posX + t.width,
+            diff: t.width - currentW,
+            label: `Width ${Math.round(t.width)}px`,
+            priority: 3,
+          });
+        }
+
+        const vertDist = Math.max(0, nodeVBounds.top - t.bottom, t.top - nodeVBounds.bottom);
+        for (const test of widthTests) {
+          const absDiff = Math.abs(test.diff);
+          if (absDiff <= threshold) {
+            const score =
+              absDiff * 2.0 +
+              (test.priority - 1) * 5.0 +
+              (vertDist / 100) * 1.5 +
+              (t.boxDist / 200) * 1.0;
+            if (score < bestWidthScore) {
+              bestWidthScore = score;
+              bestWidthMatch = {
+                targetItem: t,
+                targetW: test.targetW,
+                guideX: test.guideX,
+                label: test.label,
+              };
+            }
+          }
+        }
+      }
+
+      // --- HEIGHT / BOTTOM EDGE ALIGNMENT ---
+      if (affectsBottom) {
+        const heightTests = [];
+
+        // 1. Bottom-to-Bottom Edge Align (Priority 1)
+        const targetH_B = t.bottom - posY;
+        if (targetH_B >= minH) {
+          heightTests.push({
+            targetH: targetH_B,
+            guideY: t.bottom,
+            diff: targetH_B - currentH,
+            label: "Bottom Align",
+            priority: 1,
+          });
+        }
+
+        // 2. Bottom-to-Top Edge Flush or Margin Gap (Priority 2)
+        if (t.top > posY) {
+          const targetH_T = t.top - posY;
+          if (targetH_T >= minH) {
+            heightTests.push({
+              targetH: targetH_T,
+              guideY: t.top,
+              diff: targetH_T - currentH,
+              label: "Edge Align",
+              priority: 2,
+            });
+          }
+          if (minMarginY > 0 && targetH_T - minMarginY >= minH) {
+            heightTests.push({
+              targetH: targetH_T - minMarginY,
+              guideY: t.top - minMarginY,
+              diff: (targetH_T - minMarginY) - currentH,
+              label: `${minMarginY}px Gap`,
+              priority: 2,
+            });
+          }
+        }
+
+        // 3. Exact Height Dimension Match (Priority 3)
+        if (t.height >= minH) {
+          heightTests.push({
+            targetH: t.height,
+            guideY: posY + t.height,
+            diff: t.height - currentH,
+            label: `Height ${Math.round(t.height)}px`,
+            priority: 3,
+          });
+        }
+
+        const horizDist = Math.max(0, nodeVBounds.left - t.right, t.left - nodeVBounds.right);
+        for (const test of heightTests) {
+          const absDiff = Math.abs(test.diff);
+          if (absDiff <= threshold) {
+            const score =
+              absDiff * 2.0 +
+              (test.priority - 1) * 5.0 +
+              (horizDist / 100) * 1.5 +
+              (t.boxDist / 200) * 1.0;
+            if (score < bestHeightScore) {
+              bestHeightScore = score;
+              bestHeightMatch = {
+                targetItem: t,
+                targetH: test.targetH,
+                guideY: test.guideY,
+                label: test.label,
+              };
+            }
+          }
+        }
+      }
+    }
+
+    const finalW = bestWidthMatch ? Math.max(minW, Math.round(bestWidthMatch.targetW)) : currentW;
+    const finalH = bestHeightMatch ? Math.max(minH, Math.round(bestHeightMatch.targetH)) : currentH;
+
+    if (bestWidthMatch || bestHeightMatch) {
+      node.size[0] = finalW;
+      node.size[1] = finalH;
+      node.setSize?.(node.size);
       node.onResize?.(node.size);
+      node.setDirtyCanvas?.(true, true);
+
+      this.resizeSession = {
+        item: node,
+        width: bestWidthMatch ? finalW : null,
+        height: bestHeightMatch ? finalH : null,
+      };
+    } else {
+      this.resizeSession = null;
+    }
+
+    const updatedNodeBounds = getNodeVisualBoundsAt(node, posX, posY);
+    const guides = [];
+
+    if (bestWidthMatch) {
+      guides.push({
+        type: "vertical",
+        x: bestWidthMatch.guideX,
+        sourceBounds: updatedNodeBounds,
+        targetBounds: bestWidthMatch.targetItem,
+        label: bestWidthMatch.label,
+        isResizeGuide: true,
+      });
+    }
+
+    if (bestHeightMatch) {
       guides.push({
         type: "horizontal",
-        y: node.pos[1] + bestHTarget.height,
-        label: `Height ${Math.round(bestHTarget.height)}px`,
-        isDimensionMatch: true,
+        y: bestHeightMatch.guideY,
+        sourceBounds: updatedNodeBounds,
+        targetBounds: bestHeightMatch.targetItem,
+        label: bestHeightMatch.label,
+        isResizeGuide: true,
       });
     }
 
@@ -715,6 +1391,7 @@ class DSSnapEngine {
 
   /**
    * Draws active visual alignment guides on the canvas in graph coordinates.
+   * Scoped to connect the aligned nodes directly with precision tick marks at extreme edges.
    */
   drawGuides(ctx, canvas) {
     const allGuides = [...this.activeGuides, ...this.resizingGuides];
@@ -726,25 +1403,9 @@ class DSSnapEngine {
       getComputedStyle(document.documentElement).getPropertyValue("--ds-color-accent")?.trim() ||
       getComputedStyle(document.documentElement).getPropertyValue("--ds-accent")?.trim() ||
       "#67e8f9";
-    const scale = canvas?.ds?.scale || 1.0;
+    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
     const lineWidth = Math.max(1.5, 2.0 / scale);
-    const dash = [8 / scale, 5 / scale];
-
-    // Compute large bounding extent across visible canvas viewport
-    let vx1 = -500000;
-    let vx2 = 500000;
-    let vy1 = -500000;
-    let vy2 = 500000;
-    if (canvas?.visible_area && canvas.visible_area.length >= 4) {
-      const minX = Math.min(canvas.visible_area[0], canvas.visible_area[2]);
-      const maxX = Math.max(canvas.visible_area[0], canvas.visible_area[2]);
-      const minY = Math.min(canvas.visible_area[1], canvas.visible_area[3]);
-      const maxY = Math.max(canvas.visible_area[1], canvas.visible_area[3]);
-      vx1 = minX - 50000;
-      vx2 = maxX + 50000;
-      vy1 = minY - 50000;
-      vy2 = maxY + 50000;
-    }
+    const dash = [6 / scale, 4 / scale];
 
     ctx.save();
 
@@ -753,119 +1414,162 @@ class DSSnapEngine {
       ctx.fillStyle = accent;
       ctx.lineWidth = lineWidth;
       ctx.setLineDash(dash);
-
-      // Clean guide stroke without glow blur
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
 
-      ctx.beginPath();
+      const sb = guide.sourceBounds;
+      const tb = guide.targetBounds;
+
       if (guide.type === "horizontal") {
-        ctx.moveTo(vx1, guide.y);
-        ctx.lineTo(vx2, guide.y);
-      } else {
-        ctx.moveTo(guide.x, vy1);
-        ctx.lineTo(guide.x, vy2);
-      }
-      ctx.stroke();
+        let x1, x2;
+        if (sb && tb) {
+          x1 = Math.min(sb.left, tb.left) - 16 / scale;
+          x2 = Math.max(sb.right, tb.right) + 16 / scale;
+        } else {
+          const va = canvas?.visible_area;
+          x1 = va ? va[0] - 100 : -50000;
+          x2 = va ? va[2] + 100 : 50000;
+        }
 
-      // Reset dash & shadow for badges and ticks
-      ctx.setLineDash([]);
-      ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(x1, guide.y);
+        ctx.lineTo(x2, guide.y);
+        ctx.stroke();
 
-      // Draw anchor tick marks if source & target nodes are available
-      if (guide.sourceNode && guide.targetNode) {
-        const sb = guide.sourceNode?.left !== undefined ? guide.sourceNode : getNodeVisualBounds(guide.sourceNode);
-        const tb = guide.targetNode?.left !== undefined ? guide.targetNode : getNodeVisualBounds(guide.targetNode);
+        // Draw precision extreme-edge ticks
+        if (sb && tb) {
+          ctx.setLineDash([]);
+          ctx.lineWidth = Math.max(2, 2.5 / scale);
+          const tickLen = 6 / scale;
 
-        ctx.lineWidth = Math.max(2, 2.5 / scale);
-        const tickLen = 7 / scale;
-
-        if (guide.type === "horizontal") {
           ctx.beginPath();
-          // Tick at source left & right
           ctx.moveTo(sb.left, guide.y - tickLen);
           ctx.lineTo(sb.left, guide.y + tickLen);
           ctx.moveTo(sb.right, guide.y - tickLen);
           ctx.lineTo(sb.right, guide.y + tickLen);
-          // Tick at target left & right
           ctx.moveTo(tb.left, guide.y - tickLen);
           ctx.lineTo(tb.left, guide.y + tickLen);
           ctx.moveTo(tb.right, guide.y - tickLen);
           ctx.lineTo(tb.right, guide.y + tickLen);
           ctx.stroke();
-        } else {
+        }
+
+        // Draw high-contrast badge label
+        if (guide.label) {
+          const text = String(guide.label).toUpperCase();
+          const fontSize = Math.max(10, Math.round(11 / scale));
+          ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+
+          const tw = ctx.measureText(text).width;
+          const padX = 7 / scale;
+          const padY = 3.5 / scale;
+          const boxW = tw + padX * 2;
+          const boxH = fontSize + padY * 2;
+
+          let bx, by;
+          if (sb && tb) {
+            bx = (sb.centerX + tb.centerX) / 2 - boxW / 2;
+            by = guide.y - boxH - 6 / scale;
+          } else {
+            bx = (x1 + x2) / 2 - boxW / 2;
+            by = guide.y - boxH - 6 / scale;
+          }
+
+          // Pill background
+          ctx.fillStyle = "rgba(10, 12, 16, 0.94)";
+          ctx.strokeStyle = accent;
+          ctx.lineWidth = 1.2 / scale;
+
+          const r = 4 / scale;
           ctx.beginPath();
-          // Tick at source top & bottom
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(bx, by, boxW, boxH, r);
+          } else {
+            ctx.rect(bx, by, boxW, boxH);
+          }
+          ctx.fill();
+          ctx.stroke();
+
+          // Label text
+          ctx.fillStyle = accent;
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, bx + padX, by + boxH / 2);
+        }
+      } else {
+        let y1, y2;
+        if (sb && tb) {
+          y1 = Math.min(sb.top, tb.top) - 16 / scale;
+          y2 = Math.max(sb.bottom, tb.bottom) + 16 / scale;
+        } else {
+          const va = canvas?.visible_area;
+          y1 = va ? va[1] - 100 : -50000;
+          y2 = va ? va[3] + 100 : 50000;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(guide.x, y1);
+        ctx.lineTo(guide.x, y2);
+        ctx.stroke();
+
+        // Draw precision extreme-edge ticks
+        if (sb && tb) {
+          ctx.setLineDash([]);
+          ctx.lineWidth = Math.max(2, 2.5 / scale);
+          const tickLen = 6 / scale;
+
+          ctx.beginPath();
           ctx.moveTo(guide.x - tickLen, sb.top);
           ctx.lineTo(guide.x + tickLen, sb.top);
           ctx.moveTo(guide.x - tickLen, sb.bottom);
           ctx.lineTo(guide.x + tickLen, sb.bottom);
-          // Tick at target top & bottom
           ctx.moveTo(guide.x - tickLen, tb.top);
           ctx.lineTo(guide.x + tickLen, tb.top);
           ctx.moveTo(guide.x - tickLen, tb.bottom);
           ctx.lineTo(guide.x + tickLen, tb.bottom);
           ctx.stroke();
         }
-      }
 
-      // Draw high-contrast badge label
-      if (guide.label) {
-        const text = String(guide.label).toUpperCase();
-        const fontSize = Math.max(10, Math.round(11 / scale));
-        ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+        // Draw high-contrast badge label
+        if (guide.label) {
+          const text = String(guide.label).toUpperCase();
+          const fontSize = Math.max(10, Math.round(11 / scale));
+          ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
 
-        const tw = ctx.measureText(text).width;
-        const padX = 7 / scale;
-        const padY = 3.5 / scale;
-        const boxW = tw + padX * 2;
-        const boxH = fontSize + padY * 2;
+          const tw = ctx.measureText(text).width;
+          const padX = 7 / scale;
+          const padY = 3.5 / scale;
+          const boxW = tw + padX * 2;
+          const boxH = fontSize + padY * 2;
 
-        let bx = 0;
-        let by = 0;
-
-        if (guide.sourceNode && guide.targetNode) {
-          const sb = guide.sourceNode?.left !== undefined ? guide.sourceNode : getNodeVisualBounds(guide.sourceNode);
-          const tb = guide.targetNode?.left !== undefined ? guide.targetNode : getNodeVisualBounds(guide.targetNode);
-          if (guide.type === "horizontal") {
-            bx = (sb.centerX + tb.centerX) / 2 - boxW / 2;
-            by = guide.y - boxH - 6 / scale;
-          } else {
+          let bx, by;
+          if (sb && tb) {
             bx = guide.x + 8 / scale;
             by = (sb.centerY + tb.centerY) / 2 - boxH / 2;
-          }
-        } else {
-          const va = canvas?.visible_area;
-          const midX = va && va.length >= 3 ? (va[0] + va[2]) / 2 : (guide.x || 0);
-          const midY = va && va.length >= 4 ? (va[1] + va[3]) / 2 : (guide.y || 0);
-          if (guide.type === "horizontal") {
-            bx = midX - boxW / 2;
-            by = guide.y - boxH - 6 / scale;
           } else {
             bx = guide.x + 8 / scale;
-            by = midY - boxH / 2;
+            by = (y1 + y2) / 2 - boxH / 2;
           }
+
+          // Pill background
+          ctx.fillStyle = "rgba(10, 12, 16, 0.94)";
+          ctx.strokeStyle = accent;
+          ctx.lineWidth = 1.2 / scale;
+
+          const r = 4 / scale;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(bx, by, boxW, boxH, r);
+          } else {
+            ctx.rect(bx, by, boxW, boxH);
+          }
+          ctx.fill();
+          ctx.stroke();
+
+          // Label text
+          ctx.fillStyle = accent;
+          ctx.textBaseline = "middle";
+          ctx.fillText(text, bx + padX, by + boxH / 2);
         }
-
-        // Pill background
-        ctx.fillStyle = "rgba(10, 12, 16, 0.94)";
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 1.2 / scale;
-
-        const r = 4 / scale;
-        ctx.beginPath();
-        if (typeof ctx.roundRect === "function") {
-          ctx.roundRect(bx, by, boxW, boxH, r);
-        } else {
-          ctx.rect(bx, by, boxW, boxH);
-        }
-        ctx.fill();
-        ctx.stroke();
-
-        // Label text
-        ctx.fillStyle = accent;
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, bx + padX, by + boxH / 2);
       }
     }
 
@@ -876,148 +1580,11 @@ class DSSnapEngine {
 export const snapEngine = new DSSnapEngine(snapStore);
 
 // ---------------------------------------------------------------------------
-// 5. UNDO & REDO HISTORY MANAGER
-// ---------------------------------------------------------------------------
-class DSSnapHistoryManager {
-  constructor(maxDepth = 50) {
-    this.undoStack = [];
-    this.redoStack = [];
-    this.maxDepth = maxDepth;
-    this._arrowTimer = null;
-    this._arrowInitialSnapshot = null;
-    this._dragInitialSnapshot = null;
-  }
-
-  takeSnapshot(nodes) {
-    if (!nodes || !nodes.length) return [];
-    const seen = new Set();
-    const result = [];
-    for (const n of nodes) {
-      if (!isNode(n) || seen.has(n.id)) continue;
-      seen.add(n.id);
-      result.push({
-        id: n.id,
-        pos: [Number(n.pos[0]) || 0, Number(n.pos[1]) || 0],
-        size: [Number(n.size[0]) || 0, Number(n.size[1]) || 0],
-      });
-    }
-    return result;
-  }
-
-  hasChanged(before, after) {
-    if (!before || !after || before.length !== after.length) return true;
-    for (let i = 0; i < before.length; i++) {
-      const b = before[i];
-      const a = after[i];
-      if (b.id !== a.id) return true;
-      if (Math.abs(b.pos[0] - a.pos[0]) > 0.01 || Math.abs(b.pos[1] - a.pos[1]) > 0.01) return true;
-      if (Math.abs(b.size[0] - a.size[0]) > 0.01 || Math.abs(b.size[1] - a.size[1]) > 0.01) return true;
-    }
-    return false;
-  }
-
-  push(description, beforeSnapshot, afterSnapshot) {
-    if (!this.hasChanged(beforeSnapshot, afterSnapshot)) return;
-    this.undoStack.push({
-      description,
-      before: beforeSnapshot,
-      after: afterSnapshot,
-    });
-    if (this.undoStack.length > this.maxDepth) {
-      this.undoStack.shift();
-    }
-    this.redoStack = [];
-  }
-
-  record(description, nodes, actionFn) {
-    const before = this.takeSnapshot(nodes);
-    try {
-      actionFn();
-    } finally {
-      const after = this.takeSnapshot(nodes);
-      this.push(description, before, after);
-    }
-  }
-
-  startDrag(nodes) {
-    this._dragInitialSnapshot = this.takeSnapshot(nodes);
-  }
-
-  endDrag(nodes) {
-    if (!this._dragInitialSnapshot || !this._dragInitialSnapshot.length) return;
-    const after = this.takeSnapshot(nodes);
-    this.push("Move / Snap", this._dragInitialSnapshot, after);
-    this._dragInitialSnapshot = null;
-  }
-
-  recordArrowMove(nodes, stepFn) {
-    if (!this._arrowInitialSnapshot) {
-      this._arrowInitialSnapshot = this.takeSnapshot(nodes);
-    }
-    stepFn();
-    if (this._arrowTimer) clearTimeout(this._arrowTimer);
-    this._arrowTimer = setTimeout(() => {
-      if (this._arrowInitialSnapshot) {
-        const after = this.takeSnapshot(nodes);
-        this.push("Move Nodes", this._arrowInitialSnapshot, after);
-        this._arrowInitialSnapshot = null;
-      }
-    }, 400);
-  }
-
-  applySnapshot(records, canvas = app?.canvas) {
-    if (!records || !records.length) return;
-    const graph = canvas?.graph || app?.graph;
-    if (!graph) return;
-
-    for (const record of records) {
-      const node = graph.getNodeById?.(record.id);
-      if (node && isNode(node)) {
-        node.pos[0] = record.pos[0];
-        node.pos[1] = record.pos[1];
-        node.size[0] = record.size[0];
-        node.size[1] = record.size[1];
-        node.onResize?.(node.size);
-        node.setDirtyCanvas?.(true, true);
-      }
-    }
-    canvas?.setDirty?.(true, true);
-  }
-
-  undo(canvas = app?.canvas) {
-    if (this.undoStack.length === 0) return false;
-    const item = this.undoStack.pop();
-    this.redoStack.push(item);
-    this.applySnapshot(item.before, canvas);
-    snapEngine.showToast(`Undo: ${item.description}`);
-    return true;
-  }
-
-  redo(canvas = app?.canvas) {
-    if (this.redoStack.length === 0) return false;
-    const item = this.redoStack.pop();
-    this.undoStack.push(item);
-    this.applySnapshot(item.after, canvas);
-    snapEngine.showToast(`Redo: ${item.description}`);
-    return true;
-  }
-}
-
-export const snapHistory = new DSSnapHistoryManager();
-if (typeof window !== "undefined") {
-  window.__ds_snap_history = snapHistory;
-}
-
-// ---------------------------------------------------------------------------
-// 6. KEYBOARD SHORTCUTS & PRECISION ARROW MOVEMENT
+// 5. KEYBOARD PRECISION ARROW MOVEMENT (NUDGE)
 // ---------------------------------------------------------------------------
 function isKeyboardFocusProtected(key, isCtrlOrMeta) {
   const el = document.activeElement;
   if (!el) return false;
-  // If user presses Ctrl+Z or Ctrl+Y or Ctrl+Enter, let shortcuts engine handle it
-  if (isCtrlOrMeta && (key === "z" || key === "Z" || key === "y" || key === "Y" || key === "Enter")) {
-    return false;
-  }
   const tag = el.tagName?.toUpperCase();
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
   if (el.isContentEditable) return true;
@@ -1028,48 +1595,9 @@ function isKeyboardFocusProtected(key, isCtrlOrMeta) {
 }
 
 function handleGlobalKeyDown(e) {
-  const isCtrlOrMeta = e.ctrlKey || e.metaKey;
   const key = e.key;
 
-  if (isKeyboardFocusProtected(key, isCtrlOrMeta)) return;
-
-  // Undo shortcut: Ctrl+Z / Cmd+Z (without Shift)
-  if (isCtrlOrMeta && !e.shiftKey && (key === "z" || key === "Z")) {
-    if (snapHistory.undo(app?.canvas)) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    // Fallback to universal graph undo even if snap is OFF
-    if (typeof window.__ds_executeUndo === "function") {
-      window.__ds_executeUndo().then((ok) => {
-        if (ok) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      });
-      return;
-    }
-  }
-
-  // Redo shortcut: Ctrl+Shift+Z / Cmd+Shift+Z or Ctrl+Y / Cmd+Y
-  if ((isCtrlOrMeta && e.shiftKey && (key === "z" || key === "Z")) || (isCtrlOrMeta && (key === "y" || key === "Y"))) {
-    if (snapHistory.redo(app?.canvas)) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    // Fallback to universal graph redo even if snap is OFF
-    if (typeof window.__ds_executeRedo === "function") {
-      window.__ds_executeRedo().then((ok) => {
-        if (ok) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      });
-      return;
-    }
-  }
+  if (isKeyboardFocusProtected(key, e.ctrlKey || e.metaKey)) return;
 
   // Arrow key precision movement
   if (key !== "ArrowUp" && key !== "ArrowDown" && key !== "ArrowLeft" && key !== "ArrowRight") {
@@ -1077,7 +1605,7 @@ function handleGlobalKeyDown(e) {
   }
 
   const canvas = app?.canvas;
-  const selected = getSelectedNodes(canvas);
+  const selected = getSelectedGraphItems(canvas);
   if (!selected || selected.length === 0) return;
 
   const state = snapStore.state;
@@ -1095,115 +1623,126 @@ function handleGlobalKeyDown(e) {
   e.preventDefault();
   e.stopPropagation();
 
-  snapHistory.recordArrowMove(selected, () => {
-    try {
-      canvas?.emitBeforeChange?.();
-    } catch (_) {}
+  try {
+    canvas?.emitBeforeChange?.();
+  } catch (_) {}
 
-    for (const node of selected) {
-      node.pos[0] += dx;
-      node.pos[1] += dy;
+  for (const item of selected) {
+    if (isPinned(item)) continue;
+    if (isGroup(item)) {
+      item.pos[0] += dx;
+      item.pos[1] += dy;
+      if (item.children && typeof item.children.forEach === "function") {
+        item.children.forEach((c) => {
+          if (!isPinned(c)) {
+            c.pos[0] += dx;
+            c.pos[1] += dy;
+            c.setDirtyCanvas?.(true, true);
+          }
+        });
+      }
+      item.setDirtyCanvas?.(true, true);
+    } else if (isNode(item)) {
+      item.pos[0] += dx;
+      item.pos[1] += dy;
+      item.setDirtyCanvas?.(true, true);
     }
+  }
 
-    try {
-      canvas?.emitAfterChange?.();
-    } catch (_) {}
+  try {
+    canvas?.emitAfterChange?.();
+  } catch (_) {}
 
-    canvas?.setDirty?.(true, true);
-  });
+  canvas?.setDirty?.(true, true);
 }
 
 // ---------------------------------------------------------------------------
-// 7. MULTI-NODE ARRANGEMENT (ROW & COLUMN)
+// 6. MULTI-NODE ARRANGEMENT (ROW & COLUMN)
 // ---------------------------------------------------------------------------
 export function arrangeNodesInRow(canvas = app?.canvas) {
-  const nodes = getOrderedSelectedNodes(canvas);
+  const nodes = getOrderedSelectedNodes(canvas).filter((n) => !isPinned(n));
   if (nodes.length < 2) {
-    snapEngine.showToast("Select 2 or more nodes to arrange in a row");
+    snapEngine.showToast("Select 2 or more unpinned nodes to arrange in a row");
     return;
   }
 
-  snapHistory.record("Arrange Row", nodes, () => {
-    const anchor = nodes[0];
-    const anchorBounds = getNodeVisualBounds(anchor);
-    const margin = Number(snapStore.state.minMarginX) || 20;
+  const anchor = nodes[0];
+  const anchorBounds = getNodeVisualBounds(anchor);
+  const margin = Number(snapStore.state.minMarginX) || 20;
 
-    try {
-      canvas?.emitBeforeChange?.();
-    } catch (_) {}
+  try {
+    canvas?.emitBeforeChange?.();
+  } catch (_) {}
 
-    const commonVisualTop = anchorBounds.top;
-    let currentVisualRight = anchorBounds.right;
+  const commonVisualTop = anchorBounds.top;
+  let currentVisualRight = anchorBounds.right;
 
-    for (let i = 1; i < nodes.length; i++) {
-      const node = nodes[i];
-      const b = getNodeVisualBounds(node);
-      const topOffset = (Number(node.pos?.[1]) || 0) - b.top;
-      const leftOffset = (Number(node.pos?.[0]) || 0) - b.left;
+  for (let i = 1; i < nodes.length; i++) {
+    const node = nodes[i];
+    const b = getNodeVisualBounds(node);
+    const topOffset = (Number(node.pos?.[1]) || 0) - b.top;
+    const leftOffset = (Number(node.pos?.[0]) || 0) - b.left;
 
-      node.pos[0] = currentVisualRight + margin + leftOffset;
-      node.pos[1] = commonVisualTop + topOffset;
-      node.onResize?.(node.size);
+    node.pos[0] = currentVisualRight + margin + leftOffset;
+    node.pos[1] = commonVisualTop + topOffset;
+    node.onResize?.(node.size);
+    node.setDirtyCanvas?.(true, true);
 
-      const updatedB = getNodeVisualBounds(node);
-      currentVisualRight = updatedB.right;
-    }
+    const updatedB = getNodeVisualBounds(node);
+    currentVisualRight = updatedB.right;
+  }
 
-    try {
-      canvas?.emitAfterChange?.();
-    } catch (_) {}
+  try {
+    canvas?.emitAfterChange?.();
+  } catch (_) {}
 
-    canvas?.setDirty?.(true, true);
-  });
-
+  canvas?.setDirty?.(true, true);
   snapEngine.showToast(`Arranged ${nodes.length} nodes in a row relative to anchor "${nodes[0].title || nodes[0].id}"`);
 }
 
 export function arrangeNodesInColumn(canvas = app?.canvas) {
-  const nodes = getOrderedSelectedNodes(canvas);
+  const nodes = getOrderedSelectedNodes(canvas).filter((n) => !isPinned(n));
   if (nodes.length < 2) {
-    snapEngine.showToast("Select 2 or more nodes to arrange in a column");
+    snapEngine.showToast("Select 2 or more unpinned nodes to arrange in a column");
     return;
   }
 
-  snapHistory.record("Arrange Column", nodes, () => {
-    const anchor = nodes[0];
-    const anchorBounds = getNodeVisualBounds(anchor);
-    const margin = Number(snapStore.state.minMarginY) || 20;
+  const anchor = nodes[0];
+  const anchorBounds = getNodeVisualBounds(anchor);
+  const margin = Number(snapStore.state.minMarginY) || 20;
 
-    try {
-      canvas?.emitBeforeChange?.();
-    } catch (_) {}
+  try {
+    canvas?.emitBeforeChange?.();
+  } catch (_) {}
 
-    const commonVisualLeft = anchorBounds.left;
-    let currentVisualBottom = anchorBounds.bottom;
+  const commonVisualLeft = anchorBounds.left;
+  let currentVisualBottom = anchorBounds.bottom;
 
-    for (let i = 1; i < nodes.length; i++) {
-      const node = nodes[i];
-      const b = getNodeVisualBounds(node);
-      const topOffset = (Number(node.pos?.[1]) || 0) - b.top;
-      const leftOffset = (Number(node.pos?.[0]) || 0) - b.left;
+  for (let i = 1; i < nodes.length; i++) {
+    const node = nodes[i];
+    const b = getNodeVisualBounds(node);
+    const topOffset = (Number(node.pos?.[1]) || 0) - b.top;
+    const leftOffset = (Number(node.pos?.[0]) || 0) - b.left;
 
-      node.pos[0] = commonVisualLeft + leftOffset;
-      node.pos[1] = currentVisualBottom + margin + topOffset;
-      node.onResize?.(node.size);
+    node.pos[0] = commonVisualLeft + leftOffset;
+    node.pos[1] = currentVisualBottom + margin + topOffset;
+    node.onResize?.(node.size);
+    node.setDirtyCanvas?.(true, true);
 
-      const updatedB = getNodeVisualBounds(node);
-      currentVisualBottom = updatedB.bottom;
-    }
+    const updatedB = getNodeVisualBounds(node);
+    currentVisualBottom = updatedB.bottom;
+  }
 
-    try {
-      canvas?.emitAfterChange?.();
-    } catch (_) {}
+  try {
+    canvas?.emitAfterChange?.();
+  } catch (_) {}
 
-    canvas?.setDirty?.(true, true);
-  });
-
+  canvas?.setDirty?.(true, true);
   snapEngine.showToast(`Arranged ${nodes.length} nodes in a column relative to anchor "${nodes[0].title || nodes[0].id}"`);
 }
 
 // ---------------------------------------------------------------------------
-// 8. DIMENSION MEASUREMENT & MATCHING
+// 7. DIMENSION MEASUREMENT & MATCHING
 // ---------------------------------------------------------------------------
 export function measureSelectedNode(canvas = app?.canvas) {
   const node = getPrimarySelectedNode(canvas);
@@ -1225,47 +1764,45 @@ export function applyDimensionsToSelected(mode = "both", canvas = app?.canvas) {
     return;
   }
 
-  const nodes = getSelectedNodes(canvas);
+  const nodes = getSelectedNodes(canvas).filter((n) => !isPinned(n));
   if (nodes.length === 0) {
-    snapEngine.showToast("Select target node(s) to apply dimensions");
+    snapEngine.showToast("Select unpinned target node(s) to apply dimensions");
     return;
   }
 
+  try {
+    canvas?.emitBeforeChange?.();
+  } catch (_) {}
+
   let count = 0;
-  snapHistory.record(`Match Dimensions (${mode})`, nodes, () => {
-    try {
-      canvas?.emitBeforeChange?.();
-    } catch (_) {}
+  for (const node of nodes) {
+    if (isPinned(node) || node.flags?.resizable === false) continue;
 
-    for (const node of nodes) {
-      if (node.flags?.resizable === false) continue;
-
-      let changed = false;
-      if (mode === "width" || mode === "both") {
-        const minW = node.min_width || 40;
-        node.size[0] = Math.max(minW, state.measuredWidth);
-        changed = true;
-      }
-
-      if (mode === "height" || mode === "both") {
-        const minH = node.min_height || 30;
-        node.size[1] = Math.max(minH, state.measuredHeight);
-        changed = true;
-      }
-
-      if (changed) {
-        node.onResize?.(node.size);
-        count++;
-      }
+    let changed = false;
+    if (mode === "width" || mode === "both") {
+      const minW = node.min_width || 40;
+      node.size[0] = Math.max(minW, state.measuredWidth);
+      changed = true;
     }
 
-    try {
-      canvas?.emitAfterChange?.();
-    } catch (_) {}
+    if (mode === "height" || mode === "both") {
+      const minH = node.min_height || 30;
+      node.size[1] = Math.max(minH, state.measuredHeight);
+      changed = true;
+    }
 
-    canvas?.setDirty?.(true, true);
-  });
+    if (changed) {
+      node.onResize?.(node.size);
+      node.setDirtyCanvas?.(true, true);
+      count++;
+    }
+  }
 
+  try {
+    canvas?.emitAfterChange?.();
+  } catch (_) {}
+
+  canvas?.setDirty?.(true, true);
   snapEngine.showToast(`Applied ${mode} to ${count} node(s)`);
 }
 
@@ -1484,7 +2021,7 @@ class DSSnapToolbarManager {
   /**
    * Renders the single thick horizontal toolbar strip.
    * Options cleanly divided into sections across the full browser width:
-   * DS Snap | Snap toggle, input field | Margin toggle, input field | Row, Column | Measure, Clear, Width, Height, Apply Both | Arrow step input field | History (Undo, Redo) | Status, Close
+   * DS Snap | Snap toggle, input field | Margin toggle, input field | Row, Column | Measure, Clear, Width, Height, Apply Both | Arrow step input field | Close
    */
   renderPopoverContent() {
     if (!this.popover) return;
@@ -1574,22 +2111,7 @@ class DSSnapToolbarManager {
 
         <div class="ds-snap-divider"></div>
 
-        <!-- Section 7: History (Undo / Redo with icon + text) -->
-        <div class="ds-snap-sec">
-          <span class="ds-snap-sec-title">HISTORY</span>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-undo" title="Undo node change (Ctrl+Z)" aria-label="Undo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-undo-2 preview-icon"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
-            <span>Undo</span>
-          </button>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-redo" title="Redo node change (Ctrl+Shift+Z / Ctrl+Y)" aria-label="Redo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-redo-2 preview-icon"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg>
-            <span>Redo</span>
-          </button>
-        </div>
-
-        <div class="ds-snap-divider"></div>
-
-        <!-- Section 8: Close (Far Right) -->
+        <!-- Section 7: Close (Far Right) -->
         <div class="ds-snap-sec ds-snap-sec-actions">
           <button type="button" class="ds-snap-close-btn" id="ds-snap-close-btn" aria-label="Close Snap Bar" title="Close Snap Bar">
             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1655,11 +2177,9 @@ class DSSnapToolbarManager {
       }, { passive: false });
     });
 
-    // Arrange and history buttons
+    // Arrange buttons
     this.popover.querySelector("#ds-snap-btn-row")?.addEventListener("click", () => arrangeNodesInRow());
     this.popover.querySelector("#ds-snap-btn-col")?.addEventListener("click", () => arrangeNodesInColumn());
-    this.popover.querySelector("#ds-snap-btn-undo")?.addEventListener("click", () => snapHistory.undo());
-    this.popover.querySelector("#ds-snap-btn-redo")?.addEventListener("click", () => snapHistory.redo());
 
     // Dimension buttons
     this.popover.querySelector("#ds-snap-btn-measure")?.addEventListener("click", () => measureSelectedNode());
@@ -1701,6 +2221,7 @@ function stopGlobalDrag() {
 // ---------------------------------------------------------------------------
 // 10. GLOBAL POINTER EVENT LISTENERS (SELECTION & FAILSAFE RELEASE)
 // ---------------------------------------------------------------------------
+let lastPointerDownNode = null;
 let globalListenersInstalled = false;
 
 function installGlobalPointerListeners() {
@@ -1726,7 +2247,13 @@ function installGlobalPointerListeners() {
       const graph = app?.graph || app?.canvas?.graph;
       const node = graph?.getNodeById?.(rawId);
       if (node && isNode(node)) {
+        lastPointerDownNode = node;
         recordNodeSelection(node.id, isMulti);
+      }
+    } else {
+      const canvas = app?.canvas;
+      if (canvas?.graph_mouse && canvas.graph?.getNodeOnPos) {
+        lastPointerDownNode = canvas.graph.getNodeOnPos(canvas.graph_mouse[0], canvas.graph_mouse[1]) || null;
       }
     }
 
@@ -1735,12 +2262,98 @@ function installGlobalPointerListeners() {
     }
   }, true);
 
+  // Global window pointermove handler (ensures dragging works 100% reliably in Vue nodes and Classic LiteGraph)
+  const handleGlobalPointerMove = (e) => {
+    if (!snapStore.state.enabled) return;
+    if (e && e.__ds_snap_move_handled) return;
+
+    const canvas = app?.canvas;
+    if (!canvas) return;
+
+    // Must be dragging with primary mouse button
+    if (!e || e.buttons !== 1) {
+      if (snapEngine.dragSession || snapEngine.hasGuides()) {
+        snapEngine.onDragEnd(canvas);
+        snapEngine.onResizeEnd(canvas);
+        canvas.setDirty?.(true, true);
+      }
+      return;
+    }
+
+    // Alt-key bypass or search dialog active
+    if (e.altKey || isPlacementOrSearchActive()) {
+      if (snapEngine.hasGuides()) {
+        snapEngine.onDragEnd(canvas);
+        canvas.setDirty?.(true, true);
+      }
+      return;
+    }
+
+    // Panning canvas or drawing selection box
+    if (canvas.dragging_canvas || canvas.dragging_rectangle) {
+      if (snapEngine.hasGuides()) {
+        snapEngine.onDragEnd(canvas);
+        canvas.setDirty?.(true, true);
+      }
+      return;
+    }
+
+    // Resizing detection
+    const resizingGroupItem =
+      (canvas.resizingGroup && isGroup(canvas.resizingGroup) ? canvas.resizingGroup : null) ||
+      (canvas.selected_group && canvas.selected_group_resizing && isGroup(canvas.selected_group) ? canvas.selected_group : null);
+
+    const resizingNodeItem =
+      (canvas.resizing_node && isNode(canvas.resizing_node) ? canvas.resizing_node : null) ||
+      (canvas.pointer?.resizeDirection && canvas.current_node && isNode(canvas.current_node) ? canvas.current_node : null) ||
+      (canvas.pointer?.resizeDirection && canvas.node_over && isNode(canvas.node_over) ? canvas.node_over : null);
+
+    if (resizingNodeItem) {
+      e.__ds_snap_move_handled = true;
+      snapEngine.processNodeResize(canvas, resizingNodeItem);
+      return;
+    } else if (resizingGroupItem) {
+      e.__ds_snap_move_handled = true;
+      snapEngine.processGroupResize(canvas, resizingGroupItem);
+      return;
+    }
+
+    // Dragged item detection (supports Classic + Vue Nodes + Groups)
+    let activeItem = null;
+
+    if (canvas.node_dragged && isNode(canvas.node_dragged) && !isPinned(canvas.node_dragged)) {
+      activeItem = canvas.node_dragged;
+    } else if (lastPointerDownNode && isNode(lastPointerDownNode) && !isPinned(lastPointerDownNode)) {
+      activeItem = lastPointerDownNode;
+    } else if (canvas.selected_group && isGroup(canvas.selected_group) && !isPinned(canvas.selected_group) && !resizingGroupItem) {
+      activeItem = canvas.selected_group;
+    } else if (canvas.current_node && isNode(canvas.current_node) && !isPinned(canvas.current_node)) {
+      activeItem = canvas.current_node;
+    } else if (canvas.selectedItems && canvas.selectedItems.size > 0) {
+      const grp = Array.from(canvas.selectedItems).find((it) => isGroup(it) && !isPinned(it));
+      const nde = Array.from(canvas.selectedItems).find((it) => isNode(it) && !isPinned(it));
+      activeItem = nde || grp || null;
+    } else if (canvas.selected_nodes && typeof canvas.selected_nodes === "object") {
+      activeItem = Object.values(canvas.selected_nodes).find((n) => isNode(n) && !isPinned(n)) || null;
+    }
+
+    if (activeItem && !isPinned(activeItem)) {
+      e.__ds_snap_move_handled = true;
+      snapEngine.processItemDrag(canvas, activeItem, e);
+    } else {
+      if (snapEngine.activeGuides.length > 0) {
+        snapEngine.onDragEnd(canvas);
+        canvas.setDirty?.(true, true);
+      }
+    }
+  };
+
+  window.addEventListener("pointermove", handleGlobalPointerMove, false);
+
   // Pointer release handler
   const handleGlobalPointerRelease = () => {
-    if (snapEngine.draggedNode) {
-      snapHistory.endDrag([snapEngine.draggedNode, ...getSelectedNodes(app?.canvas)]);
-    }
-    if (snapEngine.hasGuides()) {
+    lastPointerDownNode = null;
+    if (snapEngine.dragSession || snapEngine.hasGuides() || snapEngine.resizeSession) {
       snapEngine.onDragEnd(app?.canvas);
       snapEngine.onResizeEnd(app?.canvas);
       app?.canvas?.setDirty?.(true, true);
@@ -1752,11 +2365,6 @@ function installGlobalPointerListeners() {
   window.addEventListener("pointercancel", handleGlobalPointerRelease, true);
   window.addEventListener("blur", handleGlobalPointerRelease, true);
 }
-
-// ---------------------------------------------------------------------------
-// 11. LITEGRAPH CANVAS HOOKS (DRAG TRACKING & NATIVE FOREGROUND DRAW)
-// ---------------------------------------------------------------------------
-let lastPointerDownNode = null;
 
 function attachCanvasDomEvents(canvas) {
   if (!canvas || !canvas.canvas || canvas.canvas.__ds_snap_dom_hooked) return;
@@ -1774,12 +2382,12 @@ function hookCanvasTarget(target, label = "canvas") {
     const res = origProcessMouseMove ? origProcessMouseMove.apply(this, arguments) : undefined;
 
     try {
+      if (e && e.__ds_snap_move_handled) return res;
+      if (e) e.__ds_snap_move_handled = true;
+
       // Ensure active mouse drag state
       if (!e || e.buttons === 0) {
-        if (snapEngine.draggedNode) {
-          snapHistory.endDrag([snapEngine.draggedNode, ...getSelectedNodes(this)]);
-        }
-        if (snapEngine.hasGuides()) {
+        if (snapEngine.dragSession || snapEngine.hasGuides()) {
           snapEngine.onDragEnd(this);
           snapEngine.onResizeEnd(this);
           this.setDirty?.(true, true);
@@ -1806,32 +2414,68 @@ function hookCanvasTarget(target, label = "canvas") {
           return res;
         }
 
-        // Detect active node
-        const activeNode =
-          (this.node_dragged && isNode(this.node_dragged) ? this.node_dragged : null) ||
-          (this.current_node && isNode(this.current_node) ? this.current_node : null) ||
-          (this.selected_nodes ? Object.values(this.selected_nodes).find(isNode) : null) ||
-          (this.selectedItems ? Array.from(this.selectedItems).find(isNode) : null) ||
-          (getOrderedSelectedNodes(this)[0]) ||
-          null;
+        // Detect resizing first
+        const resizingGroupItem =
+          (this.resizingGroup && isGroup(this.resizingGroup) ? this.resizingGroup : null) ||
+          (this.selected_group && this.selected_group_resizing && isGroup(this.selected_group) ? this.selected_group : null);
 
-        if (activeNode) {
-          if (!snapEngine.draggedNode || snapEngine.draggedNode !== activeNode) {
-            snapEngine.onDragStart(this, activeNode);
-            snapHistory.startDrag([activeNode, ...getSelectedNodes(this)]);
+        const resizingNodeItem =
+          (this.resizing_node && isNode(this.resizing_node) ? this.resizing_node : null) ||
+          (this.pointer?.resizeDirection && this.current_node && isNode(this.current_node) ? this.current_node : null) ||
+          (this.pointer?.resizeDirection && this.node_over && isNode(this.node_over) ? this.node_over : null) ||
+          (this.pointer?.resizeDirection && this.selectedItems ? Array.from(this.selectedItems).find(isNode) : null) ||
+          (this.pointer?.resizeDirection && this.selected_nodes ? Object.values(this.selected_nodes).find(isNode) : null);
+
+        if (resizingNodeItem) {
+          snapEngine.processNodeResize(this, resizingNodeItem);
+          return res;
+        } else if (resizingGroupItem) {
+          snapEngine.processGroupResize(this, resizingGroupItem);
+          return res;
+        } else if (snapEngine.resizingGuides.length > 0) {
+          snapEngine.onResizeEnd(this);
+        }
+
+        // Detect active dragged item (node or group)
+        let activeItem = null;
+
+        if (this.node_dragged && isNode(this.node_dragged) && !isPinned(this.node_dragged)) {
+          activeItem = this.node_dragged;
+        } else if (this.selected_group && isGroup(this.selected_group) && !isPinned(this.selected_group) && !resizingGroupItem) {
+          // If no specific node is actively being dragged, treat the selected group as active
+          if (!this.node_dragged || isPinned(this.node_dragged)) {
+            activeItem = this.selected_group;
           }
-          snapEngine.processNodeDrag(this, activeNode, e);
+        } else if (this.current_node && isNode(this.current_node) && !isPinned(this.current_node) && (this.selectedItems ? this.selectedItems.has(this.current_node) : true)) {
+          activeItem = this.current_node;
+        } else if (this.selectedItems && this.selectedItems.size > 0) {
+          if (this.selected_group && this.selectedItems.has(this.selected_group) && isGroup(this.selected_group) && !isPinned(this.selected_group)) {
+            activeItem = this.selected_group;
+          } else {
+            const grp = Array.from(this.selectedItems).find((it) => isGroup(it) && !isPinned(it));
+            const nde = Array.from(this.selectedItems).find((it) => isNode(it) && !isPinned(it));
+            if (grp && !nde) {
+              activeItem = grp;
+            } else if (nde) {
+              activeItem = nde;
+            } else if (grp) {
+              activeItem = grp;
+            }
+          }
+        } else if (this.selected_nodes && typeof this.selected_nodes === "object") {
+          activeItem = Object.values(this.selected_nodes).find((n) => isNode(n) && !isPinned(n)) || null;
         } else {
-          if (snapEngine.activeGuides.length > 0 && !this.resizing_node) {
+          const ordered = getOrderedSelectedNodes(this).filter((n) => !isPinned(n));
+          if (ordered.length > 0) activeItem = ordered[0];
+        }
+
+        if (activeItem && !isPinned(activeItem) && (this.isDragging || e.buttons === 1)) {
+          snapEngine.processItemDrag(this, activeItem, e);
+        } else {
+          if (snapEngine.activeGuides.length > 0) {
             snapEngine.onDragEnd(this);
             this.setDirty?.(true, true);
           }
-        }
-
-        if (this.resizing_node && isNode(this.resizing_node)) {
-          snapEngine.processNodeResize(this, this.resizing_node);
-        } else if (snapEngine.resizingGuides.length > 0) {
-          snapEngine.onResizeEnd(this);
         }
       }
     } catch (err) {
@@ -1843,18 +2487,44 @@ function hookCanvasTarget(target, label = "canvas") {
 
   // 2. Hook Mouse Up
   const origProcessMouseUp = target.processMouseUp;
-  target.processMouseUp = function () {
+  target.processMouseUp = function (e) {
+    if (e && e.__ds_snap_up_handled) {
+      return origProcessMouseUp ? origProcessMouseUp.apply(this, arguments) : undefined;
+    }
+    if (e) e.__ds_snap_up_handled = true;
+
+    // Capture exact final snapped positions before LiteGraph clears drag state
+    let finalPositions = null;
+    if (
+      snapEngine.dragSession &&
+      (snapEngine.dragSession.snapDeltaX !== 0 || snapEngine.dragSession.snapDeltaY !== 0)
+    ) {
+      finalPositions = snapEngine.dragSession.records.map((r) => ({
+        item: r.item || r.node,
+        x: r.naturalX + snapEngine.dragSession.snapDeltaX,
+        y: r.naturalY + snapEngine.dragSession.snapDeltaY,
+      }));
+    }
+
+    let res;
     try {
-      if (snapEngine.draggedNode) {
-        snapHistory.endDrag([snapEngine.draggedNode, ...getSelectedNodes(this)]);
+      res = origProcessMouseUp ? origProcessMouseUp.apply(this, arguments) : undefined;
+    } finally {
+      if (finalPositions) {
+        // Enforce exact snapped positions across any grid snap overrides
+        for (const it of finalPositions) {
+          if (it.item && it.item.pos && !isPinned(it.item)) {
+            it.item.pos[0] = it.x;
+            it.item.pos[1] = it.y;
+            it.item.setDirtyCanvas?.(true, true);
+          }
+        }
       }
-      if (snapEngine.hasGuides()) {
-        snapEngine.onDragEnd(this);
-        snapEngine.onResizeEnd(this);
-        this.setDirty?.(true, true);
-      }
-    } catch (_) {}
-    return origProcessMouseUp ? origProcessMouseUp.apply(this, arguments) : undefined;
+      snapEngine.onDragEnd(this);
+      snapEngine.onResizeEnd(this);
+      this.setDirty?.(true, true);
+    }
+    return res;
   };
 
   // 3. Hook onDrawForeground (Native LiteGraph foreground canvas rendering)
@@ -2457,16 +3127,6 @@ app.registerExtension({
       id: "DeathshotArsenal.DSSnap.Measure",
       label: "DS Snap: Measure Selected Node",
       function: () => measureSelectedNode(),
-    },
-    {
-      id: "DeathshotArsenal.DSSnap.Undo",
-      label: "DS Snap: Undo (Ctrl+Z)",
-      function: () => snapHistory.undo(),
-    },
-    {
-      id: "DeathshotArsenal.DSSnap.Redo",
-      label: "DS Snap: Redo (Ctrl+Shift+Z / Ctrl+Y)",
-      function: () => snapHistory.redo(),
     },
   ],
 

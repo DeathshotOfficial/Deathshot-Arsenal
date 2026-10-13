@@ -23,14 +23,9 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
                │                          │
        ┌───────▼────────┐        ┌────────▼────────┐
        │ Snap Engine    │        │ Action Bar Dock │
-       │ (Hysteresis &  │        │ (Popover Panel) │
-       │  Scoring)      │        └─────────────────┘
+       │ (Natural Pos & │        │ (Popover Panel) │
+       │  Edge Scoring) │        └─────────────────┘
        └───────┬────────┘
-               │
-       ┌───────▼──────────────────────────┐
-       │   DSSnapHistoryManager (Undo)    │
-       │  (50-Level Node Snapshot Stack)  │
-       └───────┬──────────────────────────┘
                │
        ┌───────▼──────────────────────────┐
        │  LiteGraph Canvas Render Hook    │
@@ -42,18 +37,15 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
    - Single source of truth for snapping thresholds, min-margin gaps, edge/center alignment toggles, and arrow step sizes.
    - Automatically persists settings to browser storage (`DS_SNAP_CONFIG_V1`).
 
-2. **Snapping & Hysteresis Engine (`DSSnapEngine`):**
-   - Spatial candidate search prioritizing immediate visual neighbors ($< 550\text{px}$) over distant nodes.
-   - Distance-weighted scoring formula that favors edge alignments and exact margin spacing over distant centerlines.
-   - Dynamic breakout hysteresis ($1.25\times$ threshold) ensuring fluid escape from magnetic guides without getting trapped.
+2. **Snapping & Edge Alignment Engine (`DSSnapEngine`):**
+   - True virtual natural drag trajectory tracking (`naturalX`, `naturalY`), preventing delta accumulation, sticky traps, or drag jitter.
+   - Spatial candidate search prioritizing immediate visual neighbors ($< 650\text{px}$) over distant nodes.
+   - Distance-weighted scoring formula that favors direct extreme edge alignments (Top-to-Top, Bottom-to-Bottom, Left-to-Left, Right-to-Right) and exact margin spacing over distant centerlines.
+   - Clean breakout threshold ensuring fluid movement without sticky traps or resistance.
+   - Mouse release commitment: firmly retains the exact snapped position on pointer release, preventing grid-snap drift or displacement.
 
-3. **History & Undo/Redo Engine (`DSSnapHistoryManager`):**
-   - Dedicated 50-level snapshot stack tracking node positions and sizes.
-   - Captures state transitions across drag snapping, multi-node row/column arrangements, dimension matching, and keyboard arrow nudges.
-   - Native keyboard bindings (`Ctrl + Z`, `Ctrl + Shift + Z`, `Ctrl + Y`).
-
-4. **Native Foreground Rendering (`onDrawForeground`):**
-   - Renders visual guide lines and high-contrast pill badges directly on the LiteGraph canvas foreground in graph coordinate space.
+3. **Native Foreground Rendering (`onDrawForeground`):**
+   - Renders visual guide lines scoped directly between the aligned nodes with extreme edge ticks and high-contrast pill badges directly on the LiteGraph canvas foreground in graph coordinate space.
    - Zooms and pans in 1:1 real-time sync with nodes at all canvas zoom levels.
    - Zero additional DOM elements or background loops; automatically clears the instant drag ceases.
 
@@ -61,15 +53,21 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
 
 ## 3. Features & Capabilities
 
-### Intelligent Magnetic Alignment
-- **Edge Snapping:** Top-to-top, bottom-to-bottom, left-to-left, and right-to-right alignment.
-- **Center Alignment:** Center-X and Center-Y alignment with priority penalties so edge alignments take precedence when competing.
-- **True Node Visual Bounds:** Computes the exact rendered visual rectangle using `node.getBounding()`, factoring in title bar height, headers, and collapsed states.
+### Intelligent Magnetic Alignment (Nodes & Groups)
+- **Universal Graph Item Support:** Full alignment and magnetic snapping for both individual nodes and workflow group boxes (`LGraphGroup`).
+- **Group-to-Group & Group-to-Node Snapping:** Dragging a group aligns with other groups or nearby nodes; dragging a node aligns with neighboring nodes or group boundaries.
+- **Lockstep Child Node Movement:** When dragging a group, all internal nodes move synchronously with the group's exact snapped positions, preventing drift or displacement.
+- **Edge Snapping:** Top-to-top, bottom-to-bottom, left-to-left, and right-to-right alignment with primary scoring priority.
+- **Extreme Edge Flush Snapping:** Bottom-to-top and right-to-left touching edge alignment.
+- **Center Alignment:** Center-X and Center-Y alignment with lower priority when competing with edge alignments.
+- **True Visual Bounds:** Computes the exact rendered visual rectangle dynamically (`getItemVisualBoundsAt`), factoring in title bar height, headers, collapsed states, and group bounding boxes without reading stale cached bounds.
+- **Bounding Box Distance Scaling:** Uses true spatial gap calculations (`getBoundingBoxDistance`), allowing massive group boxes (e.g. 1000px+) to cleanly snap side-by-side or stacked without distance cutoff issues.
+- **Scoped Guidelines:** Guidelines connect directly from the moving item to the target candidate with extreme-edge tick marks instead of infinite canvas lines.
 - **Alt Key Bypass:** Holding `Alt` (or `Option` on macOS) while dragging completely silences snapping for 100% freeform placement.
 - **Dialog & Ghost Protection:** Automatically suppresses snapping when search dialogs (`.lgraph-search-box`, `.comfy-vue-search-box`) or ghost placement nodes are active.
 
 ### Minimum Margin & Gap Spacing
-- Enforces consistent gap spacing between adjacent nodes (default `20px`, adjustable via popover).
+- Enforces consistent gap spacing between adjacent nodes and groups (default `20px`, adjustable via popover).
 - Guides indicate exact gap distances with dynamic label badges (e.g., `20PX GAP`).
 
 ### Multi-Node Arrangement
@@ -77,15 +75,19 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
 - **Arrange in Column:** Organizes selected nodes into a clean vertical stack with uniform spacing, aligned along their left edges.
 - **Anchor Node Preservation:** The node selected first serves as the immovable anchor. Subsequent nodes align relative to it without shifting the workflow position.
 
+### Intelligent Resize Snapping & Alignment
+- **Edge Alignment During Resize:** When dragging the resize corner of a node or group:
+  - **Right Edge Align:** Snaps the right edge to match the right edge, left edge, or margin gap of neighboring nodes or groups.
+  - **Bottom Edge Align:** Snaps the bottom edge to match the bottom edge, top edge, or margin gap of neighboring nodes or groups.
+- **Dimension Matching:** Automatically detects and snaps to matching widths and heights of other workflow items.
+- **Visual Resize Guidelines:** Displays scoped horizontal and vertical guidelines with extreme edge tick marks and dynamic badge labels (e.g., `RIGHT ALIGN`, `BOTTOM ALIGN`, `WIDTH 320PX`, `HEIGHT 180PX`).
+- **Release Commitment:** Firmly locks and commits the snapped dimensions on pointer release, ensuring no native resize jitter or position reversion.
+
 ### Dimension Measurement & Matching
 - **Measure Node:** Captures the exact width and height of any primary selected node.
 - **Apply Width:** Normalizes the width of all selected nodes to match the measured width.
 - **Apply Height:** Normalizes the height of all selected nodes to match the measured height.
 - **Apply Both:** Normalizes both width and height simultaneously.
-
-### Dedicated Undo & Redo History
-- Reverses node alignment, row/column ordering, dimension matching, and keyboard movements.
-- Consecutive keyboard arrow nudges are automatically grouped into a single undo step.
 
 ---
 
@@ -93,14 +95,11 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
 
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
-| `Ctrl + Z` / `Cmd + Z` | **Undo** | Reverses the last alignment, arrangement, dimension match, or move |
-| `Ctrl + Shift + Z` / `Cmd + Shift + Z` | **Redo** | Reapplies the previously undone action |
-| `Ctrl + Y` / `Cmd + Y` | **Redo (Alt)** | Standard Windows alternate redo shortcut |
-| `Arrow Keys` (`↑`, `↓`, `←`, `→`) | **Nudge Nodes** | Moves selected nodes by the configured step (default: `10px`) |
-| `Shift + Arrow Keys` | **Accelerated Nudge** | Moves selected nodes by step $\times$ multiplier (default: $5\times = 50\text{px}$) |
+| `Arrow Keys` (`↑`, `↓`, `←`, `→`) | **Nudge Nodes & Groups** | Moves selected nodes and groups (including group children) by the configured step (default: `10px`) |
+| `Shift + Arrow Keys` | **Accelerated Nudge** | Moves selected items by step $\times$ multiplier (default: $5\times = 50\text{px}$) |
 | `Alt` (Hold during drag) | **Snap Bypass** | Temporarily disables all magnetic snapping for freeform dragging |
 
-> **Note:** Keyboard shortcuts are automatically disabled when focus is inside text fields, textareas, inputs, or modal dialogs to prevent interfering with text editing.
+> **Note:** Undo/Redo shortcuts (`Ctrl+Z`, `Ctrl+Y`) are left to ComfyUI's native handling to prevent conflicting with native node shortcuts. Keyboard nudge is disabled when focus is inside text fields, textareas, inputs, or modal dialogs.
 
 ---
 
@@ -109,24 +108,23 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
 The DS Snap popover can be toggled via the crosshair icon on ComfyUI's action dock bar or via the ComfyUI Command Palette (`DS Snap: Toggle Menu`).
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ DS SNAP  v1.1                       [ ↶ Undo ] [ ↷ Redo ]      [ ACTIVE ]  [✕]         │
-├──────────────┬──────────────┬──────────────────┬─────────────────┬─────────────────────┤
-│ MASTER SNAP  │ MIN MARGIN   │ ARRANGE          │ DIMENSIONS      │ KEYBOARD            │
-│ [Toggle: ON] │ [Toggle: ON] │ [Row]            │ [ 768 × 1152 ]  │ [Step: 10px]        │
-│ Threshold    │ Gap Size     │                  │ [Measure][Clear]│ Quick Chips:        │
-│ [-] 10px [+] │ [-] 20px [+] │ [Column]         │ [Width] [Height]│ [1px] [5px]         │
-│ Chips: 6-20px│ Chips: 10-40 │ (Anchor Preserved) [ Apply Both ]  │ [10px] [20px]       │
-└──────────────┴──────────────┴──────────────────┴─────────────────┴─────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ DS SNAP  v1.1                                                        [✕]         │
+├──────────────┬──────────────┬──────────────────┬─────────────────┬───────────────┤
+│ SNAP         │ MARGIN       │ ARRANGE          │ DIMENSIONS      │ ARROW STEP    │
+│ [Toggle: ON] │ [Toggle: ON] │ [Row]            │ [Measure][Clear]│ [Step: 10px]  │
+│ [ 10px ]     │ [ 20px ]     │ [Column]         │ [Width] [Height]│ SHIFT=5×      │
+│              │              │                  │ [ Apply Both ]  │               │
+└──────────────┴──────────────┴──────────────────┴─────────────────┴───────────────┘
 ```
 
 ### Popover Sections
-1. **Header Bar:** Extension logo and version tag, global **Undo** and **Redo** quick action buttons, **ACTIVE/OFF** status pill, and popover close button.
-2. **Master Snap Column:** Master enable toggle, precision threshold stepper (`-` / `+`), and quick preset chips (`6px`, `10px`, `15px`, `20px`).
-3. **Min Margin Column:** Spacing gap enable toggle, margin stepper, and quick chips (`10px`, `20px`, `30px`, `40px`).
-4. **Arrange Column:** 1-click **Row** and **Column** arrangement buttons with first-selected anchor preservation.
-5. **Dimensions Column:** Real-time dimension readout, **Measure**, **Clear**, **Width**, **Height**, and **Apply Both** buttons.
-6. **Keyboard Column:** Arrow step stepper and quick chips (`1px`, `5px`, `10px`, `20px`).
+1. **Brand Bar:** Extension logo and version tag, close button.
+2. **Snap:** Master snap enable toggle and threshold input (`px`).
+3. **Margin:** Minimum gap spacing enable toggle and margin gap input (`px`).
+4. **Arrange:** 1-click **Row** and **Column** arrangement buttons with anchor preservation.
+5. **Dimensions:** **Measure**, **Clear**, **Width**, **Height**, and **Apply Both** buttons.
+6. **Arrow Step:** Keyboard arrow nudge step input (`px`) with Shift multiplier tag.
 
 ---
 

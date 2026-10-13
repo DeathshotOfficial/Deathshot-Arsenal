@@ -20,11 +20,10 @@ A comprehensive suite of high-performance, precision-crafted UI and utility node
 - **DS Global Reminder**: Floating action dock notification center for ComfyUI with execution alarms, countdown timer presets, browser audio alerts, and persistent queue state tracking. See [DS Reminder Documentation](docs/DS%20Reminder.md).
 
 ### 🎛️ System Diagnostics & Control
-- **DS Hardware Monitor**: Real-time tracking of GPU / VRAM usage, CPU, RAM, and temperature via NVML and system sensors. See [DS Hardware Monitor Documentation](docs/DS%20Hardware%20Monitor.md).
+- **DS Hardware & Performance Monitor**: Unified top-action-bar telemetry HUD and benchmarking system for ComfyUI. Combines precision hardware vitals (CPU, RAM, GPU, VRAM) with real-time local LLM inference tracking (generation speed, token count, TTFT, throughput graph) and workflow execution timing with multi-stage checkpoint pause/resume coordination, split-time rollback animations, and session run history. See [DS Hardware & Performance Monitor Documentation](docs/DS%20Hardware%20&%20Performance%20Monitor.md).
 - **DS System Monitor**: Compact status bar for live generation stats and hardware metrics. See [DS System Monitor Documentation](docs/DS%20System%20Monitor.md).
 - **DS Futuristic HUD**: Sci-fi cyberpunk telemetry heads-up display overlay for the canvas and viewport. See [DS Futuristic HUD Documentation](docs/DS%20Futuristic%20HUD.md).
 - **DS Version Check**: Automatic update tracking and package version notifications. See [DS Version Check Documentation](docs/DS%20Version%20Check.md).
-- **DS Run Timer**: Accurate execution benchmarking and completion audio alerts with multi-stage checkpoint pause/resume coordination. See [DS Run Timer Documentation](docs/DS%20Run%20Timer.md).
 - **DS The Purger**: Safe, direct ComfyUI resource cleanup utility and transparent workflow passthrough node. Frees VRAM, RAM, cached models, and memory allocations mid-workflow or queue-to-queue under thread-safe synchronization with live before/after metrics. See [DS The Purger Documentation](docs/DS%20The%20Purger.md).
 
 ### 🖼️ Image & Media Tools

@@ -54,6 +54,33 @@ _state = {
 _backend = {"done": False, "gpu": False, "error": None}
 
 
+def _safe_report_llm(model, tokens, seconds, ttft=None, status="active", format_name="GGUF", offload="GPU offload", backend="AI Prompt Sensei"):
+    try:
+        from core.monitor import report_llm
+        return report_llm(model=model, tokens=tokens, seconds=seconds, ttft=ttft, status=status, format_name=format_name, offload=offload, backend=backend)
+    except Exception:
+        pass
+    try:
+        from DeathshotArsenal.core.monitor import report_llm
+        return report_llm(model=model, tokens=tokens, seconds=seconds, ttft=ttft, status=status, format_name=format_name, offload=offload, backend=backend)
+    except Exception:
+        pass
+    try:
+        from custom_nodes.DeathshotArsenal.core.monitor import report_llm
+        return report_llm(model=model, tokens=tokens, seconds=seconds, ttft=ttft, status=status, format_name=format_name, offload=offload, backend=backend)
+    except Exception:
+        pass
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        root = os.path.dirname(os.path.dirname(here))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from core.monitor import report_llm
+        return report_llm(model=model, tokens=tokens, seconds=seconds, ttft=ttft, status=status, format_name=format_name, offload=offload, backend=backend)
+    except Exception:
+        return None
+
+
 def ascii_path(path: str) -> str:
     """Windows ANSI/short path helper for llama.cpp narrow strings."""
     path = os.path.abspath(path)
@@ -1122,6 +1149,8 @@ def generate_chat(
                 safe_sampling["reasoning_start_in_prompt"] = True
             stream = _call_create_chat(safe_sampling)
 
+        cur_model = _state.get("loaded_model_name") or (os.path.basename(_state.get("key") or "").replace(".gguf", "")) or "GGUF Model"
+
         last_progress_time = t0
         token_count = 0
         in_think_block = False
@@ -1168,6 +1197,7 @@ def generate_chat(
                             "tokens": token_count,
                             "speed": tk_s,
                             "elapsed": elapsed_so_far,
+                            "model": cur_model,
                         })
                     except Exception:
                         pass
@@ -1182,6 +1212,7 @@ def generate_chat(
                             "tokens": token_count,
                             "speed": tk_s,
                             "elapsed": elapsed_so_far,
+                            "model": cur_model,
                             "node_id": str(node_id) if node_id is not None else None,
                         })
                     except Exception:
@@ -1215,10 +1246,21 @@ def generate_chat(
                     "tokens": tokens,
                     "speed": speed,
                     "elapsed": elapsed,
+                    "model": cur_model,
                     "node_id": str(node_id) if node_id is not None else None,
                 })
             except Exception:
                 pass
+
+        _safe_report_llm(
+            model=str(cur_model or "GGUF Model"),
+            tokens=tokens,
+            seconds=elapsed,
+            status="idle",
+            format_name="GGUF",
+            offload="GPU offload" if _state.get("n_gpu_layers", -1) != 0 else "CPU Only",
+            backend="AI Prompt Sensei"
+        )
 
         return cleaned_text, tokens, elapsed
 
@@ -1263,7 +1305,7 @@ def generate_prompt_builtin(
     auto_unload = bool(cfg.get("auto_unload", True))
     free_comfy = bool(cfg.get("free_comfy_memory", True))
 
-    model_display_name = os.path.basename(model_key).replace('.gguf', '')
+    model_display_name = (loaded_model_name() or os.path.basename(model_key or "")).replace('.gguf', '') or "GGUF Model"
 
     try:
         import server
@@ -1273,6 +1315,7 @@ def generate_prompt_builtin(
             "tokens": 0,
             "speed": 0.0,
             "elapsed": 0.0,
+            "model": model_display_name,
             "node_id": node_id,
         })
     except Exception:
@@ -1291,6 +1334,7 @@ def generate_prompt_builtin(
             free_comfy=free_comfy,
             require_vision=need_vision,
         )
+        model_display_name = (loaded_model_name() or os.path.basename(model_key or "")).replace('.gguf', '') or model_display_name
         t_load = round(time.time() - t_load_start, 1)
         try:
             import server
@@ -1300,6 +1344,7 @@ def generate_prompt_builtin(
                 "tokens": 0,
                 "speed": 0.0,
                 "elapsed": 0.0,
+                "model": model_display_name,
                 "node_id": node_id,
             })
         except Exception:
@@ -1434,6 +1479,7 @@ def generate_prompt_builtin(
                     "tokens": result.get("tokens", 0),
                     "speed": result.get("speed", 0.0),
                     "elapsed": result.get("elapsed", 0.0),
+                    "model": model_display_name,
                     "node_id": node_id,
                 })
             except Exception:
@@ -1446,7 +1492,7 @@ def generate_prompt_builtin(
             tok = result.get("tokens", 0)
             spd = result.get("speed", 0.0)
             ela = result.get("elapsed", 0.0)
-            mod = loaded_model_name() or os.path.basename(model_key)
+            mod = model_display_name or (loaded_model_name() or os.path.basename(model_key or "")).replace('.gguf', '') or "GGUF Model"
             server.PromptServer.instance.send_sync("ds_sensei_progress", {
                 "stage": "completed",
                 "message": f"Completed ({tok} tokens · {spd} Tk/s · {ela}s)",
@@ -1457,6 +1503,15 @@ def generate_prompt_builtin(
                 "prompt": result.get("prompt", ""),
                 "node_id": node_id,
             })
+            _safe_report_llm(
+                model=mod,
+                tokens=tok,
+                seconds=ela,
+                status="idle",
+                format_name="GGUF",
+                offload="GPU offload" if n_gpu_layers != 0 else "CPU Only",
+                backend="AI Prompt Sensei"
+            )
         except Exception:
             pass
 

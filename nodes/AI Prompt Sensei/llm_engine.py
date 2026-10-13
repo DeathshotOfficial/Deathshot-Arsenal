@@ -957,6 +957,19 @@ def generate_prompt_lm_studio(
             "prompt": result_text,
             "node_id": node_id,
         })
+        try:
+            from core.monitor import report_llm
+            report_llm(
+                model=str(selected_model or "LM Studio"),
+                tokens=completion_tokens,
+                seconds=elapsed,
+                status="idle",
+                format_name="Remote / Local API",
+                offload="Local Server",
+                backend="LM Studio / AI Prompt Sensei"
+            )
+        except Exception:
+            pass
     except Exception:
         pass
 

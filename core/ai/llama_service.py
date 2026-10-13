@@ -173,6 +173,19 @@ def generate_text_completion(
                 "elapsed": round(time.time() - t0, 2),
                 "model": model_id,
             }
+            try:
+                from ..monitor import report_llm
+                report_llm(
+                    model=model_id,
+                    tokens=tokens,
+                    seconds=max(0.01, time.time() - t0),
+                    status="active",
+                    format_name="GGUF",
+                    offload="GPU offload" if n_gpu_layers != 0 else "CPU Only",
+                    backend="DS AI Service"
+                )
+            except Exception:
+                pass
             return text, meta
         finally:
             if auto_unload:

@@ -1020,9 +1020,16 @@ class DSReminderToolbarManager {
 
     this._createToolbarElements();
 
-    // Always anchor to the FAR LEFT of the action bar
-    if (actionDock.firstChild !== this.group) {
-      actionDock.prepend(this.group);
+    // Anchor to far left, or immediately after HPM monitor if present
+    const hpm = actionDock.querySelector(".hpm-monitor-group, .hpm-dock-placeholder");
+    if (hpm) {
+      if (hpm.nextSibling !== this.group) {
+        hpm.after(this.group);
+      }
+    } else {
+      if (actionDock.firstChild !== this.group) {
+        actionDock.prepend(this.group);
+      }
     }
 
     this.updateBadge();
@@ -1038,8 +1045,15 @@ class DSReminderToolbarManager {
         document.querySelector(".top-bar-button-group") ||
         document.querySelector(".comfy-menu");
       if (!actionDock) return;
-      if (actionDock.firstChild !== this.group) {
-        actionDock.prepend(this.group);
+      const hpm = actionDock.querySelector(".hpm-monitor-group, .hpm-dock-placeholder");
+      if (hpm) {
+        if (hpm.nextSibling !== this.group) {
+          hpm.after(this.group);
+        }
+      } else {
+        if (actionDock.firstChild !== this.group) {
+          actionDock.prepend(this.group);
+        }
       }
     };
     const observer = new MutationObserver(check);

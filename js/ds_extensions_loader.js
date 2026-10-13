@@ -21,6 +21,7 @@ loadDsExtension("ds_group.js");
 loadDsExtension("ds_gear_menu.js");
 loadDsExtension("ds_reminder_global.js");
 loadDsExtension("ds_snap.js");
+loadDsExtension("ds_hardware_monitor_bar.js");
 
 // Theme Manager is kept in a nested UI folder. Load it explicitly so its
 // extension registration does not depend on frontend directory scanning.

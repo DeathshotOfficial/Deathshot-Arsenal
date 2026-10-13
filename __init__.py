@@ -5,6 +5,10 @@ import server
 import torch
 import sys
 import os
+
+_DS_ROOT = os.path.dirname(os.path.abspath(__file__))
+if _DS_ROOT not in sys.path:
+    sys.path.insert(0, _DS_ROOT)
 import glob
 import time
 import threading
@@ -126,14 +130,6 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_Reroute: {e}", flush=True)
     DS_Reroute = None
 
-# DS Run Timer
-try:
-    _mod = _load_node_pkg("run_timer", "Run Timer")
-    DS_RunTimer = _mod.DS_RunTimer
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_RunTimer: {e}", flush=True)
-    DS_RunTimer = None
-
 # DS Reminder Backend Routes (Global Extension)
 try:
     _load_node_pkg("reminder", "Reminder")
@@ -217,14 +213,6 @@ except Exception as e:
     DS_Switch = None
 
 
-
-# DS Hardware Monitor
-try:
-    _mod = _load_node_pkg("hardware_monitor", "Hardware Monitor")
-    DS_HardwareMonitor = _mod.DS_HardwareMonitor
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_HardwareMonitor: {e}", flush=True)
-    DS_HardwareMonitor = None
 
 # DS Image Compare
 try:
@@ -393,6 +381,16 @@ try:
     register_ai_routes()
 except Exception as e:
     print(f"[DeathshotArsenal] Failed to register centralized AI routes: {e}", flush=True)
+
+# DS Hardware & Performance Monitor Core
+try:
+    try:
+        from .core.monitor import register_monitor_routes
+    except Exception:
+        from core.monitor import register_monitor_routes
+    register_monitor_routes()
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to register Hardware & Performance Monitor routes: {e}", flush=True)
 
 # DS AI Prompt Sensei
 try:
@@ -713,7 +711,6 @@ except Exception as e:
 # --- MAPPINGS ---
 NODE_CLASS_MAPPINGS = {
     **({"DS_Label": DS_Label} if DS_Label is not None else {}),
-    **({"DS_RunTimer": DS_RunTimer} if DS_RunTimer is not None else {}),
     **({"DS_PromptScanner": DS_PromptScanner} if DS_PromptScanner is not None else {}),
     **({"DS_ImageSaveAdvance": DS_ImageSaveAdvance} if DS_ImageSaveAdvance is not None else {}),
     **({"DS_PipeIn": DS_PipeIn} if DS_PipeIn is not None else {}),
@@ -723,7 +720,6 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_ImagePreview": DS_ImagePreview} if DS_ImagePreview is not None else {}),
     **({"DS_AnySwitch": DS_AnySwitch} if DS_AnySwitch is not None else {}),
     **({"DS_Switch": DS_Switch} if DS_Switch is not None else {}),
-    **({"DS_HardwareMonitor": DS_HardwareMonitor} if DS_HardwareMonitor is not None else {}),
     **({"DS_LoadImage": DS_LoadImage} if DS_LoadImage is not None else {}),
     **({"DS_LoadVideo": DS_LoadVideo} if DS_LoadVideo is not None else {}),
     **({"DS_Outpaint": DS_Outpaint} if DS_Outpaint is not None else {}),
@@ -757,7 +753,6 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_Label": "DS Label"} if DS_Label is not None else {}),
-    **({"DS_RunTimer": "DS Run Timer"} if DS_RunTimer is not None else {}),
     **({"DS_PromptScanner": "DS Prompt Scanner"} if DS_PromptScanner is not None else {}),
     **({"DS_ImageSaveAdvance": "DS Image Save Advance"} if DS_ImageSaveAdvance is not None else {}),
     **({"DS_PipeIn": "DS Pipe In (Universal)"} if DS_PipeIn is not None else {}),
@@ -767,7 +762,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_ImagePreview": "DS Image Preview"} if DS_ImagePreview is not None else {}),
     **({"DS_AnySwitch": "DS Any Switch"} if DS_AnySwitch is not None else {}),
     **({"DS_Switch": "DS Switch"} if DS_Switch is not None else {}),
-    **({"DS_HardwareMonitor": "DS Hardware Monitor"} if DS_HardwareMonitor is not None else {}),
     **({"DS_LoadImage": "DS Load Image"} if DS_LoadImage is not None else {}),
     **({"DS_LoadVideo": "DS Load Video"} if DS_LoadVideo is not None else {}),
     **({"DS_Outpaint": "DS Outpaint"} if DS_Outpaint is not None else {}),

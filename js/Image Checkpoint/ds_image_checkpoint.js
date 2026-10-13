@@ -355,6 +355,8 @@ async function continueExecution(node) {
   const s = stateOf(node);
   if (s.mode !== "pause" || !s.hasSnapshot || s.busy) return;
   window._dsCheckpointContinuing = true;
+  window._dsCheckpointActivePause = false;
+  window.dispatchEvent(new CustomEvent("ds_checkpoint_continue", { detail: { nodeId: node.id } }));
   await queueWithMode(node, "continue");
 }
 async function regenerate(node) {
@@ -564,9 +566,13 @@ function onExecutionDone() {
     if (n.type === TYPE || n.comfyClass === TYPE) {
       const s = stateOf(n);
       if (s.busy) {
+        const wasContinue = n._dsICActiveMode === "continue";
         s.busy = false;
         n._dsICActiveMode = null;
-        if (s.mode === "pause" && s.hasSnapshot) {
+        if (wasContinue) {
+          setStatus(n, "ready", "CONTINUED");
+          window._dsCheckpointActivePause = false;
+        } else if (s.mode === "pause" && s.hasSnapshot) {
           setStatus(n, "paused", "PAUSED · READY");
         } else {
           setStatus(n, "ready", s.mode === "pass" ? "PASSED" : "READY");
@@ -600,11 +606,13 @@ app.registerExtension({
       const s = stateOf(node);
       if (f.mode === "continue") {
         setStatus(node, "ready", "CONTINUED");
+        window._dsCheckpointActivePause = false;
       } else if (s.mode === "pause") {
         setStatus(node, "paused", "PAUSED · READY");
         window._dsCheckpointActivePause = true;
       } else {
         setStatus(node, "ready", f.mode === "pass" ? "PASSED" : "READY");
+        window._dsCheckpointActivePause = false;
       }
       log("executed", { node: d.node, mode: f.mode, width: f.width, height: f.height });
     });

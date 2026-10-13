@@ -50,8 +50,6 @@ const KNOWN_DS_NODES = [
   "DS_Outpaint",
   "DS_OutpaintStitch",
   "DS_FilmGrain",
-  "DS_HardwareMonitor",
-  "DS_RunTimer",
   "DS_Notes",
   "DS_Label",
   "DS_Gallery",

@@ -2293,6 +2293,48 @@ function getCardsTotalHeight(node) {
   return totalCardsH;
 }
 
+function estimateSenseiCardsHeight(s) {
+  if (!s) return 460;
+  let totalH = 0;
+  const order = Array.isArray(s.section_order) && s.section_order.length === 6
+    ? s.section_order
+    : ["image", "models", "lora", "video", "notes", "prompt"];
+
+  for (const sec of order) {
+    const isCol = Boolean(s.collapsed?.[sec]);
+    if (isCol) {
+      totalH += 34; // collapsed header height
+      continue;
+    }
+    switch (sec) {
+      case "image":
+        totalH += 140;
+        break;
+      case "models":
+        totalH += 115;
+        break;
+      case "lora": {
+        const count = Array.isArray(s.loras) ? s.loras.length : 0;
+        totalH += 46 + (count * 36) + 38;
+        break;
+      }
+      case "video":
+        totalH += 155;
+        break;
+      case "notes":
+        totalH += 80 + (Number(s.notes_height) || 60);
+        break;
+      case "prompt":
+        totalH += 90 + (Number(s.prompt_height) || 60);
+        break;
+      default:
+        totalH += 80;
+    }
+  }
+  if (order.length > 1) totalH += (order.length - 1) * 10;
+  return totalH;
+}
+
 function getFittedHeight(node) {
   if (!node) return DEFAULT_H;
 
@@ -2303,10 +2345,12 @@ function getFittedHeight(node) {
   const widgetMargin = Number.isFinite(widget?.margin)
     ? Number(widget.margin)
     : CARD_MARGIN;
-  const cardsBottom = getCardsTotalHeight(node);
+  let cardsBottom = getCardsTotalHeight(node);
 
   if (cardsBottom <= 50) {
-    return Number(node.size?.[1]) || DEFAULT_H;
+    // If cards have not yet rendered in the live DOM (cold start / fresh reload),
+    // calculate realistic height from node._sstate so the node never balloons to 1350px.
+    cardsBottom = estimateSenseiCardsHeight(node._sstate);
   }
 
   // Node base bottom = actual bottom of the card stack + exactly 5px.
@@ -2350,7 +2394,7 @@ function scheduleFitNode(node) {
     if (!node.graph || node._dsRemoved) return;
     fitNode(node);
     scheduleAlign(node);
-  }, 80);
+  }, 100);
 }
 
 function scheduleAlign(node) {
@@ -2472,8 +2516,7 @@ function buildCard(node) {
 
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(() => {
-      // Card content changes need alignment, but resizing the DOM host must never
-      // redefine the node's saved/natural height.
+      scheduleFitNode(node);
       scheduleAlign(node);
     });
     node._senseiRo = ro;
@@ -4610,6 +4653,7 @@ app.registerExtension({
       this._syncState?.();
       this._renderUI?.();
       this._syncSenseiWidgetWidth?.();
+      fitNode(this);
       scheduleFitNode(this);
       watchAlign(this);
       scheduleAlign(this);

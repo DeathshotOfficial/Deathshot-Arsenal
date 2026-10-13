@@ -83,19 +83,10 @@ export function captureChange(description = "") {
 }
 
 /**
- * Execute Undo across ComfyUI, LiteGraph, and DS Snap
+ * Execute Undo across ComfyUI and LiteGraph
  */
 export async function executeUndo() {
-  // 1. If DS Snap has recorded moves and is enabled, let it undo
-  try {
-    if (window.__ds_snap_history && window.__ds_snap_history.undoStack?.length > 0) {
-      if (window.__ds_snap_history.undo(app?.canvas)) {
-        return true;
-      }
-    }
-  } catch (_) {}
-
-  // 2. Try ComfyUI command
+  // 1. Try ComfyUI command
   try {
     const ok = await executeCommand("Comfy.Undo");
     if (ok) {
@@ -104,7 +95,7 @@ export async function executeUndo() {
     }
   } catch (_) {}
 
-  // 3. Try ComfyUI ChangeTracker (active workflow)
+  // 2. Try ComfyUI ChangeTracker (active workflow)
   try {
     const tracker = app?.workflowManager?.activeWorkflow?.changeTracker
       || window.comfyAPI?.changeTracker?.ChangeTracker?.getActiveTracker?.();
@@ -115,7 +106,7 @@ export async function executeUndo() {
     }
   } catch (_) {}
 
-  // 4. Try app.canvasHistory
+  // 3. Try app.canvasHistory
   try {
     if (app?.canvasHistory && typeof app.canvasHistory.undo === "function") {
       await app.canvasHistory.undo();
@@ -124,25 +115,16 @@ export async function executeUndo() {
     }
   } catch (_) {}
 
-  // 5. Fallback dirty refresh
+  // 4. Fallback dirty refresh
   app?.canvas?.setDirty?.(true, true);
   return false;
 }
 
 /**
- * Execute Redo across ComfyUI, LiteGraph, and DS Snap
+ * Execute Redo across ComfyUI and LiteGraph
  */
 export async function executeRedo() {
-  // 1. If DS Snap has redo stack, try it
-  try {
-    if (window.__ds_snap_history && window.__ds_snap_history.redoStack?.length > 0) {
-      if (window.__ds_snap_history.redo(app?.canvas)) {
-        return true;
-      }
-    }
-  } catch (_) {}
-
-  // 2. Try ComfyUI command
+  // 1. Try ComfyUI command
   try {
     const ok = await executeCommand("Comfy.Redo");
     if (ok) {
@@ -151,7 +133,7 @@ export async function executeRedo() {
     }
   } catch (_) {}
 
-  // 3. Try ComfyUI ChangeTracker
+  // 2. Try ComfyUI ChangeTracker
   try {
     const tracker = app?.workflowManager?.activeWorkflow?.changeTracker
       || window.comfyAPI?.changeTracker?.ChangeTracker?.getActiveTracker?.();

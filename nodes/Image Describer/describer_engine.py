@@ -576,6 +576,33 @@ def describe_image_sync(
         f"[Image Describer] Generation completed: {token_count} tokens in {gen_elapsed}s "
         f"({avg_speed} tok/s, TTFT: {ttft}s). Output length: {len(final_prompt)} chars."
     )
+    try:
+        from DeathshotArsenal.core.monitor import report_llm
+        report_llm(
+            model=str(getattr(b_llm, "_state", {}).get("key") or model_id or "Vision LLM"),
+            tokens=token_count,
+            seconds=gen_elapsed,
+            ttft=ttft,
+            status="active",
+            format_name="GGUF Vision",
+            offload="GPU offload",
+            backend="Image Describer"
+        )
+    except Exception:
+        try:
+            from core.monitor import report_llm
+            report_llm(
+                model=str(getattr(b_llm, "_state", {}).get("key") or model_id or "Vision LLM"),
+                tokens=token_count,
+                seconds=gen_elapsed,
+                ttft=ttft,
+                status="active",
+                format_name="GGUF Vision",
+                offload="GPU offload",
+                backend="Image Describer"
+            )
+        except Exception:
+            pass
 
     # 7. Auto Unload if requested
     if auto_unload:
