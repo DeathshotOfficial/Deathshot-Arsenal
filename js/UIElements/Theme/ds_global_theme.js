@@ -143,7 +143,13 @@ function isTransparentColor(color) {
 
 function hasCustomNodeColors(node) {
   const props = node?.properties || {};
-  return Boolean(props.node_color || props.ds_bg_color || props.ds_title_color);
+  return Boolean(
+    props.node_color ||
+    props.ds_bg_color ||
+    props.ds_title_color ||
+    node?.color ||
+    node?.bgcolor
+  );
 }
 
 function shouldSkipNodeBase(node) {

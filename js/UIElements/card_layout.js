@@ -41,6 +41,7 @@ const CSS = `
   margin: 0;
   padding: 0;
   border: 0;
+  background: var(--ds-color-card, #12151c) !important;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -296,9 +297,14 @@ export function createCard(node, options = {}) {
   requestAnimationFrame(() => {
     if (configured) return;
     const min = node.computeSize();
+    const existingW = Number(node.size?.[0]) || 0;
+    const existingH = Number(node.size?.[1]) || 0;
+    if (existingW >= minWidth && existingH >= min[1]) {
+      return;
+    }
     node.setSize([
-      Math.max(options.width ?? minWidth, min[0]),
-      lockHeight ? min[1] : Math.max(options.height ?? 0, min[1]),
+      Math.max(options.width ?? minWidth, min[0], existingW),
+      lockHeight ? min[1] : Math.max(options.height ?? 0, min[1], existingH),
     ]);
     node.setDirtyCanvas?.(true, true);
   });

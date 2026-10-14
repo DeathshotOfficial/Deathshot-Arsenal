@@ -128,13 +128,10 @@ export function protectDSResizeCorners(node) {
       const w = this.size[0];
       const h = this.size[1];
 
-      // Release corners (24px) and bottom edge (14px) for LiteGraph native resize handles
+      // Release native bottom-right corner (20px) and bottom edge (12px) for LiteGraph native resize handle
       if (
-        (localX >= w - 24 && localY >= h - 24) || // bottom-right corner
-        (localX <= 24 && localY >= h - 24) ||      // bottom-left corner
-        (localX >= w - 24 && localY <= 24) ||      // top-right corner
-        (localX <= 24 && localY <= 24) ||          // top-left corner
-        (localY >= h - 14)                         // bottom margin
+        (localX >= w - 20 && localY >= h - 20) ||
+        (localY >= h - 12)
       ) {
         return undefined;
       }
@@ -412,7 +409,6 @@ export function installDSCanvasNavigationBridge() {
   let activeDragSession = null;
 
   const endDragSession = () => {
-    if (!activeDragSession) return;
     activeDragSession = null;
     document.body?.classList.remove("ds-canvas-dragging");
   };
@@ -641,6 +637,8 @@ export function installDSCanvasNavigationBridge() {
     capture: true,
     passive: true,
   });
+  window.addEventListener("mouseleave", () => endDragSession(), { capture: true, passive: true });
+  window.addEventListener("pointerleave", () => endDragSession(), { capture: true, passive: true });
 
   // Forward right-click contextmenu on non-interactive node areas to LiteGraph canvas
   window.addEventListener(

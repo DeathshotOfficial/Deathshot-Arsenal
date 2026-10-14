@@ -507,15 +507,15 @@ function drawDsGroup(graphCanvas, ctx) {
     ctx.save();
     const alpha = Number(graphCanvas?.editor_alpha) || 1;
 
-    // Dark body background
-    ctx.globalAlpha = alpha * 0.40;
+    // Solid opaque base body background so elements behind never bleed through
+    ctx.globalAlpha = alpha * 0.96;
     ctx.fillStyle = "#0c1015";
     ctx.beginPath();
     ctx.roundRect(x, y, width, height, radius);
     ctx.fill();
 
     // Subtle tint with group header color
-    ctx.globalAlpha = alpha * 0.08;
+    ctx.globalAlpha = alpha * 0.12;
     ctx.fillStyle = header;
     ctx.beginPath();
     ctx.roundRect(x, y, width, height, radius);

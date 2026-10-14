@@ -122,7 +122,8 @@ function fixInvalidNodeId(node) {
   if (!node) return;
   const graph = node.graph || app?.graph;
   if (!graph) return;
-  if (node.id !== -1 && node.id != null && graph._nodes_by_id?.[node.id] === node) return;
+  // If node already has a valid ID, never mutate it!
+  if (node.id !== -1 && node.id != null && node.id !== "") return;
 
   let maxId = Number(graph.last_node_id || graph.lastNodeId || 0);
   for (const n of graph._nodes || []) {
@@ -132,9 +133,6 @@ function fixInvalidNodeId(node) {
   const newId = maxId + 1;
   graph.last_node_id = newId;
   if (graph.lastNodeId !== undefined) graph.lastNodeId = newId;
-  if (node.id != null && graph._nodes_by_id?.[node.id] === node) {
-    delete graph._nodes_by_id[node.id];
-  }
   node.id = newId;
   if (graph._nodes_by_id) graph._nodes_by_id[newId] = node;
 }
@@ -147,13 +145,12 @@ app.registerExtension({
       const g = app.graph;
       if (!g?._nodes) return;
       for (const n of g._nodes) {
-        if (n && n.type === "DS_Prompt" && (n.id === -1 || n.id == null || g._nodes_by_id?.[n.id] !== n)) {
+        if (n && n.type === "DS_Prompt" && (n.id === -1 || n.id == null || n.id === "")) {
           fixInvalidNodeId(n);
         }
       }
     };
     setTimeout(healStaleNodes, 150);
-    setTimeout(healStaleNodes, 600);
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData) {
@@ -209,12 +206,11 @@ app.registerExtension({
           const height = Number(this.size?.[1]) || 0;
           const handle = Number(this.constructor?.resizeHandleSize) || 15;
 
-          const inLeft = localX <= handle;
           const inRight = localX >= width - handle;
-          const inTop = localY <= handle;
           const inBottom = localY >= height - handle;
 
-          if ((inLeft || inRight) && (inTop || inBottom)) {
+          // Only release native bottom-right corner and bottom edge for resizing
+          if ((inRight && inBottom) || localY >= height - 12) {
             return undefined;
           }
         }

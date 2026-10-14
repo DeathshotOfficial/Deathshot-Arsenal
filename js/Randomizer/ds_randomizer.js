@@ -216,12 +216,10 @@ function protectRandomizerResizeCorners(node) {
       const height = Number(this.size?.[1]) || 0;
       const handle = Number(this.constructor?.resizeHandleSize) || 15;
 
-      const inLeft = localX <= handle;
       const inRight = localX >= width - handle;
-      const inTop = localY <= handle;
       const inBottom = localY >= height - handle;
 
-      if ((inLeft || inRight) && (inTop || inBottom)) {
+      if ((inRight && inBottom) || localY >= height - 12) {
         return undefined;
       }
     }
@@ -1056,18 +1054,26 @@ app.registerExtension({
     };
 
     nodeType.prototype.onSerialize = function (info) {
-      if (originalOnSerialize) originalOnSerialize.apply(this, arguments);
       const sw = ensureStateWidget(this);
       if (sw && this.properties?.ds_randomizer_state) {
         sw.value = JSON.stringify(this.properties.ds_randomizer_state);
       }
+      if (info && this.properties?.ds_randomizer_state) {
+        info.properties = info.properties || {};
+        info.properties.ds_randomizer_state = this.properties.ds_randomizer_state;
+      }
+      if (originalOnSerialize) originalOnSerialize.apply(this, arguments);
     };
 
     nodeType.prototype.serialize = function () {
-      const data = originalSerialize ? originalSerialize.apply(this, arguments) : {};
       const sw = ensureStateWidget(this);
       if (sw && this.properties?.ds_randomizer_state) {
         sw.value = JSON.stringify(this.properties.ds_randomizer_state);
+      }
+      const data = originalSerialize ? originalSerialize.apply(this, arguments) : {};
+      if (data && this.properties?.ds_randomizer_state) {
+        data.properties = data.properties || {};
+        data.properties.ds_randomizer_state = this.properties.ds_randomizer_state;
       }
       return data;
     };

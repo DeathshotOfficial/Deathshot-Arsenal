@@ -348,6 +348,53 @@ function getSelectedGraphItems(canvas = app?.canvas) {
   return [...new Set([...nodes, ...groups])];
 }
 
+/**
+ * Returns only the items that should genuinely move with activeItem.
+ * Crucial: dragging a node never drags groups or unselected nodes.
+ */
+function getDragItemsFor(canvas = app?.canvas, activeItem) {
+  if (!activeItem) return [];
+
+  // When dragging a node, NEVER include groups or unrelated nodes
+  if (isNode(activeItem)) {
+    const selectedNodes = new Set();
+    if (canvas?.selected_nodes && typeof canvas.selected_nodes === "object") {
+      const vals = Object.values(canvas.selected_nodes).filter(isNode);
+      if (vals.length > 1 && vals.some((n) => n === activeItem || String(n.id) === String(activeItem.id))) {
+        vals.forEach((n) => selectedNodes.add(n));
+      }
+    }
+    if (canvas?.selectedItems && canvas.selectedItems.size > 1) {
+      const items = Array.from(canvas.selectedItems).filter(isNode);
+      if (items.length > 1 && items.some((n) => n === activeItem || String(n.id) === String(activeItem.id))) {
+        items.forEach((n) => selectedNodes.add(n));
+      }
+    }
+    if (selectedNodes.size > 1) {
+      return [...selectedNodes];
+    }
+    // Single node drag: ONLY this node, nothing else
+    return [activeItem];
+  }
+
+  // When dragging a group, only include that group (or multiple groups if multi-selected)
+  if (isGroup(activeItem)) {
+    const selectedGroups = new Set();
+    if (canvas?.selectedItems && canvas.selectedItems.size > 1) {
+      const grps = Array.from(canvas.selectedItems).filter(isGroup);
+      if (grps.length > 1 && grps.includes(activeItem)) {
+        grps.forEach((g) => selectedGroups.add(g));
+      }
+    }
+    if (selectedGroups.size > 1) {
+      return [...selectedGroups];
+    }
+    return [activeItem];
+  }
+
+  return [activeItem];
+}
+
 function getPrimarySelectedNode(canvas = app?.canvas) {
   const nodes = getOrderedSelectedNodes(canvas);
   if (nodes.length > 0) return nodes[0];
@@ -508,6 +555,8 @@ class DSSnapEngine {
 
     addWithChildren(primaryItem);
     for (const it of allSelectedItems) {
+      // If dragging a Node, NEVER pull groups into the drag session
+      if (isNode(primaryItem) && isGroup(it)) continue;
       if (!isPinned(it)) addWithChildren(it);
     }
 
@@ -551,6 +600,7 @@ class DSSnapEngine {
       }
       this.dragSession = null;
     }
+    document.body?.classList.remove("ds-canvas-dragging");
     if (this.activeGuides.length > 0) {
       this.activeGuides = [];
     }
@@ -558,6 +608,7 @@ class DSSnapEngine {
   }
 
   onResizeEnd(canvas) {
+    document.body?.classList.remove("ds-canvas-dragging");
     if (this.resizeSession) {
       const { item, width, height } = this.resizeSession;
       if (item && item.size && !isPinned(item)) {
@@ -615,7 +666,7 @@ class DSSnapEngine {
 
     // Ensure active dragSession
     if (!this.dragSession || this.dragSession.primaryItem !== activeItem) {
-      const selected = getSelectedGraphItems(canvas);
+      const selected = getDragItemsFor(canvas, activeItem);
       this.onDragStart(canvas, activeItem, selected);
     }
 
@@ -2249,14 +2300,15 @@ function stopGlobalDrag() {
 // ---------------------------------------------------------------------------
 // 10. GLOBAL POINTER EVENT LISTENERS (SELECTION & FAILSAFE RELEASE)
 // ---------------------------------------------------------------------------
-let lastPointerDownNode = null;
+let lastPointerDownItem = null;
+let lastPointerDownPos = null;
 let globalListenersInstalled = false;
 
 function installGlobalPointerListeners() {
   if (globalListenersInstalled) return;
   globalListenersInstalled = true;
 
-  // Track selection history when clicking Vue Node DOM elements
+  // Track selection history and target item on pointerdown
   window.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
 
@@ -2268,6 +2320,7 @@ function installGlobalPointerListeners() {
     }
 
     const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
+    lastPointerDownPos = [e.clientX, e.clientY];
 
     const vueNodeEl = target.closest?.("[data-node-id]");
     if (vueNodeEl) {
@@ -2275,20 +2328,30 @@ function installGlobalPointerListeners() {
       const graph = app?.graph || app?.canvas?.graph;
       const node = graph?.getNodeById?.(rawId);
       if (node && isNode(node)) {
-        lastPointerDownNode = node;
+        lastPointerDownItem = node;
         recordNodeSelection(node.id, isMulti);
       }
     } else {
       const canvas = app?.canvas;
-      if (canvas?.graph_mouse && canvas.graph?.getNodeOnPos) {
-        lastPointerDownNode = canvas.graph.getNodeOnPos(canvas.graph_mouse[0], canvas.graph_mouse[1]) || null;
-        if (lastPointerDownNode && isNode(lastPointerDownNode)) {
-          recordNodeSelection(lastPointerDownNode.id, isMulti);
+      if (canvas?.graph_mouse && canvas.graph) {
+        const mouseX = canvas.graph_mouse[0];
+        const mouseY = canvas.graph_mouse[1];
+        const node = canvas.graph.getNodeOnPos ? canvas.graph.getNodeOnPos(mouseX, mouseY) : null;
+        if (node && isNode(node)) {
+          lastPointerDownItem = node;
+          recordNodeSelection(node.id, isMulti);
+        } else {
+          const group = canvas.graph.getGroupOnPos ? canvas.graph.getGroupOnPos(mouseX, mouseY) : null;
+          if (group && isGroup(group)) {
+            lastPointerDownItem = group;
+          } else {
+            lastPointerDownItem = null;
+          }
         }
       }
     }
 
-    if (!isMulti && !vueNodeEl && !lastPointerDownNode && target === app?.canvas?.canvas) {
+    if (!isMulti && !vueNodeEl && !lastPointerDownItem && target === app?.canvas?.canvas) {
       selectionHistory = [];
     }
   }, true);
@@ -2329,24 +2392,42 @@ function installGlobalPointerListeners() {
       return;
     }
 
-    // Resizing detection
+    // Resizing detection - CRITICAL: if resizing, NEVER drag!
+    const isResizing = Boolean(
+      canvas.resizing_node ||
+      canvas.pointer?.resizeDirection ||
+      canvas.resizingGroup ||
+      (canvas.selected_group && canvas.selected_group_resizing)
+    );
+
     const resizingGroupItem =
       (canvas.resizingGroup && isGroup(canvas.resizingGroup) ? canvas.resizingGroup : null) ||
       (canvas.selected_group && canvas.selected_group_resizing && isGroup(canvas.selected_group) ? canvas.selected_group : null);
 
-    const resizingNodeItem =
-      (canvas.resizing_node && isNode(canvas.resizing_node) ? canvas.resizing_node : null) ||
-      (canvas.pointer?.resizeDirection && canvas.current_node && isNode(canvas.current_node) ? canvas.current_node : null) ||
-      (canvas.pointer?.resizeDirection && canvas.node_over && isNode(canvas.node_over) ? canvas.node_over : null);
+    let resizingNodeItem = null;
+    if (isNode(canvas.resizing_node)) {
+      resizingNodeItem = canvas.resizing_node;
+    } else if (canvas.resizing_node || canvas.pointer?.resizeDirection) {
+      resizingNodeItem =
+        (canvas.current_node && isNode(canvas.current_node) ? canvas.current_node : null) ||
+        (canvas.node_over && isNode(canvas.node_over) ? canvas.node_over : null) ||
+        (lastPointerDownItem && isNode(lastPointerDownItem) ? lastPointerDownItem : null);
+    }
 
-    if (resizingNodeItem) {
+    if (isResizing) {
       e.__ds_snap_move_handled = true;
-      snapEngine.processNodeResize(canvas, resizingNodeItem);
+      if (resizingNodeItem) {
+        snapEngine.processNodeResize(canvas, resizingNodeItem);
+      } else if (resizingGroupItem) {
+        snapEngine.processGroupResize(canvas, resizingGroupItem);
+      }
       return;
-    } else if (resizingGroupItem) {
-      e.__ds_snap_move_handled = true;
-      snapEngine.processGroupResize(canvas, resizingGroupItem);
-      return;
+    }
+
+    // Require at least 4px pointer movement from pointerdown before treating as drag
+    if (lastPointerDownPos) {
+      const dist = Math.hypot(e.clientX - lastPointerDownPos[0], e.clientY - lastPointerDownPos[1]);
+      if (dist < 4) return;
     }
 
     // Dragged item detection (supports Classic + Vue Nodes + Groups)
@@ -2354,18 +2435,12 @@ function installGlobalPointerListeners() {
 
     if (canvas.node_dragged && isNode(canvas.node_dragged) && !isPinned(canvas.node_dragged)) {
       activeItem = canvas.node_dragged;
-    } else if (lastPointerDownNode && isNode(lastPointerDownNode) && !isPinned(lastPointerDownNode)) {
-      activeItem = lastPointerDownNode;
-    } else if (canvas.selected_group && isGroup(canvas.selected_group) && !isPinned(canvas.selected_group) && !resizingGroupItem) {
-      activeItem = canvas.selected_group;
-    } else if (canvas.current_node && isNode(canvas.current_node) && !isPinned(canvas.current_node)) {
+    } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
+      activeItem = lastPointerDownItem;
+    } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
+      activeItem = lastPointerDownItem;
+    } else if (canvas.current_node && isNode(canvas.current_node) && !isPinned(canvas.current_node) && canvas.isDragging) {
       activeItem = canvas.current_node;
-    } else if (canvas.selectedItems && canvas.selectedItems.size > 0) {
-      const grp = Array.from(canvas.selectedItems).find((it) => isGroup(it) && !isPinned(it));
-      const nde = Array.from(canvas.selectedItems).find((it) => isNode(it) && !isPinned(it));
-      activeItem = nde || grp || null;
-    } else if (canvas.selected_nodes && typeof canvas.selected_nodes === "object") {
-      activeItem = Object.values(canvas.selected_nodes).find((n) => isNode(n) && !isPinned(n)) || null;
     }
 
     if (activeItem && !isPinned(activeItem)) {
@@ -2383,7 +2458,9 @@ function installGlobalPointerListeners() {
 
   // Pointer release handler
   const handleGlobalPointerRelease = () => {
-    lastPointerDownNode = null;
+    lastPointerDownItem = null;
+    lastPointerDownPos = null;
+    document.body?.classList.remove("ds-canvas-dragging");
     if (snapEngine.dragSession || snapEngine.hasGuides() || snapEngine.resizeSession) {
       snapEngine.onDragEnd(app?.canvas);
       snapEngine.onResizeEnd(app?.canvas);
@@ -2445,23 +2522,36 @@ function hookCanvasTarget(target, label = "canvas") {
           return res;
         }
 
-        // Detect resizing first
+        // Detect resizing first - CRITICAL: if resizing, NEVER process as drag!
+        const isResizing = Boolean(
+          this.resizing_node ||
+          this.pointer?.resizeDirection ||
+          this.resizingGroup ||
+          (this.selected_group && this.selected_group_resizing)
+        );
+
         const resizingGroupItem =
           (this.resizingGroup && isGroup(this.resizingGroup) ? this.resizingGroup : null) ||
           (this.selected_group && this.selected_group_resizing && isGroup(this.selected_group) ? this.selected_group : null);
 
-        const resizingNodeItem =
-          (this.resizing_node && isNode(this.resizing_node) ? this.resizing_node : null) ||
-          (this.pointer?.resizeDirection && this.current_node && isNode(this.current_node) ? this.current_node : null) ||
-          (this.pointer?.resizeDirection && this.node_over && isNode(this.node_over) ? this.node_over : null) ||
-          (this.pointer?.resizeDirection && this.selectedItems ? Array.from(this.selectedItems).find(isNode) : null) ||
-          (this.pointer?.resizeDirection && this.selected_nodes ? Object.values(this.selected_nodes).find(isNode) : null);
+        let resizingNodeItem = null;
+        if (isNode(this.resizing_node)) {
+          resizingNodeItem = this.resizing_node;
+        } else if (this.resizing_node || this.pointer?.resizeDirection) {
+          resizingNodeItem =
+            (this.current_node && isNode(this.current_node) ? this.current_node : null) ||
+            (this.node_over && isNode(this.node_over) ? this.node_over : null) ||
+            (this.selectedItems ? Array.from(this.selectedItems).find(isNode) : null) ||
+            (this.selected_nodes ? Object.values(this.selected_nodes).find(isNode) : null) ||
+            (lastPointerDownItem && isNode(lastPointerDownItem) ? lastPointerDownItem : null);
+        }
 
-        if (resizingNodeItem) {
-          snapEngine.processNodeResize(this, resizingNodeItem);
-          return res;
-        } else if (resizingGroupItem) {
-          snapEngine.processGroupResize(this, resizingGroupItem);
+        if (isResizing) {
+          if (resizingNodeItem) {
+            snapEngine.processNodeResize(this, resizingNodeItem);
+          } else if (resizingGroupItem) {
+            snapEngine.processGroupResize(this, resizingGroupItem);
+          }
           return res;
         } else if (snapEngine.resizingGuides.length > 0) {
           snapEngine.onResizeEnd(this);
@@ -2472,27 +2562,12 @@ function hookCanvasTarget(target, label = "canvas") {
 
         if (this.node_dragged && isNode(this.node_dragged) && !isPinned(this.node_dragged)) {
           activeItem = this.node_dragged;
-        } else if (this.selected_group && isGroup(this.selected_group) && !isPinned(this.selected_group) && !resizingGroupItem) {
-          // If no specific node is actively being dragged, treat the selected group as active
-          if (!this.node_dragged || isPinned(this.node_dragged)) {
-            activeItem = this.selected_group;
-          }
+        } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
+          activeItem = lastPointerDownItem;
+        } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
+          activeItem = lastPointerDownItem;
         } else if (this.current_node && isNode(this.current_node) && !isPinned(this.current_node) && (this.selectedItems ? this.selectedItems.has(this.current_node) : true)) {
           activeItem = this.current_node;
-        } else if (this.selectedItems && this.selectedItems.size > 0) {
-          if (this.selected_group && this.selectedItems.has(this.selected_group) && isGroup(this.selected_group) && !isPinned(this.selected_group)) {
-            activeItem = this.selected_group;
-          } else {
-            const grp = Array.from(this.selectedItems).find((it) => isGroup(it) && !isPinned(it));
-            const nde = Array.from(this.selectedItems).find((it) => isNode(it) && !isPinned(it));
-            if (grp && !nde) {
-              activeItem = grp;
-            } else if (nde) {
-              activeItem = nde;
-            } else if (grp) {
-              activeItem = grp;
-            }
-          }
         } else if (this.selected_nodes && typeof this.selected_nodes === "object") {
           activeItem = Object.values(this.selected_nodes).find((n) => isNode(n) && !isPinned(n)) || null;
         } else {

@@ -209,46 +209,46 @@ function restoreState(node) {
   syncFromWidgets(node);
 
   let saved = {};
+  let hasWorkflowState = false;
 
-  // 1. Widget ds_load_video_state
+  // 1. Widget ds_load_video_state (saved in workflow JSON)
   const stateWidget = node.widgets?.find((w) => w?.name === "ds_load_video_state");
   if (stateWidget?.value) {
     try {
       const raw = Array.isArray(stateWidget.value) ? stateWidget.value.join("") : String(stateWidget.value);
-      if (raw) Object.assign(saved, JSON.parse(raw));
+      if (raw && raw !== "{}") {
+        Object.assign(saved, JSON.parse(raw));
+        hasWorkflowState = true;
+      }
     } catch {}
   }
 
-  // 2. Node properties
+  // 2. Node properties (saved in workflow JSON)
   if (node.properties?.[PROP]) {
     try {
       const raw = node.properties[PROP];
       const p = typeof raw === "string" ? JSON.parse(raw) : raw;
-      if (p) Object.assign(saved, p);
+      if (p && Object.keys(p).length > 0) {
+        Object.assign(saved, p);
+        hasWorkflowState = true;
+      }
     } catch {}
   }
 
-  // 3. Server-persisted state cache
-  if (node.id != null && window._ds_load_video_server_nodes?.[String(node.id)]) {
-    Object.assign(saved, window._ds_load_video_server_nodes[String(node.id)]);
-  }
-
-  // 4. LocalStorage for this specific node
-  if (node.id != null) {
-    try {
-      const raw = localStorage.getItem(`DS_LOAD_VIDEO_STATE_${node.id}`);
-      if (raw) Object.assign(saved, JSON.parse(raw));
-    } catch {}
-  }
-
-  // 5. Fallback for video from primary 'video' widget if still empty
+  // 3. Fallback for video from primary 'video' widget if still empty
   const videoWidget = node.widgets?.find((w) => w?.name === "video");
   if (!saved.video && videoWidget?.value) {
     saved.video = String(videoWidget.value);
+    hasWorkflowState = true;
   }
 
-  // 6. Global last video fallback
-  if (!saved.video) {
+  // 4. Server-persisted state cache ONLY if no workflow state is found (brand new node)
+  if (!hasWorkflowState && node.id != null && window._ds_load_video_server_nodes?.[String(node.id)]) {
+    Object.assign(saved, window._ds_load_video_server_nodes[String(node.id)]);
+  }
+
+  // 5. Global last video fallback ONLY if node has no saved video and is newly created
+  if (!saved.video && !hasWorkflowState) {
     if (window._ds_load_video_last_video) {
       saved.video = window._ds_load_video_last_video;
     } else {
