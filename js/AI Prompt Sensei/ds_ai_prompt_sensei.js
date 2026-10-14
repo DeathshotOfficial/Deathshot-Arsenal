@@ -1886,6 +1886,10 @@ function installSenseiQueueHooks() {
     const allNodes = app.graph?._nodes || app.graph?.nodes || [];
     for (const n of allNodes) {
       if ((n.type === NODE_TYPE || n.comfyClass === NODE_TYPE) && String(n.id) === String(detail.node_id)) {
+        if (n._isKilled || n._sstate?.status === "cancelled") {
+          return;
+        }
+
         const incomingText = detail.text !== undefined
           ? detail.text
           : ((n._sstate?.generated_prompt || "") + (detail.chunk || ""));
@@ -1992,11 +1996,30 @@ function installSenseiQueueHooks() {
           if (detail.model) n._sstate.telemetry.model = detail.model;
         }
         if (detail.stage === "loading" || detail.stage === "generating") {
+          if (n._isKilled || n._sstate?.status === "cancelled") return;
           n._sstate.status = "generating";
           if (n._promptTA) {
             n._promptTA.classList.add("is-generating");
           }
+        } else if (detail.stage === "cancelled" || detail.stage === "aborted") {
+          n._sstate.status = "cancelled";
+          n._isGeneratingPrompt = false;
+          if (n._promptTA) {
+            n._promptTA.classList.remove("is-generating");
+          }
+          n._syncState?.();
+          n._renderUI?.();
+        } else if (detail.stage === "failed" || detail.stage === "error") {
+          n._sstate.status = "failed";
+          n._sstate.error_msg = detail.message || "Generation failed";
+          n._isGeneratingPrompt = false;
+          if (n._promptTA) {
+            n._promptTA.classList.remove("is-generating");
+          }
+          n._syncState?.();
+          n._renderUI?.();
         } else if (detail.stage === "completed" || detail.stage === "finished") {
+          if (n._isKilled || n._sstate?.status === "cancelled") return;
           n._sstate.status = "completed";
           if (n._promptTA) {
             n._promptTA.classList.remove("is-generating");
@@ -3864,11 +3887,39 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
       variant: "danger",
       onClick: async () => {
         try {
+          killBtn.setDisabled(true);
+          killBtn.setLabel("Stopping...");
+          node._isKilled = true;
+          node._isGeneratingPrompt = false;
+
+          // Abort active client fetch in flight
+          try {
+            node._promptAbortController?.abort();
+          } catch (_) { }
+
+          // Signal backend to immediately abort LLM generation (Built-In + LM Studio)
           await fetch("/ds/prompt_sensei/kill", { method: "POST" });
+          try { await fetch("/ds/prompt_sensei/builtin/abort", { method: "POST" }); } catch (_) { }
+
           s.status = "cancelled";
+          node._livePromptStatus = "Generation stopped by user";
+          node._livePromptStage = "cancelled";
+          const currentTA = promptTA || node._promptTA || node._domContainer?.querySelector(".ds-sensei-prompt-area");
+          if (currentTA) {
+            currentTA.classList.remove("is-generating");
+          }
           sync();
+          node._updateLlmMonitor?.();
           rerender();
-        } catch (_) { }
+          killBtn.setLabel("Stopped ✓");
+        } catch (_) {
+        } finally {
+          setTimeout(() => {
+            node._isKilled = false;
+            killBtn.setDisabled(false);
+            killBtn.setLabel("Kill LLM");
+          }, 800);
+        }
       },
     });
     leftBtns.append(sysBtn.root, killBtn.root);
@@ -4146,9 +4197,11 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
         node._updateLlmMonitor?.();
         rerollBtn.setDisabled(true);
         rerollBtn.setLabel("Generating...");
+        node._promptAbortController = new AbortController();
         try {
           const isBuiltIn = s.provider === "built_in";
           const r = await fetch("/ds/prompt_sensei/generate", {
+            signal: node._promptAbortController.signal,
             method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               node_id: String(node.id),
@@ -4177,8 +4230,9 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
           });
           if (r.ok) {
             const d = await r.json();
-            if (d.status === "cancelled") {
+            if (d.status === "cancelled" || node._isKilled) {
               s.status = "cancelled";
+              s.error_msg = null;
             } else if (d.status === "failed") {
               s.status = "failed";
               s.error_msg = d.error || "Generation failed";
@@ -4211,12 +4265,22 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
               };
             }
           } else {
-            s.status = "failed";
-            s.error_msg = "Server error generating prompt";
+            if (node._isKilled || s.status === "cancelled") {
+              s.status = "cancelled";
+              s.error_msg = null;
+            } else {
+              s.status = "failed";
+              s.error_msg = "Server error generating prompt";
+            }
           }
         } catch (e) {
-          s.status = "failed";
-          s.error_msg = e?.message || "Generation error";
+          if (e?.name === "AbortError" || node._isKilled || s.status === "cancelled") {
+            s.status = "cancelled";
+            s.error_msg = null;
+          } else {
+            s.status = "failed";
+            s.error_msg = e?.message || "Generation error";
+          }
         } finally {
           node._isGeneratingPrompt = false;
           rerollBtn.setDisabled(false);
@@ -4329,7 +4393,29 @@ function registerSenseiProgressListener() {
         n._livePromptStage = d.stage;
         n._livePromptProgress = d;
 
-        if (d.stage === "completed" || d.stage === "finished") {
+        if (d.stage === "cancelled" || d.stage === "aborted") {
+          n._isGeneratingPrompt = false;
+          if (n._promptTA) {
+            n._promptTA.classList.remove("is-generating");
+          }
+          if (n._sstate) {
+            n._sstate.status = "cancelled";
+          }
+          n._syncState?.();
+          n._renderUI?.();
+        } else if (d.stage === "failed" || d.stage === "error") {
+          n._isGeneratingPrompt = false;
+          if (n._promptTA) {
+            n._promptTA.classList.remove("is-generating");
+          }
+          if (n._sstate) {
+            n._sstate.status = "failed";
+            n._sstate.error_msg = d.message || "Generation failed";
+          }
+          n._syncState?.();
+          n._renderUI?.();
+        } else if (d.stage === "completed" || d.stage === "finished") {
+          if (n._isKilled || n._sstate?.status === "cancelled") return;
           n._isGeneratingPrompt = false;
           if (n._promptTA) {
             n._promptTA.classList.remove("is-generating");

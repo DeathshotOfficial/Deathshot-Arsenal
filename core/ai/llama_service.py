@@ -90,8 +90,14 @@ def unload_model() -> bool:
 def kill_active_generation() -> bool:
     """Cancels any running generation mid-flight."""
     mod = _get_builtin_llm_mod()
-    if mod and hasattr(mod, "_state"):
-        mod._state["abort"] = True
+    if mod:
+        if hasattr(mod, "abort_generation"):
+            try:
+                mod.abort_generation()
+            except Exception:
+                pass
+        if hasattr(mod, "_state"):
+            mod._state["abort"] = True
         return True
     return False
 

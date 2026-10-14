@@ -258,13 +258,58 @@ def register_prompt_sensei_routes():
                 return web.json_response({"status": "failed", "error": str(e)}, status=500)
 
         # ------------------------------------------------------------------
-        # Kill active generation
+        # Kill active generation (Built-In LLM and LM Studio)
         # ------------------------------------------------------------------
         @routes.post("/ds/prompt_sensei/kill")
         async def kill_handler(request):
             try:
-                killed = kill_active_generation()
-                return web.json_response({"killed": killed})
+                killed_lm = False
+                try:
+                    killed_lm = kill_active_generation()
+                except Exception as e:
+                    logger.debug(f"[Prompt Sensei] LM Studio kill error: {e}")
+
+                killed_builtin = False
+                try:
+                    from .builtin_llm import abort_generation
+                    killed_builtin = abort_generation()
+                except Exception:
+                    try:
+                        from builtin_llm import abort_generation
+                        killed_builtin = abort_generation()
+                    except Exception as e:
+                        logger.debug(f"[Prompt Sensei] Built-in abort error: {e}")
+
+                try:
+                    from ...core.ai.llama_service import kill_active_generation as kill_ai_core
+                    kill_ai_core()
+                except Exception:
+                    pass
+
+                return web.json_response({
+                    "killed": bool(killed_lm or killed_builtin),
+                    "builtin": bool(killed_builtin),
+                    "lm_studio": bool(killed_lm),
+                })
+            except Exception as e:
+                logger.error(f"[Prompt Sensei] Kill error: {e}")
+                return web.json_response({"error": str(e)}, status=500)
+
+        @routes.post("/ds/prompt_sensei/builtin/kill")
+        @routes.post("/ds/prompt_sensei/builtin/abort")
+        async def builtin_abort_handler(request):
+            try:
+                killed = False
+                try:
+                    from .builtin_llm import abort_generation
+                    killed = abort_generation()
+                except Exception:
+                    try:
+                        from builtin_llm import abort_generation
+                        killed = abort_generation()
+                    except Exception:
+                        pass
+                return web.json_response({"killed": bool(killed)})
             except Exception as e:
                 return web.json_response({"error": str(e)}, status=500)
 

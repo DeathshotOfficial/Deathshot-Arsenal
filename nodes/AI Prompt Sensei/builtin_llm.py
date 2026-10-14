@@ -689,9 +689,35 @@ def _unload_locked():
     return True
 
 
+def abort_generation() -> bool:
+    """Immediately halts any active built-in GGUF model generation mid-flight."""
+    _state["abort"] = True
+    llm = _state.get("llm")
+    if llm is not None:
+        if hasattr(llm, "abort"):
+            try:
+                llm.abort()
+            except Exception as e:
+                logger.debug(f"[Builtin LLM] Error calling llm.abort(): {e}")
+        try:
+            native_flag = getattr(llm, "_native_abort_flag", None)
+            if native_flag is not None:
+                native_flag.value = True
+        except Exception:
+            pass
+        try:
+            abort_ev = getattr(llm, "_abort_event", None)
+            if abort_ev is not None:
+                abort_ev.set()
+        except Exception:
+            pass
+    logger.info("[Builtin LLM] Active generation aborted by user.")
+    return True
+
+
 def unload():
     """Unload model and free GPU VRAM and System RAM completely."""
-    _state["abort"] = True
+    abort_generation()
     with _lock:
         was_loaded = _state["llm"] is not None
         _unload_locked()
@@ -1102,6 +1128,16 @@ def generate_chat(
         _enforce_no_thinking_on_llm(llm)
 
         _state["abort"] = False
+        try:
+            native_flag = getattr(llm, "_native_abort_flag", None)
+            if native_flag is not None:
+                native_flag.value = False
+            abort_ev = getattr(llm, "_abort_event", None)
+            if abort_ev is not None:
+                abort_ev.clear()
+        except Exception:
+            pass
+
         t0 = time.perf_counter()
         parts = []
 
@@ -1156,11 +1192,15 @@ def generate_chat(
         in_think_block = False
         try:
             for chunk in stream:
-                if _state["abort"]:
+                if _state.get("abort"):
                     raise RuntimeError("[Builtin LLM] Generation cancelled mid-run.")
                 if check_interrupt:
                     check_interrupt()
-                delta = chunk["choices"][0].get("delta") or {}
+                choice = chunk["choices"][0] if chunk.get("choices") else {}
+                if choice.get("finish_reason") == "abort":
+                    _state["abort"] = True
+                    raise RuntimeError("[Builtin LLM] Generation cancelled mid-run.")
+                delta = choice.get("delta") or {}
                 piece = delta.get("content") or ""
                 if not piece:
                     continue
@@ -1282,6 +1322,7 @@ def generate_prompt_builtin(
     streams completion, strips <think> reasoning tokens, and honors auto-unload.
     """
     cfg = builtin_config or {}
+    _state["abort"] = False
     model_key = cfg.get("model")
     if not model_key:
         available = list_builtin_models()
@@ -1355,6 +1396,10 @@ def generate_prompt_builtin(
             "status": "failed",
             "error": f"Failed to load built-in model: {e}",
         }
+
+    if _state.get("abort"):
+        logger.info("[Builtin LLM] Generation aborted immediately after model load.")
+        return {"status": "cancelled", "error": "Generation interrupted by user"}
 
     # Encode image if present
     image_payload = None
@@ -1436,6 +1481,10 @@ def generate_prompt_builtin(
 
     result = {}
     try:
+        if _state.get("abort"):
+            logger.info("[Builtin LLM] Generation aborted before inference started.")
+            return {"status": "cancelled", "error": "Generation interrupted by user"}
+
         cleaned_text, tokens, elapsed = generate_chat(
             messages=messages,
             max_tokens=max_tokens,
@@ -1460,7 +1509,13 @@ def generate_prompt_builtin(
             "seed": seed,
         }
     except BaseException as e:
-        if type(e).__name__ in ("InterruptProcessingException", "CancelledError"):
+        is_cancelled = (
+            _state.get("abort")
+            or type(e).__name__ in ("InterruptProcessingException", "CancelledError")
+            or "cancelled" in str(e).lower()
+            or "aborted" in str(e).lower()
+        )
+        if is_cancelled:
             logger.info("[Builtin LLM] Generation cancelled/interrupted by user.")
             result = {"status": "cancelled", "error": "Generation interrupted by user"}
         elif isinstance(e, Exception):
@@ -1470,7 +1525,7 @@ def generate_prompt_builtin(
             raise
     finally:
         if auto_unload:
-            time.sleep(0.3)
+            time.sleep(0.1)
             try:
                 import server
                 server.PromptServer.instance.send_sync("ds_sensei_progress", {
@@ -1485,7 +1540,10 @@ def generate_prompt_builtin(
             except Exception:
                 pass
             unload()
-            time.sleep(0.15)
+            time.sleep(0.1)
+
+        is_cancel = result.get("status") == "cancelled" or _state.get("abort")
+        is_fail = result.get("status") == "failed"
 
         try:
             import server
@@ -1493,16 +1551,39 @@ def generate_prompt_builtin(
             spd = result.get("speed", 0.0)
             ela = result.get("elapsed", 0.0)
             mod = model_display_name or (loaded_model_name() or os.path.basename(model_key or "")).replace('.gguf', '') or "GGUF Model"
-            server.PromptServer.instance.send_sync("ds_sensei_progress", {
-                "stage": "completed",
-                "message": f"Completed ({tok} tokens · {spd} Tk/s · {ela}s)",
-                "tokens": tok,
-                "speed": spd,
-                "elapsed": ela,
-                "model": mod,
-                "prompt": result.get("prompt", ""),
-                "node_id": node_id,
-            })
+            if is_cancel:
+                server.PromptServer.instance.send_sync("ds_sensei_progress", {
+                    "stage": "cancelled",
+                    "message": "Generation stopped by user.",
+                    "tokens": tok,
+                    "speed": spd,
+                    "elapsed": ela,
+                    "model": mod,
+                    "prompt": "",
+                    "node_id": node_id,
+                })
+            elif is_fail:
+                server.PromptServer.instance.send_sync("ds_sensei_progress", {
+                    "stage": "failed",
+                    "message": f"Generation failed: {result.get('error', '')}",
+                    "tokens": tok,
+                    "speed": spd,
+                    "elapsed": ela,
+                    "model": mod,
+                    "prompt": "",
+                    "node_id": node_id,
+                })
+            else:
+                server.PromptServer.instance.send_sync("ds_sensei_progress", {
+                    "stage": "completed",
+                    "message": f"Completed ({tok} tokens · {spd} Tk/s · {ela}s)",
+                    "tokens": tok,
+                    "speed": spd,
+                    "elapsed": ela,
+                    "model": mod,
+                    "prompt": result.get("prompt", ""),
+                    "node_id": node_id,
+                })
             _safe_report_llm(
                 model=mod,
                 tokens=tok,
