@@ -50,6 +50,12 @@ loadDsExtension("ds_hardware_monitor_bar.js");
     } catch (error) {
         console.error("[DeathshotArsenal] Failed to load DS GIF Generator frontend:", error);
     }
+    try {
+        await import("./Stripper/stripper.js?v=1.0.0&t=" + Date.now());
+        console.log("[DeathshotArsenal] Loaded DS Stripper frontend");
+    } catch (error) {
+        console.error("[DeathshotArsenal] Failed to load DS Stripper frontend:", error);
+    }
 })();
 
 

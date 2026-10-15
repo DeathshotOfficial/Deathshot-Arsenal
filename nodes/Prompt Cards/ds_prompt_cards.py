@@ -93,22 +93,36 @@ def save_cards(cards):
 # ------------------------------------------------------------------
 # API (used by the node frontend)
 # ------------------------------------------------------------------
-@server.PromptServer.instance.routes.get("/ds/promptcards/cards")
-async def promptcards_get(_request):
-    return web.json_response({"cards": load_cards()})
+def register_prompt_cards_routes():
+    if not hasattr(server, "PromptServer") or not hasattr(server.PromptServer, "instance") or server.PromptServer.instance is None:
+        return
+    routes = server.PromptServer.instance.routes
+
+    for r in routes:
+        if getattr(r, "path", None) == "/ds/promptcards/cards":
+            return
+
+    @routes.get("/ds/promptcards/cards")
+    async def promptcards_get(_request):
+        return web.json_response({"cards": load_cards()})
+
+    @routes.post("/ds/promptcards/cards")
+    async def promptcards_post(request):
+        try:
+            payload = await request.json()
+            cards = payload.get("cards", [])
+            if not isinstance(cards, list):
+                return web.json_response({"error": "cards must be a list"}, status=400)
+            ok = save_cards(cards)
+            return web.json_response({"success": ok, "count": len(cards)})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
 
 
-@server.PromptServer.instance.routes.post("/ds/promptcards/cards")
-async def promptcards_post(request):
-    try:
-        payload = await request.json()
-        cards = payload.get("cards", [])
-        if not isinstance(cards, list):
-            return web.json_response({"error": "cards must be a list"}, status=400)
-        ok = save_cards(cards)
-        return web.json_response({"success": ok, "count": len(cards)})
-    except Exception as e:
-        return web.json_response({"error": str(e)}, status=500)
+try:
+    register_prompt_cards_routes()
+except Exception as exc:
+    print(f"[DS Prompt Cards] Route registration deferred: {exc}")
 
 
 # ------------------------------------------------------------------

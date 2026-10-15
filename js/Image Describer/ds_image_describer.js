@@ -6,7 +6,7 @@
  */
 
 import { app } from "/scripts/app.js";
-import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
+import { attachNodeShortcuts, attachTextHistory } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   DSIcon,
@@ -564,7 +564,8 @@ app.registerExtension({
       textareaWrap.className = "ds-describer-textarea-wrap";
 
       const textareaEl = document.createElement("textarea");
-      textareaEl.className = "ds-describer-textarea";
+      textareaEl.className = "ds-describer-textarea ds-ui-text-editor";
+      textareaEl.spellcheck = true;
       textareaEl.placeholder = "Prompt description will be generated here or enter text directly...";
       textareaEl.value = wText?.value || "";
 
@@ -572,6 +573,7 @@ app.registerExtension({
         card.set(wText, textareaEl.value);
         updateWordCount();
       });
+      attachTextHistory(textareaEl);
 
       textareaWrap.appendChild(textareaEl);
 
@@ -1476,10 +1478,27 @@ app.registerExtension({
         textareaEl.classList.remove("is-generating");
         setStatus("Done", "Analysis complete");
         if (detail.text) {
+          const isFocused = document.activeElement === textareaEl;
+          const selStart = isFocused ? textareaEl.selectionStart : null;
+          const selEnd = isFocused ? textareaEl.selectionEnd : null;
+          const scrollTop = isFocused ? textareaEl.scrollTop : null;
+
           textareaEl.value = detail.text;
           lastGeneratedText = detail.text;
           card.set(wText, detail.text);
           updateWordCount();
+
+          if (isFocused) {
+            if (selStart !== null && selEnd !== null) {
+              textareaEl.setSelectionRange(
+                Math.min(selStart, textareaEl.value.length),
+                Math.min(selEnd, textareaEl.value.length)
+              );
+            }
+            if (scrollTop !== null) {
+              textareaEl.scrollTop = scrollTop;
+            }
+          }
         }
         updateMetrics({
           tokens: detail.tokens,
@@ -1504,8 +1523,10 @@ app.registerExtension({
         } catch (_) {}
         syncBadges();
         if (wText && textareaEl.value !== wText.value) {
-          textareaEl.value = wText.value || "";
-          updateWordCount();
+          if (document.activeElement !== textareaEl) {
+            textareaEl.value = wText.value || "";
+            updateWordCount();
+          }
         }
         return res;
       };
@@ -1523,10 +1544,27 @@ app.registerExtension({
           thumbOverlay.style.display = "block";
         }
         if (message?.prompt?.[0]) {
+          const isFocused = document.activeElement === textareaEl;
+          const selStart = isFocused ? textareaEl.selectionStart : null;
+          const selEnd = isFocused ? textareaEl.selectionEnd : null;
+          const scrollTop = isFocused ? textareaEl.scrollTop : null;
+
           textareaEl.value = message.prompt[0];
           lastGeneratedText = message.prompt[0];
           card.set(wText, message.prompt[0]);
           updateWordCount();
+
+          if (isFocused) {
+            if (selStart !== null && selEnd !== null) {
+              textareaEl.setSelectionRange(
+                Math.min(selStart, textareaEl.value.length),
+                Math.min(selEnd, textareaEl.value.length)
+              );
+            }
+            if (scrollTop !== null) {
+              textareaEl.scrollTop = scrollTop;
+            }
+          }
         }
       };
 

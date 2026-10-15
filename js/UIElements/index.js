@@ -12,7 +12,7 @@ import { Card } from "./Core/Card.js";
 import { Field } from "./Core/Field.js";
 import { Section } from "./Core/Section.js";
 import { Popup } from "./Core/Popup.js";
-import { normalizeDSWidgetHost, protectDSResizeCorners } from "./Core/system.js";
+import { normalizeDSWidgetHost, protectDSResizeCorners, isTextEditableElement } from "./Core/system.js";
 
 // Containers
 import { Panel } from "./Containers/Panel.js";
@@ -123,6 +123,7 @@ export {
   executeToggleBypass,
   executeMoveSelected,
   isEditableTarget,
+  isTextEditableElement,
   attachTextHistory,
   handleNodeKeyDown,
   attachNodeShortcuts,
@@ -192,6 +193,7 @@ if (typeof window !== "undefined") {
   window.DSUI.VideoPlayerModal = VideoPlayerModal;
   window.DSUI.StatusBar = StatusBar;
   window.DSUI.StatusLabel = StatusLabel;
+  window.DSUI.isTextEditableElement = isTextEditableElement;
   window.DSUI.normalizeWidgetHost = normalizeDSWidgetHost;
   window.DSUI.protectResizeCorners = protectDSResizeCorners;
   window.DSUI.install = installDSUI;

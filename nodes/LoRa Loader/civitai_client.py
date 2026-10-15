@@ -471,7 +471,13 @@ def register_routes():
     try:
         import server
         from aiohttp import web
+        if not hasattr(server, "PromptServer") or not hasattr(server.PromptServer, "instance") or server.PromptServer.instance is None:
+            return False
         routes = server.PromptServer.instance.routes
+
+        for r in routes:
+            if getattr(r, "path", None) == "/ds/civitai/retrieve":
+                return True
 
         async def _handle_retrieve(request):
             try:

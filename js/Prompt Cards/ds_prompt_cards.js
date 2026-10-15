@@ -15,7 +15,7 @@
  */
 
 import { app } from "/scripts/app.js";
-import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
+import { attachNodeShortcuts, attachTextHistory } from "../UIElements/shortcuts.js";
 import {
   DSIconMarkup,
   installDSUI,
@@ -539,7 +539,7 @@ app.registerExtension({
             </div>
           </div>
 
-          <textarea class="ds-prompt-text prompt-text" data-prompt rows="3" placeholder="Describe the pose / subject...">${promptVal}</textarea>
+          <textarea class="ds-prompt-text prompt-text ds-ui-text-editor" data-prompt rows="3" spellcheck="true" placeholder="Describe the pose / subject...">${promptVal}</textarea>
         </div>
       `;
 
@@ -554,6 +554,7 @@ app.registerExtension({
       textarea.addEventListener("keydown", (e) => {
         e.stopPropagation();
       });
+      attachTextHistory(textarea);
 
       // Image Click -> Pick
       preview.addEventListener("click", (e) => {
@@ -1332,7 +1333,8 @@ app.registerExtension({
 
           <div class="ds-pc-modal-body">
             <textarea
-              class="ds-pc-modal-prompt"
+              class="ds-pc-modal-prompt ds-ui-text-editor"
+              spellcheck="true"
               placeholder="Describe the pose / subject..."
             >${(card.prompt || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</textarea>
           </div>
@@ -1359,6 +1361,7 @@ app.registerExtension({
       ta.addEventListener("keydown", (e) => {
         e.stopPropagation();
       });
+      attachTextHistory(ta);
 
       const savePrompt = debounce((val) => {
         const c = this.cards.find((x) => x.id === id);

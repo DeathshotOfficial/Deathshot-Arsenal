@@ -1,7 +1,7 @@
 // DS AI Prompt Sensei — Deathshot Arsenal
 
 import { app } from "/scripts/app.js";
-import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
+import { attachNodeShortcuts, attachTextHistory } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   Card,
@@ -1845,7 +1845,11 @@ function installSenseiQueueHooks() {
     const allNodes = app.graph?._nodes || app.graph?.nodes || [];
     for (const n of allNodes) {
       if (n.type === NODE_TYPE || n.comfyClass === NODE_TYPE) {
-        n._renderUI?.();
+        if (typeof n._updateExecutionUI === "function") {
+          n._updateExecutionUI(_isSenseiExecuting);
+        } else if (!n._domContainer?.contains(document.activeElement)) {
+          n._renderUI?.();
+        }
       }
     }
   };
@@ -1861,11 +1865,14 @@ function installSenseiQueueHooks() {
           } else {
             n._sstate.status = "ready";
           }
+        }
+        if (typeof n._updateExecutionUI === "function") {
+          n._updateExecutionUI(false);
+        } else if (!n._domContainer?.contains(document.activeElement)) {
           n._renderUI?.();
         }
       }
     }
-    triggerSenseiNodeUpdates();
   };
 
   api.addEventListener("execution_start", () => {
@@ -1907,9 +1914,21 @@ function installSenseiQueueHooks() {
 
         const ta = n._promptTA || n._domContainer?.querySelector(".ds-sensei-prompt-area");
         if (ta) {
-          ta.value = incomingText;
+          const isFocused = document.activeElement === ta;
+          if (isFocused) {
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            const top = ta.scrollTop;
+            ta.value = incomingText;
+            try {
+              ta.setSelectionRange(start, end);
+              ta.scrollTop = top;
+            } catch (_) {}
+          } else {
+            ta.value = incomingText;
+            ta.scrollTop = ta.scrollHeight;
+          }
           ta.classList.add("is-generating");
-          ta.scrollTop = ta.scrollHeight;
         }
 
         const count = incomingText.trim().split(/\s+/).filter(Boolean).length;
@@ -1930,7 +1949,19 @@ function installSenseiQueueHooks() {
         if (detail.prompt) {
           n._sstate.generated_prompt = detail.prompt;
           if (n._promptTA) {
-            n._promptTA.value = detail.prompt;
+            const isFocused = document.activeElement === n._promptTA;
+            if (isFocused) {
+              const start = n._promptTA.selectionStart;
+              const end = n._promptTA.selectionEnd;
+              const top = n._promptTA.scrollTop;
+              n._promptTA.value = detail.prompt;
+              try {
+                n._promptTA.setSelectionRange(start, end);
+                n._promptTA.scrollTop = top;
+              } catch (_) {}
+            } else {
+              n._promptTA.value = detail.prompt;
+            }
             n._promptTA.classList.remove("is-generating");
           }
           if (detail.speed && detail.elapsed) {
@@ -1944,7 +1975,11 @@ function installSenseiQueueHooks() {
           n._sstate.status = "completed";
           n._sstate.error_msg = null;
           n._syncState?.();
-          n._renderUI?.();
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
+          } else if (!n._domContainer?.contains(document.activeElement)) {
+            n._renderUI?.();
+          }
         }
       }
     }
@@ -1959,7 +1994,19 @@ function installSenseiQueueHooks() {
         if (promptText) {
           n._sstate.generated_prompt = promptText;
           if (n._promptTA) {
-            n._promptTA.value = promptText;
+            const isFocused = document.activeElement === n._promptTA;
+            if (isFocused) {
+              const start = n._promptTA.selectionStart;
+              const end = n._promptTA.selectionEnd;
+              const top = n._promptTA.scrollTop;
+              n._promptTA.value = promptText;
+              try {
+                n._promptTA.setSelectionRange(start, end);
+                n._promptTA.scrollTop = top;
+              } catch (_) {}
+            } else {
+              n._promptTA.value = promptText;
+            }
             n._promptTA.classList.remove("is-generating");
           }
           const newSpeed = detail.output.speed?.[0];
@@ -1976,7 +2023,11 @@ function installSenseiQueueHooks() {
           n._sstate.error_msg = null;
           n._livePromptStatus = null;
           n._syncState?.();
-          n._renderUI?.();
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
+          } else if (!n._domContainer?.contains(document.activeElement)) {
+            n._renderUI?.();
+          }
         }
       }
     }
@@ -2008,7 +2059,11 @@ function installSenseiQueueHooks() {
             n._promptTA.classList.remove("is-generating");
           }
           n._syncState?.();
-          n._renderUI?.();
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
+          } else if (!n._domContainer?.contains(document.activeElement)) {
+            n._renderUI?.();
+          }
         } else if (detail.stage === "failed" || detail.stage === "error") {
           n._sstate.status = "failed";
           n._sstate.error_msg = detail.message || "Generation failed";
@@ -2017,7 +2072,11 @@ function installSenseiQueueHooks() {
             n._promptTA.classList.remove("is-generating");
           }
           n._syncState?.();
-          n._renderUI?.();
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
+          } else if (!n._domContainer?.contains(document.activeElement)) {
+            n._renderUI?.();
+          }
         } else if (detail.stage === "completed" || detail.stage === "finished") {
           if (n._isKilled || n._sstate?.status === "cancelled") return;
           n._sstate.status = "completed";
@@ -2027,13 +2086,28 @@ function installSenseiQueueHooks() {
           if (detail.prompt) {
             n._sstate.generated_prompt = detail.prompt.trim();
             if (n._promptTA) {
-              n._promptTA.value = n._sstate.generated_prompt;
+              const isFocused = document.activeElement === n._promptTA;
+              if (isFocused) {
+                const start = n._promptTA.selectionStart;
+                const end = n._promptTA.selectionEnd;
+                const top = n._promptTA.scrollTop;
+                n._promptTA.value = n._sstate.generated_prompt;
+                try {
+                  n._promptTA.setSelectionRange(start, end);
+                  n._promptTA.scrollTop = top;
+                } catch (_) {}
+              } else {
+                n._promptTA.value = n._sstate.generated_prompt;
+              }
             }
             if (n._wcBadge) {
               const count = n._sstate.generated_prompt.split(/\s+/).filter(Boolean).length;
               n._wcBadge.textContent = `${count} words`;
             }
             n._syncState?.();
+          }
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
           }
         }
         n._updateLlmMonitor?.();
@@ -2516,14 +2590,42 @@ function buildCard(node) {
   };
   node._syncState = sync;
 
-  const rerender = () => {
-    const curNotes = container.querySelector(".ds-sensei-notes-area");
-    if (curNotes && curNotes.style.height) {
-      node._sstate.notes_height = curNotes.style.height;
-    }
-    const curPrompt = container.querySelector(".ds-sensei-prompt-area");
-    if (curPrompt && curPrompt.style.height) {
-      node._sstate.prompt_height = curPrompt.style.height;
+  const rerender = (skipHarvest = false) => {
+    const activeEl = document.activeElement;
+    const isFocusedInside = Boolean(activeEl && container.contains(activeEl));
+    let focusedTag = isFocusedInside ? activeEl.tagName : null;
+    let focusedClass = isFocusedInside && activeEl.className ? activeEl.className.split(/\s+/).find((c) => c.startsWith("ds-sensei-") || c.startsWith("ds-ui-")) : null;
+    let selStart = isFocusedInside && typeof activeEl.selectionStart === "number" ? activeEl.selectionStart : null;
+    let selEnd = isFocusedInside && typeof activeEl.selectionEnd === "number" ? activeEl.selectionEnd : null;
+    let scrollPos = isFocusedInside ? activeEl.scrollTop : null;
+
+    if (!skipHarvest && !node._isConfiguring) {
+      const curNotes = container.querySelector(".ds-sensei-notes-area");
+      if (curNotes) {
+        if (curNotes.style.height) node._sstate.notes_height = curNotes.style.height;
+        if (curNotes.value !== undefined) {
+          // Never overwrite non-empty state with an empty string if curNotes was never interacted with
+          if (curNotes.value !== "" || !node._sstate.scene_notes) {
+            if (node._sstate.mode === "custom") {
+              node._sstate.custom_text = curNotes.value;
+            } else {
+              if (!node._sstate.notes_per_mode) node._sstate.notes_per_mode = {};
+              node._sstate.notes_per_mode[node._sstate.mode] = curNotes.value;
+              node._sstate.scene_notes = curNotes.value;
+            }
+          }
+        }
+      }
+      const curPrompt = container.querySelector(".ds-sensei-prompt-area");
+      if (curPrompt) {
+        if (curPrompt.style.height) node._sstate.prompt_height = curPrompt.style.height;
+        if (curPrompt.value !== undefined && !curPrompt.classList.contains("is-generating")) {
+          // Never overwrite non-empty prompt with empty string during programmatic re-renders
+          if (curPrompt.value !== "" || !node._sstate.generated_prompt) {
+            node._sstate.generated_prompt = curPrompt.value;
+          }
+        }
+      }
     }
     sync();
 
@@ -2533,6 +2635,19 @@ function buildCard(node) {
     try { window.DSGlobalTheme?.bindNode?.(container, node); } catch (_) { }
     scheduleFitNode(node);
     scheduleAlign(node);
+
+    if (isFocusedInside && (focusedClass || focusedTag)) {
+      const restored = focusedClass ? container.querySelector("." + focusedClass) : container.querySelector(focusedTag);
+      if (restored && typeof restored.focus === "function") {
+        restored.focus();
+        if (selStart !== null && selEnd !== null) {
+          try { restored.setSelectionRange(selStart, selEnd); } catch (_) {}
+        }
+        if (scrollPos !== null) {
+          try { restored.scrollTop = scrollPos; } catch (_) {}
+        }
+      }
+    }
   };
   node._renderUI = rerender;
   node._anchorEls = anchorEls;
@@ -3796,7 +3911,8 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
 
     // 4. Notes / Custom Prompt Textarea
     notesTA = document.createElement("textarea");
-    notesTA.className = "ds-sensei-textarea ds-sensei-notes-area";
+    notesTA.className = "ds-ui-text-editor ds-sensei-textarea ds-sensei-notes-area";
+    notesTA.spellcheck = true;
     if (s.mode === "custom") {
       notesTA.placeholder = "Write or paste your custom prompt here. Passes through to the prompt output unchanged without using an LLM.";
       notesTA.value = s.custom_text || s.generated_prompt || s.scene_notes || "";
@@ -3818,6 +3934,19 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
       }
       sync();
     };
+
+    node._notesTA = notesTA;
+    attachTextHistory(notesTA, (val) => {
+      if (s.mode === "custom") {
+        s.custom_text = val;
+        s.generated_prompt = val;
+      } else {
+        if (!s.notes_per_mode) s.notes_per_mode = {};
+        s.notes_per_mode[s.mode] = val;
+        s.scene_notes = val;
+      }
+      sync();
+    });
 
     let _skipNotesInit = true;
     if (window.ResizeObserver) {
@@ -4101,9 +4230,10 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
       cardPrompt.append(errBox);
     }
     promptTA = document.createElement("textarea");
-    promptTA.className = "ds-sensei-textarea ds-sensei-prompt-area" + (s.status === "generating" ? " is-generating" : "");
+    promptTA.className = "ds-ui-text-editor ds-sensei-textarea ds-sensei-prompt-area" + (s.status === "generating" ? " is-generating" : "");
     promptTA.placeholder = s.status === "generating" ? "Sensei is writing prompt..." : "Generated prompt. Edit freely before clicking Continue.";
     promptTA.value = s.generated_prompt || "";
+    promptTA.spellcheck = true;
     if (s.prompt_height) promptTA.style.height = s.prompt_height;
     promptTA.oninput = () => {
       s.generated_prompt = promptTA.value;
@@ -4111,6 +4241,13 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
       const count = (s.generated_prompt || "").trim().split(/\s+/).filter(Boolean).length;
       wcBadge.textContent = `${count} words`;
     };
+
+    attachTextHistory(promptTA, (val) => {
+      s.generated_prompt = val;
+      sync();
+      const count = (s.generated_prompt || "").trim().split(/\s+/).filter(Boolean).length;
+      wcBadge.textContent = `${count} words`;
+    });
 
     node._promptTA = promptTA;
     node._wcBadge = wcBadge;
@@ -4349,6 +4486,40 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
 
     actRow.append(rerollBtn.root, continueBtn.root);
     cardPrompt.append(actRow);
+
+    node._rerollBtn = rerollBtn;
+    node._continueBtn = continueBtn;
+    node._updateExecutionUI = function (isExecuting) {
+      const btn = this._continueBtn;
+      const isCustom = s.mode === "custom";
+      const isGenerating = s.status === "generating";
+      const executing = Boolean(isExecuting || isGenerating);
+
+      if (btn) {
+        if (executing) {
+          btn.setLabel("Abort");
+          btn.setIcon?.("square");
+          btn.setVariant?.("danger");
+          btn.root.classList.remove("ds-sensei-btn-continue");
+          btn.root.classList.add("ds-sensei-btn-danger");
+          btn.root.title = "Stop the running ComfyUI workflow and LLM generation";
+        } else {
+          btn.setLabel(isCustom ? "Continue (Custom)" : "Continue");
+          btn.setIcon?.("play");
+          btn.setVariant?.("primary");
+          btn.root.classList.remove("ds-sensei-btn-danger");
+          btn.root.classList.add("ds-sensei-btn-continue");
+          btn.root.title = "Apply edited prompt and continue workflow";
+        }
+      }
+
+      if (this._rerollBtn) {
+        this._rerollBtn.setDisabled(isGenerating);
+        this._rerollBtn.setLabel(isGenerating ? "Generating..." : (isCustom ? "Sync Prompt" : "Reroll"));
+      }
+
+      this._updateLlmMonitor?.();
+    };
   }
 
   // ── Append Cards According to Section Order
@@ -4402,7 +4573,11 @@ function registerSenseiProgressListener() {
             n._sstate.status = "cancelled";
           }
           n._syncState?.();
-          n._renderUI?.();
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
+          } else if (!n._domContainer?.contains(document.activeElement)) {
+            n._renderUI?.();
+          }
         } else if (d.stage === "failed" || d.stage === "error") {
           n._isGeneratingPrompt = false;
           if (n._promptTA) {
@@ -4413,7 +4588,11 @@ function registerSenseiProgressListener() {
             n._sstate.error_msg = d.message || "Generation failed";
           }
           n._syncState?.();
-          n._renderUI?.();
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
+          } else if (!n._domContainer?.contains(document.activeElement)) {
+            n._renderUI?.();
+          }
         } else if (d.stage === "completed" || d.stage === "finished") {
           if (n._isKilled || n._sstate?.status === "cancelled") return;
           n._isGeneratingPrompt = false;
@@ -4423,7 +4602,24 @@ function registerSenseiProgressListener() {
           if (d.prompt) {
             n._sstate.generated_prompt = d.prompt.trim();
             if (n._promptTA) {
+              const isPromptFocused = document.activeElement === n._promptTA;
+              const selStart = isPromptFocused ? n._promptTA.selectionStart : null;
+              const selEnd = isPromptFocused ? n._promptTA.selectionEnd : null;
+              const scrollTop = isPromptFocused ? n._promptTA.scrollTop : null;
+
               n._promptTA.value = n._sstate.generated_prompt;
+
+              if (isPromptFocused) {
+                if (selStart !== null && selEnd !== null) {
+                  n._promptTA.setSelectionRange(
+                    Math.min(selStart, n._promptTA.value.length),
+                    Math.min(selEnd, n._promptTA.value.length)
+                  );
+                }
+                if (scrollTop !== null) {
+                  n._promptTA.scrollTop = scrollTop;
+                }
+              }
             }
             if (n._wcBadge) {
               const count = n._sstate.generated_prompt.split(/\s+/).filter(Boolean).length;
@@ -4440,6 +4636,9 @@ function registerSenseiProgressListener() {
               model: d.model || n._sstate.telemetry?.model || (n._sstate?.provider === "built_in" ? (n._sstate?.built_in?.model?.split(/[/\\]/).pop() || "Built In") : (n._sstate?.lm_studio?.model || "LM Studio")),
             };
           }
+          if (typeof n._updateExecutionUI === "function") {
+            n._updateExecutionUI(false);
+          }
         }
         n._updateLlmMonitor?.();
       }
@@ -4453,6 +4652,7 @@ function registerSenseiProgressListener() {
         if (n?.type === NODE_TYPE) {
           n._isGeneratingPrompt = false;
           n._promptTA?.classList.remove("is-generating");
+          n._updateExecutionUI?.(false);
           n._updateLlmMonitor?.();
         }
       }
@@ -4464,12 +4664,14 @@ function registerSenseiProgressListener() {
         if (String(n.id) === String(executingId)) {
           n._isGeneratingPrompt = true;
           _activeSenseiNode = n;
+          n._updateExecutionUI?.(true);
         } else {
           n._isGeneratingPrompt = false;
           n._promptTA?.classList.remove("is-generating");
           if (_activeSenseiNode === n) {
             _activeSenseiNode = null;
           }
+          n._updateExecutionUI?.(false);
         }
         n._updateLlmMonitor?.();
       }
@@ -4617,7 +4819,7 @@ app.registerExtension({
 
       try { window.DSGlobalTheme?.applyNodeBase?.(this); } catch (_) { }
       getCatalog().then(() => {
-        this._renderUI?.();
+        this._renderUI?.(true);
         scheduleFitNode(this);
         scheduleAlign(this);
       });
@@ -4628,6 +4830,7 @@ app.registerExtension({
 
     const origConfigure = nodeType.prototype.onConfigure;
     nodeType.prototype.onConfigure = function (info) {
+      this._isConfiguring = true;
       origConfigure?.apply(this, arguments);
       this.widgets_start_y = 5;
       this.shape = LiteGraph.ROUND_SHAPE;
@@ -4737,7 +4940,8 @@ app.registerExtension({
       }
       try { window.DSGlobalTheme?.applyNodeBase?.(this); } catch (_) { }
       this._syncState?.();
-      this._renderUI?.();
+      this._renderUI?.(true);
+      this._isConfiguring = false;
       this._syncSenseiWidgetWidth?.();
       fitNode(this);
       scheduleFitNode(this);
@@ -4835,6 +5039,22 @@ app.registerExtension({
         }
       }
       return o;
+    };
+
+    const origOnSerialize = nodeType.prototype.onSerialize;
+    nodeType.prototype.onSerialize = function (info) {
+      this._syncState?.();
+      if (info && typeof info === "object") {
+        info.properties = info.properties || {};
+        info.properties.ds_sensei_state = JSON.parse(JSON.stringify(this._sstate));
+        if (info.widgets_values && Array.isArray(this.widgets)) {
+          const idx = this.widgets.findIndex((w) => w.name === "SenseiState");
+          if (idx !== -1) {
+            info.widgets_values[idx] = JSON.stringify(this._sstate);
+          }
+        }
+      }
+      return origOnSerialize?.apply(this, arguments);
     };
   },
 

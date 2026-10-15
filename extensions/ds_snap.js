@@ -2302,7 +2302,30 @@ function stopGlobalDrag() {
 // ---------------------------------------------------------------------------
 let lastPointerDownItem = null;
 let lastPointerDownPos = null;
+let lastPointerDownIsVue = false;
 let globalListenersInstalled = false;
+
+function isPointerNearNodeSlot(node, mouseX, mouseY) {
+  if (!node) return false;
+  const radius = (globalThis.LiteGraph?.NODE_SLOT_HEIGHT ?? 20) * 1.35;
+  if (Array.isArray(node.inputs)) {
+    for (let i = 0; i < node.inputs.length; i++) {
+      const pos = node.getInputPos ? node.getInputPos(i) : null;
+      if (pos && Math.hypot(mouseX - pos[0], mouseY - pos[1]) <= radius) {
+        return true;
+      }
+    }
+  }
+  if (Array.isArray(node.outputs)) {
+    for (let i = 0; i < node.outputs.length; i++) {
+      const pos = node.getOutputPos ? node.getOutputPos(i) : null;
+      if (pos && Math.hypot(mouseX - pos[0], mouseY - pos[1]) <= radius) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 function installGlobalPointerListeners() {
   if (globalListenersInstalled) return;
@@ -2329,17 +2352,23 @@ function installGlobalPointerListeners() {
       const node = graph?.getNodeById?.(rawId);
       if (node && isNode(node)) {
         lastPointerDownItem = node;
+        lastPointerDownIsVue = true;
         recordNodeSelection(node.id, isMulti);
       }
     } else {
+      lastPointerDownIsVue = false;
       const canvas = app?.canvas;
       if (canvas?.graph_mouse && canvas.graph) {
         const mouseX = canvas.graph_mouse[0];
         const mouseY = canvas.graph_mouse[1];
         const node = canvas.graph.getNodeOnPos ? canvas.graph.getNodeOnPos(mouseX, mouseY) : null;
         if (node && isNode(node)) {
-          lastPointerDownItem = node;
-          recordNodeSelection(node.id, isMulti);
+          if (isPointerNearNodeSlot(node, mouseX, mouseY)) {
+            lastPointerDownItem = null;
+          } else {
+            lastPointerDownItem = node;
+            recordNodeSelection(node.id, isMulti);
+          }
         } else {
           const group = canvas.graph.getGroupOnPos ? canvas.graph.getGroupOnPos(mouseX, mouseY) : null;
           if (group && isGroup(group)) {
@@ -2392,6 +2421,22 @@ function installGlobalPointerListeners() {
       return;
     }
 
+    // Connecting or dragging a link wire - NEVER treat as node drag!
+    const isLinkConnecting = Boolean(
+      canvas.linkConnector?.isConnecting ||
+      canvas.connecting_node != null ||
+      canvas.connecting_slot != null ||
+      Boolean(canvas.linkConnector?.renderLinks?.length)
+    );
+    if (isLinkConnecting) {
+      lastPointerDownItem = null;
+      if (snapEngine.hasGuides()) {
+        snapEngine.onDragEnd(canvas);
+        canvas.setDirty?.(true, true);
+      }
+      return;
+    }
+
     // Resizing detection - CRITICAL: if resizing, NEVER drag!
     const isResizing = Boolean(
       canvas.resizing_node ||
@@ -2435,12 +2480,12 @@ function installGlobalPointerListeners() {
 
     if (canvas.node_dragged && isNode(canvas.node_dragged) && !isPinned(canvas.node_dragged)) {
       activeItem = canvas.node_dragged;
-    } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
-      activeItem = lastPointerDownItem;
-    } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
-      activeItem = lastPointerDownItem;
     } else if (canvas.current_node && isNode(canvas.current_node) && !isPinned(canvas.current_node) && canvas.isDragging) {
       activeItem = canvas.current_node;
+    } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (canvas.isDragging || lastPointerDownIsVue)) {
+      activeItem = lastPointerDownItem;
+    } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (canvas.isDragging || lastPointerDownIsVue)) {
+      activeItem = lastPointerDownItem;
     }
 
     if (activeItem && !isPinned(activeItem)) {
@@ -2513,6 +2558,22 @@ function hookCanvasTarget(target, label = "canvas") {
           return res;
         }
 
+        // Connecting or dragging a link wire - NEVER treat as node drag!
+        const isLinkConnecting = Boolean(
+          this.linkConnector?.isConnecting ||
+          this.connecting_node != null ||
+          this.connecting_slot != null ||
+          Boolean(this.linkConnector?.renderLinks?.length)
+        );
+        if (isLinkConnecting) {
+          lastPointerDownItem = null;
+          if (snapEngine.hasGuides()) {
+            snapEngine.onDragEnd(this);
+            this.setDirty?.(true, true);
+          }
+          return res;
+        }
+
         // Alt-key bypass or search dialog active
         if (e?.altKey || isPlacementOrSearchActive()) {
           if (snapEngine.hasGuides()) {
@@ -2562,12 +2623,12 @@ function hookCanvasTarget(target, label = "canvas") {
 
         if (this.node_dragged && isNode(this.node_dragged) && !isPinned(this.node_dragged)) {
           activeItem = this.node_dragged;
-        } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
-          activeItem = lastPointerDownItem;
-        } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem)) {
-          activeItem = lastPointerDownItem;
-        } else if (this.current_node && isNode(this.current_node) && !isPinned(this.current_node) && (this.selectedItems ? this.selectedItems.has(this.current_node) : true)) {
+        } else if (this.current_node && isNode(this.current_node) && !isPinned(this.current_node) && (this.selectedItems ? this.selectedItems.has(this.current_node) : true) && this.isDragging) {
           activeItem = this.current_node;
+        } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (this.isDragging || lastPointerDownIsVue)) {
+          activeItem = lastPointerDownItem;
+        } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (this.isDragging || lastPointerDownIsVue)) {
+          activeItem = lastPointerDownItem;
         } else if (this.selected_nodes && typeof this.selected_nodes === "object") {
           activeItem = Object.values(this.selected_nodes).find((n) => isNode(n) && !isPinned(n)) || null;
         } else {

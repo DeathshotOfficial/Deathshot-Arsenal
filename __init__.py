@@ -458,6 +458,17 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_ImageDescriber: {e}", flush=True)
     DS_ImageDescriber = None
 
+# DS Stripper
+try:
+    _mod = _load_node_pkg("stripper", "Stripper")
+    DS_Stripper = _mod.DSStripper
+    if hasattr(_mod, "register_stripper_routes"):
+        _mod.register_stripper_routes()
+except Exception as e:
+    print(f"[DeathshotArsenal] Failed to load DS_Stripper: {e}", flush=True)
+    DS_Stripper = None
+
+
 
 
 
@@ -749,6 +760,7 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_ImageDescriber": DS_ImageDescriber} if DS_ImageDescriber is not None else {}),
     **({"DS_ThemeManager": DS_ThemeManager} if DS_ThemeManager is not None else {}),
     **({"DS_GifGenerator": DS_GifGenerator} if DS_GifGenerator is not None else {}),
+    **({"DSStripper": DS_Stripper} if DS_Stripper is not None else {}),
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -791,6 +803,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_ImageDescriber": "DS Image Describer"} if DS_ImageDescriber is not None else {}),
     **({"DS_ThemeManager": "DS Theme Manager"} if DS_ThemeManager is not None else {}),
     **({"DS_GifGenerator": "DS GIF Generator"} if DS_GifGenerator is not None else {}),
+    **({"DSStripper": "DS Stripper"} if DS_Stripper is not None else {}),
 }
 
 WEB_DIRECTORY = "js"

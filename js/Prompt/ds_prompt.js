@@ -1,5 +1,5 @@
 import { app } from "/scripts/app.js";
-import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
+import { attachNodeShortcuts, attachTextHistory } from "../UIElements/shortcuts.js";
 import {
   DSIconMarkup,
   protectDSResizeCorners,
@@ -323,7 +323,7 @@ app.registerExtension({
             </div>
           </div>
           <div class="ds-prompt-body">
-            <textarea class="ds-prompt-textarea" data-prompt spellcheck="false"
+            <textarea class="ds-ui-text-editor ds-prompt-textarea" data-prompt spellcheck="true"
                       placeholder="Write your prompt..."></textarea>
             <div class="ds-prompt-preview-wrap" data-preview-wrap>
               <div class="ds-prompt-preview-head">
@@ -460,6 +460,7 @@ app.registerExtension({
       this._dsPromptTextarea.addEventListener("input", () => {
         syncValue(this._dsPromptTextarea.value, false);
       });
+      attachTextHistory(this._dsPromptTextarea);
 
       root.addEventListener("click", async (event) => {
         const posBtn = event.target.closest("button[data-pos]");
@@ -540,13 +541,7 @@ app.registerExtension({
         },
       });
 
-      if (Array.isArray(this.widgets)) {
-        const domIdx = this.widgets.indexOf(this._dsPromptDOMWidget);
-        if (domIdx > 0) {
-          this.widgets.splice(domIdx, 1);
-          this.widgets.unshift(this._dsPromptDOMWidget);
-        }
-      }
+
 
 
       setTimeout(() => {
@@ -711,11 +706,14 @@ app.registerExtension({
         }
       }
 
-      if (Object.prototype.hasOwnProperty.call(props, "ds_prompt_text")) {
-        const val = String(props.ds_prompt_text ?? "");
-        this._dsPromptValue = val;
-        if (this._dsPromptNativeText) this._dsPromptNativeText.value = val;
-        if (this._dsPromptTextarea) this._dsPromptTextarea.value = val;
+      const val = Object.prototype.hasOwnProperty.call(props, "ds_prompt_text")
+        ? String(props.ds_prompt_text ?? "")
+        : String(this._dsPromptNativeText?.value ?? (Array.isArray(info?.widgets_values) ? info.widgets_values[0] : "") ?? "");
+      this._dsPromptValue = val;
+      props.ds_prompt_text = val;
+      if (this._dsPromptNativeText) this._dsPromptNativeText.value = val;
+      if (this._dsPromptTextarea && document.activeElement !== this._dsPromptTextarea) {
+        this._dsPromptTextarea.value = val;
       }
 
       if (Object.prototype.hasOwnProperty.call(props, "ds_prompt_trigger_position")) {

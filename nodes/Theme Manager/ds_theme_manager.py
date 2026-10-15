@@ -192,77 +192,92 @@ def _download_google_font(font_name):
 # ------------------------------------------------------------------
 # API ROUTES
 # ------------------------------------------------------------------
-@server.PromptServer.instance.routes.get("/ds/theme/config")
-@server.PromptServer.instance.routes.get("/api/ds/theme/config")
-async def theme_get_config(_request):
-    return web.json_response({"config": load_appearance()})
+def register_theme_manager_routes():
+    if not hasattr(server, "PromptServer") or not hasattr(server.PromptServer, "instance") or server.PromptServer.instance is None:
+        return
+    routes = server.PromptServer.instance.routes
+
+    for r in routes:
+        if getattr(r, "path", None) == "/ds/theme/config":
+            return
+
+    @routes.get("/ds/theme/config")
+    @routes.get("/api/ds/theme/config")
+    async def theme_get_config(_request):
+        return web.json_response({"config": load_appearance()})
 
 
-@server.PromptServer.instance.routes.post("/ds/theme/config")
-@server.PromptServer.instance.routes.post("/api/ds/theme/config")
-async def theme_save_config(request):
-    try:
-        payload = await request.json()
-        cfg = payload.get("config", payload)
-        if not isinstance(cfg, dict):
-            return web.json_response({"error": "config must be an object"}, status=400)
-        current = load_appearance()
-        merged = {**current, **cfg}
-        ok = save_appearance(merged)
-        return web.json_response({"success": ok, "config": load_appearance()})
-    except Exception as e:
-        return web.json_response({"error": str(e)}, status=500)
+    @routes.post("/ds/theme/config")
+    @routes.post("/api/ds/theme/config")
+    async def theme_save_config(request):
+        try:
+            payload = await request.json()
+            cfg = payload.get("config", payload)
+            if not isinstance(cfg, dict):
+                return web.json_response({"error": "config must be an object"}, status=400)
+            current = load_appearance()
+            merged = {**current, **cfg}
+            ok = save_appearance(merged)
+            return web.json_response({"success": ok, "config": load_appearance()})
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
 
 
-@server.PromptServer.instance.routes.get("/ds/theme/themes")
-@server.PromptServer.instance.routes.get("/api/ds/theme/themes")
-async def theme_get_themes(_request):
-    themes = _load_json(THEMES_FILE, {"themes": {}})
-    return web.json_response(themes)
+    @routes.get("/ds/theme/themes")
+    @routes.get("/api/ds/theme/themes")
+    async def theme_get_themes(_request):
+        themes = _load_json(THEMES_FILE, {"themes": {}})
+        return web.json_response(themes)
 
 
-@server.PromptServer.instance.routes.post("/ds/theme/download-font")
-async def theme_download_font(request):
-    try:
-        payload = await request.json()
-        font_name = str(payload.get("font", "")).strip()
-        if not font_name:
-            return web.json_response({"error": "font name required"}, status=400)
+    @routes.post("/ds/theme/download-font")
+    async def theme_download_font(request):
+        try:
+            payload = await request.json()
+            font_name = str(payload.get("font", "")).strip()
+            if not font_name:
+                return web.json_response({"error": "font name required"}, status=400)
 
-        result = _download_google_font(font_name)
-        if not result.get("success"):
-            return web.json_response(result, status=400)
+            result = _download_google_font(font_name)
+            if not result.get("success"):
+                return web.json_response(result, status=400)
 
-        cfg = load_appearance()
-        fonts = cfg.get("downloadedFonts", [])
-        existing = next((f for f in fonts if f.get("name", "").lower() == font_name.lower()), None)
-        if existing:
-            existing.update(result["font"])
-        else:
-            fonts.append(result["font"])
-        cfg["downloadedFonts"] = fonts
-        cfg["font"] = font_name
-        save_appearance(cfg)
+            cfg = load_appearance()
+            fonts = cfg.get("downloadedFonts", [])
+            existing = next((f for f in fonts if f.get("name", "").lower() == font_name.lower()), None)
+            if existing:
+                existing.update(result["font"])
+            else:
+                fonts.append(result["font"])
+            cfg["downloadedFonts"] = fonts
+            cfg["font"] = font_name
+            save_appearance(cfg)
 
-        return web.json_response({
-            "success": True,
-            "font": result["font"],
-            "config": load_appearance(),
-        })
-    except Exception as e:
-        return web.json_response({"error": str(e)}, status=500)
+            return web.json_response({
+                "success": True,
+                "font": result["font"],
+                "config": load_appearance(),
+            })
+        except Exception as e:
+            return web.json_response({"error": str(e)}, status=500)
 
 
-@server.PromptServer.instance.routes.get("/ds/theme/font-presets")
-async def theme_font_presets(_request):
-    presets = [
-        "Inter", "Roboto", "Open Sans", "Poppins", "Montserrat", "Lato", "Nunito",
-        "Ubuntu", "JetBrains Mono", "Fira Code", "Source Sans 3", "Source Code Pro",
-        "Noto Sans", "Noto Serif", "IBM Plex Sans", "IBM Plex Mono", "Merriweather",
-        "Playfair Display", "Raleway", "Work Sans", "Quicksand", "Cabin", "Exo",
-        "Orbitron", "Bebas Neue", "Oswald", "Inconsolata", "Rubik", "Outfit", "Manrope",
-    ]
-    return web.json_response({"presets": presets})
+    @routes.get("/ds/theme/font-presets")
+    async def theme_font_presets(_request):
+        presets = [
+            "Inter", "Roboto", "Open Sans", "Poppins", "Montserrat", "Lato", "Nunito",
+            "Ubuntu", "JetBrains Mono", "Fira Code", "Source Sans 3", "Source Code Pro",
+            "Noto Sans", "Noto Serif", "IBM Plex Sans", "IBM Plex Mono", "Merriweather",
+            "Playfair Display", "Raleway", "Work Sans", "Quicksand", "Cabin", "Exo",
+            "Orbitron", "Bebas Neue", "Oswald", "Inconsolata", "Rubik", "Outfit", "Manrope",
+        ]
+        return web.json_response({"presets": presets})
+
+
+try:
+    register_theme_manager_routes()
+except Exception as exc:
+    print(f"[DS Theme Manager] Route registration deferred: {exc}")
 
 
 # ------------------------------------------------------------------

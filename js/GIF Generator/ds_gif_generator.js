@@ -4,8 +4,8 @@
  * Features real-time progress bar, live encoding updates, and constant node sizing.
  */
 
-import { app } from "../../../scripts/app.js";
-import { api } from "../../../scripts/api.js";
+import { app } from "/scripts/app.js";
+import { api } from "/scripts/api.js";
 import { registerCardNode, useNativeWidget, LAYOUT } from "../UIElements/card_layout.js";
 import {
   ImagePreview,

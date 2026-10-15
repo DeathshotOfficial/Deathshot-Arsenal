@@ -66,8 +66,10 @@ export function TextEditor(options = {}) {
   if (options.maxHeight) textarea.style.maxHeight = typeof options.maxHeight === "number" ? `${options.maxHeight}px` : options.maxHeight;
   textarea.value = options.value || "";
   textarea.readOnly = Boolean(options.readOnly);
+  textarea.spellcheck = options.spellcheck !== false;
 
-  textarea.addEventListener("input", () => {
+  textarea.addEventListener("input", (e) => {
+    options.onInput?.(textarea.value, api, e);
     options.onChange?.(textarea.value, api);
   });
 
@@ -80,8 +82,20 @@ export function TextEditor(options = {}) {
     root,
     textarea,
     getValue: () => textarea.value,
-    setValue(val) {
-      textarea.value = val || "";
+    setValue(val, preserveCursor = false) {
+      const next = val || "";
+      if (preserveCursor && document.activeElement === textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const top = textarea.scrollTop;
+        textarea.value = next;
+        try {
+          textarea.setSelectionRange(start, end);
+          textarea.scrollTop = top;
+        } catch (_) {}
+      } else {
+        textarea.value = next;
+      }
       if (textarea.__ds_text_history) {
         textarea.__ds_text_history.stack.push(textarea.value);
         textarea.__ds_text_history.index = textarea.__ds_text_history.stack.length - 1;

@@ -12,6 +12,7 @@ import {
   Toggle,
   DSIcon,
   DSIconMarkup,
+  attachTextHistory,
 } from "../UIElements/index.js";
 
 let _activeAIPopover = null;
@@ -1000,13 +1001,18 @@ export async function openAISettingsPopover({
     scroll.appendChild(sysDesc);
 
     const sysTa = document.createElement("textarea");
-    sysTa.className = "ds-ai-textarea";
+    sysTa.className = "ds-ai-textarea ds-ui-text-editor";
+    sysTa.spellcheck = true;
     sysTa.placeholder = "Enter custom system prompt (leave empty for default)...";
     sysTa.value = currentSettings.system_prompt || DEFAULT_SYSTEM_PROMPT;
+    sysTa.oninput = () => {
+      currentSettings.system_prompt = sysTa.value.trim();
+    };
     sysTa.onchange = () => {
       currentSettings.system_prompt = sysTa.value.trim();
       sync();
     };
+    attachTextHistory(sysTa);
     scroll.appendChild(sysTa);
 
     const sysActions = document.createElement("div");

@@ -682,136 +682,151 @@ def _format_ext(fmt):
     return {"png": ".png", "jpg": ".jpg", "webp": ".webp"}.get(fmt, ".png")
 
 
-@server.PromptServer.instance.routes.post("/ds/image_save_advance/list_dir")
-async def image_save_advance_list_dir(request):
-    try:
-        data = await request.json()
-        path = _resolve_save_dir(data.get("path", ""))
-        if not os.path.isdir(path):
-            path = os.path.abspath(folder_paths.get_output_directory())
-        dirs = []
+def register_image_save_advance_routes():
+    if not hasattr(server, "PromptServer") or not hasattr(server.PromptServer, "instance") or server.PromptServer.instance is None:
+        return
+    routes = server.PromptServer.instance.routes
+
+    for r in routes:
+        if getattr(r, "path", None) == "/ds/image_save_advance/list_dir":
+            return
+
+    @routes.post("/ds/image_save_advance/list_dir")
+    async def image_save_advance_list_dir(request):
         try:
-            dirs = [x for x in sorted(os.listdir(path)) if os.path.isdir(os.path.join(path, x))]
-        except Exception:
-            pass
-        return web.json_response({"current": path, "dirs": dirs})
-    except Exception as e:
-        return web.json_response({"error": str(e)}, status=500)
-
-
-@server.PromptServer.instance.routes.post("/ds/image_save_advance/open")
-async def image_save_advance_open(request):
-    try:
-        data = await request.json()
-        path = _clean_path(data.get("path", ""))
-        if not path or not os.path.isfile(path):
-            return web.json_response({"success": False, "error": "File not found"}, status=404)
-        if os.name == "nt":
-            os.startfile(path)
-        elif os.uname().sysname == "Darwin":
-            subprocess.Popen(["open", path])
-        else:
-            subprocess.Popen(["xdg-open", path])
-        return web.json_response({"success": True})
-    except Exception as e:
-        return web.json_response({"success": False, "error": str(e)}, status=500)
-
-
-@server.PromptServer.instance.routes.post("/ds/image_save_advance/folder")
-async def image_save_advance_folder(request):
-    try:
-        data = await request.json()
-        raw = data.get("path", "")
-        cleaned = _clean_path(raw)
-        if cleaned and os.path.isfile(cleaned):
-            folder = os.path.dirname(cleaned)
-        else:
-            folder = _resolve_save_dir(raw)
-        if not folder:
-            folder = os.path.abspath(folder_paths.get_output_directory())
-        os.makedirs(folder, exist_ok=True)
-        if os.name == "nt":
-            os.startfile(folder)
-        elif os.uname().sysname == "Darwin":
-            subprocess.Popen(["open", folder])
-        else:
-            subprocess.Popen(["xdg-open", folder])
-        return web.json_response({"success": True, "folder": folder})
-    except Exception as e:
-        return web.json_response({"success": False, "error": str(e)}, status=500)
-
-
-@server.PromptServer.instance.routes.post("/ds/image_save_advance/delete")
-async def image_save_advance_delete(request):
-    try:
-        data = await request.json()
-        path = _clean_path(data.get("path", ""))
-        node_id = str(data.get("node_id", ""))
-        if not path or not os.path.isfile(path):
-            return web.json_response({"success": False, "error": "File not found"}, status=404)
-        try:
-            os.remove(path)
+            data = await request.json()
+            path = _resolve_save_dir(data.get("path", ""))
+            if not os.path.isdir(path):
+                path = os.path.abspath(folder_paths.get_output_directory())
+            dirs = []
+            try:
+                dirs = [x for x in sorted(os.listdir(path)) if os.path.isdir(os.path.join(path, x))]
+            except Exception:
+                pass
+            return web.json_response({"current": path, "dirs": dirs})
         except Exception as e:
-            return web.json_response({"success": False, "error": f"Failed to delete: {e}"}, status=500)
-
-        with STATE_LOCK:
-            if node_id and node_id in LAST_STATE:
-                st = LAST_STATE[node_id]
-                if isinstance(st, dict):
-                    paths = st.get("last_paths")
-                    if isinstance(paths, list) and path in paths:
-                        paths.remove(path)
-                        st["last_path"] = paths[-1] if paths else ""
-                    elif st.get("last_path") == path:
-                        st["last_path"] = ""
-                    if not st.get("last_path") and st.get("counter", 1) > 1:
-                        st["counter"] = max(1, int(st["counter"]) - 1)
-                _save_state()
-        print(f"[DS Image Save Advance] deleted {path}", flush=True)
-        return web.json_response({"success": True, "path": path})
-    except Exception as e:
-        return web.json_response({"success": False, "error": str(e)}, status=500)
+            return web.json_response({"error": str(e)}, status=500)
 
 
-@server.PromptServer.instance.routes.get("/ds/image_save_advance/state")
-async def image_save_advance_state(request):
-    return web.json_response({"nodes": LAST_STATE, "default_dir": os.path.abspath(folder_paths.get_output_directory())})
+    @routes.post("/ds/image_save_advance/open")
+    async def image_save_advance_open(request):
+        try:
+            data = await request.json()
+            path = _clean_path(data.get("path", ""))
+            if not path or not os.path.isfile(path):
+                return web.json_response({"success": False, "error": "File not found"}, status=404)
+            if os.name == "nt":
+                os.startfile(path)
+            elif os.uname().sysname == "Darwin":
+                subprocess.Popen(["open", path])
+            else:
+                subprocess.Popen(["xdg-open", path])
+            return web.json_response({"success": True})
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
 
 
-@server.PromptServer.instance.routes.get("/ds/image_save_advance/preview")
-async def image_save_advance_preview(request):
-    path = request.query.get("path", "")
-    path = _clean_path(path)
-    if not path or not os.path.isfile(path):
-        return web.Response(status=404)
-    try:
-        return web.FileResponse(path)
-    except Exception as e:
-        print(f"[DS Image Save Advance] preview failed: {e}", flush=True)
-        return web.Response(status=500)
+    @routes.post("/ds/image_save_advance/folder")
+    async def image_save_advance_folder(request):
+        try:
+            data = await request.json()
+            raw = data.get("path", "")
+            cleaned = _clean_path(raw)
+            if cleaned and os.path.isfile(cleaned):
+                folder = os.path.dirname(cleaned)
+            else:
+                folder = _resolve_save_dir(raw)
+            if not folder:
+                folder = os.path.abspath(folder_paths.get_output_directory())
+            os.makedirs(folder, exist_ok=True)
+            if os.name == "nt":
+                os.startfile(folder)
+            elif os.uname().sysname == "Darwin":
+                subprocess.Popen(["open", folder])
+            else:
+                subprocess.Popen(["xdg-open", folder])
+            return web.json_response({"success": True, "folder": folder})
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
 
-@server.PromptServer.instance.routes.post("/ds/image_save_advance/convert")
-async def image_save_advance_convert(request):
-    try:
-        data = await request.json()
-        path = _clean_path(data.get("path", ""))
-        fmt = str(data.get("format", "png")).lower()
-        quality = max(1, min(100, int(data.get("quality", 100))))
-        lossless = bool(data.get("webp_lossless", False))
-        if fmt not in {"png", "jpg", "webp"}:
-            return web.json_response({"success": False, "error": "Unsupported format"}, status=400)
+
+    @routes.post("/ds/image_save_advance/delete")
+    async def image_save_advance_delete(request):
+        try:
+            data = await request.json()
+            path = _clean_path(data.get("path", ""))
+            node_id = str(data.get("node_id", ""))
+            if not path or not os.path.isfile(path):
+                return web.json_response({"success": False, "error": "File not found"}, status=404)
+            try:
+                os.remove(path)
+            except Exception as e:
+                return web.json_response({"success": False, "error": f"Failed to delete: {e}"}, status=500)
+
+            with STATE_LOCK:
+                if node_id and node_id in LAST_STATE:
+                    st = LAST_STATE[node_id]
+                    if isinstance(st, dict):
+                        paths = st.get("last_paths")
+                        if isinstance(paths, list) and path in paths:
+                            paths.remove(path)
+                            st["last_path"] = paths[-1] if paths else ""
+                        elif st.get("last_path") == path:
+                            st["last_path"] = ""
+                        if not st.get("last_path") and st.get("counter", 1) > 1:
+                            st["counter"] = max(1, int(st["counter"]) - 1)
+                    _save_state()
+            print(f"[DS Image Save Advance] deleted {path}", flush=True)
+            return web.json_response({"success": True, "path": path})
+        except Exception as e:
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+    @routes.get("/ds/image_save_advance/state")
+    async def image_save_advance_state(request):
+        return web.json_response({"nodes": LAST_STATE, "default_dir": os.path.abspath(folder_paths.get_output_directory())})
+
+
+    @routes.get("/ds/image_save_advance/preview")
+    async def image_save_advance_preview(request):
+        path = request.query.get("path", "")
+        path = _clean_path(path)
         if not path or not os.path.isfile(path):
-            return web.json_response({"success": False, "error": "File not found"}, status=404)
-        with Image.open(path) as source:
-            image = source.convert("RGBA") if source.mode in {"RGBA", "LA", "P"} else source.convert("RGB")
-            stem = os.path.splitext(os.path.basename(path))[0]
-            target = _unique_path(os.path.dirname(path), stem, _format_ext(fmt))
-            _save_image(image, target, fmt, quality, lossless, {"converted_from": path})
-        print(f"[DS Image Save Advance] manual save {target}", flush=True)
-        return web.json_response({"success": True, "path": target})
-    except Exception as e:
-        print(f"[DS Image Save Advance] manual conversion failed: {e}", flush=True)
-        return web.json_response({"success": False, "error": str(e)}, status=500)
+            return web.Response(status=404)
+        try:
+            return web.FileResponse(path)
+        except Exception as e:
+            print(f"[DS Image Save Advance] preview failed: {e}", flush=True)
+            return web.Response(status=500)
+
+    @routes.post("/ds/image_save_advance/convert")
+    async def image_save_advance_convert(request):
+        try:
+            data = await request.json()
+            path = _clean_path(data.get("path", ""))
+            fmt = str(data.get("format", "png")).lower()
+            quality = max(1, min(100, int(data.get("quality", 100))))
+            lossless = bool(data.get("webp_lossless", False))
+            if fmt not in {"png", "jpg", "webp"}:
+                return web.json_response({"success": False, "error": "Unsupported format"}, status=400)
+            if not path or not os.path.isfile(path):
+                return web.json_response({"success": False, "error": "File not found"}, status=404)
+            with Image.open(path) as source:
+                image = source.convert("RGBA") if source.mode in {"RGBA", "LA", "P"} else source.convert("RGB")
+                stem = os.path.splitext(os.path.basename(path))[0]
+                target = _unique_path(os.path.dirname(path), stem, _format_ext(fmt))
+                _save_image(image, target, fmt, quality, lossless, {"converted_from": path})
+            print(f"[DS Image Save Advance] manual save {target}", flush=True)
+            return web.json_response({"success": True, "path": target})
+        except Exception as e:
+            print(f"[DS Image Save Advance] manual conversion failed: {e}", flush=True)
+            return web.json_response({"success": False, "error": str(e)}, status=500)
+
+
+try:
+    register_image_save_advance_routes()
+except Exception as exc:
+    print(f"[DS Image Save Advance] Route registration deferred: {exc}")
 
 
 class DS_ImageSaveAdvance:

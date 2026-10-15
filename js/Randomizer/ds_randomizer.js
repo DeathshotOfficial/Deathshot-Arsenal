@@ -5,7 +5,7 @@
  */
 
 import { app } from "/scripts/app.js";
-import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
+import { attachNodeShortcuts, attachTextHistory } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import {
   Card,
@@ -756,7 +756,32 @@ app.registerExtension({
       previewTextarea.className = "ds-ui-text-editor ds-rand-textarea";
       previewTextarea.placeholder = "Randomized prompt will appear here on queue or preview...";
       previewTextarea.value = self.properties.ds_randomizer_preview || "";
+      previewTextarea.spellcheck = true;
       this._dsPreviewTextarea = previewTextarea;
+
+      previewTextarea.addEventListener("input", () => {
+        self.properties.ds_randomizer_preview = previewTextarea.value;
+        if (self.properties.ds_randomizer_state) {
+          self.properties.ds_randomizer_state.preview_prompt = previewTextarea.value;
+        }
+        const stateWidget = ensureStateWidget(self);
+        if (stateWidget) {
+          stateWidget.value = JSON.stringify(self.properties.ds_randomizer_state);
+        }
+        self.setDirtyCanvas?.(true, true);
+      });
+
+      attachTextHistory(previewTextarea, (val) => {
+        self.properties.ds_randomizer_preview = val;
+        if (self.properties.ds_randomizer_state) {
+          self.properties.ds_randomizer_state.preview_prompt = val;
+        }
+        const stateWidget = ensureStateWidget(self);
+        if (stateWidget) {
+          stateWidget.value = JSON.stringify(self.properties.ds_randomizer_state);
+        }
+        self.setDirtyCanvas?.(true, true);
+      });
 
       prevWrap.appendChild(previewTextarea);
       genSection.appendChild(prevWrap);
@@ -1118,7 +1143,9 @@ app.registerExtension({
       }
 
       if (this.properties?.ds_randomizer_preview && this._dsPreviewTextarea) {
-        this._dsPreviewTextarea.value = this.properties.ds_randomizer_preview;
+        if (document.activeElement !== this._dsPreviewTextarea) {
+          this._dsPreviewTextarea.value = this.properties.ds_randomizer_preview;
+        }
       }
 
       if (typeof this._dsRenderTabs === "function") {
@@ -1145,7 +1172,19 @@ app.registerExtension({
       const raw = message?.prompt_preview ?? message?.ui?.prompt_preview;
       const preview = Array.isArray(raw) ? raw[0] : raw;
       if (typeof preview === "string" && this._dsPreviewTextarea) {
-        this._dsPreviewTextarea.value = preview;
+        const isFocused = document.activeElement === this._dsPreviewTextarea;
+        if (isFocused) {
+          const start = this._dsPreviewTextarea.selectionStart;
+          const end = this._dsPreviewTextarea.selectionEnd;
+          const top = this._dsPreviewTextarea.scrollTop;
+          this._dsPreviewTextarea.value = preview;
+          try {
+            this._dsPreviewTextarea.setSelectionRange(start, end);
+            this._dsPreviewTextarea.scrollTop = top;
+          } catch (_) {}
+        } else {
+          this._dsPreviewTextarea.value = preview;
+        }
         this.properties = this.properties || {};
         this.properties.ds_randomizer_preview = preview;
       }
@@ -1175,7 +1214,19 @@ if (api && !api._dsRandomizerExecutedWrapped) {
         const preview = Array.isArray(raw) ? raw[0] : raw;
         if (typeof preview === "string" && preview.trim()) {
           if (n._dsPreviewTextarea) {
-            n._dsPreviewTextarea.value = preview;
+            const isFocused = document.activeElement === n._dsPreviewTextarea;
+            if (isFocused) {
+              const start = n._dsPreviewTextarea.selectionStart;
+              const end = n._dsPreviewTextarea.selectionEnd;
+              const top = n._dsPreviewTextarea.scrollTop;
+              n._dsPreviewTextarea.value = preview;
+              try {
+                n._dsPreviewTextarea.setSelectionRange(start, end);
+                n._dsPreviewTextarea.scrollTop = top;
+              } catch (_) {}
+            } else {
+              n._dsPreviewTextarea.value = preview;
+            }
           }
           n.properties = n.properties || {};
           n.properties.ds_randomizer_preview = preview;

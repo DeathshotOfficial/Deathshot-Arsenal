@@ -35,7 +35,7 @@ class DS_Reroute:
     RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("value",)
     FUNCTION = "route"
-    CATEGORY = "Routing"
+    CATEGORY = "☠️ Deathshot Arsenal/🔀 Routing"
     DESCRIPTION = "Generic pass-through routing node with editable descriptive label."
 
     def route(self, value=None, label=""):

@@ -55,17 +55,22 @@ const KNOWN_DS_NODES = [
   "DS_Gallery",
   "DS_VersionCheck",
   "DS_ThePurger",
+  "DS_Controller",
+  "DS_ImageDescriber",
+  "DS_ThemeManager",
+  "DS_GifGenerator",
+  "DSStripper",
 ];
 
 /**
  * Returns all registered Deathshot node types, combining the known list
- * with dynamic discovery of any `DS_` node in LiteGraph (excluding the dev spawner).
+ * with dynamic discovery of any `DS_` or `DS` node in LiteGraph (excluding the dev spawner).
  */
 function getDeathshotNodeTypes() {
   const typeSet = new Set(KNOWN_DS_NODES);
   const reg = window.LiteGraph?.registered_node_types || {};
   for (const key of Object.keys(reg)) {
-    if (key.startsWith("DS_") && key !== TYPE) {
+    if ((key.startsWith("DS_") || key.startsWith("DS")) && key !== TYPE) {
       typeSet.add(key);
     }
   }

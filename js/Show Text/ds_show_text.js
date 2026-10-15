@@ -127,7 +127,7 @@ function buildShowTextUI(node) {
   }
 
   const textarea = document.createElement("textarea");
-  textarea.className = "ds-show-text-area";
+  textarea.className = "ds-show-text-area ds-ui-text-editor";
   textarea.readOnly = true;
   textarea.spellcheck = false;
   textarea.placeholder = "Nothing to display";

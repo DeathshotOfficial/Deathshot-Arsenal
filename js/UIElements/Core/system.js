@@ -233,6 +233,22 @@ function isFocusedWheelInput(target) {
   return false;
 }
 
+export function isTextEditableElement(target) {
+  if (!(target instanceof Element)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  if (tag === "TEXTAREA") return true;
+  if (tag === "INPUT") {
+    const type = (target.type || "text").toLowerCase();
+    return !["button", "checkbox", "radio", "range", "color", "file", "submit", "reset", "image"].includes(type);
+  }
+  return Boolean(
+    target.closest(
+      "textarea, input:not([type='button']):not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']), [contenteditable='true'], [role='textbox'], .ds-ui-text-editor, .ds-ui-input, .ds-ui-textarea, .ds-sensei-textarea, .ds-prompt-textarea, .ds-rand-textarea"
+    )
+  );
+}
+
 function isInteractiveDSElement(target, rootBoundary) {
   if (!(target instanceof Element)) return false;
 
@@ -417,12 +433,7 @@ export function installDSCanvasNavigationBridge() {
     "keydown",
     (e) => {
       if (e.code === "Space") {
-        const tag = document.activeElement?.tagName;
-        const isEditable =
-          tag === "INPUT" ||
-          tag === "TEXTAREA" ||
-          document.activeElement?.isContentEditable;
-        if (!isEditable) {
+        if (!isTextEditableElement(document.activeElement)) {
           isSpaceHeld = true;
         }
       }
@@ -479,15 +490,27 @@ export function installDSCanvasNavigationBridge() {
 
   // 2. Click-and-Drag Canvas Pan & Node Move Forwarding (Capture Phase)
   const shouldForwardPressToCanvas = (e, dsRoot) => {
-    // Middle-click (button 1) or Right-click (button 2) or Space+drag or Read-Only mode always pans/menus on canvas
-    if (
-      e.button === 1 ||
-      e.button === 2 ||
-      isSpaceHeld ||
-      Boolean(window.app?.canvas?.read_only)
-    ) {
+    // Text fields and editable elements must NEVER forward any clicks or drags to canvas (especially right-click button 2)
+    if (isTextEditableElement(e.target)) {
+      return false;
+    }
+
+    // Middle-click (button 1) always pans canvas
+    if (e.button === 1) {
       return true;
     }
+
+    // Space + drag or Read-Only canvas mode always pans canvas
+    if (isSpaceHeld || Boolean(window.app?.canvas?.read_only)) {
+      return true;
+    }
+
+    // Right-click (button 2) on empty space of a node forwards to canvas contextmenu / pan
+    if (e.button === 2) {
+      return !isInteractiveDSElement(e.target, dsRoot);
+    }
+
+    // Left-click (button 0): only forward when clicking non-interactive empty space on node
     if (e.button !== 0) return false;
     return !isInteractiveDSElement(e.target, dsRoot);
   };
@@ -495,6 +518,8 @@ export function installDSCanvasNavigationBridge() {
   window.addEventListener(
     "pointerdown",
     (e) => {
+      if (isTextEditableElement(e.target)) return;
+
       const canvasEl = getGraphCanvasElement();
       if (!canvasEl || e.target === canvasEl) return;
 
@@ -552,6 +577,8 @@ export function installDSCanvasNavigationBridge() {
   window.addEventListener(
     "mousedown",
     (e) => {
+      if (isTextEditableElement(e.target)) return;
+
       const canvasEl = getGraphCanvasElement();
       if (!canvasEl || e.target === canvasEl) return;
 
@@ -650,8 +677,22 @@ export function installDSCanvasNavigationBridge() {
       const dsRoot = getDSNodeDomRoot(e.target);
       if (!dsRoot) return;
 
-      const tag = e.target instanceof Element ? e.target.tagName : "";
-      if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) {
+      if (isTextEditableElement(e.target)) {
+        // Text field right-click: Allow native browser spellcheck/context menu.
+        // Explicitly dismiss any previously opened ComfyUI/LiteGraph context menu so it doesn't linger!
+        try {
+          if (window.LiteGraph?.closeAllContextMenus) {
+            window.LiteGraph.closeAllContextMenus();
+          }
+          if (window.app?.canvas?.closeContextMenu) {
+            window.app.canvas.closeContextMenu();
+          }
+          document.querySelectorAll(".litecontextmenu, .litemenu-entry, .litegraph .context-menu").forEach((el) => el.remove());
+        } catch (_) {}
+        return;
+      }
+
+      if (isInteractiveDSElement(e.target, dsRoot)) {
         return;
       }
 

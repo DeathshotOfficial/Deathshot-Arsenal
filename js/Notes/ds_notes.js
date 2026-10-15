@@ -310,14 +310,6 @@ app.registerExtension({
 
       normalizeDSWidgetHost(card.root, this, { shell: false });
 
-      if (Array.isArray(this.widgets)) {
-        const domIdx = this.widgets.indexOf(this._dsNotesDOMWidget);
-        if (domIdx > 0) {
-          this.widgets.splice(domIdx, 1);
-          this.widgets.unshift(this._dsNotesDOMWidget);
-        }
-      }
-
       // Render the in-node canvas card (Read-Only Content Display)
       this._dsRenderCanvasPreview();
 
