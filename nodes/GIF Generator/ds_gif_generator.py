@@ -454,7 +454,6 @@ class DSGifGenerator:
                                     pass
                             if not vid_path:
                                 for candidate_dir in [
-                                    "/home/godkiller/ComfyUI-Easy-Install/ComfyUI/input",
                                     os.path.join(os.getcwd(), "input"),
                                     os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "input")
                                 ]:
