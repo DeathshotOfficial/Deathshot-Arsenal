@@ -424,13 +424,34 @@ def _build_pnginfo(prompt, extra_pnginfo, context, width, height):
     return pnginfo
 
 
+def _write_previews(image, node_id, pnginfo=None):
+    """Write every image in the batch losslessly to temp for browser preview with embedded metadata."""
+    results = []
+    count = int(image.shape[0]) if len(image.shape) > 0 else 1
+    safe_nid = _safe_id(node_id)
+    batch_uid = uuid.uuid4().hex[:8]
+    for idx in range(count):
+        pil = _tensor_to_pil(image[idx])
+        name = f"{TEMP_PREFIX}{safe_nid}_{batch_uid}_{idx + 1:03d}_{uuid.uuid4().hex[:6]}.png"
+        path = os.path.join(_temp_dir(), name)
+        pil.save(path, format="PNG", compress_level=4, pnginfo=pnginfo)
+        results.append({
+            "file": name,
+            "width": pil.width,
+            "height": pil.height,
+        })
+    return results
+
+
 def _write_preview(image, node_id, pnginfo=None):
-    """Write the first image losslessly to temp for browser preview with embedded metadata."""
-    pil = _tensor_to_pil(image[0])
-    name = f"{TEMP_PREFIX}{_safe_id(node_id)}_{uuid.uuid4().hex}.png"
-    path = os.path.join(_temp_dir(), name)
-    pil.save(path, format="PNG", compress_level=4, pnginfo=pnginfo)
-    return path, pil.width, pil.height
+    """Write the first preview frame to temp and return its path and dimensions."""
+    previews = _write_previews(image, node_id, pnginfo=pnginfo)
+    if previews:
+        first = previews[0]
+        return os.path.join(_temp_dir(), first["file"]), first["width"], first["height"]
+    return "", 0, 0
+
+
 
 
 def _save_batch(image, node_id, pnginfo=None):
@@ -528,19 +549,25 @@ class DS_ImagePreview:
         context = _graph_context(prompt, node_id, extra_pnginfo)
         pnginfo = _build_pnginfo(prompt, extra_pnginfo, context, width, height)
 
-        preview_path, p_width, p_height = _write_preview(image, node_id, pnginfo=pnginfo)
-        preview_name = os.path.basename(preview_path)
+        previews = _write_previews(image, node_id, pnginfo=pnginfo)
+        latest = previews[-1] if previews else {"file": "", "width": width, "height": height}
+        preview_name = latest["file"]
+        p_width = latest["width"]
+        p_height = latest["height"]
+
         saved = []
         if mode == "save":
             saved = _save_batch(image, node_id, pnginfo=pnginfo)
             _log(f"SAVE mode node={node_id}: saved {len(saved)} PNG(s) with metadata, preview={p_width}x{p_height}")
         else:
-            _log(f"PREVIEW mode node={node_id}: captured {p_width}x{p_height} with metadata; no output file saved")
+            _log(f"PREVIEW mode node={node_id}: captured {len(previews)} preview(s) ({p_width}x{p_height}) with metadata; no output file saved")
 
         return {
             "ui": {
                 "ds_image_preview": [{
                     "file": preview_name,
+                    "files": [p["file"] for p in previews],
+                    "items": previews,
                     "width": p_width,
                     "height": p_height,
                     "count": int(image.shape[0]),
@@ -551,6 +578,7 @@ class DS_ImagePreview:
             },
             "result": (image,),
         }
+
 
 
 NODE_CLASS_MAPPINGS = {"DS_ImagePreview": DS_ImagePreview}
