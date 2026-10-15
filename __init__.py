@@ -440,14 +440,6 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_ThePurger: {e}", flush=True)
     DS_ThePurger = None
 
-# DS Dev Spawner (Development tool)
-try:
-    _mod = _load_node_pkg("dev_spawner", "Dev Spawner")
-    DS_DevSpawner = _mod.DS_DevSpawner
-except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_DevSpawner: {e}", flush=True)
-    DS_DevSpawner = None
-
 # DS Image Describer
 try:
     _mod = _load_node_pkg("image_describer", "Image Describer")
@@ -755,7 +747,6 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_Randomizer": DS_Randomizer} if DS_Randomizer is not None else {}),
     **({"DS_FilmGrain": DS_FilmGrain} if DS_FilmGrain is not None else {}),
     **({"DS_ThePurger": DS_ThePurger} if DS_ThePurger is not None else {}),
-    **({"DS_DevSpawner": DS_DevSpawner} if DS_DevSpawner is not None else {}),
     **({"DS_Controller": DS_Controller} if DS_Controller is not None else {}),
     **({"DS_ImageDescriber": DS_ImageDescriber} if DS_ImageDescriber is not None else {}),
     **({"DS_ThemeManager": DS_ThemeManager} if DS_ThemeManager is not None else {}),
@@ -798,7 +789,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_Randomizer": "DS Randomizer"} if DS_Randomizer is not None else {}),
     **({"DS_FilmGrain": "DS Film Grain"} if DS_FilmGrain is not None else {}),
     **({"DS_ThePurger": "DS The Purger"} if DS_ThePurger is not None else {}),
-    **({"DS_DevSpawner": "DS Dev Spawner"} if DS_DevSpawner is not None else {}),
     **({"DS_Controller": "DS Controller"} if DS_Controller is not None else {}),
     **({"DS_ImageDescriber": "DS Image Describer"} if DS_ImageDescriber is not None else {}),
     **({"DS_ThemeManager": "DS Theme Manager"} if DS_ThemeManager is not None else {}),
