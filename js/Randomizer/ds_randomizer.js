@@ -892,6 +892,25 @@ app.registerExtension({
           (c) => activeGroup === "all" || c.group === activeGroup
         );
 
+        const PARENT_SUB_RELATIONS = [
+          {
+            parents: ["clothing", "female_clothing", "male_clothing"],
+            subs: ["top", "bottom", "footwear", "clothing_accessories", "fabric", "clothing_color", "style", "clothing_state", "outfit_type"],
+          },
+          {
+            parents: ["shot_type"],
+            subs: ["camera_angle", "perspective", "framing", "distance", "lens_focal", "camera_position", "camera_characteristics"],
+          },
+          {
+            parents: ["location"],
+            subs: ["room_environment", "background", "architecture"],
+          },
+          {
+            parents: ["hair"],
+            subs: ["hair_color", "hair_length", "hair_type", "hair_style"],
+          },
+        ];
+
         for (const cat of cats) {
           const isActive = enabledSet.has(cat.id);
           const chipBtn = Button({
@@ -905,7 +924,21 @@ app.registerExtension({
               if (enabledSet.has(cat.id)) {
                 self.properties.ds_randomizer_state.enabled_categories = list.filter((id) => id !== cat.id);
               } else {
-                self.properties.ds_randomizer_state.enabled_categories = [...list, cat.id];
+                const toRemove = new Set();
+                for (const rel of PARENT_SUB_RELATIONS) {
+                  if (rel.parents.includes(cat.id)) {
+                    // Enabling parent category: suppress all sub-selections and sister parents
+                    rel.subs.forEach((s) => toRemove.add(s));
+                    rel.parents.forEach((p) => {
+                      if (p !== cat.id) toRemove.add(p);
+                    });
+                  } else if (rel.subs.includes(cat.id)) {
+                    // Enabling sub-selection: suppress parent categories
+                    rel.parents.forEach((p) => toRemove.add(p));
+                  }
+                }
+                const filtered = list.filter((id) => !toRemove.has(id));
+                self.properties.ds_randomizer_state.enabled_categories = [...filtered, cat.id];
               }
               self.properties.ds_randomizer_state.preview_prompt = "";
               self.properties.ds_randomizer_preview = "";
@@ -1384,7 +1417,9 @@ if (api && !api._dsRandomizerQueueWrapped) {
             if (node?.properties?.ds_randomizer_state) {
               node.properties.ds_randomizer_state.ai_enabled = Boolean(node.properties.ds_randomizer_ai_enabled);
               node.properties.ds_randomizer_state.ai_settings = node.properties.ds_randomizer_ai_settings || {};
-              const isPauseForEdit = Boolean(node.properties.ds_randomizer_ai_settings?.pause_for_edit);
+              const aiCfg = node.properties.ds_randomizer_ai_settings || {};
+              // Both toggles keep the LLM off on Queue and send the Run/edited preview instead
+              const isPauseForEdit = Boolean(aiCfg.pause_for_edit) || aiCfg.auto_load === false;
               if (isContinuing) {
                 // Checkpoint continue: send last generated prompt so ComfyUI skips re-running Randomizer
                 if (lastPrompt) {

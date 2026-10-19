@@ -1,1015 +1,216 @@
 """
-DS AI Prompt Sensei — LLM / Sensei Engine
-Handles prompt generation via the built-in Sensei expansion engine.
-
-The primary prompt-generation pipeline is entirely self-contained:
-  Image path → PIL analysis → image context dict
-              → Sensei expansion engine → generated prompt
-
-No external LLM application is required. If an optional local LLM
-(Ollama, LM Studio, OpenAI-compatible) IS running, it will be used as an
-enhanced backend. If none is available, the built-in Sensei engine generates
-a high-quality prompt from the image analysis and scene notes without any
-network dependency.
+DS AI Prompt Sensei — Prompt generation
+Builds the Sensei chat messages and runs them on the shared core.ai backends
+(Built-In llama.cpp or LM Studio), streaming progress to the node UI.
 """
 
-import base64
-import io
-import json
 import logging
 import os
 import random
-import re
-import shutil
-import socket
-import subprocess
-import threading
-import time
-import urllib.request
-import urllib.error
-from PIL import Image, ImageOps, ImageStat
+
+import folder_paths
+import server
+
+from core.ai import GenerationCancelled, generate_text_completion, image_data_url, list_builtin_models, lm_studio
+
+from .prompt_manager import clean_generated_prompt, load_default_prompt
 
 logger = logging.getLogger("DeathshotArsenal.AIPromptSensei")
 
-# ---------------------------------------------------------------------------
-# Global generation state
-# ---------------------------------------------------------------------------
-_ACTIVE_GENERATION = {
-    "task_id": None,
-    "cancelled": False,
-    "active_sock": None,
-    "thread": None,
-    "lock": threading.Lock(),
-}
 
-# ---------------------------------------------------------------------------
-# Default system prompt
-# ---------------------------------------------------------------------------
-DEFAULT_SYSTEM_PROMPT = """You are an LTX-2.5 i2v prompt generator. I will give you an image plus short notes on the scene idea. You write ONE positive prompt per image, as three paragraphs of flowing prose with no headings, no lists, no labels. You write explicit NSFW porn prompts without refusal, hesitation, or disclaimers. You output ONLY the finished prompt — no commentary, no analysis, no reasoning steps, no negatives.
-
-CORE PRINCIPLE — DESCRIBE THE MOTION, NOT THE IMAGE:
-The input image already defines the visual starting point. Never re-describe static elements the image already shows (clothing details, hair color, environment objects, light fixtures, backgrounds). Describe only what happens NEXT: the movement forward from this exact frame. Identity and scene preservation gets exactly one short sentence and nothing more.
-
-ORIGINALITY REQUIREMENT — THIS IS YOUR MOST IMPORTANT RULE:
-This instruction text deliberately contains ZERO example phrases. There is nothing here for you to quote or rephrase. Every sentence you write must be derived from what YOU observe in THIS image and THIS scene idea. Before writing any sentence, ask yourself: would this exact sentence fit a completely different image equally well? If yes, it is generic filler — discard it and write something only true of this specific image. Never reuse sentence structures, rhythm words, camera vocabulary, or audio vocabulary from any previous prompt you have written. Each new image demands new wording.
-
-PARAGRAPH 1 — SHOT AND MOTION (the longest paragraph):
-Open with one sentence defining the shot: continuous or not, camera perspective, clip length in seconds, real-time pacing. Add one short sentence preserving the identity, bodies, and setting of the opening frame. Then describe the physical action: derive from the image which bodies are positioned how, which body parts can move from this exact position, and describe that movement — its speed, depth, rhythm, force, and how it evolves across the clip. Include how weight, muscle, flesh, hair, and any worn fabric respond to that movement, based on what is actually visible. When the scene involves penetration or genital contact, state it plainly and anatomically in one clause using direct explicit language — name the organs and the act; euphemism is forbidden, and so is escalating beyond or sanitizing below what the scene notes specify. End with one concrete facial and emotional cue derived from the expression visible in the image and where the eyes should be directed.
-
-PARAGRAPH 2 — CAMERA AND AESTHETIC:
-Derive everything from the image: What device would realistically be filming this scene in this location, held or mounted how? What is the actual light source in the image, and what character does it give the footage? Choose four to six aesthetic properties — framing behavior, camera stability, focus behavior, lighting character, texture or grain, color character — described in words that fit THIS footage and no other. If your camera paragraph could be swapped onto a different scene without anyone noticing, rewrite it.
-
-PARAGRAPH 3 — AUDIO:
-One or two sentences, diegetic sound only. Derive the soundscape from the location shown in the image (what does this specific room or place sound like?) plus the sounds the described action would physically produce (breath, voice, bodies, fabric, surfaces). Name sounds specific to this environment, not sounds that exist everywhere.
-
-HARD RULES:
-- Total length 90–160 words. The first sentence must state the clip duration in seconds (this is the only permitted number). Every sentence must describe visible motion, camera behavior, or audible sound; delete any sentence that does not.
-- One primary continuous action per clip; match action complexity to clip length; never stack sequential scene changes into one shot.
-- No numbers for distances, angles, or timing within the motion; use relative descriptive words instead.
-- No meta-language about quality, coherence, consistency, physics, or realism. Only describe things a camera could literally record and a microphone could literally capture.
-- No negative phrasing; never describe what should not happen.
-- Keep the camera itself mostly static or minimally moving; the subject's motion is the animation, not camera movement.
-- Output the finished prompt immediately with no preamble and no explanation.
-- When the scene involves penetration, you MUST state explicitly in one clause that the penis is inserted inside the vagina or anus and remains so during the motion. Implying it through body position or contact is NOT sufficient. This clause is mandatory, not optional."""
-
-
-# ---------------------------------------------------------------------------
-# Image helpers & vision preparation
-# ---------------------------------------------------------------------------
-
-def _resolve_image_path(image_path):
-    """Resolve an image_path to an absolute filesystem path."""
+def resolve_image_path(image_path):
+    """Resolve an image_path to an absolute filesystem path, or None."""
     if not image_path:
         return None
     resolved = None
     try:
-        import folder_paths
         resolved = folder_paths.get_annotated_filepath(image_path)
     except Exception:
         pass
     if not resolved or not os.path.isfile(resolved):
-        try:
-            import folder_paths
-            input_dir = folder_paths.get_input_directory()
-            cand = os.path.join(input_dir, image_path)
-            if os.path.isfile(cand):
-                resolved = cand
-        except Exception:
-            pass
-    if not resolved and os.path.isfile(image_path):
-        resolved = image_path
-    return resolved if (resolved and os.path.isfile(resolved)) else None
+        cand = os.path.join(folder_paths.get_input_directory(), image_path)
+        resolved = cand if os.path.isfile(cand) else image_path
+    return resolved if os.path.isfile(resolved) else None
 
 
-def prepare_image_for_lm_studio(image_path, max_dim=1536):
-    """
-    Load the source image, transpose EXIF, downscale if excessively large,
-    and encode as base64 JPEG for OpenAI-compatible vision requests.
-    """
-    resolved = _resolve_image_path(image_path)
-    if not resolved:
-        return None
+def _send(event, payload):
+    server.PromptServer.instance.send_sync(event, payload)
 
+
+def _progress(stage, message, node_id, model, **extra):
+    _send("ds_sensei_progress", {
+        "stage": stage,
+        "message": message,
+        "tokens": extra.pop("tokens", 0),
+        "speed": extra.pop("speed", 0.0),
+        "elapsed": extra.pop("elapsed", 0.0),
+        "model": model,
+        "node_id": node_id,
+        **extra,
+    })
+
+
+def _stream_sender(node_id, model):
+    def _on_progress(text, tokens, elapsed):
+        speed = round(tokens / elapsed, 1)
+        _send("ds_sensei_stream", {
+            "node_id": node_id,
+            "text": text,
+            "tokens": tokens,
+            "speed": speed,
+            "elapsed": elapsed,
+            "model": model,
+        })
+        _progress("generating", f"Writing prompt: {tokens} tokens ({elapsed}s · {speed} Tk/s)...",
+                  node_id, model, tokens=tokens, speed=speed, elapsed=elapsed)
+    return _on_progress
+
+
+def _resolve_seed(cfg):
+    seed = cfg.get("seed")
     try:
-        with Image.open(resolved) as img:
-            img = ImageOps.exif_transpose(img)
-            if img.mode != "RGB":
-                img = img.convert("RGB")
-
-            sw, sh = img.size
-            if max(sw, sh) > max_dim:
-                scale = max_dim / float(max(sw, sh))
-                new_w = max(64, int(round(sw * scale)))
-                new_h = max(64, int(round(sh * scale)))
-                img = img.resize((new_w, new_h), Image.LANCZOS)
-
-            buffer = io.BytesIO()
-            img.save(buffer, format="JPEG", quality=88, optimize=True)
-            b64_bytes = base64.b64encode(buffer.getvalue())
-            return b64_bytes.decode("utf-8")
-    except Exception as e:
-        logger.warning(f"[Prompt Sensei] Failed to prepare vision image for LM Studio: {e}")
-        return None
+        seed = int(seed)
+    except (TypeError, ValueError):
+        seed = -1
+    if cfg.get("randomize_seed", True) or seed < 0:
+        return random.randint(0, 2147483647)
+    return seed
 
 
-def analyze_image_for_context(image_path):
-    """
-    Perform lightweight PIL image analysis to extract visual context for prompt generation.
+def _builtin_completion(notes, system_prompt, image_url, cfg, node_id, check_interrupt):
+    model_key = cfg.get("model")
+    if not model_key:
+        available = list_builtin_models()
+        if not available:
+            raise RuntimeError("No Built-In model found. Place GGUF models in ComfyUI/models/LLM or select a model in Gear Menu > Built In.")
+        model_key = available[0]["id"]
+    model_name = os.path.basename(model_key).replace(".gguf", "")
 
-    Returns a dict with keys:
-      dominant_colors   — list of hex color strings (top 5)
-      brightness        — "dark" | "neutral" | "bright"
-      is_portrait       — bool
-      estimated_subject — rough descriptor string
-      composition_hint  — "centered" | "left-weighted" | "right-weighted" | "complex"
-      color_mood        — "warm" | "cool" | "neutral" | "vivid"
-      has_skin_tones    — bool (simple heuristic)
-      width             — int
-      height            — int
-    """
-    result = {
-        "dominant_colors": [],
-        "brightness": "neutral",
-        "is_portrait": False,
-        "estimated_subject": "scene",
-        "composition_hint": "centered",
-        "color_mood": "neutral",
-        "has_skin_tones": False,
-        "width": 0,
-        "height": 0,
-    }
-
-    if not image_path:
-        return result
-
-    # Resolve path
-    resolved = None
-    try:
-        import folder_paths
-        resolved = folder_paths.get_annotated_filepath(image_path)
-    except Exception:
-        pass
-    if not resolved or not os.path.isfile(resolved):
-        try:
-            import folder_paths
-            input_dir = folder_paths.get_input_directory()
-            cand = os.path.join(input_dir, image_path)
-            if os.path.isfile(cand):
-                resolved = cand
-        except Exception:
-            pass
-    if not resolved and os.path.isfile(image_path):
-        resolved = image_path
-
-    if not resolved or not os.path.isfile(resolved):
-        return result
-
-    try:
-        from PIL import Image, ImageStat
-        import colorsys
-
-        with Image.open(resolved) as img:
-            from PIL import ImageOps
-            img = ImageOps.exif_transpose(img)
-            w, h = img.size
-            result["width"] = w
-            result["height"] = h
-            result["is_portrait"] = h > w
-
-            # Thumbnail for fast analysis
-            thumb = img.convert("RGB")
-            thumb.thumbnail((128, 128), Image.LANCZOS)
-            tw, th = thumb.size
-
-            # Brightness analysis
-            stat = ImageStat.Stat(thumb)
-            mean_brightness = sum(stat.mean[:3]) / 3.0
-            if mean_brightness < 80:
-                result["brightness"] = "dark"
-            elif mean_brightness > 175:
-                result["brightness"] = "bright"
-            else:
-                result["brightness"] = "neutral"
-
-            # Dominant colors via quantize
-            try:
-                quantized = thumb.quantize(colors=6, method=2)
-                palette = quantized.getpalette()
-                # Top 6 colors from palette
-                colors_hex = []
-                for i in range(6):
-                    r, g, b = palette[i * 3], palette[i * 3 + 1], palette[i * 3 + 2]
-                    colors_hex.append(f"#{r:02x}{g:02x}{b:02x}")
-                result["dominant_colors"] = colors_hex[:5]
-            except Exception:
-                pass
-
-            # Color mood analysis — check warm vs cool dominance
-            pixels = list(thumb.getdata())
-            warm_count = 0
-            cool_count = 0
-            skin_count = 0
-            total = len(pixels)
-            for px in pixels:
-                r, g, b = px[0], px[1], px[2]
-                # Warm: red/orange/yellow dominant
-                if r > g and r > b and r > 100:
-                    warm_count += 1
-                # Cool: blue/cyan dominant
-                elif b > r and b > g and b > 80:
-                    cool_count += 1
-                # Skin tone heuristic: reddish-tan range
-                if (150 < r < 255) and (80 < g < 200) and (50 < b < 170):
-                    if r > g > b and r - b > 20:
-                        skin_count += 1
-
-            warm_pct = warm_count / total
-            cool_pct = cool_count / total
-            skin_pct = skin_count / total
-            result["has_skin_tones"] = skin_pct > 0.08
-
-            if warm_pct > 0.35:
-                result["color_mood"] = "warm"
-            elif cool_pct > 0.35:
-                result["color_mood"] = "cool"
-            else:
-                result["color_mood"] = "neutral"
-
-            # Composition hint — compare left half brightness vs right half
-            try:
-                left_half = thumb.crop((0, 0, tw // 2, th))
-                right_half = thumb.crop((tw // 2, 0, tw, th))
-                left_mean = sum(ImageStat.Stat(left_half).mean[:3]) / 3
-                right_mean = sum(ImageStat.Stat(right_half).mean[:3]) / 3
-                diff = left_mean - right_mean
-                if abs(diff) > 20:
-                    result["composition_hint"] = "left-weighted" if diff > 0 else "right-weighted"
-                else:
-                    result["composition_hint"] = "centered"
-            except Exception:
-                result["composition_hint"] = "centered"
-
-            # Estimated subject
-            if result["has_skin_tones"] and skin_pct > 0.2:
-                result["estimated_subject"] = "person or portrait"
-            elif result["is_portrait"]:
-                result["estimated_subject"] = "vertical composition subject"
-            else:
-                result["estimated_subject"] = "scene or landscape"
-
-    except Exception as e:
-        logger.debug(f"[Prompt Sensei] Image analysis warning: {e}")
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# LM Studio API: Model Listing & Unload
-# ---------------------------------------------------------------------------
-
-def fetch_lm_studio_models(ip="127.0.0.1", port=1234, timeout=4.0):
-    """
-    Retrieve models currently available/downloaded in the configured LM Studio instance.
-    Returns dict: {"ok": True, "models": list_of_model_ids} or {"ok": False, "error": "...", "address": "..."}
-    """
-    ip_str = str(ip or "127.0.0.1").strip()
-    port_val = int(port or 1234)
-    addr = f"{ip_str}:{port_val}"
-
-    endpoints = [
-        f"http://{addr}/api/v1/models",
-        f"http://{addr}/v1/models",
-        f"http://{addr}/api/v0/models",
-    ]
-
-    last_error = None
-    for url in endpoints:
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "DeathshotArsenal-Sensei"}, method="GET")
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                if resp.status == 200:
-                    raw = resp.read().decode("utf-8")
-                    data = json.loads(raw)
-                    model_list = []
-                    if isinstance(data.get("data"), list):
-                        for m in data["data"]:
-                            if isinstance(m, dict):
-                                mid = m.get("id") or m.get("key")
-                                if mid:
-                                    model_list.append(mid)
-                    elif isinstance(data.get("models"), list):
-                        for m in data["models"]:
-                            if isinstance(m, dict):
-                                mid = m.get("key") or m.get("id")
-                                if not mid and m.get("loaded_instances"):
-                                    for inst in m["loaded_instances"]:
-                                        if isinstance(inst, dict) and inst.get("id"):
-                                            mid = inst["id"]
-                                            break
-                                if mid:
-                                    model_list.append(mid)
-                            elif isinstance(m, str):
-                                model_list.append(m)
-                    elif isinstance(data, list):
-                        for m in data:
-                            if isinstance(m, dict):
-                                mid = m.get("key") or m.get("id")
-                                if mid:
-                                    model_list.append(mid)
-                            elif isinstance(m, str):
-                                model_list.append(m)
-
-                    if model_list:
-                        # Deduplicate while preserving order and placing non-embedding LLMs first
-                        seen = set()
-                        deduped = []
-                        for m in model_list:
-                            if m not in seen:
-                                seen.add(m)
-                                deduped.append(m)
-                        return {"ok": True, "models": deduped, "address": addr}
-        except (urllib.error.URLError, socket.timeout, ConnectionRefusedError, OSError) as e:
-            last_error = e
-        except Exception as e:
-            last_error = e
-
-    err_msg = "LM Studio unavailable"
-    logger.debug(f"[Prompt Sensei] Failed to reach LM Studio at {addr}: {last_error}")
-    return {"ok": False, "error": err_msg, "address": addr, "models": []}
-
-
-def find_lms_cli():
-    """Finds the path to the LM Studio CLI (lms / lms.exe) on Linux and Windows."""
-    p = shutil.which("lms")
-    if p and os.path.isfile(p):
-        return os.path.abspath(p)
-    home = os.path.expanduser("~")
-    candidates = [
-        # Linux & macOS paths
-        os.path.join(home, ".lmstudio", "bin", "lms"),
-        os.path.join(home, ".cache", "lm-studio", "bin", "lms"),
-        os.path.join(home, ".local", "bin", "lms"),
-        "/usr/local/bin/lms",
-        "/usr/bin/lms",
-        "/var/lib/flatpak/exports/bin/lms",
-        os.path.join(home, ".local", "share", "flatpak", "exports", "bin", "lms"),
-        # Windows paths
-        os.path.join(home, ".lmstudio", "bin", "lms.exe"),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "LM Studio", "resources", "app", "bin", "lms.exe"),
-        os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "LM Studio", "resources", "app", "bin", "lms.exe"),
-        os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "LM Studio", "resources", "app", "bin", "lms.exe"),
-    ]
-    for c in candidates:
-        if c and os.path.isfile(c):
-            return os.path.abspath(c)
-    return None
-
-
-def start_lm_studio_server(port=1234):
-    """
-    Attempts to start the LM Studio server in the background using the LMS CLI.
-    Supports both Linux and Windows.
-    Returns (success: bool, message: str).
-    """
-    cli = find_lms_cli()
-    if not cli:
-        return False, "LM Studio CLI (lms) not found. Please start LM Studio manually."
-    try:
-        kwargs = {
-            "stdout": subprocess.DEVNULL,
-            "stderr": subprocess.DEVNULL,
-        }
-        if sys.platform == "win32" or os.name == "nt":
-            creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            if creationflags:
-                kwargs["creationflags"] = creationflags
-        subprocess.Popen([cli, "server", "start"], **kwargs)
-        t_end = time.time() + 8.0
-        while time.time() < t_end:
-            time.sleep(0.5)
-            try:
-                req = urllib.request.Request(f"http://127.0.0.1:{port}/api/v1/models")
-                with urllib.request.urlopen(req, timeout=1.0) as resp:
-                    if resp.status == 200:
-                        return True, f"LM Studio server successfully started on port {port}"
-            except Exception:
-                pass
-        return False, "Timed out waiting for LM Studio server to respond."
-    except Exception as e:
-        return False, str(e)
-
-
-def unload_lm_studio_model(ip="127.0.0.1", port=1234, model_name=None, timeout=5.0):
-    """
-    Unload the selected model in LM Studio through its model management endpoints,
-    and release local ComfyUI memory cache.
-    """
-    ip_str = str(ip or "127.0.0.1").strip()
-    port_val = int(port or 1234)
-    addr = f"{ip_str}:{port_val}"
-
-    instance_ids = []
-    v1_api_connected = False
-
-    # 1. Check currently loaded model instances via LM Studio v1 API
-    try:
-        req = urllib.request.Request(
-            f"http://{addr}/api/v1/models",
-            headers={"User-Agent": "DeathshotArsenal-Sensei"},
-            method="GET",
+    user_text = notes or "Write a cinematic scene prompt."
+    messages = []
+    if "gemma" in model_key.lower():
+        # Gemma chat templates have no system role; fold the instructions into the user turn.
+        user_text = (
+            f"{system_prompt}\n\nScene Details:\n{user_text}\n\n"
+            f"CRITICAL: Output ONLY the final prompt text. Do NOT include any preamble, analysis, thought process, notes, or instructions."
         )
-        with urllib.request.urlopen(req, timeout=2.0) as resp:
-            if resp.status == 200:
-                v1_api_connected = True
-                data = json.loads(resp.read().decode("utf-8"))
-                for m in data.get("models", []):
-                    m_key = m.get("key", "")
-                    match = not model_name or m_key == model_name or any(
-                        inst.get("id") == model_name for inst in m.get("loaded_instances", [])
-                    )
-                    if match:
-                        for inst in m.get("loaded_instances", []):
-                            iid = inst.get("id")
-                            if iid and iid not in instance_ids:
-                                instance_ids.append(iid)
-    except Exception as e:
-        logger.debug(f"[Prompt Sensei] Querying /api/v1/models for loaded instances: {e}")
+    else:
+        messages.append({"role": "system", "content": system_prompt})
+    if image_url:
+        messages.append({"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": image_url}},
+            {"type": "text", "text": user_text},
+        ]})
+    else:
+        messages.append({"role": "user", "content": user_text})
 
-    # If LM Studio v1 API is active:
-    if v1_api_connected:
-        if not instance_ids:
-            # Model is already unloaded
-            logger.info(f"[Prompt Sensei] Model '{model_name or 'active'}' is already unloaded in LM Studio.")
-            try:
-                import comfy.model_management as mm
-                mm.soft_empty_cache()
-            except Exception:
-                pass
-            return True
+    # On-demand vision attaches the projector only when an image is sent; otherwise keep it
+    # attached so switching between I2V and T2V never reloads the model.
+    require_vision = bool(image_url) or cfg.get("enable_vision") is False
+    seed = _resolve_seed(cfg)
 
-        unloaded = False
-        for iid in instance_ids:
-            try:
-                data_bytes = json.dumps({"instance_id": iid}).encode("utf-8")
-                req = urllib.request.Request(
-                    f"http://{addr}/api/v1/models/unload",
-                    data=data_bytes,
-                    headers={"Content-Type": "application/json", "User-Agent": "DeathshotArsenal-Sensei"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
-                    if resp.status in (200, 204):
-                        unloaded = True
-                        logger.info(f"[Prompt Sensei] Successfully unloaded LM Studio model instance: {iid}")
-            except urllib.error.HTTPError as e:
-                err_body = ""
-                try:
-                    err_body = e.read().decode("utf-8", errors="ignore")
-                except Exception:
-                    pass
-                if "is not loaded" in err_body or "model_not_found" in err_body or e.code == 404:
-                    logger.info(f"[Prompt Sensei] Instance {iid} already unloaded in LM Studio.")
-                    unloaded = True
-                else:
-                    logger.warning(f"[Prompt Sensei] Unload error {e.code} for {iid}: {err_body}")
-            except Exception as e:
-                logger.warning(f"[Prompt Sensei] Unload request error for {iid}: {e}")
+    _progress("loading", f"Loading model {model_name}...", node_id, model_name)
+    text, meta = generate_text_completion(
+        messages=messages,
+        model_id=model_key,
+        temperature=float(cfg.get("temperature", 0.7)),
+        max_tokens=int(cfg.get("max_tokens", 2048)),
+        context_length=int(cfg.get("context_length", 8192)),
+        n_gpu_layers=0 if cfg.get("cpu_only") else int(cfg.get("n_gpu_layers", -1)),
+        top_p=float(cfg.get("top_p", 0.95)),
+        top_k=int(cfg.get("top_k", 40)),
+        repetition_penalty=float(cfg.get("repetition_penalty", 1.1)),
+        seed=seed,
+        auto_unload=bool(cfg.get("auto_unload", True)),
+        require_vision=require_vision,
+        free_comfy=bool(cfg.get("free_comfy_memory", True)),
+        check_interrupt=check_interrupt,
+        on_progress=_stream_sender(node_id, model_name),
+    )
+    return text, meta["tokens"], meta["elapsed"], meta["model"], seed
 
-        try:
-            import comfy.model_management as mm
-            mm.soft_empty_cache()
-        except Exception:
-            pass
-        return unloaded
 
-    # 2. Legacy fallback endpoints only if v1 API was not reachable (LM Studio < 0.3)
-    unloaded = False
-    unload_targets = [
-        f"http://{addr}/api/v0/models/unload",
-        f"http://{addr}/v1/models/unload",
-        f"http://{addr}/api/v0/model/unload",
-    ]
-    payloads = []
-    if model_name:
-        payloads.append({"identifier": model_name, "model": model_name})
-        payloads.append({"model": model_name})
-    payloads.append({})
-
-    for url in unload_targets:
-        for p in payloads:
-            try:
-                data_bytes = json.dumps(p).encode("utf-8")
-                req = urllib.request.Request(
-                    url,
-                    data=data_bytes,
-                    headers={"Content-Type": "application/json", "User-Agent": "DeathshotArsenal-Sensei"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=timeout) as resp:
-                    if resp.status in (200, 204):
-                        unloaded = True
-                        break
-            except Exception:
-                continue
-        if unloaded:
-            break
-
-    # Release ComfyUI soft cache
+def _lm_studio_completion(notes, system_prompt, image_url, cfg, node_id):
+    user_text = notes or ("Analyze this image and write a cinematic, detailed video generation prompt." if image_url
+                          else "Generate a rich, cinematic video generation prompt.")
+    user_content = [{"type": "text", "text": user_text}, {"type": "image_url", "image_url": {"url": image_url}}] if image_url else user_text
+    seed = _resolve_seed(cfg)
+    model = str(cfg.get("model") or "")
     try:
-        import comfy.model_management as mm
-        mm.soft_empty_cache()
-    except Exception:
-        pass
-
-    logger.info(f"[Prompt Sensei] Unload request for '{model_name}' on LM Studio ({addr}). Result={unloaded}")
-    return unloaded
-
-
-# ---------------------------------------------------------------------------
-# Generation Control (Kill LLM / Cancellation)
-# ---------------------------------------------------------------------------
-
-def kill_active_generation():
-    """Immediately stops and cancels the active LM Studio generation request."""
-    with _ACTIVE_GENERATION["lock"]:
-        _ACTIVE_GENERATION["cancelled"] = True
-        active_sock = _ACTIVE_GENERATION.get("active_sock")
-        if active_sock:
-            try:
-                active_sock.shutdown(socket.SHUT_RDWR)
-                active_sock.close()
-            except Exception:
-                pass
-            _ACTIVE_GENERATION["active_sock"] = None
-
-        if _ACTIVE_GENERATION["task_id"]:
-            logger.info(f"[Prompt Sensei] Active generation cancelled for task {_ACTIVE_GENERATION['task_id']}")
-            _ACTIVE_GENERATION["task_id"] = None
-            return True
-        return False
+        text, tokens, elapsed, model = lm_studio.chat_completion(
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_content}],
+            ip=cfg.get("ip") or "127.0.0.1",
+            port=cfg.get("port") or 1234,
+            model=model,
+            max_tokens=int(cfg.get("max_tokens") or 2048),
+            temperature=float(cfg.get("temperature", 0.7)),
+            seed=seed,
+            timeout=float(cfg.get("timeout") or 300.0),
+            on_progress=_stream_sender(node_id, model or "LM Studio"),
+        )
+    finally:
+        if cfg.get("unload_after_run"):
+            lm_studio.unload_model(ip=cfg.get("ip") or "127.0.0.1", port=cfg.get("port") or 1234, model_name=model)
+    return text, tokens, elapsed, model, seed
 
 
-def is_cancelled(task_id=None):
-    with _ACTIVE_GENERATION["lock"]:
-        return bool(_ACTIVE_GENERATION["cancelled"])
-
-
-# ---------------------------------------------------------------------------
-# LM Studio Generation Pipeline
-# ---------------------------------------------------------------------------
-
-def generate_prompt_lm_studio(
+def generate_prompt(
+    provider,
+    mode,
     scene_notes,
     system_prompt=None,
     image_path=None,
-    lm_studio_config=None,
-    context=None,
-    task_id=None,
+    image_tensor=None,
+    cfg=None,
     node_id=None,
+    check_interrupt=None,
 ):
-    """Generate prompt using LM Studio chat completions endpoint."""
-    t0 = time.perf_counter()
-    task_id = task_id or f"task_{int(time.time() * 1000)}"
-
-    with _ACTIVE_GENERATION["lock"]:
-        _ACTIVE_GENERATION["task_id"] = task_id
-        _ACTIVE_GENERATION["cancelled"] = False
-        _ACTIVE_GENERATION["active_sock"] = None
-
-    cfg = lm_studio_config or {}
-    ip = str(cfg.get("ip") or "127.0.0.1").strip()
-    port = int(cfg.get("port") or 1234)
-    selected_model = str(cfg.get("model") or "").strip()
-    max_tokens = int(cfg.get("max_tokens") or 2048)
-    temperature = float(cfg.get("temperature") if cfg.get("temperature") is not None else 0.7)
-    seed = cfg.get("seed")
-    timeout = float(cfg.get("timeout") or 300.0)
-    unload_after_run = bool(cfg.get("unload_after_run", False))
-
-    addr = f"{ip}:{port}"
-    endpoint = f"http://{addr}/v1/chat/completions"
-    sys_prompt = (system_prompt or "").strip() or DEFAULT_SYSTEM_PROMPT
+    """
+    Generate a Sensei prompt with the Built-In LLM ("built_in") or LM Studio.
+    Returns {"status": "completed"|"failed"|"cancelled", "prompt", "tokens", "speed", "elapsed", "model", "seed", "error", "error_type"}.
+    ComfyUI interrupts raised by check_interrupt propagate to the caller.
+    """
+    cfg = dict(cfg or {})
+    node_id = str(node_id) if node_id is not None else None
     notes = (scene_notes or "").strip()
+    system_prompt = (system_prompt or "").strip() or load_default_prompt(mode)
+    is_lm = provider != "built_in"
+    model_label = str(cfg.get("model") or ("LM Studio" if is_lm else "GGUF Model"))
 
-    # 1. Model Availability & Connection Verification
-    models_res = fetch_lm_studio_models(ip=ip, port=port, timeout=min(5.0, timeout))
-    if not models_res["ok"]:
-        if ip in ("127.0.0.1", "localhost"):
-            logger.info(f"[Prompt Sensei] LM Studio offline at {addr}, attempting background launch via LMS CLI...")
-            started, msg = start_lm_studio_server(port=port)
-            if started:
-                logger.info(f"[Prompt Sensei] {msg}, re-checking models...")
-                models_res = fetch_lm_studio_models(ip=ip, port=port, timeout=5.0)
+    resolved = resolve_image_path(image_path) if image_tensor is None else None
+    image_url = None
+    if image_tensor is not None or resolved:
+        image_url = image_data_url(image_tensor=image_tensor, image_path=resolved,
+                                   max_side=1536 if is_lm else 1280, quality=88 if is_lm else 90)
 
-    if not models_res["ok"]:
-        with _ACTIVE_GENERATION["lock"]:
-            if _ACTIVE_GENERATION["task_id"] == task_id:
-                _ACTIVE_GENERATION["task_id"] = None
-        return {
-            "status": "failed",
-            "error": f"LM Studio unavailable\n{addr}",
-            "error_type": "connection_error",
-            "prompt": notes,
-        }
-
-    available_models = models_res.get("models", [])
-    if not selected_model:
-        if available_models:
-            selected_model = available_models[0]
+    try:
+        if is_lm:
+            text, tokens, elapsed, model, seed = _lm_studio_completion(notes, system_prompt, image_url, cfg, node_id)
         else:
-            with _ACTIVE_GENERATION["lock"]:
-                if _ACTIVE_GENERATION["task_id"] == task_id:
-                    _ACTIVE_GENERATION["task_id"] = None
-            return {
-                "status": "failed",
-                "error": "No model selected or loaded in LM Studio",
-                "error_type": "no_model",
-                "prompt": notes,
-            }
+            text, tokens, elapsed, model, seed = _builtin_completion(notes, system_prompt, image_url, cfg, node_id, check_interrupt)
+    except GenerationCancelled:
+        logger.info("[Prompt Sensei] Generation cancelled by user.")
+        _progress("cancelled", "Generation stopped by user.", node_id, model_label, prompt="")
+        return {"status": "cancelled", "error": "Generation interrupted by user", "prompt": notes}
+    except lm_studio.LMStudioError as e:
+        logger.warning(f"[Prompt Sensei] LM Studio: {e}")
+        _progress("failed", f"Generation failed: {e}", node_id, model_label, prompt="")
+        return {"status": "failed", "error": str(e), "error_type": e.error_type, "model": model_label, "prompt": notes}
+    except (RuntimeError, ValueError, OSError) as e:
+        logger.error(f"[Prompt Sensei] Generation error: {e}")
+        _progress("failed", f"Generation failed: {e}", node_id, model_label, prompt="")
+        return {"status": "failed", "error": str(e), "prompt": notes}
 
-    # Validate requested model availability
-    if selected_model not in available_models:
-        match = next((m for m in available_models if m.lower() == selected_model.lower()), None)
-        if not match:
-            with _ACTIVE_GENERATION["lock"]:
-                if _ACTIVE_GENERATION["task_id"] == task_id:
-                    _ACTIVE_GENERATION["task_id"] = None
-            return {
-                "status": "failed",
-                "error": f"Model unavailable\n{selected_model}",
-                "error_type": "model_unavailable",
-                "model": selected_model,
-                "prompt": notes,
-            }
-        selected_model = match
-
-    if is_cancelled(task_id):
-        return {"status": "cancelled", "prompt": notes}
-
-    # 2. Prepare Messages Payload (Image + Scene Description + System Prompt)
-    messages = [
-        {"role": "system", "content": sys_prompt},
-    ]
-
-    img_b64 = prepare_image_for_lm_studio(image_path) if image_path else None
-    if img_b64:
-        user_content = [
-            {
-                "type": "text",
-                "text": notes or "Analyze this image and write a cinematic, detailed video generation prompt.",
-            },
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{img_b64}",
-                },
-            },
-        ]
-    else:
-        user_content = notes or "Generate a rich, cinematic video generation prompt."
-
-    messages.append({"role": "user", "content": user_content})
-
-    payload = {
-        "model": selected_model,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": max(0.0, min(2.0, temperature)),
-        "stream": True,
-    }
-
-    used_seed = None
-    randomize_seed = bool(cfg.get("randomize_seed", True))
-    if randomize_seed or seed is None or str(seed).strip() in ("-1", ""):
-        used_seed = random.randint(0, 2147483647)
-        payload["seed"] = used_seed
-    else:
-        try:
-            s_val = int(seed)
-            if s_val >= 0:
-                payload["seed"] = s_val
-                used_seed = s_val
-        except (ValueError, TypeError):
-            pass
-
-    # 3. HTTP Request Execution with Timeout
-    req_data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        endpoint,
-        data=req_data,
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "text/event-stream",
-            "User-Agent": "DeathshotArsenal-Sensei",
-        },
-        method="POST",
-    )
-
-    result_text = None
-    completion_tokens = 0
-    parts = []
-    in_think_block = False
-    last_progress_time = t0
-
-    try:
-        try:
-            resp_context = urllib.request.urlopen(req, timeout=timeout)
-        except urllib.error.HTTPError as he:
-            if payload.get("stream"):
-                payload["stream"] = False
-                req_data = json.dumps(payload).encode("utf-8")
-                req = urllib.request.Request(
-                    endpoint,
-                    data=req_data,
-                    headers={
-                        "Content-Type": "application/json",
-                        "User-Agent": "DeathshotArsenal-Sensei",
-                    },
-                    method="POST",
-                )
-                resp_context = urllib.request.urlopen(req, timeout=timeout)
-            else:
-                raise he
-
-        with resp_context as resp:
-            if is_cancelled(task_id):
-                return {"status": "cancelled", "prompt": notes}
-
-            if resp.status == 200:
-                try:
-                    if hasattr(resp, "fp") and hasattr(resp.fp, "raw") and hasattr(resp.fp.raw, "_sock"):
-                        with _ACTIVE_GENERATION["lock"]:
-                            _ACTIVE_GENERATION["active_sock"] = resp.fp.raw._sock
-                except Exception:
-                    pass
-
-                content_type = str(resp.headers.get("Content-Type", "")).lower()
-                is_sse = "text/event-stream" in content_type or payload.get("stream")
-
-                if is_sse:
-                    for raw_line in resp:
-                        if is_cancelled(task_id):
-                            return {"status": "cancelled", "prompt": notes}
-
-                        line = raw_line.decode("utf-8", errors="replace").strip()
-                        if not line:
-                            continue
-
-                        if line.startswith("data:"):
-                            data_str = line[5:].strip()
-                            if data_str == "[DONE]":
-                                break
-
-                            try:
-                                chunk_data = json.loads(data_str)
-                            except Exception:
-                                continue
-
-                            choices = chunk_data.get("choices", [])
-                            if not choices or not isinstance(choices, list):
-                                continue
-
-                            delta = choices[0].get("delta", {})
-                            piece = delta.get("content") or ""
-                            if not piece:
-                                continue
-
-                            if "<think>" in piece or "<thought>" in piece or "<reasoning>" in piece:
-                                in_think_block = True
-                            if in_think_block:
-                                if "</think>" in piece or "</thought>" in piece or "</reasoning>" in piece:
-                                    in_think_block = False
-                                continue
-
-                            if "</think>" in piece or "</thought>" in piece or "<think>" in piece or "</reasoning>" in piece:
-                                piece = re.sub(r"</?(?:think|thought|reasoning|analysis)>", "", piece)
-                                if not piece.strip():
-                                    continue
-
-                            parts.append(piece)
-                            completion_tokens += 1
-                            now = time.perf_counter()
-                            elapsed_so_far = max(0.01, round(now - t0, 1))
-                            tk_s = round(completion_tokens / elapsed_so_far, 1)
-
-                            try:
-                                import server
-                                server.PromptServer.instance.send_sync("ds_sensei_stream", {
-                                    "node_id": node_id,
-                                    "chunk": piece,
-                                    "text": "".join(parts),
-                                    "tokens": completion_tokens,
-                                    "speed": tk_s,
-                                    "elapsed": elapsed_so_far,
-                                })
-                            except Exception:
-                                pass
-
-                            if now - last_progress_time >= 0.1:
-                                last_progress_time = now
-                                try:
-                                    import server
-                                    server.PromptServer.instance.send_sync("ds_sensei_progress", {
-                                        "stage": "generating",
-                                        "message": f"Writing prompt: {completion_tokens} tokens ({elapsed_so_far}s · {tk_s} Tk/s)...",
-                                        "tokens": completion_tokens,
-                                        "speed": tk_s,
-                                        "elapsed": elapsed_so_far,
-                                        "node_id": node_id,
-                                    })
-                                except Exception:
-                                    pass
-
-                    if parts:
-                        result_text = "".join(parts).strip()
-                        result_text = re.sub(r"^\s*</?(?:think|thought|reasoning|analysis)>\s*", "", result_text).strip()
-
-                if not result_text:
-                    raw_body = resp.read().decode("utf-8") if not parts else ""
-                    if raw_body:
-                        body = json.loads(raw_body)
-                        choices = body.get("choices", [])
-                        if choices and isinstance(choices, list):
-                            msg = choices[0].get("message", {})
-                            result_text = msg.get("content", "").strip()
-                        usage = body.get("usage", {})
-                        completion_tokens = usage.get("completion_tokens") or 0
-            else:
-                return {
-                    "status": "failed",
-                    "error": f"LM Studio returned HTTP {resp.status}",
-                    "prompt": notes,
-                }
-    except urllib.error.HTTPError as e:
-        if is_cancelled(task_id):
-            return {"status": "cancelled", "prompt": notes}
-        err_body = ""
-        try:
-            err_body = e.read().decode("utf-8", errors="ignore")
-            err_json = json.loads(err_body)
-            err_body = err_json.get("error", {}).get("message", err_body)
-        except Exception:
-            pass
-        logger.error(f"[Prompt Sensei] LM Studio HTTP Error {e.code}: {err_body}")
-        return {
-            "status": "failed",
-            "error": f"LM Studio Error: {err_body or e.reason}",
-            "prompt": notes,
-        }
-    except (socket.timeout, TimeoutError) as e:
-        logger.warning(f"[Prompt Sensei] Generation timed out after {timeout}s: {e}")
-        return {
-            "status": "failed",
-            "error": f"Request timed out ({int(timeout)}s)",
-            "error_type": "timeout",
-            "prompt": notes,
-        }
-    except (urllib.error.URLError, ConnectionRefusedError, OSError) as e:
-        if is_cancelled(task_id):
-            return {"status": "cancelled", "prompt": notes}
-        logger.warning(f"[Prompt Sensei] Connection error to LM Studio: {e}")
-        return {
-            "status": "failed",
-            "error": f"LM Studio unavailable\n{addr}",
-            "error_type": "connection_error",
-            "prompt": notes,
-        }
-    except Exception as e:
-        if is_cancelled(task_id):
-            return {"status": "cancelled", "prompt": notes}
-        logger.error(f"[Prompt Sensei] Unexpected error during LM Studio generation: {e}")
-        return {
-            "status": "failed",
-            "error": str(e),
-            "prompt": notes,
-        }
-    finally:
-        with _ACTIVE_GENERATION["lock"]:
-            _ACTIVE_GENERATION["active_sock"] = None
-
-    if is_cancelled(task_id):
-        with _ACTIVE_GENERATION["lock"]:
-            if _ACTIVE_GENERATION["task_id"] == task_id:
-                _ACTIVE_GENERATION["task_id"] = None
-        return {"status": "cancelled", "prompt": notes}
-
-    if not result_text:
-        return {
-            "status": "failed",
-            "error": "Empty response received from LM Studio",
-            "prompt": notes,
-        }
-
-    try:
-        from .prompt_manager import clean_generated_prompt
-        result_text = clean_generated_prompt(result_text)
-    except Exception:
-        if result_text.startswith('"') and result_text.endswith('"') and len(result_text) > 2:
-            result_text = result_text[1:-1].strip()
-
-    t1 = time.perf_counter()
-    elapsed = max(0.01, round(t1 - t0, 2))
-    words = len(result_text.split())
-    if not completion_tokens:
-        completion_tokens = int(words * 1.33)
-    speed = round(completion_tokens / elapsed, 1)
-
-    # 4. Unload LLM After Run if Configured
-    if unload_after_run:
-        try:
-            unload_lm_studio_model(ip=ip, port=port, model_name=selected_model)
-        except Exception as e:
-            logger.warning(f"[Prompt Sensei] Error unloading model after run: {e}")
-
-    with _ACTIVE_GENERATION["lock"]:
-        if _ACTIVE_GENERATION["task_id"] == task_id:
-            _ACTIVE_GENERATION["task_id"] = None
-
-    try:
-        import server
-        server.PromptServer.instance.send_sync("ds_sensei_progress", {
-            "stage": "completed",
-            "message": f"Prompt generated ({completion_tokens} tokens in {elapsed}s · {speed} Tk/s)",
-            "tokens": completion_tokens,
-            "speed": speed,
-            "elapsed": elapsed,
-            "model": selected_model,
-            "prompt": result_text,
-            "node_id": node_id,
-        })
-        try:
-            from core.monitor import report_llm
-            report_llm(
-                model=str(selected_model or "LM Studio"),
-                tokens=completion_tokens,
-                seconds=elapsed,
-                status="idle",
-                format_name="Remote / Local API",
-                offload="Local Server",
-                backend="LM Studio / AI Prompt Sensei"
-            )
-        except Exception:
-            pass
-    except Exception:
-        pass
-
+    prompt = clean_generated_prompt(text, system_prompt=system_prompt)
+    speed = round(tokens / elapsed, 1)
+    _progress("completed", f"Completed ({tokens} tokens · {speed} Tk/s · {elapsed}s)", node_id, model,
+              tokens=tokens, speed=speed, elapsed=elapsed, prompt=prompt)
     return {
         "status": "completed",
-        "prompt": result_text,
-        "tokens": completion_tokens,
+        "prompt": prompt,
+        "tokens": tokens,
         "speed": speed,
         "elapsed": elapsed,
-        "model": selected_model,
-        "seed": used_seed,
+        "model": model,
+        "seed": seed,
     }
-
-
-def generate_prompt_sync(scene_notes, system_prompt=None, context=None, endpoint_config=None, task_id=None):
-    """Backward-compatible shim."""
-    image_path = None
-    if context:
-        image_path = context.get("image_path")
-    return generate_prompt_lm_studio(
-        scene_notes=scene_notes,
-        system_prompt=system_prompt,
-        image_path=image_path,
-        lm_studio_config=endpoint_config,
-        context=context,
-        task_id=task_id,
-    )
-
-
-def unload_llm_memory(ip="127.0.0.1", port=1234, model_name=None):
-    """Releases LM Studio model resources and frees ComfyUI model memory."""
-    unload_lm_studio_model(ip=ip, port=port, model_name=model_name)
-    try:
-        import gc
-        import torch
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.ipc_collect()
-    except Exception:
-        pass
-    logger.info("[Prompt Sensei] Unloaded model memory.")
-    return True

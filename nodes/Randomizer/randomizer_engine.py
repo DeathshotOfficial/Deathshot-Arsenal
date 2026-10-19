@@ -174,6 +174,8 @@ class DetectedSpan:
         return f"<DetectedSpan {self.category_id}: '{self.matched_text}' [{self.start}:{self.end}]>"
 
 
+_HAIR_ADJ = r"(?!\b(?:in|on|with|and|or|of|to|for|at|by|from|a|an|the|is|has|wearing|dressed|clad|sporting|standing|sitting|walking|holding|looking|woman|man|girl|guy|person|model|lady)\b)[a-zA-Z\-]+"
+
 class CategoryDetector:
     @staticmethod
     def detect_category(text: str, category_id: str, db: DatabaseLoader) -> Optional[DetectedSpan]:
@@ -188,7 +190,8 @@ class CategoryDetector:
                 m_start = match.start()
                 m_end = match.end()
                 m_text = match.group(0)
-                if match.lastindex is not None:
+                # Only use capture group if not hair or clothing to avoid slicing off nouns like 'hair'
+                if match.lastindex is not None and category_id not in ("hair_color", "hair", "hair_style", "clothing", "female_clothing", "male_clothing"):
                     for g in range(1, match.lastindex + 1):
                         if match.group(g):
                             m_start = match.start(g)
@@ -234,17 +237,17 @@ class CategoryDetector:
             "age_range": r"\b\d{1,2}\s*(?:yo|y/o|years?\s*old|-year-old)\b|\b(?:early|mid|late)\s*(?:twenties|thirties|forties|fifties|sixties|20s|30s|40s|50s)\b",
             "body_figure": r"\b(?:curvy\s+thick|thick\s+curves?|curvaceous|voluptuous|hourglass|athletic|slender|slim|muscular|petite|statuesque|toned|chubby|plus-size|bbw)\b(?:\s*(?:build|figure|physique|frame|body|curves?|silhouette))?",
             "bust_size": r"\b(?:large\s+hanging\s+breasts|heavy\s+breasts|voluptuous\s+bust|busty|large\s+breasts|perky\s+breasts|ample\s+cleavage)\b",
-            "female_clothing": r"\b(?:wearing\s+only|wearing|dressed\s+in|clad\s+in)\s+(?:only\s+)?(?:[\w\s-]+ )?(?:high heels|heels|dress|skirt|babydoll|lingerie|bikini|swimsuit|robe|pumps)\b|\b(?:completely naked|fully nude)\b",
-            "male_clothing": r"\b(?:wearing|dressed\s+in|clad\s+in)\s+(?:a |an )?(?:[\w\s-]+ )?(?:jeans|pants|trousers|suit|shirt|jacket|boxers|sweatpants)\b|\bshirtless\b",
-            "clothing": r"\b(?:wearing|dressed\s+in|clad\s+in)\s+(?:only\s+)?(?:[\w\s-]+ )?(?:blazer|sweater|jacket|dress|shirt|suit|hoodie|coat|panties|lingerie|bra|underwear|top|pants|trousers|skirt|jeans|swimsuit|bikini|heels|boots|armor|robes|robe|gown|kimono|costume|attire|outfit|vest|tunic|uniform)\b",
-            "location": r"\b(?:[\w-]+\s+){0,3}(?:beach|coastline|shore|bedroom|living room|apartment|hotel room|hotel suite|loft|penthouse|cabin|cottage|library|study|art gallery|gallery|studio|greenhouse|terrace|balcony|rooftop|alleyway|street|cafe|restaurant|bar|speakeasy|dungeon|sauna|bathhouse|onsen|pool|poolside|garden|forest|woods|courtyard|kitchen|bathroom)(?:\s+(?:setting|scene|interior|atmosphere|environment))?(?:\s+with\s+[^,.;\n]+)?\b",
+            "female_clothing": r"(?:,\s*|\band\s*)?(?:\b(?:wearing\s+only|wearing|dressed\s+in|clad\s+in|in\s+a|in\s+an|in|sporting|outfitted\s+in)\s+)?\b(?:[\w\-]+\s+){0,3}(?:dress|skirt|blazer|sweater|hoodie|jacket|coat|shirt|blouse|crop\s+top|pants|jeans|shorts|high heels|heels|pumps|lingerie|bra|panties|underwear|swimsuit|bikini|babydoll|robe|gown|kimono|costume|attire|outfit)\b|\b(?:completely naked|fully nude)\b",
+            "male_clothing": r"(?:,\s*|\band\s*)?(?:\b(?:wearing|dressed\s+in|clad\s+in|in\s+a|in\s+an|in)\s+)?\b(?:[\w\-]+\s+){0,3}(?:suit|tuxedo|jacket|blazer|coat|shirt|t-shirt|sweater|hoodie|jeans|pants|trousers|boxers|sweatpants|shorts)\b|\bshirtless\b",
+            "clothing": r"(?:,\s*|\band\s*)?(?:\b(?:wearing\s+only|wearing|dressed\s+in|clad\s+in|in\s+a|in\s+an|in|sporting|outfitted\s+in)\s+)?\b(?:[\w\-]+\s+){0,3}(?:dress|skirt|blazer|sweater|cardigan|hoodie|jacket|coat|trench\s+coat|shirt|t-shirt|blouse|top|crop\s+top|pants|trousers|jeans|shorts|suit|tuxedo|lingerie|bra|panties|underwear|swimsuit|bikini|bodysuit|gown|robe|robes|kimono|armor|outfit|attire|uniform|costume)\b(?:\s+and\s+[\w\-\s]+)?",
+            "location": r"(?:,\s*|\band\s*)?(?:\b(?:in\s+a|in\s+an|in\s+the|at\s+a|at\s+an|at\s+the|inside\s+a|inside\s+an|inside\s+the|on\s+a|on\s+the)\s+)?\b(?:[\w\-]+\s+){0,3}(?:beach|coastline|shore|bedroom|living room|apartment|hotel room|hotel suite|loft|penthouse|cabin|cottage|library|study|art gallery|gallery|studio|greenhouse|terrace|balcony|rooftop|alleyway|alley|street|cafe|coffee shop|restaurant|bar|speakeasy|dungeon|sauna|bathhouse|onsen|pool|poolside|garden|forest|woods|courtyard|kitchen|bathroom|cathedral|temple|sanctuary)\b(?:\s+(?:setting|scene|interior|atmosphere|environment))?(?:\s+with\s+[^,.;\n]+)?",
             "camera_angle": r"\b(?:strict front-facing|front-facing|straight angle shot|straight-on angle|low-angle|high-angle|eye-level|dutch angle|top-down|overhead)\b(?:\s*(?:shot|angle|view))?",
             "lens_focal": r"\b(?:Photo shot on\s+)?(?:ultra-wide-angle\s+)?(?:\d{2,3}mm\s+(?:f/[\d.]+\s+)?(?:GM|prime|lens)?|16mm lens|24mm lens|35mm lens|50mm lens|85mm lens|105mm lens|135mm lens)\b",
-            "hair_color": r"\b(?:platinum blonde|golden honey-blonde|golden blonde|honey blonde|sun-bleached blonde|dirty blonde|strawberry blonde|champagne blonde|ice blonde|bleached blonde|Swedish ice-blonde|bleached white-blonde|blonde|dark brunette|chestnut brown|chocolate brown|copper red|fiery copper-red|vibrant Irish ginger|ginger|auburn|crimson auburn|bright fiery red|ash-brown|ash brown|silver-white|silver-gray|silver gray|icy titanium silver|deep raven-black|jet-black|jet black|raven black|brunette|redhead)\b|\b(black|brown|dark brown|red|white|gray|silver)\b(?=(?:[\s,]+(?:waist-length|shoulder-length|medium-length|mid-back|short|long|cropped|flowing|voluminous|buzzcut|pixie|bob|layered|messy|tousled|wavy|straight|curly|coily|silky|textured|loose|natural))*[\s,]+(?:hair|curls|locks|tresses|ponytail|braid|bangs|updo|cut|bob)\b)|\b(?:with|has|hair is)\s+(black|brown|dark brown|red|white|gray|silver)\b(?=[\s,]+(?:short|long|wavy|straight|curly)\b)|\b(black|brown|dark brown|red|white|gray|silver)\s+(?:hair|curls|locks|tresses)\b|\b(black|brown|dark brown|red|white|gray|silver)\b(?=[\s,]+(?:short|long|wavy|straight|curly)\b)",
+            "hair_color": rf"(?:\b(?:with|has|hair\s+is)\s+)?\b({_HAIR_ADJ}(?:\s+{_HAIR_ADJ}){{0,2}}\s+(?:hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob))\b|\b(?:platinum blonde|golden honey-blonde|golden blonde|honey blonde|sun-bleached blonde|dirty blonde|strawberry blonde|champagne blonde|ice blonde|bleached blonde|Swedish ice-blonde|bleached white-blonde|blonde|blond|dark brunette|brunette|redhead)\b(?:\s+(?:hair|curls|locks|tresses))?|\b(?:chestnut brown|chocolate brown|copper red|fiery copper-red|vibrant Irish ginger|ginger|auburn|crimson auburn|bright fiery red|ash-brown|ash brown|silver-white|silver-gray|silver gray|icy titanium silver|deep raven-black|jet-black|jet black|raven black|black|brown|dark brown|red|green|emerald|blue|teal|cyan|purple|violet|lavender|pink|rose|white|gray|silver|yellow|orange|golden|dark|light|neon|pastel|dyed)\s+(?:hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob)\b",
             "hair_length": r"\b(waist-length|elbow-length|shoulder-length|chin-length|mid-back length|mid-back|knee-length|pixie-length|buzz-cut|closely cropped short|short cropped|medium-length|medium length|very long)\b|\b(long|short|cropped)\b(?=(?:[\s,]+(?:platinum blonde|golden honey-blonde|golden blonde|honey blonde|strawberry blonde|dirty blonde|blonde|dark brunette|chestnut brown|chocolate brown|copper red|ginger|auburn|ash brown|silver gray|black|brown|red|white|gray|silver|brunette|redhead|wavy|straight|curly|coily|silky|textured|loose|natural|messy|tousled))*[\s,]+(?:hair|curls|locks|tresses|ponytail|braid|bangs|updo|cut|bob)\b)|\b(?:platinum blonde|golden blonde|honey blonde|blonde|brunette|black|brown|red|ginger|silver|gray|white)[\s,]+(long|short|cropped)\b|\b(long|short|cropped)\b(?=[\s,]+(?:wavy|straight|curly|coily|silky|textured|blonde|brunette|black|brown|red|ginger)\b)|\b(long|short|cropped)\s+hair\b",
             "hair_type": r"\b(sleek straight|straight|beach waves|loose waves|gentle waves|wavy|bouncy curls|ringlets|curly|coily|kinky|afro-textured|afro|tousled|messy|silky|textured)\b",
             "hair_style": r"\b(pixie cut|pixie|blunt bob|french bob|bob cut|bob|high ponytail|ponytail|messy bun|topknot|chignon|bun|french braid|dutch braid|box braids|cornrows|dreadlocks|dreads|braids|braid|curtain bangs|blunt bangs|bangs|layered cut|wolf cut|shag cut|layered hair|undercut|buzz cut|updo)\b",
-            "hair": r"\b(?:(?:waist-length|shoulder-length|medium-length|mid-back length|mid-back|elbow-length|chin-length|pixie-length|buzz-cut|very long|medium length|closely cropped short|short cropped|long|short|cropped|flowing|voluminous|layered|messy|tousled|wavy|straight|curly|coily|silky|textured|loose|natural|sleek straight|beach waves|platinum blonde|golden honey-blonde|golden blonde|honey blonde|sun-bleached blonde|dirty blonde|strawberry blonde|champagne blonde|ice blonde|bleached blonde|Swedish ice-blonde|bleached white-blonde|blonde|dark brunette|chestnut brown|chocolate brown|copper red|fiery copper-red|vibrant Irish ginger|ginger|auburn|crimson auburn|bright fiery red|ash-brown|ash brown|silver-white|silver-gray|silver gray|icy titanium silver|deep raven-black|jet-black|jet black|raven black|brunette|redhead|black|dark brown|brown|red|silver|gray|white)[\s,]+)*(?:hair|curls|locks|tresses|ponytail|braid|bangs|updo|cut|bob)\b|\b(?:hair|curls|locks|tresses)\b",
+            "hair": rf"(?:\b(?:with|has|hair\s+is)\s+)?\b({_HAIR_ADJ}(?:\s+{_HAIR_ADJ}){{0,4}}\s+(?:hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob))\b|\b(?:hair|curls|locks|tresses)\b",
             "skin_complexion": r"\b(?:natural skin sheen|fabric-free skin textures?|porcelain skin|bronze skin|tanned skin|pale skin|olive skin|dewy skin)\b",
             "makeup": r"\b(?:full makeup|no-makeup look|natural makeup|smoky eye|bold red lip|winged eyeliner|glam makeup)\b",
             "expression": r"\b(?:moaning expression|parted lips, eyes half-closed|seductive look|ecstatic expression|alluring gaze|sensual smile)\b",
@@ -257,7 +260,8 @@ class CategoryDetector:
                 m_start = match.start()
                 m_end = match.end()
                 m_text = match.group(0)
-                if match.lastindex is not None:
+                # Keep whole attribute span for hair and clothing
+                if match.lastindex is not None and category_id not in ("hair_color", "hair", "hair_style", "clothing", "female_clothing", "male_clothing"):
                     for g in range(1, match.lastindex + 1):
                         if match.group(g):
                             m_start = match.start(g)
@@ -494,8 +498,12 @@ class PromptRewriter:
         """Cleans duplicate commas, extra whitespace, and dangling punctuation."""
         if not text:
             return ""
+        # Collapse duplicate identical words (e.g. hair hair, dress dress, wearing wearing)
+        t = re.sub(r"\b([a-zA-Z]{3,})\s+\1\b", r"\1", text, flags=re.I)
+        # Collapse duplicate prepositions
+        t = re.sub(r"\b(in|with|on|at|of)\s+\1\b", r"\1", t, flags=re.I)
         # Remove repeated commas
-        t = re.sub(r",\s*,+", ", ", text)
+        t = re.sub(r",\s*,+", ", ", t)
         # Normalize mixed punctuation (period followed by comma -> comma or single period)
         t = re.sub(r"\.\s*,+", ". ", t)
         t = re.sub(r",\s*\.+", ".", t)
@@ -524,6 +532,22 @@ class PromptRewriter:
         before = text[:span.start]
         after = text[span.end:]
         rep = replacement.strip()
+        # Clean up hyphenated prefix leftovers (e.g. 'jet-black hair' where only 'black hair' matched)
+        if before.endswith("-"):
+            before = before[:-1].rstrip()
+            before = re.sub(r"\b(jet|raven|deep|dark|light)\b$", "", before, flags=re.I).rstrip(" ,")
+
+        # Preserve hair noun if replacing a hair trait
+        if category_id in ("hair_color", "hair_length", "hair_type"):
+            has_hair_in_span = bool(re.search(r"\b(hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob)\b", span.matched_text, re.I))
+            has_hair_in_rep = bool(re.search(r"\b(hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob)\b", rep, re.I))
+            has_hair_in_after = bool(re.match(r"^\s*(hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob)\b", after, re.I))
+            if has_hair_in_span and not has_hair_in_rep and not has_hair_in_after:
+                rep = f"{rep} hair"
+
+        # Prevent boundary noun duplication (e.g. rep='vibrant green hair', after=' hair')
+        if rep.lower().endswith("hair") and after.lstrip().lower().startswith("hair"):
+            after = re.sub(r"^\s*hair\b", "", after, flags=re.I, count=1)
 
         # Ensure proper spacing around replacement if adjacent to words
         if before and before[-1].isalnum() and rep and rep[0].isalnum():
@@ -697,16 +721,39 @@ class DSRandomizerPipeline:
             "male_clothing": 23,
         }
 
-        # Suppress composite 'hair' when granular hair attributes are active to prevent clashing/overwriting traits
-        granular_hair = {"hair_color", "hair_length", "hair_type", "hair_style"}
         active_cats = list(enabled_categories)
+
+        # 1. Hair mutual exclusion: suppress composite 'hair' when granular hair attributes are active
+        granular_hair = {"hair_color", "hair_length", "hair_type", "hair_style"}
         if any(c in active_cats for c in granular_hair) and "hair" in active_cats:
             active_cats = [c for c in active_cats if c != "hair"]
 
-        # Suppress generic 'clothing' when specific clothing categories are active
-        granular_clothing = {"female_clothing", "male_clothing", "top", "bottom"}
-        if any(c in active_cats for c in granular_clothing) and "clothing" in active_cats:
-            active_cats = [c for c in active_cats if c != "clothing"]
+        # 2. Clothing mutual exclusion: suppress all full-outfit parents when specific garments or traits are active
+        granular_clothing = {
+            "top", "bottom", "footwear", "clothing_accessories", "fabric",
+            "clothing_color", "style", "clothing_state", "outfit_type",
+        }
+        clothing_parents = {"clothing", "female_clothing", "male_clothing"}
+        if any(c in active_cats for c in granular_clothing):
+            active_cats = [c for c in active_cats if c not in clothing_parents]
+        elif sum(1 for c in active_cats if c in clothing_parents) > 1:
+            if "female_clothing" in active_cats:
+                active_cats = [c for c in active_cats if c not in ("clothing", "male_clothing")]
+            elif "male_clothing" in active_cats:
+                active_cats = [c for c in active_cats if c not in ("clothing", "female_clothing")]
+
+        # 3. Location mutual exclusion: suppress broad 'location' when specific sub-elements are active
+        location_subs = {"room_environment", "background", "architecture"}
+        if any(c in active_cats for c in location_subs) and "location" in active_cats:
+            active_cats = [c for c in active_cats if c != "location"]
+
+        # 4. Camera mutual exclusion: suppress broad 'shot_type' when specific camera controls are active
+        camera_subs = {
+            "camera_angle", "perspective", "framing", "distance",
+            "lens_focal", "camera_position", "camera_characteristics",
+        }
+        if any(c in active_cats for c in camera_subs) and "shot_type" in active_cats:
+            active_cats = [c for c in active_cats if c != "shot_type"]
 
         sorted_categories = sorted(active_cats, key=lambda c: GRANULAR_PRIORITY.get(c, 50))
 
@@ -723,6 +770,8 @@ class DSRandomizerPipeline:
                 to_replace.append((cat_id, span))
             else:
                 to_insert.append(cat_id)
+
+        applied_choices: Dict[str, str] = {}
 
         # 1. Perform replacements
         for cat_id, initial_span in to_replace:
@@ -765,6 +814,9 @@ class DSRandomizerPipeline:
                         active_tags.difference_update({"indoor"})
                 active_tags.update(new_tags)
 
+                if cat_id in ("hair_color", "hair_length", "hair_type") and "hair" not in chosen_text.lower():
+                    chosen_text = f"{chosen_text} hair"
+                applied_choices[cat_id] = chosen_text
                 working_prompt = PromptRewriter.replace_span(
                     working_prompt,
                     current_span,
@@ -815,6 +867,7 @@ class DSRandomizerPipeline:
                         active_tags.difference_update({"indoor"})
                 active_tags.update(new_tags)
 
+                applied_choices[cat_id] = chosen_text
                 working_prompt = PromptRewriter.insert_category(
                     working_prompt,
                     cat_id,
@@ -826,6 +879,39 @@ class DSRandomizerPipeline:
 
         # 3. Clean up environmental contradictions (e.g. beach sand on library floor)
         working_prompt = clean_environmental_contradictions(working_prompt, active_tags)
+
+        # 4. Resolve conflicting duplicate attributes (e.g. prompt already had black hair and green hair)
+        for cat_id, chosen_val in applied_choices.items():
+            pat = None
+            if cat_id in ("hair_color", "hair"):
+                pat = re.compile(
+                    rf"(?:\b(?:with|has|hair\s+is)\s+)?\b({_HAIR_ADJ}(?:\s+{_HAIR_ADJ}){{0,2}}\s+(?:hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob))\b"
+                    r"|\b(?:platinum blonde|golden honey-blonde|golden blonde|honey blonde|sun-bleached blonde|dirty blonde|strawberry blonde|champagne blonde|ice blonde|bleached blonde|Swedish ice-blonde|bleached white-blonde|blonde|blond|dark brunette|brunette|redhead)\b(?:\s+(?:hair|curls|locks|tresses))?"
+                    r"|\b(?:chestnut brown|chocolate brown|copper red|fiery copper-red|vibrant Irish ginger|ginger|auburn|crimson auburn|bright fiery red|ash-brown|ash brown|silver-white|silver-gray|silver gray|icy titanium silver|deep raven-black|jet-black|jet black|raven black|black|brown|dark brown|red|green|emerald|blue|teal|cyan|purple|violet|lavender|pink|rose|white|gray|silver|yellow|orange|golden|dark|light|neon|pastel|dyed)\s+(?:hair|curls|locks|tresses|ponytail|braids?|bangs|updo|cut|bob)\b",
+                    re.I
+                )
+            elif cat_id in ("clothing", "female_clothing", "male_clothing"):
+                pat = re.compile(
+                    r"(?:,\s*|\band\s*)?(?:\b(?:wearing\s+only|wearing|dressed\s+in|clad\s+in|in\s+a|in\s+an|in|sporting|outfitted\s+in)\s+)?\b(?:[\w\-]+\s+){0,3}(?:dress|skirt|blazer|sweater|cardigan|hoodie|jacket|coat|trench\s+coat|shirt|t-shirt|blouse|top|crop\s+top|pants|trousers|jeans|shorts|suit|tuxedo|lingerie|bra|panties|underwear|swimsuit|bikini|bodysuit|gown|robe|robes|kimono|armor|outfit|attire|uniform|costume)\b(?:\s+and\s+[\w\-\s]+)?",
+                    re.I
+                )
+
+            if pat:
+                matches = list(pat.finditer(working_prompt))
+                if len(matches) > 1:
+                    chosen_pos = working_prompt.find(chosen_val)
+                    chosen_end = chosen_pos + len(chosen_val) if chosen_pos != -1 else -1
+
+                    to_remove = []
+                    for m in matches:
+                        m_start, m_end = m.start(), m.end()
+                        if chosen_pos != -1 and not (m_end <= chosen_pos or m_start >= chosen_end):
+                            continue
+                        to_remove.append((m_start, m_end))
+
+                    for s, e in reversed(to_remove):
+                        working_prompt = working_prompt[:s] + working_prompt[e:]
+                    working_prompt = PromptRewriter.clean_text(working_prompt)
 
         return PromptRewriter.clean_text(working_prompt)
 

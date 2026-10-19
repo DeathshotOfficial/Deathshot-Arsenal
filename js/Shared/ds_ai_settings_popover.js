@@ -533,7 +533,7 @@ export async function openAISettingsPopover({
 
     const modeNotice = document.createElement("div");
     modeNotice.style.cssText = "font-size:10px;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;";
-    modeNotice.innerHTML = `${DSIconMarkup("check", { size: 11, color: "var(--ds-accent, #67e8f9)" })}<span><strong>Pure Text Prompt Mode:</strong> Image & vision projectors are never loaded, keeping VRAM/RAM minimal.</span>`;
+    modeNotice.innerHTML = `${DSIconMarkup("check", { size: 11, color: "var(--ds-accent, #67e8f9)" })}<span><strong>Text-only:</strong> never loads the vision projector. A model another DS node already loaded is reused without reloading.</span>`;
     modelField.appendChild(modeNotice);
 
     scroll.appendChild(modelField);
@@ -929,7 +929,7 @@ export async function openAISettingsPopover({
     // Auto-load on Queue
     const autoLoadToggle = Toggle({
       label: "Auto-load & randomize on workflow Queue",
-      description: "When Queue is clicked, automatically runs AI randomization.",
+      description: "When OFF, Queue skips the LLM and uses the prompt from Run (or the source prompt if there is none).",
       checked: currentSettings.auto_load !== false,
       onChange: (checked) => {
         currentSettings.auto_load = checked;
@@ -940,8 +940,8 @@ export async function openAISettingsPopover({
 
     // Pause for edit
     const pauseToggle = Toggle({
-      label: "Pause for edit before workflow execution",
-      description: "When OFF: unloads LLM and continues workflow without pausing.",
+      label: "Use edited preview on Queue",
+      description: "When ON, Queue uses the preview you generated with Run and edited, instead of generating a new one.",
       checked: Boolean(currentSettings.pause_for_edit),
       onChange: (checked) => {
         currentSettings.pause_for_edit = checked;
@@ -997,7 +997,7 @@ export async function openAISettingsPopover({
 
     const sysDesc = document.createElement("small");
     sysDesc.style.cssText = "color:rgba(255,255,255,0.5);font-size:10px;line-height:1.3;display:block;";
-    sysDesc.textContent = "Custom instructions governing LLM semantic parsing and randomization.";
+    sysDesc.textContent = "Used for full prompt rewrites (Attribute Replacement Only OFF). Attribute mode uses its own fixed output format.";
     scroll.appendChild(sysDesc);
 
     const sysTa = document.createElement("textarea");

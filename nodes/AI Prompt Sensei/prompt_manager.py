@@ -43,15 +43,6 @@ def load_default_prompt(mode: str) -> str:
     return FALLBACK_PROMPTS.get(mode_key, FALLBACK_PROMPTS["i2v"])
 
 
-def get_all_default_prompts() -> dict:
-    """Return dictionary of all default prompts keyed by mode."""
-    return {
-        "i2v": load_default_prompt("i2v"),
-        "t2i": load_default_prompt("t2i"),
-        "t2v": load_default_prompt("t2v"),
-    }
-
-
 def clean_generated_prompt(raw_text: str, system_prompt: str = None) -> str:
     """
     Sanitizes LLM output:
