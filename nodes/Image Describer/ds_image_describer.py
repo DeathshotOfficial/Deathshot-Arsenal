@@ -11,39 +11,19 @@ import os
 import random
 import time
 import torch
-from PIL import Image
 
 import comfy.model_management as mm
 import folder_paths
 
-try:
-    from .describer_engine import (
-        DEFAULT_SYSTEM_PROMPT,
-        DEFAULT_SYSTEM_PROMPTS,
-        get_system_prompt,
-        describe_image_sync,
-        compute_image_hash,
-        pause_manager,
-        set_debug_logging,
-        _IMAGE_CACHE,
-        tensor_to_pil,
-    )
-except (ImportError, ValueError):
-    import sys
-    cur_dir = os.path.dirname(__file__)
-    if cur_dir not in sys.path:
-        sys.path.insert(0, cur_dir)
-    from describer_engine import (
-        DEFAULT_SYSTEM_PROMPT,
-        DEFAULT_SYSTEM_PROMPTS,
-        get_system_prompt,
-        describe_image_sync,
-        compute_image_hash,
-        pause_manager,
-        set_debug_logging,
-        _IMAGE_CACHE,
-        tensor_to_pil,
-    )
+from .describer_engine import (
+    get_system_prompt,
+    describe_image_sync,
+    compute_image_hash,
+    pause_manager,
+    set_debug_logging,
+    _IMAGE_CACHE,
+    tensor_to_pil,
+)
 
 
 logger = logging.getLogger("DeathshotArsenal.ImageDescriber")
@@ -212,16 +192,13 @@ class DS_ImageDescriber:
         # ------------------------------------------------------------------
         # Execution Mode 3: Vision LLM Analysis
         # ------------------------------------------------------------------
-        effective_seed = random.randint(0, 0xffffffffffffffff) if (randomize_seed or seed < 0) else seed
+        effective_seed = random.randint(0, 2147483647) if (randomize_seed or seed < 0) else seed
         effective_sys_prompt = get_system_prompt(detail_level, output_style, system_prompt)
 
         logger.info(
             f"[Image Describer] Running Vision LLM analysis (mode={mode}, detail={detail_level}, "
             f"style={output_style}, seed={effective_seed})..."
         )
-
-        def check_comfy_interrupt():
-            mm.throw_exception_if_processing_interrupted()
 
         # Save small thumbnail for UI preview
         temp_thumb_info = None
@@ -256,7 +233,7 @@ class DS_ImageDescriber:
             auto_unload=auto_unload,
             free_comfy=free_comfy_models,
             node_id=node_id_str,
-            check_interrupt=check_comfy_interrupt,
+            check_interrupt=mm.throw_exception_if_processing_interrupted,
         )
 
         generated_prompt = gen_result["prompt"]

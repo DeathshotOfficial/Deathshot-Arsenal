@@ -18,29 +18,14 @@ import numpy as np
 from PIL import Image, ImageOps
 import torch
 
+import comfy.ldm.modules.attention as comfy_attention
 import comfy.model_management as mm
 import comfy.sd
 import comfy.utils
 import folder_paths
+import server
 
-try:
-    from .llm_engine import (
-        kill_active_generation,
-        generate_prompt_sync,
-        generate_prompt_lm_studio,
-        unload_llm_memory,
-    )
-except (ImportError, ValueError):
-    import sys
-    cur_dir = os.path.dirname(__file__)
-    if cur_dir not in sys.path:
-        sys.path.insert(0, cur_dir)
-    from llm_engine import (
-        kill_active_generation,
-        generate_prompt_sync,
-        generate_prompt_lm_studio,
-        unload_llm_memory,
-    )
+from .llm_engine import generate_prompt, resolve_image_path
 
 logger = logging.getLogger("DeathshotArsenal.AIPromptSensei")
 
@@ -353,37 +338,13 @@ def _apply_loras(model, clip, loras_list):
 # Image helpers
 # ---------------------------------------------------------------------------
 
-def _resolve_image_path(image_path):
-    """Resolve an image_path string to an absolute filesystem path."""
-    if not image_path:
-        return None
-
-    resolved = None
-    try:
-        resolved = folder_paths.get_annotated_filepath(image_path)
-    except Exception:
-        pass
-
-    if not resolved or not os.path.isfile(resolved):
-        input_dir = folder_paths.get_input_directory()
-        cand = os.path.join(input_dir, image_path)
-        if os.path.isfile(cand):
-            resolved = cand
-        elif os.path.isfile(image_path):
-            resolved = image_path
-        else:
-            resolved = None
-
-    return resolved if (resolved and os.path.isfile(resolved)) else None
-
-
 def _load_original_image(image_path):
     """
     Load the source image at its original native resolution (equivalent to ComfyUI LoadImage).
     Returns a float32 torch tensor of shape [1, H, W, 3] in range [0, 1].
     Falls back to a 1x64x64 black frame if the image cannot be loaded.
     """
-    resolved = _resolve_image_path(image_path)
+    resolved = resolve_image_path(image_path)
     if not resolved:
         return torch.zeros((1, 64, 64, 3), dtype=torch.float32)
 
@@ -402,6 +363,19 @@ def _load_original_image(image_path):
 # ---------------------------------------------------------------------------
 # Node definition
 # ---------------------------------------------------------------------------
+
+# UI attention choices -> attention functions registered by ComfyUI (comfy.ldm.modules.attention).
+ATTENTION_FUNCTIONS = {
+    "comfy_kitchen": "comfy_kitchen_int8",
+    "flash_attn": "flash",
+    "sage_attn": "sage",
+    "sage3": "sage3",
+    "sdpa": "pytorch",
+    "xformers": "xformers",
+    "sub_quad": "sub_quad",
+    "split": "split",
+}
+_ATTENTION_ALIASES = {"kitchen": "comfy_kitchen", "sage": "sage_attn"}
 
 # State keys that never influence what execute() outputs (status/UI/telemetry only).
 _SENSEI_VOLATILE_KEYS = frozenset({
@@ -622,30 +596,14 @@ class DS_AIPromptSensei:
         # ------------------------------------------------------------------
         # 4.1 Attention Mode
         # ------------------------------------------------------------------
-        if model is not None and attention_mode and attention_mode != "default":
-            try:
-                attn_map = {
-                    "kitchen": "comfy_kitchen_int8",
-                    "comfy_kitchen": "comfy_kitchen_int8",
-                    "comfy kitchen attention": "comfy_kitchen_int8",
-                    "sage_attn": "sage",
-                    "sage": "sage",
-                    "sdpa": "pytorch",
-                }
-                func_name = attn_map.get(attention_mode, attention_mode)
-                try:
-                    import comfy.ldm.modules.attention as comfy_attn
-                    attn_fn = comfy_attn.get_attention_function(func_name, None)
-                    if attn_fn is not None and hasattr(model, "set_model_optimized_attention"):
-                        model.set_model_optimized_attention(attn_fn)
-                except Exception:
-                    pass
-
-                if hasattr(model, "model_options"):
-                    model.model_options = dict(model.model_options or {})
-                    model.model_options["attention_mechanism"] = attention_mode
-            except Exception:
-                pass
+        if model is not None and attention_mode != "default":
+            key = _ATTENTION_ALIASES.get(attention_mode, attention_mode)
+            attn_fn = comfy_attention.get_attention_function(ATTENTION_FUNCTIONS.get(key, key), None)
+            if attn_fn is None:
+                logger.warning(f"[Prompt Sensei] Attention '{attention_mode}' is not available in this ComfyUI install; using the default attention.")
+            else:
+                model = model.clone()
+                model.set_model_optimized_attention(attn_fn)
 
         # ------------------------------------------------------------------
         # 5. Generated Prompt & Trigger Composition (Trigger + prompt)
@@ -685,47 +643,30 @@ class DS_AIPromptSensei:
         notes_per_mode = state.get("notes_per_mode") or {}
         active_notes = notes_per_mode.get(mode) or state.get("scene_notes") or ""
 
+        res = None
         if not prompt_text and (active_notes or (img_path and mode == "i2v")):
             system_prompts = state.get("system_prompts") or {}
-            sys_prompt = system_prompts.get(mode) or state.get("system_prompt", "")
-            target_img_path = img_path if mode == "i2v" else None
-            target_img_tensor = image_tensor if (mode == "i2v" and image is not None) else None
-
             if provider == "built_in":
-                bi_cfg = dict(state.get("built_in") or {})
-                if "auto_unload" not in bi_cfg:
-                    bi_cfg["auto_unload"] = bool(state.get("auto_unload", True))
-                try:
-                    from .builtin_llm import generate_prompt_builtin
-                    res = generate_prompt_builtin(
-                        scene_notes=active_notes,
-                        system_prompt=sys_prompt,
-                        image_path=target_img_path,
-                        image_tensor=target_img_tensor,
-                        builtin_config=bi_cfg,
-                        context=video_cfg,
-                        node_id=str(unique_id) if unique_id is not None else None,
-                    )
-                    if res.get("status") == "completed" and res.get("prompt"):
-                        prompt_text = res["prompt"].strip()
-                except Exception as e:
-                    logger.warning(f"[Prompt Sensei] Built-In generation during execute fallback: {e}")
+                cfg = dict(state.get("built_in") or {})
+                cfg.setdefault("auto_unload", bool(state.get("auto_unload", True)))
             else:
-                lm_cfg = state.get("lm_studio") or {}
-                if lm_cfg.get("model"):
-                    try:
-                        res = generate_prompt_lm_studio(
-                            scene_notes=active_notes,
-                            system_prompt=sys_prompt,
-                            image_path=target_img_path,
-                            lm_studio_config=lm_cfg,
-                            context=video_cfg,
-                            node_id=str(unique_id) if unique_id is not None else None,
-                        )
-                        if res.get("status") == "completed" and res.get("prompt"):
-                            prompt_text = res["prompt"].strip()
-                    except Exception as e:
-                        logger.warning(f"[Prompt Sensei] Generation during execute fallback: {e}")
+                cfg = dict(state.get("lm_studio") or {})
+                cfg["unload_after_run"] = bool(cfg.get("unload_after_run") or state.get("auto_unload"))
+            # LM Studio is only contacted when a model is configured; otherwise every run would wait on the server.
+            if provider == "built_in" or cfg.get("model"):
+                res = generate_prompt(
+                    provider=provider,
+                    mode=mode,
+                    scene_notes=active_notes,
+                    system_prompt=system_prompts.get(mode) or state.get("system_prompt", ""),
+                    image_path=img_path if mode == "i2v" else None,
+                    image_tensor=image_tensor if (mode == "i2v" and image is not None) else None,
+                    cfg=cfg,
+                    node_id=str(unique_id) if unique_id is not None else None,
+                    check_interrupt=mm.throw_exception_if_processing_interrupted,
+                )
+                if res.get("status") == "completed" and res.get("prompt"):
+                    prompt_text = res["prompt"].strip()
 
         if not prompt_text:
             prompt_text = str(active_notes).strip()
@@ -740,39 +681,23 @@ class DS_AIPromptSensei:
                 _AUTO_GENERATED_PROMPTS[node_id_str] = ""
 
         ui_data = {"prompt": [prompt_text]}
-        if "res" in locals() and isinstance(res, dict) and res.get("status") == "completed":
-            tokens_count = int(res.get("tokens", 0))
-            speed_val = float(res.get("speed", 0.0))
-            elapsed_val = float(res.get("elapsed", 0.0))
-            model_name = str(res.get("model") or lm_cfg.get("model") or "")
-
-            ui_data["tokens"] = [tokens_count]
-            ui_data["speed"] = [speed_val]
-            ui_data["elapsed"] = [elapsed_val]
-            ui_data["model"] = [model_name]
-
-            try:
-                import server
-                server.PromptServer.instance.send_sync(
-                    "ds_sensei_executed",
-                    {
-                        "node_id": str(unique_id) if unique_id is not None else None,
-                        "prompt": prompt_text,
-                        "final_prompt": final_prompt,
-                        "tokens": tokens_count,
-                        "speed": speed_val,
-                        "elapsed": elapsed_val,
-                        "model": model_name,
-                    },
-                )
-            except Exception:
-                pass
-
-        try:
-            import comfy.model_management as mm
-            mm.soft_empty_cache()
-        except Exception:
-            pass
+        if res is not None and res.get("status") == "completed":
+            ui_data["tokens"] = [int(res["tokens"])]
+            ui_data["speed"] = [float(res["speed"])]
+            ui_data["elapsed"] = [float(res["elapsed"])]
+            ui_data["model"] = [str(res["model"])]
+            server.PromptServer.instance.send_sync(
+                "ds_sensei_executed",
+                {
+                    "node_id": str(unique_id) if unique_id is not None else None,
+                    "prompt": prompt_text,
+                    "final_prompt": final_prompt,
+                    "tokens": res["tokens"],
+                    "speed": res["speed"],
+                    "elapsed": res["elapsed"],
+                    "model": res["model"],
+                },
+            )
 
         return {
             "ui": ui_data,

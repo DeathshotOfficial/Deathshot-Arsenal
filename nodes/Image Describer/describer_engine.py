@@ -1,24 +1,23 @@
 """
 Deathshot Arsenal — DS Image Describer Engine
-High-performance vision prompt extraction, streaming, and execution management.
-Reuses the local LLM backend from AI Prompt Sensei.
+Vision prompt extraction on the shared core.ai Built-In LLM, with streaming and pause management.
 """
 
 import base64
 import collections
-import gc
 import hashlib
 import io
-import json
 import logging
 import os
 import re
-import sys
 import threading
 import time
 import numpy as np
 from PIL import Image
+import server
 import torch
+
+from core.ai import GenerationCancelled, generate_text_completion, list_builtin_models
 
 # ---------------------------------------------------------------------------
 # Logging & In-Memory Log Buffer
@@ -56,26 +55,6 @@ def set_debug_logging(enabled: bool):
 
 def get_recent_logs(limit: int = 100):
     return list(_mem_handler.records)[-limit:]
-
-
-# ---------------------------------------------------------------------------
-# Built-In LLM Import Bridge
-# ---------------------------------------------------------------------------
-def _get_builtin_llm():
-    try:
-        from ..AI_Prompt_Sensei import builtin_llm
-        return builtin_llm
-    except Exception:
-        pass
-    try:
-        sensei_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "AI Prompt Sensei"))
-        if sensei_dir not in sys.path:
-            sys.path.insert(0, sensei_dir)
-        import builtin_llm
-        return builtin_llm
-    except Exception as e:
-        logger.error(f"[Image Describer] Failed to import builtin_llm: {e}")
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -288,26 +267,8 @@ pause_manager = PauseManager()
 
 
 # ---------------------------------------------------------------------------
-# VRAM / Memory Freeing Helper
+# VRAM status
 # ---------------------------------------------------------------------------
-def free_vram_and_comfy_models():
-    """Aggressively free VRAM and ComfyUI model cache."""
-    try:
-        import comfy.model_management as mm
-        mm.unload_all_models()
-        mm.soft_empty_cache()
-    except Exception:
-        pass
-
-    gc.collect()
-    try:
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-            torch.cuda.ipc_collect()
-    except Exception:
-        pass
-
-
 def get_vram_status():
     """Return free and total VRAM in MB if CUDA is available."""
     try:
@@ -347,43 +308,25 @@ def describe_image_sync(
     auto_unload: bool = True,
     free_comfy: bool = False,
     node_id: str = None,
-    check_interrupt = None,
-    on_token = None,
+    check_interrupt=None,
 ):
     """
-    Main entry point for analyzing an image and generating a descriptive prompt.
-    Streams token progress via websocket and callbacks, handles memory and errors.
+    Analyze an image with the shared vision LLM and return a descriptive prompt.
+    Streams token progress via websocket. Stopping with Kill keeps the text written so far.
     """
-    b_llm = _get_builtin_llm()
-    if b_llm is None:
-        raise RuntimeError("Builtin LLM engine is unavailable. Please verify DeathshotArsenal installation.")
-
+    node_id = str(node_id) if node_id else None
     t_start = time.perf_counter()
-    vram_before = get_vram_status()
-    logger.info(f"[Image Describer] Starting vision analysis (node_id={node_id}, model={model_key or 'auto'}). Free VRAM: {vram_before.get('available_mb')} MB")
 
-    if free_comfy:
-        logger.info("[Image Describer] Freeing ComfyUI model memory before LLM load...")
-        free_vram_and_comfy_models()
-
-    # 1. Resolve Model
     if not model_key:
-        available = b_llm.list_builtin_models()
-        if available:
-            # Pick first vision-capable or first available model
-            model_key = available[0]["id"]
-            for m in available:
-                if m.get("has_vision") or "vl" in m.get("id", "").lower() or "vision" in m.get("id", "").lower():
-                    model_key = m["id"]
-                    break
-        else:
+        available = list_builtin_models()
+        if not available:
             raise RuntimeError("No GGUF models found in ComfyUI/models/LLM or LM Studio. Please download a vision model (e.g. Qwen2.5-VL, Gemma-3).")
+        model_key = next((m["id"] for m in available if m["has_vision"]), available[0]["id"])
 
     model_display_name = os.path.basename(model_key).replace(".gguf", "")
-
-    # Notify WebSocket: Loading
+    logger.info(f"[Image Describer] Starting vision analysis (node_id={node_id}, model={model_display_name}). Free VRAM: {get_vram_status().get('available_mb')} MB")
     _send_ws_event("ds_describer_status", {
-        "node_id": str(node_id) if node_id else None,
+        "node_id": node_id,
         "status": "Loading model",
         "message": f"Loading model {model_display_name}...",
         "model": model_display_name,
@@ -392,264 +335,89 @@ def describe_image_sync(
         "elapsed": 0.0,
     })
 
-    # 2. Load Model with Vision projector
-    t_load_0 = time.perf_counter()
-    b_llm.load_model(
-        key=model_key,
-        n_ctx=n_ctx,
-        n_gpu_layers=gpu_layers,
-        free_comfy=free_comfy,
-        require_vision=True,
-    )
-    load_time = round(time.perf_counter() - t_load_0, 2)
-    logger.info(f"[Image Describer] Model {model_display_name} loaded in {load_time}s.")
-
-    # 3. Prepare and Encode Image
-    _send_ws_event("ds_describer_status", {
-        "node_id": str(node_id) if node_id else None,
-        "status": "Encoding image",
-        "message": "Encoding image for vision encoder...",
-        "model": model_display_name,
-        "tokens": 0,
-        "speed": 0.0,
-        "elapsed": round(time.perf_counter() - t_start, 1),
-    })
-
-    pil_img = tensor_to_pil(image_tensor, max_side=max_image_side)
-    image_payload = encode_pil_to_base64(pil_img, quality=90)
-
-    # 4. Construct Prompt & Chat Messages
-    if not system_prompt or not system_prompt.strip():
-        system_prompt = DEFAULT_SYSTEM_PROMPT
-
-    low_key = model_key.lower()
-    is_gemma = "gemma" in low_key
+    image_payload = encode_pil_to_base64(tensor_to_pil(image_tensor, max_side=max_image_side), quality=90)
+    system_prompt = (system_prompt or "").strip() or DEFAULT_SYSTEM_PROMPT
     user_instruction = "Describe this image in rich, vivid detail so a text-to-image generator can recreate it accurately."
-
-    messages = []
-    if is_gemma:
-        # Gemma models often perform best with system prompt merged into user turn
-        combined_text = f"{system_prompt.strip()}\n\nTask: {user_instruction}\n\nOutput ONLY the final descriptive prompt."
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "image_url", "image_url": {"url": image_payload}},
-                {"type": "text", "text": combined_text},
-            ],
-        })
+    if "gemma" in model_key.lower():
+        # Gemma chat templates have no system role; fold the instructions into the user turn.
+        messages = [{"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": image_payload}},
+            {"type": "text", "text": f"{system_prompt}\n\nTask: {user_instruction}\n\nOutput ONLY the final descriptive prompt."},
+        ]}]
     else:
-        messages.append({"role": "system", "content": system_prompt.strip()})
-        messages.append({
-            "role": "user",
-            "content": [
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": [
                 {"type": "image_url", "image_url": {"url": image_payload}},
                 {"type": "text", "text": user_instruction},
-            ],
-        })
+            ]},
+        ]
 
-    # 5. Stream Completion
-    _send_ws_event("ds_describer_status", {
-        "node_id": str(node_id) if node_id else None,
-        "status": "Writing prompt",
-        "message": "Generating prompt...",
-        "model": model_display_name,
-        "tokens": 0,
-        "speed": 0.0,
-        "elapsed": round(time.perf_counter() - t_start, 1),
-    })
-
-    llm_inst = getattr(b_llm, "_state", {}).get("llm")
-    if llm_inst is None:
-        raise RuntimeError("LLM instance is not initialized.")
-
-    b_llm._state["abort"] = False
-    generated_tokens = []
-    token_count = 0
-    t_first_token = None
-    t_gen_start = time.perf_counter()
-    last_ws_time = t_gen_start
-    batched_delta = []
-
-    # Sampling parameters
-    sampling = {
-        "top_k": top_k,
-        "top_p": top_p,
-        "repeat_penalty": repeat_penalty,
-    }
-    if min_p > 0 and "min_p" in inspect_params(llm_inst.create_chat_completion):
-        sampling["min_p"] = min_p
-    if "reasoning_budget" in inspect_params(llm_inst.create_chat_completion):
-        sampling["reasoning_budget"] = 0
-
-    stream = llm_inst.create_chat_completion(
-        messages=messages,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        seed=None if (seed is None or seed < 0) else seed,
-        stream=True,
-        **sampling,
-    )
-
-    try:
-        for chunk in stream:
-            if b_llm._state.get("abort"):
-                logger.info("[Image Describer] Generation cancelled by user.")
-                break
-            if check_interrupt:
-                check_interrupt()
-
-            delta = chunk["choices"][0].get("delta") or {}
-            piece = delta.get("content") or ""
-            if piece:
-                if t_first_token is None:
-                    t_first_token = time.perf_counter()
-
-                generated_tokens.append(piece)
-                batched_delta.append(piece)
-                token_count += 1
-
-                if on_token:
-                    on_token(piece)
-
-                now = time.perf_counter()
-                # Throttle WebSocket updates to ~10-12 per second
-                if now - last_ws_time >= 0.08:
-                    elapsed_so_far = max(0.1, round(now - t_gen_start, 1))
-                    tk_s = round(token_count / elapsed_so_far, 1)
-                    batched_text = "".join(batched_delta)
-                    batched_delta = []
-
-                    raw_acc = "".join(generated_tokens)
-                    display_text = strip_reasoning_and_preamble(raw_acc, is_final=False)
-                    is_thinking = ("<think>" in raw_acc.lower() and "</think>" not in raw_acc.lower())
-                    st_label = "Thinking..." if (is_thinking and not display_text) else "Writing prompt"
-
-                    _send_ws_event("ds_describer_progress", {
-                        "node_id": str(node_id) if node_id else None,
-                        "status": st_label,
-                        "delta": batched_text,
-                        "text": display_text,
-                        "tokens": token_count,
-                        "max_tokens": max_tokens,
-                        "speed": tk_s,
-                        "elapsed": elapsed_so_far,
-                        "model": model_display_name,
-                    })
-                    last_ws_time = now
-    finally:
-        try:
-            stream.close()
-        except Exception:
-            pass
-
-    # Flush remaining delta
-    if batched_delta:
-        raw_acc = "".join(generated_tokens)
-        display_text = strip_reasoning_and_preamble(raw_acc, is_final=False)
+    def _on_progress(text, tokens, elapsed):
+        display_text = strip_reasoning_and_preamble(text, is_final=False)
         _send_ws_event("ds_describer_progress", {
-            "node_id": str(node_id) if node_id else None,
+            "node_id": node_id,
             "status": "Writing prompt",
-            "delta": "".join(batched_delta),
             "text": display_text,
-            "tokens": token_count,
+            "tokens": tokens,
             "max_tokens": max_tokens,
-            "speed": round(token_count / max(0.1, time.perf_counter() - t_gen_start), 1),
-            "elapsed": round(time.perf_counter() - t_gen_start, 1),
+            "speed": round(tokens / elapsed, 1),
+            "elapsed": elapsed,
             "model": model_display_name,
         })
 
-    raw_text = "".join(generated_tokens).strip()
-    total_elapsed = max(0.01, round(time.perf_counter() - t_start, 2))
-    gen_elapsed = max(0.01, round(time.perf_counter() - t_gen_start, 2))
-    avg_speed = round(token_count / gen_elapsed, 1) if gen_elapsed > 0 else 0.0
-    ttft = round(t_first_token - t_gen_start, 2) if t_first_token else 0.0
-
-    # 6. Post-Process Text
-    final_prompt = clean_generated_prompt(
-        raw_text,
-        cleanup_markdown=cleanup_markdown,
-        prefix=prefix,
-        suffix=suffix,
-    )
-
-    logger.info(
-        f"[Image Describer] Generation completed: {token_count} tokens in {gen_elapsed}s "
-        f"({avg_speed} tok/s, TTFT: {ttft}s). Output length: {len(final_prompt)} chars."
-    )
     try:
-        from DeathshotArsenal.core.monitor import report_llm
-        report_llm(
-            model=str(getattr(b_llm, "_state", {}).get("key") or model_id or "Vision LLM"),
-            tokens=token_count,
-            seconds=gen_elapsed,
-            ttft=ttft,
-            status="active",
-            format_name="GGUF Vision",
-            offload="GPU offload",
-            backend="Image Describer"
+        raw_text, meta = generate_text_completion(
+            messages=messages,
+            model_id=model_key,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            context_length=n_ctx,
+            n_gpu_layers=gpu_layers,
+            top_p=top_p,
+            top_k=top_k,
+            repetition_penalty=repeat_penalty,
+            seed=seed,
+            auto_unload=auto_unload,
+            require_vision=True,
+            free_comfy=free_comfy,
+            min_p=min_p if min_p > 0 else None,
+            check_interrupt=check_interrupt,
+            on_progress=_on_progress,
         )
-    except Exception:
-        try:
-            from core.monitor import report_llm
-            report_llm(
-                model=str(getattr(b_llm, "_state", {}).get("key") or model_id or "Vision LLM"),
-                tokens=token_count,
-                seconds=gen_elapsed,
-                ttft=ttft,
-                status="active",
-                format_name="GGUF Vision",
-                offload="GPU offload",
-                backend="Image Describer"
-            )
-        except Exception:
-            pass
+        tokens, gen_elapsed, model_display_name = meta["tokens"], meta["elapsed"], meta["model"]
+    except GenerationCancelled as e:
+        logger.info("[Image Describer] Generation stopped by user; keeping the text written so far.")
+        raw_text, tokens, gen_elapsed = e.text, 0, max(0.01, round(time.perf_counter() - t_start, 2))
 
-    # 7. Auto Unload if requested
-    if auto_unload:
-        logger.info("[Image Describer] Auto-unload enabled. Ejecting LLM model from VRAM...")
-        try:
-            b_llm.unload()
-            free_vram_and_comfy_models()
-            vram_after = get_vram_status()
-            logger.info(f"[Image Describer] Model ejected. Free VRAM: {vram_after.get('available_mb')} MB")
-        except Exception as e:
-            logger.warning(f"[Image Describer] Auto-unload error: {e}")
+    total_elapsed = max(0.01, round(time.perf_counter() - t_start, 2))
+    avg_speed = round(tokens / gen_elapsed, 1)
+    final_prompt = clean_generated_prompt(raw_text, cleanup_markdown=cleanup_markdown, prefix=prefix, suffix=suffix)
+    logger.info(
+        f"[Image Describer] Generation completed: {tokens} tokens in {gen_elapsed}s "
+        f"({avg_speed} tok/s). Output length: {len(final_prompt)} chars."
+    )
 
-    # Final Done Notification
     _send_ws_event("ds_describer_done", {
-        "node_id": str(node_id) if node_id else None,
+        "node_id": node_id,
         "status": "Done",
         "text": final_prompt,
-        "tokens": token_count,
+        "tokens": tokens,
         "max_tokens": max_tokens,
         "speed": avg_speed,
         "elapsed": total_elapsed,
-        "ttft": ttft,
         "model": model_display_name,
     })
 
     return {
         "prompt": final_prompt,
         "raw_text": raw_text,
-        "tokens": token_count,
+        "tokens": tokens,
         "speed": avg_speed,
         "elapsed": total_elapsed,
-        "ttft": ttft,
         "model": model_display_name,
     }
 
 
-def inspect_params(func):
-    import inspect
-    try:
-        return inspect.signature(func).parameters
-    except Exception:
-        return {}
-
-
 def _send_ws_event(event_name: str, payload: dict):
-    try:
-        import server
-        server.PromptServer.instance.send_sync(event_name, payload)
-    except Exception:
-        pass
+    server.PromptServer.instance.send_sync(event_name, payload)

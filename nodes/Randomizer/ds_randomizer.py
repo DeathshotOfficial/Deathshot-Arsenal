@@ -4,22 +4,22 @@ A smart, semantic prompt variation node with non-repeating shuffle-bag selection
 and modular multi-file JSON database support.
 """
 
+import asyncio
 import json
 import logging
 from typing import Dict, Any, Optional
 
-try:
-    import server
-    from aiohttp import web
-except ImportError:
-    server = None
-    web = None
+import comfy.model_management as mm
+import server
+from aiohttp import web
 
+from .prompt_randomizer import randomize_prompt
 from .randomizer_engine import (
     get_db_loader,
     get_variation_selector,
     get_randomizer_pipeline,
 )
+from .variation_cache import clear_all_cache, clear_node_cache
 
 logger = logging.getLogger("DeathshotArsenal.Randomizer")
 
@@ -28,57 +28,16 @@ logger = logging.getLogger("DeathshotArsenal.Randomizer")
 _NODE_PROMPT_CACHE: Dict[str, Dict[str, Any]] = {}
 
 
-def _get_ai_randomize():
-    """
-    Robust import resolver for the centralized AI prompt_randomizer module.
-    Works whether DeathshotArsenal is imported as custom_nodes.DeathshotArsenal,
-    DeathshotArsenal, or dynamically loaded via _load_node_pkg.
-    """
-    import os
-    import sys
-
-    # 1. Ensure DeathshotArsenal root directory is in sys.path
-    here = os.path.dirname(os.path.abspath(__file__))  # nodes/Randomizer
-    root = os.path.dirname(os.path.dirname(here))      # DeathshotArsenal
-    if root not in sys.path:
-        sys.path.insert(0, root)
-
-    # 2. Try direct import from core.ai
-    try:
-        from core.ai.prompt_randomizer import randomize_prompt
-        return randomize_prompt
-    except Exception:
-        pass
-
-    # 3. Try importing from DeathshotArsenal.core.ai
-    try:
-        from DeathshotArsenal.core.ai.prompt_randomizer import randomize_prompt
-        return randomize_prompt
-    except Exception:
-        pass
-
-    # 4. Try importing from custom_nodes.DeathshotArsenal.core.ai
-    try:
-        from custom_nodes.DeathshotArsenal.core.ai.prompt_randomizer import randomize_prompt
-        return randomize_prompt
-    except Exception:
-        pass
-
-    # 5. Direct file location fallback via importlib
-    try:
-        import importlib.util
-        target = os.path.join(root, "core", "ai", "prompt_randomizer.py")
-        if os.path.isfile(target):
-            spec = importlib.util.spec_from_file_location("DeathshotArsenal.core.ai.prompt_randomizer", target)
-            if spec and spec.loader:
-                mod = importlib.util.module_from_spec(spec)
-                sys.modules[spec.name] = mod
-                spec.loader.exec_module(mod)
-                return getattr(mod, "randomize_prompt")
-    except Exception as e:
-        logger.warning(f"[DS Randomizer] importlib resolution error: {e}")
-
-    raise ImportError("Unable to import randomize_prompt from core.ai")
+def _progress_sender(node_id: str):
+    """Stream LLM progress to the node's status line."""
+    def _send(text, tokens, elapsed):
+        server.PromptServer.instance.send_sync("ds_randomizer_stream", {
+            "node_id": node_id,
+            "tokens": tokens,
+            "speed": round(tokens / elapsed, 1),
+            "elapsed": elapsed,
+        })
+    return _send
 
 
 class DS_Randomizer:
@@ -284,41 +243,30 @@ class DS_Randomizer:
 
         final_prompt = ""
         if is_ai_mode:
-            pause_for_edit = bool(ai_settings.get("pause_for_edit", False))
-
-            # If pause_for_edit is enabled AND user has a manual preview, use it
-            if pause_for_edit and manual_preview:
-                final_prompt = manual_preview
+            # "Use edited preview" and "Auto-randomize on Queue" both keep the LLM unloaded on Queue.
+            use_preview = bool(ai_settings.get("pause_for_edit", False)) or not ai_settings.get("auto_load", True)
+            if use_preview:
+                final_prompt = manual_preview or active_prompt
+                actual_seed = seed
             else:
-                # Runs the LLM on workflow Queue, unloads LLM, and continues without pausing
+                ai_cfg = dict(ai_settings)
+                ai_cfg.setdefault("auto_unload", True)
+                ai_cfg.setdefault("free_comfy_memory", True)
                 try:
-                    ai_randomize = _get_ai_randomize()
-
-                    if ai_settings.get("free_comfy_memory", True):
-                        try:
-                            import comfy.model_management as mm
-                            mm.unload_all_models()
-                            mm.soft_empty_cache()
-                        except Exception:
-                            pass
-
-                    ai_cfg = dict(ai_settings)
-                    if "auto_unload" not in ai_cfg:
-                        ai_cfg["auto_unload"] = True
-                    # DS Randomizer is strictly a text-only prompt modification node.
-                    # Enforce require_vision=False to prevent loading mmproj vision projectors or image handlers into VRAM/RAM.
-                    ai_cfg["require_vision"] = False
-
-                    res = ai_randomize(
+                    res = randomize_prompt(
                         prompt=active_prompt,
                         enabled_categories=enabled_categories,
                         options=category_options,
                         ai_settings=ai_cfg,
                         seed=seed if seed != 0 else None,
                         node_id=node_id,
+                        check_interrupt=mm.throw_exception_if_processing_interrupted,
+                        on_progress=_progress_sender(node_id),
                     )
                     final_prompt = res.get("prompt", active_prompt)
                     actual_seed = res.get("seed", seed)
+                except mm.InterruptProcessingException:
+                    raise
                 except Exception as e:
                     logger.error(f"[DS Randomizer] AI randomization error: {e}. Falling back to database pipeline.")
                     pipeline = get_randomizer_pipeline()
@@ -368,16 +316,7 @@ class DS_Randomizer:
 
 def register_randomizer_routes():
     """Registers HTTP API endpoints for DS Randomizer frontend interaction."""
-    try:
-        if server is None or not hasattr(server, "PromptServer"):
-            return
-        ps = getattr(server.PromptServer, "instance", None)
-        if ps is None or not hasattr(ps, "routes") or ps.routes is None:
-            return
-        routes = ps.routes
-    except Exception as e:
-        logger.warning(f"[DS Randomizer] Route registration deferred or unavailable: {e}")
-        return
+    routes = server.PromptServer.instance.routes
 
     @routes.get("/ds/randomizer/categories")
     async def _get_categories(request):
@@ -412,43 +351,40 @@ def register_randomizer_routes():
             logger.error(f"[DS Randomizer] Failed preview generation: {e}")
             return web.json_response({"error": str(e)}, status=500)
 
-    @routes.post("/ds/randomizer/ai_preview")
-    async def _ai_preview_variation(request):
+    @routes.post("/ds/ai/randomize")
+    async def _ai_randomize(request):
         try:
-            payload = await request.json()
-            text = payload.get("text", "") or payload.get("prompt", "")
-            enabled_categories = payload.get("enabled_categories", [])
-            options = payload.get("options", {})
-            ai_settings = payload.get("ai_settings", {})
-            seed = payload.get("seed", 0)
-            node_id = str(payload.get("node_id") or "")
-
-            ai_cfg = dict(ai_settings)
-            ai_cfg["require_vision"] = False
-
-            ai_randomize = _get_ai_randomize()
-
-            import asyncio
+            data = await request.json()
+            ai_cfg = dict(data.get("ai_settings") or {})
+            # Never evict ComfyUI models from an HTTP request; a workflow may be running.
+            ai_cfg["free_comfy_memory"] = False
+            node_id = str(data.get("node_id") or "")
             result = await asyncio.to_thread(
-                ai_randomize,
-                prompt=text,
-                enabled_categories=enabled_categories,
-                options=options,
+                randomize_prompt,
+                prompt=str(data.get("prompt") or data.get("text") or "").strip(),
+                enabled_categories=data.get("enabled_categories", []),
+                options=data.get("options", {}),
                 ai_settings=ai_cfg,
-                seed=seed if seed else None,
+                seed=data.get("seed"),
                 node_id=node_id or None,
+                on_progress=_progress_sender(node_id) if node_id else None,
             )
-            return web.json_response({
-                "preview": result.get("prompt", ""),
-                "model": result.get("model", ""),
-                "tokens": result.get("tokens", 0),
-                "elapsed": result.get("elapsed", 0),
-                "cache_stats": result.get("cache_stats", {}),
-                "status_note": result.get("status_note", ""),
-            })
+            return web.json_response({"ok": True, **result})
         except Exception as e:
-            logger.error(f"[DS Randomizer] Failed AI preview generation: {e}")
-            return web.json_response({"error": str(e)}, status=500)
+            logger.error(f"[DS Randomizer] AI randomization error: {e}")
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+    @routes.post("/ds/randomizer/ai_reset_history")
+    async def _ai_reset_history(request):
+        data = await request.json()
+        node_id = str(data.get("node_id") or "")
+        if node_id:
+            clear_node_cache(node_id)
+            msg = f"Variation cache cleared for node '{node_id}'."
+        else:
+            clear_all_cache()
+            msg = "All variation caches cleared."
+        return web.json_response({"ok": True, "message": msg})
 
     @routes.post("/ds/randomizer/reset_history")
     async def _reset_history(request):

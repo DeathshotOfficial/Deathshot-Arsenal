@@ -14,6 +14,8 @@ import threading
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+from core.ai import unload_model
+
 try:
     import psutil
 except ImportError:
@@ -210,19 +212,8 @@ def purge_models() -> Tuple[bool, str]:
         pass
 
     # 5. Eject Deathshot Centralized AI Core LLM/VLM models if loaded in VRAM
-    try:
-        from core.ai import llama_service
-        if hasattr(llama_service, "unload_model"):
-            if llama_service.unload_model():
-                details.append("ai llm ejected")
-    except Exception:
-        try:
-            from ...core.ai import llama_service
-            if hasattr(llama_service, "unload_model"):
-                if llama_service.unload_model():
-                    details.append("ai llm ejected")
-        except Exception:
-            pass
+    if unload_model():
+        details.append("ai llm ejected")
 
     msg = ", ".join(details) if details else "models checked"
     return (True if success or not details else True, msg)

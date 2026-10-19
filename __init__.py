@@ -373,21 +373,17 @@ except Exception as e:
     DS_GifGenerator = None
 
 # DS Centralized AI Core
+# Imported as top-level `core` (the pack root is on sys.path) so this and every node share one
+# module instance: one loaded LLM, one variation cache, one LLM monitor.
 try:
-    try:
-        from .core.ai import register_ai_routes
-    except Exception:
-        from core.ai import register_ai_routes
+    from core.ai import register_ai_routes
     register_ai_routes()
 except Exception as e:
     print(f"[DeathshotArsenal] Failed to register centralized AI routes: {e}", flush=True)
 
 # DS Hardware & Performance Monitor Core
 try:
-    try:
-        from .core.monitor import register_monitor_routes
-    except Exception:
-        from core.monitor import register_monitor_routes
+    from core.monitor import register_monitor_routes
     register_monitor_routes()
 except Exception as e:
     print(f"[DeathshotArsenal] Failed to register Hardware & Performance Monitor routes: {e}", flush=True)
