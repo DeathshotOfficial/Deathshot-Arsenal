@@ -174,129 +174,49 @@ function getGraphGroups(graph = app?.graph || app?.canvas?.graph) {
   return [];
 }
 
-/**
- * Returns the title bar height of a node.
- * For chromeless, baseless, or headerless nodes, this returns 0.
- */
-function getNodeTitleHeight(node) {
-  const LG = window.LiteGraph || globalThis.LiteGraph || app?.canvas?.constructor;
-  const noTitle = LG?.NO_TITLE ?? 1;
-  const transparentTitle = LG?.TRANSPARENT_TITLE ?? 2;
-  const titleMode = node.title_mode !== undefined ? node.title_mode : node.constructor?.title_mode;
-  if (
-    node.flags?.no_header ||
-    node.flags?.no_title ||
-    node.flags?.no_box ||
-    titleMode === noTitle ||
-    titleMode === transparentTitle ||
-    titleMode === "none"
-  ) {
-    return 0;
-  }
-  return Number(node.titleHeight) || Number(LG?.NODE_TITLE_HEIGHT) || 30;
-}
-
-/**
- * Calculates the exact visual bounds of a node at a given (posX, posY).
- * Derived purely from the node geometry, size, title bar, and collapsed state.
- * Never relies on cached/stale LiteGraph getBounding() rectangles.
- */
-function getNodeVisualBoundsAt(node, posX, posY) {
-  const x = Number(posX) || 0;
-  const y = Number(posY) || 0;
-  const w = Math.max(10, Number(node.size?.[0]) || 60);
-  const bodyH = Math.max(10, Number(node.size?.[1]) || 40);
-  const titleH = getNodeTitleHeight(node);
-  const isCollapsed = Boolean(node.flags?.collapsed);
-
-  const left = x;
-  const right = x + (isCollapsed ? (Number(node.collapsed_width) || 100) : w);
-  const top = y - titleH;
-  const bottom = y + (isCollapsed ? 0 : bodyH);
-
+function makeRect(left, top, right, bottom) {
   return {
-    item: node,
-    node,
-    group: null,
-    id: node.id,
-    title: node.title || `Node #${node.id}`,
-    titleH,
-    isCollapsed,
-    isGroup: false,
-    isNode: true,
     left,
-    right,
     top,
+    right,
     bottom,
     width: right - left,
     height: bottom - top,
-    bodyHeight: bodyH,
     centerX: (left + right) / 2,
     centerY: (top + bottom) / 2,
   };
 }
 
-/**
- * Calculates the exact visual bounds of an LGraphGroup at a given (posX, posY).
- * In LiteGraph / ComfyUI, a group rectangle is drawn starting at [pos[0], pos[1]]
- * with dimensions [size[0], size[1]].
- */
-function getGroupVisualBoundsAt(group, posX, posY) {
-  const x = Number(posX) || 0;
-  const y = Number(posY) || 0;
-  const w = Math.max(10, Number(group.size?.[0]) || 140);
-  const h = Math.max(10, Number(group.size?.[1]) || 80);
+function offsetRect(r, dx, dy) {
+  return makeRect(r.left + dx, r.top + dy, r.right + dx, r.bottom + dy);
+}
 
-  const left = x;
-  const right = x + w;
-  const top = y;
-  const bottom = y + h;
-
-  return {
-    item: group,
-    node: null,
-    group,
-    id: group.id ?? `group_${Math.round(x)}_${Math.round(y)}`,
-    title: group.title || "Group",
-    titleH: 0,
-    isCollapsed: false,
-    isGroup: true,
-    isNode: false,
-    left,
-    right,
-    top,
-    bottom,
-    width: w,
-    height: h,
-    bodyHeight: h,
-    centerX: (left + right) / 2,
-    centerY: (top + bottom) / 2,
-  };
+function unionRects(rects) {
+  return makeRect(
+    Math.min(...rects.map((r) => r.left)),
+    Math.min(...rects.map((r) => r.top)),
+    Math.max(...rects.map((r) => r.right)),
+    Math.max(...rects.map((r) => r.bottom))
+  );
 }
 
 /**
- * Returns visual bounds for either a node or a group at given position.
+ * Visual rect of a node or group, computed from its current pos/size.
+ * Mirrors LGraphNode.measure(): includes the title bar; collapsed nodes use their drawn width.
  */
-function getItemVisualBoundsAt(item, posX, posY) {
-  if (isGroup(item)) {
-    return getGroupVisualBoundsAt(item, posX, posY);
+function getItemRect(item) {
+  const x = item.pos[0];
+  const y = item.pos[1];
+  if (isGroup(item)) return makeRect(x, y, x + item.size[0], y + item.size[1]);
+
+  const LG = globalThis.LiteGraph;
+  const titleH = LG?.NODE_TITLE_HEIGHT ?? 30;
+  const titleMode = item.title_mode ?? item.constructor?.title_mode;
+  const top = titleMode === (LG?.NO_TITLE ?? 1) || titleMode === (LG?.TRANSPARENT_TITLE ?? 2) ? y : y - titleH;
+  if (item.flags?.collapsed) {
+    return makeRect(x, top, x + (item.boundingRect?.[2] || LG?.NODE_COLLAPSED_WIDTH || 80), top + titleH);
   }
-  return getNodeVisualBoundsAt(item, posX, posY);
-}
-
-function getItemVisualBounds(item) {
-  if (!item) return null;
-  return getItemVisualBoundsAt(item, item.pos?.[0], item.pos?.[1]);
-}
-
-function getNodeVisualBounds(node) {
-  return getItemVisualBounds(node);
-}
-
-function getBoundingBoxDistance(a, b) {
-  const dx = Math.max(0, a.left - b.right, b.left - a.right);
-  const dy = Math.max(0, a.top - b.bottom, b.top - a.bottom);
-  return Math.hypot(dx, dy);
+  return makeRect(x, top, x + item.size[0], y + item.size[1]);
 }
 
 function getSelectedNodes(canvas = app?.canvas) {
@@ -346,53 +266,6 @@ function getSelectedGraphItems(canvas = app?.canvas) {
   const nodes = getSelectedNodes(canvas);
   const groups = getSelectedGroups(canvas);
   return [...new Set([...nodes, ...groups])];
-}
-
-/**
- * Returns only the items that should genuinely move with activeItem.
- * Crucial: dragging a node never drags groups or unselected nodes.
- */
-function getDragItemsFor(canvas = app?.canvas, activeItem) {
-  if (!activeItem) return [];
-
-  // When dragging a node, NEVER include groups or unrelated nodes
-  if (isNode(activeItem)) {
-    const selectedNodes = new Set();
-    if (canvas?.selected_nodes && typeof canvas.selected_nodes === "object") {
-      const vals = Object.values(canvas.selected_nodes).filter(isNode);
-      if (vals.length > 1 && vals.some((n) => n === activeItem || String(n.id) === String(activeItem.id))) {
-        vals.forEach((n) => selectedNodes.add(n));
-      }
-    }
-    if (canvas?.selectedItems && canvas.selectedItems.size > 1) {
-      const items = Array.from(canvas.selectedItems).filter(isNode);
-      if (items.length > 1 && items.some((n) => n === activeItem || String(n.id) === String(activeItem.id))) {
-        items.forEach((n) => selectedNodes.add(n));
-      }
-    }
-    if (selectedNodes.size > 1) {
-      return [...selectedNodes];
-    }
-    // Single node drag: ONLY this node, nothing else
-    return [activeItem];
-  }
-
-  // When dragging a group, only include that group (or multiple groups if multi-selected)
-  if (isGroup(activeItem)) {
-    const selectedGroups = new Set();
-    if (canvas?.selectedItems && canvas.selectedItems.size > 1) {
-      const grps = Array.from(canvas.selectedItems).filter(isGroup);
-      if (grps.length > 1 && grps.includes(activeItem)) {
-        grps.forEach((g) => selectedGroups.add(g));
-      }
-    }
-    if (selectedGroups.size > 1) {
-      return [...selectedGroups];
-    }
-    return [activeItem];
-  }
-
-  return [activeItem];
 }
 
 function getPrimarySelectedNode(canvas = app?.canvas) {
@@ -445,44 +318,117 @@ export function getOrderedSelectedNodes(canvas = app?.canvas) {
   return ordered;
 }
 
-function isPlacementOrSearchActive() {
-  const canvas = app?.canvas;
-  if (!canvas) return false;
-
-  // 1. Ghost node actively following pointer before placement
-  if (canvas.state?.ghostNodeId != null || canvas.ghost_node != null) return true;
-  if (canvas.connecting_node != null) return true;
-
-  // 2. Active search on canvas
-  if (canvas.searching === true) return true;
-
-  // 3. Check if search box element is currently VISIBLE in the DOM
-  const searchBox = canvas.search_box;
-  if (searchBox && searchBox.style?.display !== "none" && searchBox.offsetParent !== null) {
-    return true;
-  }
-
-  const searchEl = document.querySelector(".lgraph-search-box, .litegraph-searchbox, .comfy-vue-search-box");
-  if (searchEl && searchEl.style?.display !== "none" && searchEl.offsetParent !== null) {
-    return true;
-  }
-
-  return false;
-}
-
 // ---------------------------------------------------------------------------
 // 4. ALIGNMENT & SNAPPING ENGINE
 // ---------------------------------------------------------------------------
+// Snapping runs in a bubble-phase window pointermove listener, i.e. after LiteGraph
+// has applied its own move/resize for the event. Drags are incremental in LiteGraph,
+// so the natural position is the current one minus the offset we applied last time.
+// Resizes are recomputed from the start bounds on every event, so they are natural as-is.
+
+const AXES = {
+  x: { start: "left", end: "right", center: "centerX", size: "width", crossStart: "top", crossEnd: "bottom", sizeLabel: "W" },
+  y: { start: "top", end: "bottom", center: "centerY", size: "height", crossStart: "left", crossEnd: "right", sizeLabel: "H" },
+};
+
+// Tie-break order when two snaps are equally close.
+const KIND_RANK = { align: 0, flush: 1, gap: 2, size: 3, center: 4 };
+
+// Distance between two rects along the axis perpendicular to `A`; 0 when they sit side by side.
+function crossGap(a, b, A) {
+  return Math.max(0, a[A.crossStart] - b[A.crossEnd], b[A.crossStart] - a[A.crossEnd]);
+}
+
+/**
+ * Finds the closest snap for the given edges of `src` along one axis.
+ * `features` lists which edges of src may move ("start", "center", "end").
+ * `opts.fixed` (resize only) is the opposite, non-moving edge; enables size matching.
+ * `opts.minSize` (resize only) rejects snaps that would shrink below the minimum.
+ */
+function findSnap(axis, src, features, targets, opts) {
+  const A = AXES[axis];
+  let best = null;
+
+  const consider = (feature, line, kind, target) => {
+    const diff = line - src[A[feature]];
+    const absDiff = Math.abs(diff);
+    if (absDiff > opts.threshold) return;
+    if (opts.minSize != null) {
+      const size = feature === "end" ? line - opts.fixed : opts.fixed - line;
+      if (size < opts.minSize) return;
+    }
+    const cross = crossGap(src, target, A);
+    const rank = KIND_RANK[kind];
+    if (best) {
+      const bestAbs = Math.abs(best.diff);
+      if (absDiff > bestAbs + 0.01) return;
+      if (absDiff >= bestAbs - 0.01 && (cross > best.cross || (cross === best.cross && rank >= best.rank))) return;
+    }
+    best = { axis, feature, line, diff, kind, target, cross, rank };
+  };
+
+  for (const t of targets) {
+    const beside = crossGap(src, t, A) === 0;
+    for (const feature of features) {
+      if (feature === "center") {
+        if (opts.centers) consider("center", t[A.center], "center", t);
+        continue;
+      }
+      const isStart = feature === "start";
+      if (opts.edges) {
+        consider(feature, t[A[feature]], "align", t);
+        if (beside) consider(feature, t[isStart ? A.end : A.start], "flush", t);
+      }
+      if (beside && opts.gap > 0) {
+        consider(feature, isStart ? t[A.end] + opts.gap : t[A.start] - opts.gap, "gap", t);
+      }
+      if (opts.fixed != null) {
+        consider(feature, isStart ? opts.fixed - t[A.size] : opts.fixed + t[A.size], "size", t);
+      }
+    }
+  }
+  return best;
+}
+
+/**
+ * Converts a snap into a drawable guide, measured against the snapped source rect.
+ * Edge/center lines are drawn to the nearest item that actually lies on the line.
+ */
+function buildGuide(snap, src, targets, gap) {
+  const A = AXES[snap.axis];
+  if (snap.kind === "gap") {
+    return { kind: "gap", axis: snap.axis, src, target: snap.target, label: `${gap}px` };
+  }
+  if (snap.kind === "size") {
+    return { kind: "size", axis: snap.axis, src, target: snap.target, label: `${A.sizeLabel} ${Math.round(snap.target[A.size])}` };
+  }
+  const keys = snap.kind === "center" ? [A.center] : [A.start, A.end];
+  let target = snap.target;
+  let nearest = crossGap(src, target, A);
+  for (const t of targets) {
+    if (!keys.some((k) => Math.abs(t[k] - snap.line) < 0.5)) continue;
+    const d = crossGap(src, t, A);
+    if (d < nearest) {
+      nearest = d;
+      target = t;
+    }
+  }
+  return { kind: "line", axis: snap.axis, at: snap.line, src, target };
+}
+
+function addNestedItems(item, out) {
+  if (out.has(item) || item.pinned) return;
+  out.add(item);
+  if (item.children) {
+    for (const child of item.children) addNestedItems(child, out);
+  }
+}
+
 class DSSnapEngine {
   constructor(store) {
     this.store = store;
-    this.activeGuides = [];
-    this.resizingGuides = [];
-
-    // Active drag session tracking
-    this.dragSession = null;
-    // Active resize session tracking
-    this.resizeSession = null;
+    this.guides = [];
+    this.drag = null;
 
     // Toast feedback notification
     this._toastTimer = null;
@@ -490,7 +436,7 @@ class DSSnapEngine {
   }
 
   hasGuides() {
-    return this.activeGuides.length > 0 || this.resizingGuides.length > 0;
+    return this.guides.length > 0;
   }
 
   showToast(message, duration = 1800) {
@@ -521,943 +467,170 @@ class DSSnapEngine {
     }, duration);
   }
 
-  onDragStart(canvas, primaryItem, allSelectedItems = []) {
-    if (!primaryItem || !isGraphItem(primaryItem) || isPinned(primaryItem)) return;
+  setGuides(canvas, guides) {
+    if (guides.length === 0 && this.guides.length === 0) return;
+    this.guides = guides;
+    canvas.setDirty?.(true, false);
+  }
 
-    const selectedSet = new Set();
-    const addWithChildren = (item) => {
-      if (!item || selectedSet.has(item) || isPinned(item)) return;
-      selectedSet.add(item);
-      if (isGroup(item)) {
-        // Collect all inside nodes and nested children so they move in lockstep
-        if (item.children && typeof item.children.forEach === "function") {
-          item.children.forEach((c) => {
-            if (!isPinned(c)) addWithChildren(c);
-          });
-        }
-        if (item._children && typeof item._children.forEach === "function") {
-          item._children.forEach((c) => {
-            if (!isPinned(c)) addWithChildren(c);
-          });
-        }
-        if (Array.isArray(item._nodes)) {
-          for (const n of item._nodes) {
-            if (!isPinned(n)) addWithChildren(n);
-          }
-        }
-        if (Array.isArray(item.nodes)) {
-          for (const n of item.nodes) {
-            if (!isPinned(n)) addWithChildren(n);
-          }
-        }
-      }
+  end(canvas) {
+    this.drag = null;
+    this.setGuides(canvas, []);
+  }
+
+  getOptions(canvas, axis) {
+    const state = this.store.state;
+    const scale = canvas.ds?.scale || 1;
+    const margin = axis === "x" ? state.minMarginX : state.minMarginY;
+    return {
+      // Threshold is in screen pixels, so snapping feels the same at every zoom level.
+      threshold: Math.max(1, Number(state.snapThreshold) || 10) / scale,
+      gap: state.alignSpacing && state.minMarginEnabled ? Number(margin) || 0 : 0,
+      edges: state.alignEdges,
+      centers: state.alignCenters,
     };
-
-    addWithChildren(primaryItem);
-    for (const it of allSelectedItems) {
-      // If dragging a Node, NEVER pull groups into the drag session
-      if (isNode(primaryItem) && isGroup(it)) continue;
-      if (!isPinned(it)) addWithChildren(it);
-    }
-
-    const mouseX = canvas?.graph_mouse ? canvas.graph_mouse[0] : (Number(primaryItem.pos[0]) || 0);
-    const mouseY = canvas?.graph_mouse ? canvas.graph_mouse[1] : (Number(primaryItem.pos[1]) || 0);
-
-    this.dragSession = {
-      primaryItem,
-      primaryNode: isNode(primaryItem) ? primaryItem : null,
-      lastGraphMouseX: mouseX,
-      lastGraphMouseY: mouseY,
-      records: Array.from(selectedSet).filter((it) => isGraphItem(it) && !isPinned(it)).map((it) => {
-        const posX = Number(it.pos[0]) || 0;
-        const posY = Number(it.pos[1]) || 0;
-        return {
-          item: it,
-          node: isNode(it) ? it : null,
-          startX: posX,
-          startY: posY,
-          naturalX: posX,
-          naturalY: posY,
-        };
-      }),
-      snapDeltaX: 0,
-      snapDeltaY: 0,
-    };
-
-    this.activeGuides = [];
   }
 
-  onDragEnd(canvas) {
-    if (this.dragSession) {
-      // Re-affirm final positions on all nodes and groups
-      for (const rec of this.dragSession.records) {
-        const it = rec.item || rec.node;
-        if (it && it.pos && !isPinned(it)) {
-          it.pos[0] = rec.naturalX + this.dragSession.snapDeltaX;
-          it.pos[1] = rec.naturalY + this.dragSession.snapDeltaY;
-          it.setDirtyCanvas?.(true, true);
-        }
-      }
-      this.dragSession = null;
+  /** Visible nodes and groups, excluding the items being moved or resized. */
+  collectTargets(canvas, exclude) {
+    const graph = canvas.graph;
+    const [vx, vy, vw, vh] = canvas.visible_area;
+    const targets = [];
+    for (const item of [...(graph._nodes || graph.nodes || []), ...getGraphGroups(graph)]) {
+      if (exclude.has(item)) continue;
+      const r = getItemRect(item);
+      if (r.right < vx || r.left > vx + vw || r.bottom < vy || r.top > vy + vh) continue;
+      targets.push(r);
     }
-    document.body?.classList.remove("ds-canvas-dragging");
-    if (this.activeGuides.length > 0) {
-      this.activeGuides = [];
-    }
-    canvas?.setDirty?.(true, true);
+    return targets;
   }
 
-  onResizeEnd(canvas) {
-    document.body?.classList.remove("ds-canvas-dragging");
-    if (this.resizeSession) {
-      const { item, width, height } = this.resizeSession;
-      if (item && item.size && !isPinned(item)) {
-        if (width != null) item.size[0] = width;
-        if (height != null) item.size[1] = height;
-        item.setSize?.(item.size);
-        item.onResize?.(item.size);
-        item.setDirtyCanvas?.(true, true);
-      }
-      this.resizeSession = null;
-    }
-    if (this.resizingGuides.length > 0) {
-      this.resizingGuides = [];
-      canvas?.setDirty?.(true, true);
-    }
-  }
-
-  /**
-   * Process graph item (node or group) position during drag.
-   * Compares visual bounds against candidate target nodes and groups,
-   * snaps cleanly into alignment, prioritizes close neighbors, and registers guide lines.
-   */
-  processItemDrag(canvas, activeItem, pointerEvent = null) {
+  update(canvas, e) {
     const state = this.store.state;
-    if (!state.enabled || !activeItem || !isGraphItem(activeItem) || isPinned(activeItem)) {
-      this.activeGuides = [];
-      return;
-    }
+    const active =
+      state.enabled &&
+      (e.buttons & 1) === 1 &&
+      canvas.pointer?.isDown &&
+      !canvas.linkConnector?.isConnecting &&
+      !canvas.dragging_rectangle &&
+      !canvas.dragging_canvas;
 
-    // Alt key completely bypasses snapping for effortless 100% freeform placement
-    if (pointerEvent?.altKey) {
-      this.activeGuides = [];
-      if (this.dragSession) {
-        for (const rec of this.dragSession.records) {
-          const it = rec.item || rec.node;
-          if (it && it.pos && !isPinned(it)) {
-            it.pos[0] = rec.naturalX;
-            it.pos[1] = rec.naturalY;
-          }
-        }
-        this.dragSession.snapDeltaX = 0;
-        this.dragSession.snapDeltaY = 0;
-      }
-      return;
-    }
-
-    // Ghost node, connecting node, or search box active — never snap
-    if (isPlacementOrSearchActive()) {
-      this.activeGuides = [];
-      return;
-    }
-
-    const graph = canvas?.graph || app?.graph;
-    if (!graph) return;
-
-    // Ensure active dragSession
-    if (!this.dragSession || this.dragSession.primaryItem !== activeItem) {
-      const selected = getDragItemsFor(canvas, activeItem);
-      this.onDragStart(canvas, activeItem, selected);
-    }
-
-    // Update natural positions based on graph_mouse displacement
-    const currentMouseX = canvas?.graph_mouse ? canvas.graph_mouse[0] : (Number(activeItem.pos[0]) || 0);
-    const currentMouseY = canvas?.graph_mouse ? canvas.graph_mouse[1] : (Number(activeItem.pos[1]) || 0);
-    const dGraphX = currentMouseX - this.dragSession.lastGraphMouseX;
-    const dGraphY = currentMouseY - this.dragSession.lastGraphMouseY;
-    this.dragSession.lastGraphMouseX = currentMouseX;
-    this.dragSession.lastGraphMouseY = currentMouseY;
-
-    for (const rec of this.dragSession.records) {
-      rec.naturalX += dGraphX;
-      rec.naturalY += dGraphY;
-    }
-
-    const primaryRec =
-      this.dragSession.records.find((r) => r.item === activeItem) || this.dragSession.records[0];
-    const naturalX = primaryRec.naturalX;
-    const naturalY = primaryRec.naturalY;
-
-    // Compute natural bounds of activeItem
-    const vBounds = getItemVisualBoundsAt(activeItem, naturalX, naturalY);
-
-    // Build candidate list — visible nodes and groups not in current dragging session
-    const draggedItemsSet = new Set(this.dragSession.records.map((r) => r.item));
-    const draggedIdsSet = new Set(
-      this.dragSession.records.map((r) => r.item?.id).filter((id) => id !== undefined)
-    );
-
-    const candidates = [];
-
-    // 1. Candidate nodes
-    if (Array.isArray(graph.nodes)) {
-      for (let i = 0; i < graph.nodes.length; i++) {
-        const other = graph.nodes[i];
-        if (!isNode(other) || draggedItemsSet.has(other) || draggedIdsSet.has(other.id)) continue;
-        if (other.mode === 2 || other.mode === 3) continue;
-
-        const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
-        const boxDist = getBoundingBoxDistance(cb, vBounds);
-        if (boxDist < 1400) {
-          candidates.push({ ...cb, boxDist, dist: boxDist });
-        }
-      }
-    }
-
-    // 2. Candidate groups
-    const graphGroups = getGraphGroups(graph);
-    for (let i = 0; i < graphGroups.length; i++) {
-      const other = graphGroups[i];
-      if (!isGroup(other) || draggedItemsSet.has(other) || draggedIdsSet.has(other.id)) continue;
-
-      const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
-      const boxDist = getBoundingBoxDistance(cb, vBounds);
-      if (boxDist < 1600) {
-        candidates.push({ ...cb, boxDist, dist: boxDist });
-      }
-    }
-
-    if (candidates.length === 0) {
-      this.activeGuides = [];
-      for (const rec of this.dragSession.records) {
-        const it = rec.item || rec.node;
-        if (it && it.pos && !isPinned(it)) {
-          it.pos[0] = rec.naturalX;
-          it.pos[1] = rec.naturalY;
-        }
-      }
-      this.dragSession.snapDeltaX = 0;
-      this.dragSession.snapDeltaY = 0;
-      return;
-    }
-
-    const candidatePool = candidates;
-
-    const baseThreshold = Number(state.snapThreshold) || 8;
-    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
-    // Snap threshold in graph space: capped between 4 and 12 graph pixels so it stays crisp
-    const threshold = Math.min(12, Math.max(4, baseThreshold / scale));
-
-    const minMarginX = state.minMarginEnabled ? (Number(state.minMarginX) || 20) : 0;
-    const minMarginY = state.minMarginEnabled ? (Number(state.minMarginY) || 20) : 0;
-
-    // --- HORIZONTAL ALIGNMENT (Matching Y coordinates / horizontal guide lines) ---
-    let bestYMatch = null;
-    let bestYScore = Infinity;
-
-    for (const t of candidatePool) {
-      const tests = [];
-
-      if (state.alignEdges) {
-        // Direct Edge-to-Edge alignments (Priority 1)
-        tests.push({
-          targetY: t.top,
-          sourceY: vBounds.top,
-          diff: t.top - vBounds.top,
-          label: "Top Align",
-          priority: 1,
-        });
-        tests.push({
-          targetY: t.bottom,
-          sourceY: vBounds.bottom,
-          diff: t.bottom - vBounds.bottom,
-          label: "Bottom Align",
-          priority: 1,
-        });
-
-        // Flush Edge-to-Edge alignments (Priority 2)
-        tests.push({
-          targetY: t.top,
-          sourceY: vBounds.bottom,
-          diff: t.top - vBounds.bottom,
-          label: "Edge Align",
-          priority: 2,
-        });
-        tests.push({
-          targetY: t.bottom,
-          sourceY: vBounds.top,
-          diff: t.bottom - vBounds.top,
-          label: "Edge Align",
-          priority: 2,
-        });
-      }
-
-      if (state.alignSpacing && state.minMarginEnabled && minMarginY > 0) {
-        tests.push({
-          targetY: t.bottom + minMarginY,
-          sourceY: vBounds.top,
-          diff: (t.bottom + minMarginY) - vBounds.top,
-          label: `${minMarginY}px Gap`,
-          priority: 3,
-        });
-        tests.push({
-          targetY: t.top - minMarginY,
-          sourceY: vBounds.bottom,
-          diff: (t.top - minMarginY) - vBounds.bottom,
-          label: `${minMarginY}px Gap`,
-          priority: 3,
-        });
-      }
-
-      if (state.alignCenters) {
-        tests.push({
-          targetY: t.centerY,
-          sourceY: vBounds.centerY,
-          diff: t.centerY - vBounds.centerY,
-          label: "Center Align",
-          priority: 4,
-        });
-      }
-
-      // Perpendicular distance (horizontal distance along the alignment line)
-      const perpDist = Math.max(0, vBounds.left - t.right, t.left - vBounds.right);
-      // Distance penalty ensures close neighbors ALWAYS win over far-away candidates
-      const distPenalty = (perpDist / 30) * 6.0 + ((t.boxDist || 0) / 50) * 3.0;
-
-      for (const test of tests) {
-        const absDiff = Math.abs(test.diff);
-        if (absDiff <= threshold) {
-          const typeAffinity = (vBounds.isGroup === t.isGroup) ? -2.0 : 0;
-          const score =
-            absDiff * 3.0 +
-            (test.priority - 1) * 4.0 +
-            distPenalty +
-            typeAffinity;
-
-          if (score < bestYScore) {
-            bestYScore = score;
-            bestYMatch = {
-              targetItem: t,
-              guideY: test.targetY,
-              snapDeltaY: test.diff,
-              label: test.label,
-            };
-          }
-        }
-      }
-    }
-
-    // --- VERTICAL ALIGNMENT (Matching X coordinates / vertical guide lines) ---
-    let bestXMatch = null;
-    let bestXScore = Infinity;
-
-    for (const t of candidatePool) {
-      const tests = [];
-
-      if (state.alignEdges) {
-        // Direct Edge-to-Edge alignments (Priority 1)
-        tests.push({
-          targetX: t.left,
-          sourceX: vBounds.left,
-          diff: t.left - vBounds.left,
-          label: "Left Align",
-          priority: 1,
-        });
-        tests.push({
-          targetX: t.right,
-          sourceX: vBounds.right,
-          diff: t.right - vBounds.right,
-          label: "Right Align",
-          priority: 1,
-        });
-
-        // Flush Edge-to-Edge alignments (Priority 2)
-        tests.push({
-          targetX: t.left,
-          sourceX: vBounds.right,
-          diff: t.left - vBounds.right,
-          label: "Edge Align",
-          priority: 2,
-        });
-        tests.push({
-          targetX: t.right,
-          sourceX: vBounds.left,
-          diff: t.right - vBounds.left,
-          label: "Edge Align",
-          priority: 2,
-        });
-      }
-
-      if (state.alignSpacing && state.minMarginEnabled && minMarginX > 0) {
-        tests.push({
-          targetX: t.right + minMarginX,
-          sourceX: vBounds.left,
-          diff: (t.right + minMarginX) - vBounds.left,
-          label: `${minMarginX}px Gap`,
-          priority: 3,
-        });
-        tests.push({
-          targetX: t.left - minMarginX,
-          sourceX: vBounds.right,
-          diff: (t.left - minMarginX) - vBounds.right,
-          label: `${minMarginX}px Gap`,
-          priority: 3,
-        });
-      }
-
-      if (state.alignCenters) {
-        tests.push({
-          targetX: t.centerX,
-          sourceX: vBounds.centerX,
-          diff: t.centerX - vBounds.centerX,
-          label: "Center Align",
-          priority: 4,
-        });
-      }
-
-      // Perpendicular distance (vertical distance along the alignment line)
-      const perpDist = Math.max(0, vBounds.top - t.bottom, t.top - vBounds.bottom);
-      // Distance penalty ensures close neighbors ALWAYS win over far-away candidates
-      const distPenalty = (perpDist / 30) * 6.0 + ((t.boxDist || 0) / 50) * 3.0;
-
-      for (const test of tests) {
-        const absDiff = Math.abs(test.diff);
-        if (absDiff <= threshold) {
-          const typeAffinity = (vBounds.isGroup === t.isGroup) ? -2.0 : 0;
-          const score =
-            absDiff * 3.0 +
-            (test.priority - 1) * 4.0 +
-            distPenalty +
-            typeAffinity;
-
-          if (score < bestXScore) {
-            bestXScore = score;
-            bestXMatch = {
-              targetItem: t,
-              guideX: test.targetX,
-              snapDeltaX: test.diff,
-              label: test.label,
-            };
-          }
-        }
-      }
-    }
-
-    // Apply snap deltas
-    const snapDeltaX = bestXMatch ? bestXMatch.snapDeltaX : 0;
-    const snapDeltaY = bestYMatch ? bestYMatch.snapDeltaY : 0;
-
-    this.dragSession.snapDeltaX = snapDeltaX;
-    this.dragSession.snapDeltaY = snapDeltaY;
-
-    for (const rec of this.dragSession.records) {
-      const it = rec.item || rec.node;
-      if (it && it.pos && !isPinned(it)) {
-        it.pos[0] = rec.naturalX + snapDeltaX;
-        it.pos[1] = rec.naturalY + snapDeltaY;
-      }
-    }
-
-    const snappedBounds = getItemVisualBoundsAt(
-      activeItem,
-      primaryRec.naturalX + snapDeltaX,
-      primaryRec.naturalY + snapDeltaY
-    );
-
-    const guides = [];
-
-    if (bestYMatch) {
-      guides.push({
-        type: "horizontal",
-        y: bestYMatch.guideY,
-        sourceBounds: snappedBounds,
-        targetBounds: bestYMatch.targetItem,
-        label: bestYMatch.label,
-      });
-    }
-
-    if (bestXMatch) {
-      guides.push({
-        type: "vertical",
-        x: bestXMatch.guideX,
-        sourceBounds: snappedBounds,
-        targetBounds: bestXMatch.targetItem,
-        label: bestXMatch.label,
-      });
-    }
-
-    this.activeGuides = guides;
-    canvas?.setDirty?.(true, true);
-  }
-
-  /**
-   * Compatibility wrapper for node dragging.
-   */
-  processNodeDrag(canvas, activeNode, pointerEvent = null) {
-    return this.processItemDrag(canvas, activeNode, pointerEvent);
-  }
-
-  /**
-   * Process group resizing in real-time with edge alignment and visual guides.
-   */
-  processGroupResize(canvas, group) {
-    const state = this.store.state;
-    if (!state.enabled || !state.resizeSnap || !group || !isGroup(group) || isPinned(group)) {
-      this.resizingGuides = [];
-      this.resizeSession = null;
-      return;
-    }
-
-    const graph = canvas?.graph || app?.graph;
-    if (!graph) return;
-
-    // Alt key completely bypasses resize snapping
-    const pointerEvent = canvas?.pointer?.eMove || window.event;
-    if (pointerEvent?.altKey) {
-      this.resizingGuides = [];
-      this.resizeSession = null;
-      return;
-    }
-
-    const allCandidates = [
-      ...getGraphGroups(graph).filter((g) => g !== group).map((g) => getItemVisualBoundsAt(g, g.pos[0], g.pos[1])),
-      ...(graph.nodes || []).filter(isNode).map((n) => getItemVisualBoundsAt(n, n.pos[0], n.pos[1])),
-    ];
-
-    if (allCandidates.length === 0) {
-      this.resizingGuides = [];
-      this.resizeSession = null;
-      return;
-    }
-
-    const baseThreshold = Number(state.snapThreshold) || 10;
-    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
-    const threshold = Math.max(4, baseThreshold / scale);
-
-    const minMarginX = state.minMarginEnabled ? (Number(state.minMarginX) || 20) : 0;
-    const minMarginY = state.minMarginEnabled ? (Number(state.minMarginY) || 20) : 0;
-
-    const posX = Number(group.pos[0]) || 0;
-    const posY = Number(group.pos[1]) || 0;
-    const currentW = Math.max(140, Number(group.size[0]) || 140);
-    const currentH = Math.max(80, Number(group.size[1]) || 80);
-    const currentRight = posX + currentW;
-    const currentBottom = posY + currentH;
-
-    const minW = 140;
-    const minH = 80;
-
-    let bestRightDiff = Infinity;
-    let bestRightTarget = null;
-    let bestRightLabel = "Right Align";
-    let bestRightW = currentW;
-    let bestRightGuideX = currentRight;
-
-    let bestBottomDiff = Infinity;
-    let bestBottomTarget = null;
-    let bestBottomLabel = "Bottom Align";
-    let bestBottomH = currentH;
-    let bestBottomGuideY = currentBottom;
-
-    for (const t of allCandidates) {
-      // 1. Right-to-Right Edge Align
-      const diffRR = Math.abs(currentRight - t.right);
-      if (diffRR <= threshold && diffRR < bestRightDiff && (t.right - posX) >= minW) {
-        bestRightDiff = diffRR;
-        bestRightTarget = t;
-        bestRightLabel = "Right Align";
-        bestRightW = t.right - posX;
-        bestRightGuideX = t.right;
-      }
-
-      // 2. Right-to-Left Edge Align / Margin
-      if (t.left > posX) {
-        const diffRL = Math.abs(currentRight - t.left);
-        if (diffRL <= threshold && diffRL < bestRightDiff && (t.left - posX) >= minW) {
-          bestRightDiff = diffRL;
-          bestRightTarget = t;
-          bestRightLabel = "Edge Align";
-          bestRightW = t.left - posX;
-          bestRightGuideX = t.left;
-        }
-        if (minMarginX > 0) {
-          const diffGap = Math.abs(currentRight - (t.left - minMarginX));
-          if (diffGap <= threshold && diffGap < bestRightDiff && (t.left - minMarginX - posX) >= minW) {
-            bestRightDiff = diffGap;
-            bestRightTarget = t;
-            bestRightLabel = `${minMarginX}px Gap`;
-            bestRightW = t.left - minMarginX - posX;
-            bestRightGuideX = t.left - minMarginX;
-          }
-        }
-      }
-
-      // 3. Bottom-to-Bottom Edge Align
-      const diffBB = Math.abs(currentBottom - t.bottom);
-      if (diffBB <= threshold && diffBB < bestBottomDiff && (t.bottom - posY) >= minH) {
-        bestBottomDiff = diffBB;
-        bestBottomTarget = t;
-        bestBottomLabel = "Bottom Align";
-        bestBottomH = t.bottom - posY;
-        bestBottomGuideY = t.bottom;
-      }
-
-      // 4. Bottom-to-Top Edge Align / Margin
-      if (t.top > posY) {
-        const diffBT = Math.abs(currentBottom - t.top);
-        if (diffBT <= threshold && diffBT < bestBottomDiff && (t.top - posY) >= minH) {
-          bestBottomDiff = diffBT;
-          bestBottomTarget = t;
-          bestBottomLabel = "Edge Align";
-          bestBottomH = t.top - posY;
-          bestBottomGuideY = t.top;
-        }
-        if (minMarginY > 0) {
-          const diffGap = Math.abs(currentBottom - (t.top - minMarginY));
-          if (diffGap <= threshold && diffGap < bestBottomDiff && (t.top - minMarginY - posY) >= minH) {
-            bestBottomDiff = diffGap;
-            bestBottomTarget = t;
-            bestBottomLabel = `${minMarginY}px Gap`;
-            bestBottomH = t.top - minMarginY - posY;
-            bestBottomGuideY = t.top - minMarginY;
-          }
-        }
-      }
-    }
-
-    const finalW = bestRightTarget ? Math.max(minW, Math.round(bestRightW)) : currentW;
-    const finalH = bestBottomTarget ? Math.max(minH, Math.round(bestBottomH)) : currentH;
-
-    if (bestRightTarget || bestBottomTarget) {
-      group.size[0] = finalW;
-      group.size[1] = finalH;
-      group.setDirtyCanvas?.(false, true);
-
-      this.resizeSession = {
-        item: group,
-        width: bestRightTarget ? finalW : null,
-        height: bestBottomTarget ? finalH : null,
-      };
+    if (active && state.resizeSnap && isNode(canvas.resizing_node)) {
+      this.resizeItem(canvas, canvas.resizing_node, canvas.pointer.resizeDirection || "SE", e);
+    } else if (active && state.resizeSnap && isGroup(canvas.resizingGroup)) {
+      this.resizeItem(canvas, canvas.resizingGroup, "SE", e);
+    } else if (active && canvas.isDragging && canvas.selectedItems?.size) {
+      this.dragItems(canvas, e);
     } else {
-      this.resizeSession = null;
+      this.end(canvas);
     }
-
-    const updatedGroupBounds = getGroupVisualBoundsAt(group, posX, posY);
-    const guides = [];
-
-    if (bestRightTarget) {
-      guides.push({
-        type: "vertical",
-        x: bestRightGuideX,
-        sourceBounds: updatedGroupBounds,
-        targetBounds: bestRightTarget,
-        label: bestRightLabel,
-        isResizeGuide: true,
-      });
-    }
-
-    if (bestBottomTarget) {
-      guides.push({
-        type: "horizontal",
-        y: bestBottomGuideY,
-        sourceBounds: updatedGroupBounds,
-        targetBounds: bestBottomTarget,
-        label: bestBottomLabel,
-        isResizeGuide: true,
-      });
-    }
-
-    this.resizingGuides = guides;
-    canvas?.setDirty?.(true, true);
   }
 
-  /**
-   * Process node resizing in real-time with edge alignment, dimension matching, and guidelines.
-   */
-  processNodeResize(canvas, node) {
-    const state = this.store.state;
-    if (!state.enabled || !state.resizeSnap || !node || !isNode(node) || isPinned(node)) {
-      this.resizingGuides = [];
-      this.resizeSession = null;
-      return;
-    }
-
-    const graph = canvas?.graph || app?.graph;
-    if (!graph) return;
-
-    // Alt key completely bypasses resize snapping
-    const pointerEvent = canvas?.pointer?.eMove || window.event;
-    if (pointerEvent?.altKey) {
-      this.resizingGuides = [];
-      this.resizeSession = null;
-      return;
-    }
-
-    const baseThreshold = Number(state.snapThreshold) || 10;
-    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
-    const threshold = Math.max(4, baseThreshold / scale);
-
-    const minMarginX = state.minMarginEnabled ? (Number(state.minMarginX) || 20) : 0;
-    const minMarginY = state.minMarginEnabled ? (Number(state.minMarginY) || 20) : 0;
-
-    const posX = Number(node.pos[0]) || 0;
-    const posY = Number(node.pos[1]) || 0;
-    const currentW = Math.max(10, Number(node.size[0]) || 60);
-    const currentH = Math.max(10, Number(node.size[1]) || 40);
-    const nodeVBounds = getNodeVisualBoundsAt(node, posX, posY);
-
-    // Minimum node dimensions
-    const computedMin = typeof node.computeSize === "function" ? node.computeSize() : [60, 30];
-    const minW = Math.max(Number(node.min_width) || 40, computedMin[0] || 60);
-    const minH = Math.max(Number(node.min_height) || 30, computedMin[1] || 30);
-
-    // Collect all candidate nodes and groups
-    const candidates = [];
-
-    if (Array.isArray(graph.nodes)) {
-      for (let i = 0; i < graph.nodes.length; i++) {
-        const other = graph.nodes[i];
-        if (!isNode(other) || other === node) continue;
-        if (other.mode === 2 || other.mode === 3) continue;
-
-        const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
-        const boxDist = getBoundingBoxDistance(cb, nodeVBounds);
-        if (boxDist < 1400) {
-          candidates.push({ ...cb, boxDist });
-        }
-      }
-    }
-
-    const graphGroups = getGraphGroups(graph);
-    for (let i = 0; i < graphGroups.length; i++) {
-      const other = graphGroups[i];
-      if (!isGroup(other)) continue;
-
-      const cb = getItemVisualBoundsAt(other, other.pos[0], other.pos[1]);
-      const boxDist = getBoundingBoxDistance(cb, nodeVBounds);
-      if (boxDist < 1600) {
-        candidates.push({ ...cb, boxDist });
-      }
-    }
-
-    if (candidates.length === 0) {
-      this.resizingGuides = [];
-      this.resizeSession = null;
-      return;
-    }
-
-    const resizeDir = canvas?.pointer?.resizeDirection || "SE";
-    const affectsRight = resizeDir.includes("E") || resizeDir === "SE" || !resizeDir;
-    const affectsBottom = resizeDir.includes("S") || resizeDir === "SE" || !resizeDir;
-
-    let bestWidthMatch = null;
-    let bestWidthScore = Infinity;
-
-    let bestHeightMatch = null;
-    let bestHeightScore = Infinity;
-
-    // Evaluate candidates
-    for (const t of candidates) {
-      // --- WIDTH / RIGHT EDGE ALIGNMENT ---
-      if (affectsRight) {
-        const widthTests = [];
-
-        // 1. Right-to-Right Edge Align (Priority 1)
-        const targetW_R = t.right - posX;
-        if (targetW_R >= minW) {
-          widthTests.push({
-            targetW: targetW_R,
-            guideX: t.right,
-            diff: targetW_R - currentW,
-            label: "Right Align",
-            priority: 1,
-          });
-        }
-
-        // 2. Right-to-Left Edge Flush or Margin Gap (Priority 2)
-        if (t.left > posX) {
-          const targetW_L = t.left - posX;
-          if (targetW_L >= minW) {
-            widthTests.push({
-              targetW: targetW_L,
-              guideX: t.left,
-              diff: targetW_L - currentW,
-              label: "Edge Align",
-              priority: 2,
-            });
-          }
-          if (minMarginX > 0 && targetW_L - minMarginX >= minW) {
-            widthTests.push({
-              targetW: targetW_L - minMarginX,
-              guideX: t.left - minMarginX,
-              diff: (targetW_L - minMarginX) - currentW,
-              label: `${minMarginX}px Gap`,
-              priority: 2,
-            });
-          }
-        }
-
-        // 3. Exact Width Dimension Match (Priority 3)
-        if (t.width >= minW) {
-          widthTests.push({
-            targetW: t.width,
-            guideX: posX + t.width,
-            diff: t.width - currentW,
-            label: `Width ${Math.round(t.width)}px`,
-            priority: 3,
-          });
-        }
-
-        const vertDist = Math.max(0, nodeVBounds.top - t.bottom, t.top - nodeVBounds.bottom);
-        for (const test of widthTests) {
-          const absDiff = Math.abs(test.diff);
-          if (absDiff <= threshold) {
-            const score =
-              absDiff * 2.0 +
-              (test.priority - 1) * 5.0 +
-              (vertDist / 100) * 1.5 +
-              (t.boxDist / 200) * 1.0;
-            if (score < bestWidthScore) {
-              bestWidthScore = score;
-              bestWidthMatch = {
-                targetItem: t,
-                targetW: test.targetW,
-                guideX: test.guideX,
-                label: test.label,
-              };
-            }
-          }
-        }
-      }
-
-      // --- HEIGHT / BOTTOM EDGE ALIGNMENT ---
-      if (affectsBottom) {
-        const heightTests = [];
-
-        // 1. Bottom-to-Bottom Edge Align (Priority 1)
-        const targetH_B = t.bottom - posY;
-        if (targetH_B >= minH) {
-          heightTests.push({
-            targetH: targetH_B,
-            guideY: t.bottom,
-            diff: targetH_B - currentH,
-            label: "Bottom Align",
-            priority: 1,
-          });
-        }
-
-        // 2. Bottom-to-Top Edge Flush or Margin Gap (Priority 2)
-        if (t.top > posY) {
-          const targetH_T = t.top - posY;
-          if (targetH_T >= minH) {
-            heightTests.push({
-              targetH: targetH_T,
-              guideY: t.top,
-              diff: targetH_T - currentH,
-              label: "Edge Align",
-              priority: 2,
-            });
-          }
-          if (minMarginY > 0 && targetH_T - minMarginY >= minH) {
-            heightTests.push({
-              targetH: targetH_T - minMarginY,
-              guideY: t.top - minMarginY,
-              diff: (targetH_T - minMarginY) - currentH,
-              label: `${minMarginY}px Gap`,
-              priority: 2,
-            });
-          }
-        }
-
-        // 3. Exact Height Dimension Match (Priority 3)
-        if (t.height >= minH) {
-          heightTests.push({
-            targetH: t.height,
-            guideY: posY + t.height,
-            diff: t.height - currentH,
-            label: `Height ${Math.round(t.height)}px`,
-            priority: 3,
-          });
-        }
-
-        const horizDist = Math.max(0, nodeVBounds.left - t.right, t.left - nodeVBounds.right);
-        for (const test of heightTests) {
-          const absDiff = Math.abs(test.diff);
-          if (absDiff <= threshold) {
-            const score =
-              absDiff * 2.0 +
-              (test.priority - 1) * 5.0 +
-              (horizDist / 100) * 1.5 +
-              (t.boxDist / 200) * 1.0;
-            if (score < bestHeightScore) {
-              bestHeightScore = score;
-              bestHeightMatch = {
-                targetItem: t,
-                targetH: test.targetH,
-                guideY: test.guideY,
-                label: test.label,
-              };
-            }
-          }
-        }
-      }
-    }
-
-    const finalW = bestWidthMatch ? Math.max(minW, Math.round(bestWidthMatch.targetW)) : currentW;
-    const finalH = bestHeightMatch ? Math.max(minH, Math.round(bestHeightMatch.targetH)) : currentH;
-
-    if (bestWidthMatch || bestHeightMatch) {
-      node.size[0] = finalW;
-      node.size[1] = finalH;
-      node.setSize?.(node.size);
-      node.onResize?.(node.size);
-      node.setDirtyCanvas?.(true, true);
-
-      this.resizeSession = {
-        item: node,
-        width: bestWidthMatch ? finalW : null,
-        height: bestHeightMatch ? finalH : null,
+  dragItems(canvas, e) {
+    if (!this.drag) {
+      // Same item set LiteGraph moves (getDraggedItems): the selection plus nested group
+      // contents, or only the selection while Ctrl/Cmd is held.
+      const selected = [...canvas.selectedItems];
+      const nested = new Set();
+      for (const it of selected) addNestedItems(it, nested);
+      this.drag = {
+        anchors: selected.filter((it) => isGraphItem(it) && !it.pinned),
+        items: e.ctrlKey || e.metaKey ? selected : [...nested],
+        exclude: new Set([...selected, ...nested]),
+        dx: 0,
+        dy: 0,
       };
-    } else {
-      this.resizeSession = null;
+    }
+    const drag = this.drag;
+    if (drag.anchors.length === 0) return;
+
+    const current = unionRects(drag.anchors.map(getItemRect));
+    const natural = offsetRect(current, -drag.dx, -drag.dy);
+
+    const optsX = this.getOptions(canvas, "x");
+    const optsY = this.getOptions(canvas, "y");
+    let snapX = null;
+    let snapY = null;
+    let targets = [];
+    if (!e.altKey) {
+      targets = this.collectTargets(canvas, drag.exclude);
+      snapX = findSnap("x", natural, ["start", "center", "end"], targets, optsX);
+      snapY = findSnap("y", natural, ["start", "center", "end"], targets, optsY);
     }
 
-    const updatedNodeBounds = getNodeVisualBoundsAt(node, posX, posY);
+    const dx = snapX ? snapX.diff : 0;
+    const dy = snapY ? snapY.diff : 0;
+    if (dx !== drag.dx || dy !== drag.dy) {
+      for (const it of drag.items) it.move(dx - drag.dx, dy - drag.dy, true);
+      drag.dx = dx;
+      drag.dy = dy;
+    }
+
+    const snapped = offsetRect(natural, dx, dy);
     const guides = [];
+    if (snapX) guides.push(buildGuide(snapX, snapped, targets, optsX.gap));
+    if (snapY) guides.push(buildGuide(snapY, snapped, targets, optsY.gap));
+    this.setGuides(canvas, guides);
+  }
 
-    if (bestWidthMatch) {
-      guides.push({
-        type: "vertical",
-        x: bestWidthMatch.guideX,
-        sourceBounds: updatedNodeBounds,
-        targetBounds: bestWidthMatch.targetItem,
-        label: bestWidthMatch.label,
-        isResizeGuide: true,
-      });
+  resizeItem(canvas, item, direction, e) {
+    if (e.altKey) {
+      this.setGuides(canvas, []);
+      return;
     }
 
-    if (bestHeightMatch) {
-      guides.push({
-        type: "horizontal",
-        y: bestHeightMatch.guideY,
-        sourceBounds: updatedNodeBounds,
-        targetBounds: bestHeightMatch.targetItem,
-        label: bestHeightMatch.label,
-        isResizeGuide: true,
-      });
+    const natural = getItemRect(item);
+    const group = isGroup(item);
+    const titleH = group ? 0 : item.pos[1] - natural.top;
+    let minW;
+    let minH;
+    if (group) {
+      const LG = globalThis.LiteGraph;
+      minW = LG?.LGraphGroup?.minWidth ?? 140;
+      minH = LG?.LGraphGroup?.minHeight ?? 80;
+    } else {
+      const min = item.computeSize();
+      minW = min[0];
+      minH = min[1] + titleH;
     }
 
-    this.resizingGuides = guides;
-    canvas?.setDirty?.(true, true);
+    // Groups contain their children, so their edges are useful targets when resizing a group.
+    const targets = this.collectTargets(canvas, new Set([item]));
+    const xFeature = direction.includes("W") ? "start" : "end";
+    const yFeature = direction.includes("N") ? "start" : "end";
+    const fixedX = xFeature === "end" ? natural.left : natural.right;
+    const fixedY = yFeature === "end" ? natural.top : natural.bottom;
+
+    const optsX = { ...this.getOptions(canvas, "x"), centers: false, fixed: fixedX, minSize: minW };
+    const optsY = { ...this.getOptions(canvas, "y"), centers: false, fixed: fixedY, minSize: minH };
+    const snapX = findSnap("x", natural, [xFeature], targets, optsX);
+    const snapY = findSnap("y", natural, [yFeature], targets, optsY);
+
+    const r = { ...natural };
+    if (snapX) r[AXES.x[xFeature]] = snapX.line;
+    if (snapY) r[AXES.y[yFeature]] = snapY.line;
+
+    if (snapX || snapY) {
+      if (group) {
+        item.resize(r.right - r.left, r.bottom - r.top);
+      } else {
+        item.pos = [r.left, r.top + titleH];
+        item.setSize([r.right - r.left, r.bottom - r.top - titleH]);
+      }
+    }
+
+    const snapped = makeRect(r.left, r.top, r.right, r.bottom);
+    const guides = [];
+    if (snapX) guides.push(buildGuide(snapX, snapped, targets, optsX.gap));
+    if (snapY) guides.push(buildGuide(snapY, snapped, targets, optsY.gap));
+    this.setGuides(canvas, guides);
   }
 
   /**
-   * Draws active visual alignment guides on the canvas in graph coordinates.
-   * Scoped to connect the aligned nodes directly with precision tick marks at extreme edges.
+   * Draws the active guides in graph space (called from onDrawForeground).
    */
   drawGuides(ctx, canvas) {
-    const allGuides = [...this.activeGuides, ...this.resizingGuides];
-    if (!ctx || allGuides.length === 0) return;
+    if (!ctx || this.guides.length === 0) return;
 
     const accent =
       window.DSGlobalTheme?.getVar?.("--ds-color-accent") ||
@@ -1465,172 +638,86 @@ class DSSnapEngine {
       getComputedStyle(document.documentElement).getPropertyValue("--ds-color-accent")?.trim() ||
       getComputedStyle(document.documentElement).getPropertyValue("--ds-accent")?.trim() ||
       "#67e8f9";
-    const scale = Math.max(0.2, canvas?.ds?.scale || 1.0);
-    const lineWidth = Math.max(1.5, 2.0 / scale);
-    const dash = [6 / scale, 4 / scale];
+    const scale = canvas.ds?.scale || 1;
+    const px = 1 / scale;
+    const tick = 5 * px;
 
     ctx.save();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.5 * px;
 
-    for (const guide of allGuides) {
-      ctx.strokeStyle = accent;
-      ctx.fillStyle = accent;
-      ctx.lineWidth = lineWidth;
-      ctx.setLineDash(dash);
-      ctx.shadowColor = "transparent";
-      ctx.shadowBlur = 0;
+    const segment = (x1, y1, x2, y2, dashed) => {
+      ctx.setLineDash(dashed ? [5 * px, 4 * px] : []);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    };
 
-      const sb = guide.sourceBounds;
-      const tb = guide.targetBounds;
-
-      if (guide.type === "horizontal") {
-        let x1, x2;
-        if (sb && tb) {
-          x1 = Math.min(sb.left, tb.left) - 16 / scale;
-          x2 = Math.max(sb.right, tb.right) + 16 / scale;
-        } else {
-          const va = canvas?.visible_area;
-          x1 = va ? va[0] - 100 : -50000;
-          x2 = va ? va[2] + 100 : 50000;
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(x1, guide.y);
-        ctx.lineTo(x2, guide.y);
-        ctx.stroke();
-
-        // Draw precision extreme-edge ticks
-        if (sb && tb) {
-          ctx.setLineDash([]);
-          ctx.lineWidth = Math.max(2, 2.5 / scale);
-          const tickLen = 6 / scale;
-
-          ctx.beginPath();
-          ctx.moveTo(sb.left, guide.y - tickLen);
-          ctx.lineTo(sb.left, guide.y + tickLen);
-          ctx.moveTo(sb.right, guide.y - tickLen);
-          ctx.lineTo(sb.right, guide.y + tickLen);
-          ctx.moveTo(tb.left, guide.y - tickLen);
-          ctx.lineTo(tb.left, guide.y + tickLen);
-          ctx.moveTo(tb.right, guide.y - tickLen);
-          ctx.lineTo(tb.right, guide.y + tickLen);
-          ctx.stroke();
-        }
-
-        // Draw high-contrast badge label
-        if (guide.label) {
-          const text = String(guide.label).toUpperCase();
-          const fontSize = Math.max(10, Math.round(11 / scale));
-          ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
-
-          const tw = ctx.measureText(text).width;
-          const padX = 7 / scale;
-          const padY = 3.5 / scale;
-          const boxW = tw + padX * 2;
-          const boxH = fontSize + padY * 2;
-
-          let bx, by;
-          if (sb && tb) {
-            bx = (sb.centerX + tb.centerX) / 2 - boxW / 2;
-            by = guide.y - boxH - 6 / scale;
-          } else {
-            bx = (x1 + x2) / 2 - boxW / 2;
-            by = guide.y - boxH - 6 / scale;
-          }
-
-          // Pill background
-          ctx.fillStyle = "rgba(10, 12, 16, 0.94)";
-          ctx.strokeStyle = accent;
-          ctx.lineWidth = 1.2 / scale;
-
-          const r = 4 / scale;
-          ctx.beginPath();
-          if (typeof ctx.roundRect === "function") {
-            ctx.roundRect(bx, by, boxW, boxH, r);
-          } else {
-            ctx.rect(bx, by, boxW, boxH);
-          }
-          ctx.fill();
-          ctx.stroke();
-
-          // Label text
-          ctx.fillStyle = accent;
-          ctx.textBaseline = "middle";
-          ctx.fillText(text, bx + padX, by + boxH / 2);
-        }
+    // Solid measurement bar with end ticks between a and b along `axis`, at cross position c.
+    const bar = (axis, a, b, c) => {
+      if (axis === "x") {
+        segment(a, c, b, c, false);
+        segment(a, c - tick, a, c + tick, false);
+        segment(b, c - tick, b, c + tick, false);
       } else {
-        let y1, y2;
-        if (sb && tb) {
-          y1 = Math.min(sb.top, tb.top) - 16 / scale;
-          y2 = Math.max(sb.bottom, tb.bottom) + 16 / scale;
+        segment(c, a, c, b, false);
+        segment(c - tick, a, c + tick, a, false);
+        segment(c - tick, b, c + tick, b, false);
+      }
+    };
+
+    const pill = (text, cx, cy) => {
+      const fontSize = 11 * px;
+      ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
+      const w = ctx.measureText(text).width + 12 * px;
+      const h = fontSize + 7 * px;
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(10, 12, 16, 0.94)";
+      ctx.lineWidth = 1.2 * px;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === "function") ctx.roundRect(cx - w / 2, cy - h / 2, w, h, 4 * px);
+      else ctx.rect(cx - w / 2, cy - h / 2, w, h);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = accent;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, cx, cy);
+      ctx.lineWidth = 1.5 * px;
+    };
+
+    for (const g of this.guides) {
+      const { src, target } = g;
+      const A = AXES[g.axis];
+
+      if (g.kind === "line") {
+        // Line across both items along the aligned edge, with ticks where it meets each item.
+        const from = Math.min(src[A.crossStart], target[A.crossStart]) - 8 * px;
+        const to = Math.max(src[A.crossEnd], target[A.crossEnd]) + 8 * px;
+        const ends = [src[A.crossStart], src[A.crossEnd], target[A.crossStart], target[A.crossEnd]];
+        if (g.axis === "x") {
+          segment(g.at, from, g.at, to, true);
+          for (const y of ends) segment(g.at - tick, y, g.at + tick, y, false);
         } else {
-          const va = canvas?.visible_area;
-          y1 = va ? va[1] - 100 : -50000;
-          y2 = va ? va[3] + 100 : 50000;
+          segment(from, g.at, to, g.at, true);
+          for (const x of ends) segment(x, g.at - tick, x, g.at + tick, false);
         }
-
-        ctx.beginPath();
-        ctx.moveTo(guide.x, y1);
-        ctx.lineTo(guide.x, y2);
-        ctx.stroke();
-
-        // Draw precision extreme-edge ticks
-        if (sb && tb) {
-          ctx.setLineDash([]);
-          ctx.lineWidth = Math.max(2, 2.5 / scale);
-          const tickLen = 6 / scale;
-
-          ctx.beginPath();
-          ctx.moveTo(guide.x - tickLen, sb.top);
-          ctx.lineTo(guide.x + tickLen, sb.top);
-          ctx.moveTo(guide.x - tickLen, sb.bottom);
-          ctx.lineTo(guide.x + tickLen, sb.bottom);
-          ctx.moveTo(guide.x - tickLen, tb.top);
-          ctx.lineTo(guide.x + tickLen, tb.top);
-          ctx.moveTo(guide.x - tickLen, tb.bottom);
-          ctx.lineTo(guide.x + tickLen, tb.bottom);
-          ctx.stroke();
-        }
-
-        // Draw high-contrast badge label
-        if (guide.label) {
-          const text = String(guide.label).toUpperCase();
-          const fontSize = Math.max(10, Math.round(11 / scale));
-          ctx.font = `bold ${fontSize}px Inter, system-ui, sans-serif`;
-
-          const tw = ctx.measureText(text).width;
-          const padX = 7 / scale;
-          const padY = 3.5 / scale;
-          const boxW = tw + padX * 2;
-          const boxH = fontSize + padY * 2;
-
-          let bx, by;
-          if (sb && tb) {
-            bx = guide.x + 8 / scale;
-            by = (sb.centerY + tb.centerY) / 2 - boxH / 2;
-          } else {
-            bx = guide.x + 8 / scale;
-            by = (y1 + y2) / 2 - boxH / 2;
-          }
-
-          // Pill background
-          ctx.fillStyle = "rgba(10, 12, 16, 0.94)";
-          ctx.strokeStyle = accent;
-          ctx.lineWidth = 1.2 / scale;
-
-          const r = 4 / scale;
-          ctx.beginPath();
-          if (typeof ctx.roundRect === "function") {
-            ctx.roundRect(bx, by, boxW, boxH, r);
-          } else {
-            ctx.rect(bx, by, boxW, boxH);
-          }
-          ctx.fill();
-          ctx.stroke();
-
-          // Label text
-          ctx.fillStyle = accent;
-          ctx.textBaseline = "middle";
-          ctx.fillText(text, bx + padX, by + boxH / 2);
+      } else if (g.kind === "gap") {
+        // Spacing bar between the facing edges, centred on the shared span.
+        const a = src[A.start] >= target[A.end] ? target[A.end] : src[A.end];
+        const b = src[A.start] >= target[A.end] ? src[A.start] : target[A.start];
+        const c = (Math.max(src[A.crossStart], target[A.crossStart]) + Math.min(src[A.crossEnd], target[A.crossEnd])) / 2;
+        bar(g.axis, a, b, c);
+        if (g.axis === "x") pill(g.label, (a + b) / 2, c - 12 * px);
+        else pill(g.label, c + 24 * px, (a + b) / 2);
+      } else if (g.kind === "size") {
+        // Matching dimension bars just outside both items.
+        for (const r of [src, target]) {
+          const c = g.axis === "x" ? r.top - 10 * px : r.right + 10 * px;
+          bar(g.axis, r[A.start], r[A.end], c);
+          if (g.axis === "x") pill(g.label, r.centerX, c - 12 * px);
+          else pill(g.label, c + 24 * px, r.centerY);
         }
       }
     }
@@ -1734,7 +821,7 @@ export function arrangeNodesInRow(canvas = app?.canvas) {
   }
 
   const anchor = nodes[0];
-  const anchorBounds = getNodeVisualBounds(anchor);
+  const anchorBounds = getItemRect(anchor);
   const margin = Number(snapStore.state.minMarginX) || 20;
 
   try {
@@ -1746,7 +833,7 @@ export function arrangeNodesInRow(canvas = app?.canvas) {
 
   for (let i = 1; i < nodes.length; i++) {
     const node = nodes[i];
-    const b = getNodeVisualBounds(node);
+    const b = getItemRect(node);
     const topOffset = (Number(node.pos?.[1]) || 0) - b.top;
     const leftOffset = (Number(node.pos?.[0]) || 0) - b.left;
 
@@ -1755,7 +842,7 @@ export function arrangeNodesInRow(canvas = app?.canvas) {
     node.onResize?.(node.size);
     node.setDirtyCanvas?.(true, true);
 
-    const updatedB = getNodeVisualBounds(node);
+    const updatedB = getItemRect(node);
     currentVisualRight = updatedB.right;
   }
 
@@ -1780,7 +867,7 @@ export function arrangeNodesInColumn(canvas = app?.canvas) {
   }
 
   const anchor = nodes[0];
-  const anchorBounds = getNodeVisualBounds(anchor);
+  const anchorBounds = getItemRect(anchor);
   const margin = Number(snapStore.state.minMarginY) || 20;
 
   try {
@@ -1792,7 +879,7 @@ export function arrangeNodesInColumn(canvas = app?.canvas) {
 
   for (let i = 1; i < nodes.length; i++) {
     const node = nodes[i];
-    const b = getNodeVisualBounds(node);
+    const b = getItemRect(node);
     const topOffset = (Number(node.pos?.[1]) || 0) - b.top;
     const leftOffset = (Number(node.pos?.[0]) || 0) - b.left;
 
@@ -1801,7 +888,7 @@ export function arrangeNodesInColumn(canvas = app?.canvas) {
     node.onResize?.(node.size);
     node.setDirtyCanvas?.(true, true);
 
-    const updatedB = getNodeVisualBounds(node);
+    const updatedB = getItemRect(node);
     currentVisualBottom = updatedB.bottom;
   }
 
@@ -2010,11 +1097,8 @@ class DSSnapToolbarManager {
         }
       }
 
-      // Continuously ensure active canvas instance is hooked
-      if (app?.canvas) {
-        hookCanvasTarget(app.canvas);
-        attachCanvasDomEvents(app.canvas);
-      }
+      // Continuously ensure the active canvas draws snap guides
+      hookCanvasDraw(app?.canvas);
     };
 
     const observer = new MutationObserver(check);
@@ -2272,37 +1356,8 @@ class DSSnapToolbarManager {
 export const toolbarManager = new DSSnapToolbarManager();
 
 // ---------------------------------------------------------------------------
-// 9. OVERLAY ADAPTER INTERFACE
+// 9. CANVAS HOOKS (SELECTION ORDER, SNAP UPDATES, GUIDE DRAWING)
 // ---------------------------------------------------------------------------
-try {
-  const existingOverlay = document.getElementById("ds-snap-guide-overlay");
-  if (existingOverlay) existingOverlay.remove();
-} catch (_) {}
-
-export const snapOverlay = {
-  clear() {
-    try {
-      const el = document.getElementById("ds-snap-guide-overlay");
-      if (el) el.remove();
-    } catch (_) {}
-  },
-  renderGuides() {},
-};
-
-function stopGlobalDrag() {
-  if (snapEngine.hasGuides()) {
-    snapEngine.onDragEnd(app?.canvas);
-    snapEngine.onResizeEnd(app?.canvas);
-    app?.canvas?.setDirty?.(true, true);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 10. GLOBAL POINTER EVENT LISTENERS (SELECTION & FAILSAFE RELEASE)
-// ---------------------------------------------------------------------------
-let lastPointerDownItem = null;
-let lastPointerDownPos = null;
-let lastPointerDownIsVue = false;
 let globalListenersInstalled = false;
 
 function isPointerNearNodeSlot(node, mouseX, mouseY) {
@@ -2331,415 +1386,72 @@ function installGlobalPointerListeners() {
   if (globalListenersInstalled) return;
   globalListenersInstalled = true;
 
-  // Track selection history and target item on pointerdown
+  // Track node click order so the first clicked node is the arrange anchor
   window.addEventListener("pointerdown", (e) => {
     if (e.button !== 0) return;
 
     const target = e.target;
     if (!target || !(target instanceof Element)) return;
-
     if (target.closest?.(".ds-snap-popover, .comfy-modal, .litegraph-dialog, .ds-ui-menu, input, textarea, select, button")) {
       return;
     }
 
     const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
-    lastPointerDownPos = [e.clientX, e.clientY];
-
+    const graph = app?.graph || app?.canvas?.graph;
     const vueNodeEl = target.closest?.("[data-node-id]");
+    let node = null;
     if (vueNodeEl) {
-      const rawId = vueNodeEl.dataset?.nodeId || vueNodeEl.getAttribute("data-node-id");
-      const graph = app?.graph || app?.canvas?.graph;
-      const node = graph?.getNodeById?.(rawId);
-      if (node && isNode(node)) {
-        lastPointerDownItem = node;
-        lastPointerDownIsVue = true;
-        recordNodeSelection(node.id, isMulti);
-      }
+      node = graph?.getNodeById?.(vueNodeEl.dataset?.nodeId || vueNodeEl.getAttribute("data-node-id"));
     } else {
-      lastPointerDownIsVue = false;
       const canvas = app?.canvas;
       if (canvas?.graph_mouse && canvas.graph) {
-        const mouseX = canvas.graph_mouse[0];
-        const mouseY = canvas.graph_mouse[1];
-        const node = canvas.graph.getNodeOnPos ? canvas.graph.getNodeOnPos(mouseX, mouseY) : null;
-        if (node && isNode(node)) {
-          if (isPointerNearNodeSlot(node, mouseX, mouseY)) {
-            lastPointerDownItem = null;
-          } else {
-            lastPointerDownItem = node;
-            recordNodeSelection(node.id, isMulti);
-          }
-        } else {
-          const group = canvas.graph.getGroupOnPos ? canvas.graph.getGroupOnPos(mouseX, mouseY) : null;
-          if (group && isGroup(group)) {
-            lastPointerDownItem = group;
-          } else {
-            lastPointerDownItem = null;
-          }
-        }
+        const [mouseX, mouseY] = canvas.graph_mouse;
+        node = canvas.graph.getNodeOnPos?.(mouseX, mouseY);
+        if (node && isPointerNearNodeSlot(node, mouseX, mouseY)) return;
       }
     }
 
-    if (!isMulti && !vueNodeEl && !lastPointerDownItem && target === app?.canvas?.canvas) {
+    if (node && isNode(node)) {
+      recordNodeSelection(node.id, isMulti);
+    } else if (!isMulti && target === app?.canvas?.canvas) {
       selectionHistory = [];
     }
   }, true);
 
-  // Global window pointermove handler (ensures dragging works 100% reliably in Vue nodes and Classic LiteGraph)
-  const handleGlobalPointerMove = (e) => {
-    if (!snapStore.state.enabled) return;
-    if (e && e.__ds_snap_move_handled) return;
-
+  // Bubble phase: runs after LiteGraph has processed the same pointermove.
+  window.addEventListener("pointermove", (e) => {
     const canvas = app?.canvas;
-    if (!canvas) return;
+    if (canvas?.graph) snapEngine.update(canvas, e);
+  });
 
-    // Must be dragging with primary mouse button
-    if (!e || e.buttons !== 1) {
-      if (snapEngine.dragSession || snapEngine.hasGuides()) {
-        snapEngine.onDragEnd(canvas);
-        snapEngine.onResizeEnd(canvas);
-        canvas.setDirty?.(true, true);
-      }
-      return;
-    }
-
-    // Alt-key bypass or search dialog active
-    if (e.altKey || isPlacementOrSearchActive()) {
-      if (snapEngine.hasGuides()) {
-        snapEngine.onDragEnd(canvas);
-        canvas.setDirty?.(true, true);
-      }
-      return;
-    }
-
-    // Panning canvas or drawing selection box
-    if (canvas.dragging_canvas || canvas.dragging_rectangle) {
-      if (snapEngine.hasGuides()) {
-        snapEngine.onDragEnd(canvas);
-        canvas.setDirty?.(true, true);
-      }
-      return;
-    }
-
-    // Connecting or dragging a link wire - NEVER treat as node drag!
-    const isLinkConnecting = Boolean(
-      canvas.linkConnector?.isConnecting ||
-      canvas.connecting_node != null ||
-      canvas.connecting_slot != null ||
-      Boolean(canvas.linkConnector?.renderLinks?.length)
-    );
-    if (isLinkConnecting) {
-      lastPointerDownItem = null;
-      if (snapEngine.hasGuides()) {
-        snapEngine.onDragEnd(canvas);
-        canvas.setDirty?.(true, true);
-      }
-      return;
-    }
-
-    // Resizing detection - CRITICAL: if resizing, NEVER drag!
-    const isResizing = Boolean(
-      canvas.resizing_node ||
-      canvas.pointer?.resizeDirection ||
-      canvas.resizingGroup ||
-      (canvas.selected_group && canvas.selected_group_resizing)
-    );
-
-    const resizingGroupItem =
-      (canvas.resizingGroup && isGroup(canvas.resizingGroup) ? canvas.resizingGroup : null) ||
-      (canvas.selected_group && canvas.selected_group_resizing && isGroup(canvas.selected_group) ? canvas.selected_group : null);
-
-    let resizingNodeItem = null;
-    if (isNode(canvas.resizing_node)) {
-      resizingNodeItem = canvas.resizing_node;
-    } else if (canvas.resizing_node || canvas.pointer?.resizeDirection) {
-      resizingNodeItem =
-        (canvas.current_node && isNode(canvas.current_node) ? canvas.current_node : null) ||
-        (canvas.node_over && isNode(canvas.node_over) ? canvas.node_over : null) ||
-        (lastPointerDownItem && isNode(lastPointerDownItem) ? lastPointerDownItem : null);
-    }
-
-    if (isResizing) {
-      e.__ds_snap_move_handled = true;
-      if (resizingNodeItem) {
-        snapEngine.processNodeResize(canvas, resizingNodeItem);
-      } else if (resizingGroupItem) {
-        snapEngine.processGroupResize(canvas, resizingGroupItem);
-      }
-      return;
-    }
-
-    // Require at least 4px pointer movement from pointerdown before treating as drag
-    if (lastPointerDownPos) {
-      const dist = Math.hypot(e.clientX - lastPointerDownPos[0], e.clientY - lastPointerDownPos[1]);
-      if (dist < 4) return;
-    }
-
-    // Dragged item detection (supports Classic + Vue Nodes + Groups)
-    let activeItem = null;
-
-    if (canvas.node_dragged && isNode(canvas.node_dragged) && !isPinned(canvas.node_dragged)) {
-      activeItem = canvas.node_dragged;
-    } else if (canvas.current_node && isNode(canvas.current_node) && !isPinned(canvas.current_node) && canvas.isDragging) {
-      activeItem = canvas.current_node;
-    } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (canvas.isDragging || lastPointerDownIsVue)) {
-      activeItem = lastPointerDownItem;
-    } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (canvas.isDragging || lastPointerDownIsVue)) {
-      activeItem = lastPointerDownItem;
-    }
-
-    if (activeItem && !isPinned(activeItem)) {
-      e.__ds_snap_move_handled = true;
-      snapEngine.processItemDrag(canvas, activeItem, e);
-    } else {
-      if (snapEngine.activeGuides.length > 0) {
-        snapEngine.onDragEnd(canvas);
-        canvas.setDirty?.(true, true);
-      }
-    }
+  const release = () => {
+    if (app?.canvas) snapEngine.end(app.canvas);
   };
-
-  window.addEventListener("pointermove", handleGlobalPointerMove, false);
-
-  // Pointer release handler
-  const handleGlobalPointerRelease = () => {
-    lastPointerDownItem = null;
-    lastPointerDownPos = null;
-    document.body?.classList.remove("ds-canvas-dragging");
-    if (snapEngine.dragSession || snapEngine.hasGuides() || snapEngine.resizeSession) {
-      snapEngine.onDragEnd(app?.canvas);
-      snapEngine.onResizeEnd(app?.canvas);
-      app?.canvas?.setDirty?.(true, true);
-    }
-  };
-
-  window.addEventListener("pointerup", handleGlobalPointerRelease, true);
-  window.addEventListener("mouseup", handleGlobalPointerRelease, true);
-  window.addEventListener("pointercancel", handleGlobalPointerRelease, true);
-  window.addEventListener("blur", handleGlobalPointerRelease, true);
+  window.addEventListener("pointerup", release, true);
+  window.addEventListener("pointercancel", release, true);
+  window.addEventListener("blur", release);
 }
 
-function attachCanvasDomEvents(canvas) {
-  if (!canvas || !canvas.canvas || canvas.canvas.__ds_snap_dom_hooked) return;
-  canvas.canvas.__ds_snap_dom_hooked = true;
-}
+function hookCanvasDraw(canvas) {
+  if (!canvas || canvas.__ds_snap_draw_hooked) return;
+  canvas.__ds_snap_draw_hooked = true;
 
-function hookCanvasTarget(target, label = "canvas") {
-  if (!target) return;
-  if (Object.prototype.hasOwnProperty.call(target, "__ds_snap_hooked")) return;
-  Object.defineProperty(target, "__ds_snap_hooked", { value: true, configurable: true, writable: true });
-
-  // 1. Hook Mouse Move (Node Dragging & Resizing)
-  const origProcessMouseMove = target.processMouseMove;
-  target.processMouseMove = function (e) {
-    const res = origProcessMouseMove ? origProcessMouseMove.apply(this, arguments) : undefined;
-
-    try {
-      if (e && e.__ds_snap_move_handled) return res;
-      if (e) e.__ds_snap_move_handled = true;
-
-      // Ensure active mouse drag state
-      if (!e || e.buttons === 0) {
-        if (snapEngine.dragSession || snapEngine.hasGuides()) {
-          snapEngine.onDragEnd(this);
-          snapEngine.onResizeEnd(this);
-          this.setDirty?.(true, true);
-        }
-        return res;
-      }
-
-      if (snapStore.state.enabled) {
-        // Panning canvas or drawing selection box
-        if (this.dragging_canvas || this.dragging_rectangle) {
-          if (snapEngine.hasGuides()) {
-            snapEngine.onDragEnd(this);
-            this.setDirty?.(true, true);
-          }
-          return res;
-        }
-
-        // Connecting or dragging a link wire - NEVER treat as node drag!
-        const isLinkConnecting = Boolean(
-          this.linkConnector?.isConnecting ||
-          this.connecting_node != null ||
-          this.connecting_slot != null ||
-          Boolean(this.linkConnector?.renderLinks?.length)
-        );
-        if (isLinkConnecting) {
-          lastPointerDownItem = null;
-          if (snapEngine.hasGuides()) {
-            snapEngine.onDragEnd(this);
-            this.setDirty?.(true, true);
-          }
-          return res;
-        }
-
-        // Alt-key bypass or search dialog active
-        if (e?.altKey || isPlacementOrSearchActive()) {
-          if (snapEngine.hasGuides()) {
-            snapEngine.onDragEnd(this);
-            this.setDirty?.(true, true);
-          }
-          return res;
-        }
-
-        // Detect resizing first - CRITICAL: if resizing, NEVER process as drag!
-        const isResizing = Boolean(
-          this.resizing_node ||
-          this.pointer?.resizeDirection ||
-          this.resizingGroup ||
-          (this.selected_group && this.selected_group_resizing)
-        );
-
-        const resizingGroupItem =
-          (this.resizingGroup && isGroup(this.resizingGroup) ? this.resizingGroup : null) ||
-          (this.selected_group && this.selected_group_resizing && isGroup(this.selected_group) ? this.selected_group : null);
-
-        let resizingNodeItem = null;
-        if (isNode(this.resizing_node)) {
-          resizingNodeItem = this.resizing_node;
-        } else if (this.resizing_node || this.pointer?.resizeDirection) {
-          resizingNodeItem =
-            (this.current_node && isNode(this.current_node) ? this.current_node : null) ||
-            (this.node_over && isNode(this.node_over) ? this.node_over : null) ||
-            (this.selectedItems ? Array.from(this.selectedItems).find(isNode) : null) ||
-            (this.selected_nodes ? Object.values(this.selected_nodes).find(isNode) : null) ||
-            (lastPointerDownItem && isNode(lastPointerDownItem) ? lastPointerDownItem : null);
-        }
-
-        if (isResizing) {
-          if (resizingNodeItem) {
-            snapEngine.processNodeResize(this, resizingNodeItem);
-          } else if (resizingGroupItem) {
-            snapEngine.processGroupResize(this, resizingGroupItem);
-          }
-          return res;
-        } else if (snapEngine.resizingGuides.length > 0) {
-          snapEngine.onResizeEnd(this);
-        }
-
-        // Detect active dragged item (node or group)
-        let activeItem = null;
-
-        if (this.node_dragged && isNode(this.node_dragged) && !isPinned(this.node_dragged)) {
-          activeItem = this.node_dragged;
-        } else if (this.current_node && isNode(this.current_node) && !isPinned(this.current_node) && (this.selectedItems ? this.selectedItems.has(this.current_node) : true) && this.isDragging) {
-          activeItem = this.current_node;
-        } else if (lastPointerDownItem && isNode(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (this.isDragging || lastPointerDownIsVue)) {
-          activeItem = lastPointerDownItem;
-        } else if (lastPointerDownItem && isGroup(lastPointerDownItem) && !isPinned(lastPointerDownItem) && (this.isDragging || lastPointerDownIsVue)) {
-          activeItem = lastPointerDownItem;
-        } else if (this.selected_nodes && typeof this.selected_nodes === "object") {
-          activeItem = Object.values(this.selected_nodes).find((n) => isNode(n) && !isPinned(n)) || null;
-        } else {
-          const ordered = getOrderedSelectedNodes(this).filter((n) => !isPinned(n));
-          if (ordered.length > 0) activeItem = ordered[0];
-        }
-
-        if (activeItem && !isPinned(activeItem) && (this.isDragging || e.buttons === 1)) {
-          snapEngine.processItemDrag(this, activeItem, e);
-        } else {
-          if (snapEngine.activeGuides.length > 0) {
-            snapEngine.onDragEnd(this);
-            this.setDirty?.(true, true);
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("[DS Snap] Error in processMouseMove hook:", err);
-    }
-
-    return res;
-  };
-
-  // 2. Hook Mouse Up
-  const origProcessMouseUp = target.processMouseUp;
-  target.processMouseUp = function (e) {
-    if (e && e.__ds_snap_up_handled) {
-      return origProcessMouseUp ? origProcessMouseUp.apply(this, arguments) : undefined;
-    }
-    if (e) e.__ds_snap_up_handled = true;
-
-    // Capture exact final snapped positions before LiteGraph clears drag state
-    let finalPositions = null;
-    if (
-      snapEngine.dragSession &&
-      (snapEngine.dragSession.snapDeltaX !== 0 || snapEngine.dragSession.snapDeltaY !== 0)
-    ) {
-      finalPositions = snapEngine.dragSession.records.map((r) => ({
-        item: r.item || r.node,
-        x: r.naturalX + snapEngine.dragSession.snapDeltaX,
-        y: r.naturalY + snapEngine.dragSession.snapDeltaY,
-      }));
-    }
-
-    let res;
-    try {
-      res = origProcessMouseUp ? origProcessMouseUp.apply(this, arguments) : undefined;
-    } finally {
-      if (finalPositions) {
-        // Enforce exact snapped positions across any grid snap overrides
-        for (const it of finalPositions) {
-          if (it.item && it.item.pos && !isPinned(it.item)) {
-            it.item.pos[0] = it.x;
-            it.item.pos[1] = it.y;
-            it.item.setDirtyCanvas?.(true, true);
-          }
-        }
-      }
-      snapEngine.onDragEnd(this);
-      snapEngine.onResizeEnd(this);
-      this.setDirty?.(true, true);
-    }
-    return res;
-  };
-
-  // 3. Hook onDrawForeground (Native LiteGraph foreground canvas rendering)
-  // This draws directly in graph coordinate space — perfectly synchronizing with zoom and pan!
-  const origDrawForeground = target.onDrawForeground;
-  target.onDrawForeground = function (ctx, visibleArea) {
-    const res = origDrawForeground ? origDrawForeground.apply(this, arguments) : undefined;
-    try {
-      if (snapStore.state.enabled && snapEngine.hasGuides()) {
-        snapEngine.drawGuides(ctx, this);
-      }
-    } catch (err) {
-      console.warn("[DS Snap] Error in onDrawForeground:", err);
-    }
+  const origDrawForeground = canvas.onDrawForeground;
+  canvas.onDrawForeground = function (ctx, visibleArea) {
+    const res = origDrawForeground?.apply(this, arguments);
+    snapEngine.drawGuides(ctx, this);
     return res;
   };
 }
 
-let hooksInstalled = false;
+let keyboardInstalled = false;
 
 function installCanvasHooks() {
   installGlobalPointerListeners();
+  hookCanvasDraw(app?.canvas);
 
-  const LG = window.LiteGraph || globalThis.LiteGraph;
-  if (LG?.LGraphCanvas?.prototype) {
-    hookCanvasTarget(LG.LGraphCanvas.prototype, "prototype");
-  }
-  if (app?.canvas) {
-    hookCanvasTarget(app.canvas, "app.canvas");
-    attachCanvasDomEvents(app.canvas);
-  }
-
-  // Periodic safeguard to ensure app.canvas is hooked if created asynchronously
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    if (app?.canvas) {
-      hookCanvasTarget(app.canvas, "app.canvas");
-      attachCanvasDomEvents(app.canvas);
-      if (Object.prototype.hasOwnProperty.call(app.canvas, "__ds_snap_hooked")) {
-        clearInterval(timer);
-      }
-    }
-    if (attempts > 30) clearInterval(timer);
-  }, 250);
-
-  if (!hooksInstalled) {
-    hooksInstalled = true;
+  if (!keyboardInstalled) {
+    keyboardInstalled = true;
     window.addEventListener("keydown", handleGlobalKeyDown, true);
   }
 }

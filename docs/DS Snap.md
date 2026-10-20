@@ -38,11 +38,10 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
    - Automatically persists settings to browser storage (`DS_SNAP_CONFIG_V1`).
 
 2. **Snapping & Edge Alignment Engine (`DSSnapEngine`):**
-   - True virtual natural drag trajectory tracking (`naturalX`, `naturalY`), preventing delta accumulation, sticky traps, or drag jitter.
-   - Spatial candidate search prioritizing immediate visual neighbors ($< 650\text{px}$) over distant nodes.
-   - Distance-weighted scoring formula that favors direct extreme edge alignments (Top-to-Top, Bottom-to-Bottom, Left-to-Left, Right-to-Right) and exact margin spacing over distant centerlines.
-   - Clean breakout threshold ensuring fluid movement without sticky traps or resistance.
-   - Mouse release commitment: firmly retains the exact snapped position on pointer release, preventing grid-snap drift or displacement.
+   - Runs after LiteGraph's own move/resize on every pointer move. The natural position is the current one minus the last applied snap offset, so snapping never accumulates, sticks, or drifts.
+   - Picks the single closest edge, center, gap, or size match within the threshold. Ties go to the item nearest on the other axis.
+   - The threshold is in screen pixels, so snapping feels the same at every zoom level.
+   - Only nodes and groups currently in view are snap targets.
 
 3. **Native Foreground Rendering (`onDrawForeground`):**
    - Renders visual guide lines scoped directly between the aligned nodes with extreme edge ticks and high-contrast pill badges directly on the LiteGraph canvas foreground in graph coordinate space.
@@ -53,35 +52,30 @@ Unlike ad-hoc alignment scripts that pollute the DOM with overlapping canvases o
 
 ## 3. Features & Capabilities
 
-### Intelligent Magnetic Alignment (Nodes & Groups)
-- **Universal Graph Item Support:** Full alignment and magnetic snapping for both individual nodes and workflow group boxes (`LGraphGroup`).
-- **Group-to-Group & Group-to-Node Snapping:** Dragging a group aligns with other groups or nearby nodes; dragging a node aligns with neighboring nodes or group boundaries.
-- **Lockstep Child Node Movement:** When dragging a group, all internal nodes move synchronously with the group's exact snapped positions, preventing drift or displacement.
-- **Edge Snapping:** Top-to-top, bottom-to-bottom, left-to-left, and right-to-right alignment with primary scoring priority.
-- **Extreme Edge Flush Snapping:** Bottom-to-top and right-to-left touching edge alignment.
-- **Center Alignment:** Center-X and Center-Y alignment with lower priority when competing with edge alignments.
-- **True Visual Bounds:** Computes the exact rendered visual rectangle dynamically (`getItemVisualBoundsAt`), factoring in title bar height, headers, collapsed states, and group bounding boxes without reading stale cached bounds.
-- **Bounding Box Distance Scaling:** Uses true spatial gap calculations (`getBoundingBoxDistance`), allowing massive group boxes (e.g. 1000px+) to cleanly snap side-by-side or stacked without distance cutoff issues.
-- **Scoped Guidelines:** Guidelines connect directly from the moving item to the target candidate with extreme-edge tick marks instead of infinite canvas lines.
-- **Alt Key Bypass:** Holding `Alt` (or `Option` on macOS) while dragging completely silences snapping for 100% freeform placement.
-- **Dialog & Ghost Protection:** Automatically suppresses snapping when search dialogs (`.lgraph-search-box`, `.comfy-vue-search-box`) or ghost placement nodes are active.
+### Magnetic Alignment (Nodes & Groups)
+- Moving a node, group, or multi-selection snaps the selection's bounding box to visible nodes and groups.
+- **Edges:** left/right/top/bottom to the same edge, or flush against the opposite edge of an item beside it.
+- **Centers:** center-to-center (toggle `alignCenters`).
+- **Group contents:** a dragged group carries its children; with Ctrl/Cmd held only the group moves, matching ComfyUI.
+- **Bounds:** node rects include the title bar and use the drawn width for collapsed nodes, same as LiteGraph.
+- **Guides:** a dashed line is drawn along the aligned edge from the moving item to the nearest item on that line, with ticks at both items.
+- **Alt Key Bypass:** Hold `Alt` (or `Option` on macOS) while dragging or resizing to disable snapping.
 
 ### Minimum Margin & Gap Spacing
-- Enforces consistent gap spacing between adjacent nodes and groups (default `20px`, adjustable via popover).
-- Guides indicate exact gap distances with dynamic label badges (e.g., `20PX GAP`).
+- Snaps to the configured gap (default `20px`) between items that sit side by side or stacked.
+- Shows a measurement bar between the two facing edges with the gap value.
 
 ### Multi-Node Arrangement
 - **Arrange in Row:** Organizes selected nodes into a tidy horizontal sequence with uniform spacing, aligned along their top edges.
 - **Arrange in Column:** Organizes selected nodes into a clean vertical stack with uniform spacing, aligned along their left edges.
 - **Anchor Node Preservation:** The node selected first serves as the immovable anchor. Subsequent nodes align relative to it without shifting the workflow position.
 
-### Intelligent Resize Snapping & Alignment
-- **Edge Alignment During Resize:** When dragging the resize corner of a node or group:
-  - **Right Edge Align:** Snaps the right edge to match the right edge, left edge, or margin gap of neighboring nodes or groups.
-  - **Bottom Edge Align:** Snaps the bottom edge to match the bottom edge, top edge, or margin gap of neighboring nodes or groups.
-- **Dimension Matching:** Automatically detects and snaps to matching widths and heights of other workflow items.
-- **Visual Resize Guidelines:** Displays scoped horizontal and vertical guidelines with extreme edge tick marks and dynamic badge labels (e.g., `RIGHT ALIGN`, `BOTTOM ALIGN`, `WIDTH 320PX`, `HEIGHT 180PX`).
-- **Release Commitment:** Firmly locks and commits the snapped dimensions on pointer release, ensuring no native resize jitter or position reversion.
+### Resize Snapping
+- Works from any node resize corner (NE, SE, SW, NW) and the group resize corner. Only the edges being dragged snap.
+- **Horizontal resize:** the moving left/right edge snaps to the edges of visible items and shows a vertical guide, so a node can be made the same width as the node above or below it.
+- **Vertical resize:** the moving top/bottom edge snaps to the edges of visible items and shows a horizontal guide, so heights can be matched with neighbours.
+- **Size match:** also snaps to the exact width/height of another item and shows `W 320` / `H 180` bars on both items.
+- Snaps that would shrink an item below its minimum size are skipped. Resizing a group can snap to the nodes inside it.
 
 ### Dimension Measurement & Matching
 - **Measure Node:** Captures the exact width and height of any primary selected node.
