@@ -4,6 +4,12 @@
  * Theme consistency via DS UI CSS variables.
  */
 
+/**
+ * DeathshotArsenal — DS Image Save Advance Stylesheet
+ * Strictly PRD compliant: Node Base (5px) -> Card -> UI (10px padding).
+ * Theme consistency via DS UI CSS variables.
+ */
+
 /* ComfyUI's positioning wrapper around the DOM widget */
 .dom-widget:has(> .ds-isa-card) {
   pointer-events: none !important;
@@ -85,52 +91,6 @@
   flex: 0 0 auto;
 }
 
-.ds-isa-collapse-btn {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-color-panel-2, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
-  color: var(--ds-color-muted-text, #9ca3af);
-  cursor: pointer;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-collapse-btn:hover {
-  background: var(--ds-btn-hover, #1e2433);
-  color: var(--ds-color-text, #ffffff);
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-.ds-isa-delete-btn {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-color-panel-2, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
-  color: var(--ds-color-muted-text, #9ca3af);
-  cursor: pointer;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.6);
-  color: #ef4444;
-}
-
-.ds-isa-delete-btn:active {
-  transform: scale(0.92);
-}
-
 .ds-isa-collapse-btn svg {
   transition: transform var(--ds-transition, 150ms ease);
 }
@@ -169,97 +129,12 @@
   user-select: none;
 }
 
-.ds-isa-input-row {
-  display: flex;
-  align-items: center;
-  gap: var(--ds-gap-xs, 4px);
-  min-width: 0;
-}
-
-.ds-isa-input {
-  box-sizing: border-box;
-  width: 100%;
-  height: var(--ds-control-h-compact, 24px);
-  min-width: 0;
-  padding: 0 8px;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  outline: none;
-  background: var(--ds-input-bg, #161a23);
-  color: var(--ds-color-text, #e5e7eb);
-  font: 10px var(--ds-font, Inter, sans-serif);
-  transition: border-color var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-input:focus {
-  border-color: var(--ds-color-accent, #67e8f9);
-  box-shadow: 0 0 0 1px var(--ds-color-focus-ring, rgba(103, 232, 249, 0.25));
-}
-
-.ds-isa-browse-btn {
-  height: var(--ds-control-h-compact, 24px);
-  min-width: 60px;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-btn-bg, #161a23);
-  color: var(--ds-color-text, #e5e7eb);
-  font: 700 9px var(--ds-font, Inter, sans-serif);
-  cursor: pointer;
-  white-space: nowrap;
-  flex: 0 0 auto;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-browse-btn:hover {
-  background: var(--ds-btn-hover, #1e2433);
-  border-color: var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-accent, #67e8f9);
-}
-
 /* Insert Tokens Grid */
 .ds-isa-inserts {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 3px;
   flex: 0 0 auto;
-}
-
-.ds-isa-insert-btn {
-  height: 22px;
-  min-width: 0;
-  padding: 0 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 4px);
-  background: var(--ds-btn-bg, #161a23);
-  color: var(--ds-color-muted-text, #9ca3af);
-  font: 700 8px var(--ds-font, Inter, sans-serif);
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-insert-btn:hover {
-  background: var(--ds-btn-hover, #1e2433);
-  border-color: var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-accent, #67e8f9);
-}
-
-.ds-isa-insert-btn.ds-isa-insert-clear {
-  color: var(--ds-color-danger, #f87171);
-}
-
-.ds-isa-insert-btn.ds-isa-insert-clear:hover {
-  border-color: var(--ds-color-danger, #f87171);
-  background: color-mix(in srgb, var(--ds-color-danger, #f87171) 15%, var(--ds-btn-bg, #161a23));
 }
 
 /* Status Line */
@@ -285,45 +160,8 @@
   flex: 0 0 auto;
 }
 
-.ds-isa-action-btn {
-  height: var(--ds-control-h-compact, 24px);
-  min-width: 0;
-  padding: 0 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-btn-bg, #161a23);
-  color: var(--ds-color-text, #e5e7eb);
-  font: 700 8.5px var(--ds-font, Inter, sans-serif);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-action-btn:hover {
-  background: var(--ds-btn-hover, #1e2433);
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-.ds-isa-action-btn.is-active {
-  border-color: var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-on-accent, #0a0c10);
-  background: var(--ds-color-accent, #67e8f9);
-  font-weight: 800;
-}
-
-.ds-isa-action-btn svg {
-  width: 12px;
-  height: 12px;
-  flex: 0 0 auto;
-  stroke: currentColor;
-  fill: none;
-}
-
-/* Preview Box (OUTSIDE collapsible config, grows to fill remaining height) */
+/* Preview Box (OUTSIDE collapsible config,
+grows to fill remaining height) */
 .ds-isa-preview {
   position: relative;
   box-sizing: border-box;
@@ -444,26 +282,6 @@
   color: var(--ds-color-muted-text, #9ca3af);
 }
 
-.ds-isa-popup-close {
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  background: transparent;
-  color: var(--ds-color-muted-text, #9ca3af);
-  cursor: pointer;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-popup-close:hover {
-  background: var(--ds-btn-hover, #1e2433);
-  color: var(--ds-color-text, #ffffff);
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
 .ds-isa-popup-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -489,48 +307,7 @@
 }
 
 .ds-isa-seg-group {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  padding: 3px;
-  background: var(--ds-color-panel-2, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-}
-
-.ds-isa-seg-btn {
-  height: 24px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ds-color-muted-text, #9ca3af);
-  font: 700 8.5px var(--ds-font, Inter, sans-serif);
-  cursor: pointer;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-seg-btn.is-active {
-  background: var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-on-accent, #0a0c10);
-}
-
-.ds-isa-slider-block {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ds-isa-slider-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 9px;
-  color: var(--ds-color-text, #e5e7eb);
-}
-
-.ds-isa-slider-head b {
-  font-variant-numeric: tabular-nums;
-  color: var(--ds-color-accent, #67e8f9);
 }
 
 .ds-isa-popup-foot {
@@ -541,77 +318,6 @@
   border-top: 1px solid var(--ds-color-border, #242a36);
   background: var(--ds-color-panel-2, #161a23);
   flex: 0 0 auto;
-}
-
-.ds-isa-foot-btn {
-  height: 28px;
-  flex: 1 1 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-btn-bg, #161a23);
-  color: var(--ds-color-text, #e5e7eb);
-  font: 700 9px var(--ds-font, Inter, sans-serif);
-  cursor: pointer;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-foot-btn:hover {
-  border-color: var(--ds-color-accent, #67e8f9);
-  background: var(--ds-btn-hover, #1e2433);
-}
-
-.ds-isa-foot-btn.ds-isa-btn-primary {
-  background: var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-on-accent, #0a0c10);
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-.ds-isa-foot-btn.ds-isa-btn-primary:hover {
-  filter: brightness(1.1);
-}
-
-/* Output Folder Browser Modal */
-.ds-isa-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 100000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.72);
-}
-
-.ds-isa-browser {
-  width: min(480px, 92vw);
-  max-height: 75vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--ds-color-card, #12151c);
-  border: 1px solid var(--ds-color-card-border, #242a36);
-  border-radius: var(--ds-radius-popup, 8px);
-  color: var(--ds-color-text, #e5e7eb);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-}
-
-.ds-isa-browser-head {
-  height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--ds-color-border, #242a36);
-  background: var(--ds-color-panel-2, #161a23);
-  flex: 0 0 auto;
-}
-
-.ds-isa-browser-title {
-  flex: 1 1 auto;
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .ds-isa-browser-path {
@@ -634,24 +340,7 @@
 
 .ds-isa-dir {
   width: 100%;
-  min-height: 28px;
-  border: 0;
-  border-radius: var(--ds-radius-control, 4px);
-  background: transparent;
-  color: var(--ds-color-text, #e5e7eb);
-  text-align: left;
-  padding: 0 8px;
-  cursor: pointer;
-  font-size: 9.5px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: background var(--ds-transition, 120ms ease);
-}
-
-.ds-isa-dir:hover {
-  background: var(--ds-btn-hover, #1e2433);
-  color: var(--ds-color-accent, #67e8f9);
+  justify-content: flex-start;
 }
 
 .ds-isa-no-dirs {
@@ -661,11 +350,6 @@
   font-size: 9px;
 }
 
-.ds-isa-browser-foot {
-  display: flex;
-  gap: 6px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--ds-color-border, #242a36);
-  background: var(--ds-color-panel-2, #161a23);
-  flex: 0 0 auto;
+.ds-isa-seg-group > .ds-ui-btn {
+  flex: 1 1 0;
 }

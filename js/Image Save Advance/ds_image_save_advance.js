@@ -6,7 +6,10 @@ import {
   protectDSResizeCorners,
   Toggle,
   Slider,
-  DSIcon,
+  Button,
+  Input,
+  InputRow,
+  Modal,
 } from "../UIElements/index.js";
 
 const TYPE = "DS_ImageSaveAdvance";
@@ -53,6 +56,13 @@ const INSERTS = [
   ["{date_folder}/", "+ Date folder"],
   ["{input_folder}/", "+ Input folder"],
 ];
+
+// Shared DS button that keeps its press away from the canvas.
+function btn(options) {
+  const b = Button(options);
+  b.root.addEventListener("pointerdown", stop);
+  return b;
+}
 
 function stop(e) {
   e?.stopPropagation?.();
@@ -258,16 +268,16 @@ function openSettings(node) {
     </div>
   `;
 
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "ds-isa-popup-close";
-  closeBtn.title = "Close";
-  closeBtn.appendChild(DSIcon("x", { size: 14 }));
-  closeBtn.addEventListener("click", (e) => {
-    stop(e);
-    closeSettingsPopup(node.id);
+  const closeBtn = btn({
+    icon: "x",
+    compact: true,
+    tooltip: "Close",
+    onClick: (e) => {
+      stop(e);
+      closeSettingsPopup(node.id);
+    },
   });
-  head.appendChild(closeBtn);
+  head.appendChild(closeBtn.root);
   popup.appendChild(head);
 
   // Popup Body
@@ -284,23 +294,19 @@ function openSettings(node) {
   dateSec.appendChild(dateLabel);
 
   const segGroup = document.createElement("div");
-  segGroup.className = "ds-isa-seg-group";
-  const dateFormats = ["yyyy-MM-dd", "dd-MM-yyyy", "MM-dd-yyyy"];
-  dateFormats.forEach((fmt) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `ds-isa-seg-btn${s.date_style === fmt ? " is-active" : ""}`;
-    btn.textContent = fmt;
-    btn.addEventListener("click", (e) => {
+  segGroup.className = "ds-ui-btn-group ds-isa-seg-group";
+  const dateBtns = ["yyyy-MM-dd", "dd-MM-yyyy", "MM-dd-yyyy"].map((fmt) => btn({
+    label: fmt,
+    active: s.date_style === fmt,
+    onClick: (e, b) => {
       stop(e);
       s.date_style = fmt;
-      segGroup.querySelectorAll(".ds-isa-seg-btn").forEach((b) => b.classList.remove("is-active"));
-      btn.classList.add("is-active");
+      dateBtns.forEach((other) => other.setActive(other === b));
       persist(node);
       render(node);
-    });
-    segGroup.appendChild(btn);
-  });
+    },
+  }));
+  segGroup.append(...dateBtns.map((b) => b.root));
   dateSec.appendChild(segGroup);
 
   const counterSlider = Slider({
@@ -392,29 +398,26 @@ function openSettings(node) {
   const foot = document.createElement("div");
   foot.className = "ds-isa-popup-foot";
 
-  const resetBtn = document.createElement("button");
-  resetBtn.type = "button";
-  resetBtn.className = "ds-isa-foot-btn";
-  resetBtn.textContent = "Reset to Defaults";
-  resetBtn.addEventListener("click", (e) => {
-    stop(e);
-    Object.assign(state(node), DEFAULT_STATE);
-    persist(node);
-    render(node);
-    closeSettingsPopup(node.id);
-    openSettings(node);
+  const resetBtn = btn({
+    label: "Reset to Defaults",
+    onClick: (e) => {
+      stop(e);
+      Object.assign(state(node), DEFAULT_STATE);
+      persist(node);
+      render(node);
+      closeSettingsPopup(node.id);
+      openSettings(node);
+    },
   });
-
-  const doneBtn = document.createElement("button");
-  doneBtn.type = "button";
-  doneBtn.className = "ds-isa-foot-btn ds-isa-btn-primary";
-  doneBtn.textContent = "Done";
-  doneBtn.addEventListener("click", (e) => {
-    stop(e);
-    closeSettingsPopup(node.id);
+  const doneBtn = btn({
+    label: "Done",
+    variant: "primary",
+    onClick: (e) => {
+      stop(e);
+      closeSettingsPopup(node.id);
+    },
   });
-
-  foot.append(resetBtn, doneBtn);
+  foot.append(resetBtn.root, doneBtn.root);
   popup.appendChild(foot);
 
   positionSettingsPopup(node, popup);
@@ -635,29 +638,27 @@ function buildCard(node) {
   const rightGroup = document.createElement("div");
   rightGroup.className = "ds-isa-header-actions";
 
-  const deleteBtn = document.createElement("button");
-  deleteBtn.type = "button";
-  deleteBtn.className = "ds-isa-delete-btn";
-  deleteBtn.title = "Delete last saved image";
-  deleteBtn.appendChild(DSIcon("trash-2", { size: 13 }));
-  deleteBtn.addEventListener("pointerdown", stop);
-  deleteBtn.addEventListener("click", (e) => {
-    stop(e);
-    deleteLast(node);
+  const deleteBtn = btn({
+    icon: "trash-2",
+    compact: true,
+    tooltip: "Delete last saved image",
+    className: "ds-isa-delete-btn",
+    onClick: (e) => {
+      stop(e);
+      deleteLast(node);
+    },
   });
-
-  const collapseBtn = document.createElement("button");
-  collapseBtn.type = "button";
-  collapseBtn.className = "ds-isa-collapse-btn";
-  collapseBtn.title = "Expand / Collapse Settings";
-  collapseBtn.appendChild(DSIcon("chevron-down", { size: 14 }));
-  collapseBtn.addEventListener("pointerdown", stop);
-  collapseBtn.addEventListener("click", (e) => {
-    stop(e);
-    toggleCollapse(node);
+  const collapseBtn = btn({
+    icon: "chevron-down",
+    compact: true,
+    tooltip: "Expand / Collapse Settings",
+    className: "ds-isa-collapse-btn",
+    onClick: (e) => {
+      stop(e);
+      toggleCollapse(node);
+    },
   });
-
-  rightGroup.append(deleteBtn, collapseBtn);
+  rightGroup.append(deleteBtn.root, collapseBtn.root);
   header.append(leftGroup, rightGroup);
   card.appendChild(header);
 
@@ -673,12 +674,18 @@ function buildCard(node) {
   folderLabel.className = "ds-isa-label";
   folderLabel.textContent = "Output Folder";
 
-  const folderRow = document.createElement("div");
-  folderRow.className = "ds-isa-input-row";
-
-  const dirInput = document.createElement("input");
-  dirInput.className = "ds-isa-input";
-  dirInput.placeholder = "ComfyUI output folder...";
+  const folderRow = InputRow({
+    placeholder: "ComfyUI output folder...",
+    actions: [btn({
+      label: "Browse",
+      compact: true,
+      onClick: (e) => {
+        stop(e);
+        showBrowser(node);
+      },
+    })],
+  });
+  const dirInput = folderRow.input;
   const cleanDirInput = () => {
     let val = dirInput.value.trim();
     while (
@@ -703,18 +710,7 @@ function buildCard(node) {
   dirInput.addEventListener("change", cleanDirInput);
   dirInput.addEventListener("paste", () => setTimeout(cleanDirInput, 0));
 
-  const browseBtn = document.createElement("button");
-  browseBtn.type = "button";
-  browseBtn.className = "ds-isa-browse-btn";
-  browseBtn.textContent = "Browse";
-  browseBtn.addEventListener("pointerdown", stop);
-  browseBtn.addEventListener("click", (e) => {
-    stop(e);
-    showBrowser(node);
-  });
-
-  folderRow.append(dirInput, browseBtn);
-  folderGroup.append(folderLabel, folderRow);
+  folderGroup.append(folderLabel, folderRow.root);
   configSec.appendChild(folderGroup);
 
   // Image name row
@@ -724,13 +720,13 @@ function buildCard(node) {
   nameLabel.className = "ds-isa-label";
   nameLabel.textContent = "Image Name";
 
-  const nameInput = document.createElement("input");
-  nameInput.className = "ds-isa-input";
-  nameInput.placeholder = "image";
-  nameInput.addEventListener("input", () => {
-    state(node).input_name = nameInput.value;
-    persist(node);
-  });
+  const nameInput = Input({
+    placeholder: "image",
+    onInput: (val) => {
+      state(node).input_name = val;
+      persist(node);
+    },
+  }).root;
 
   nameGroup.append(nameLabel, nameInput);
   configSec.appendChild(nameGroup);
@@ -742,13 +738,13 @@ function buildCard(node) {
   templateLabel.className = "ds-isa-label";
   templateLabel.textContent = "Filename Template";
 
-  const templateInput = document.createElement("input");
-  templateInput.className = "ds-isa-input";
-  templateInput.placeholder = "{input_name}_{date}_{time}_{counter}";
-  templateInput.addEventListener("input", () => {
-    state(node).template = templateInput.value;
-    persist(node);
-  });
+  const templateInput = Input({
+    placeholder: "{input_name}_{date}_{time}_{counter}",
+    onInput: (val) => {
+      state(node).template = val;
+      persist(node);
+    },
+  }).root;
 
   templateGroup.append(templateLabel, templateInput);
   configSec.appendChild(templateGroup);
@@ -757,45 +753,28 @@ function buildCard(node) {
   const insertsWrap = document.createElement("div");
   insertsWrap.className = "ds-isa-inserts";
 
-  INSERTS.forEach(([token, label]) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "ds-isa-insert-btn";
-    chip.textContent = label;
-    chip.title = token;
-    chip.addEventListener("pointerdown", stop);
-    chip.addEventListener("click", (e) => {
+  const chip = (label, tooltip, onClick) => btn({
+    label,
+    tooltip,
+    compact: true,
+    onClick: (e) => {
       stop(e);
-      insertToken(node, token);
-    });
-    insertsWrap.appendChild(chip);
+      onClick();
+    },
+  }).root;
+  INSERTS.forEach(([token, label]) => {
+    insertsWrap.appendChild(chip(label, token, () => insertToken(node, token)));
   });
-
-  const clearBtn = document.createElement("button");
-  clearBtn.type = "button";
-  clearBtn.className = "ds-isa-insert-btn ds-isa-insert-clear";
-  clearBtn.textContent = "Clear";
-  clearBtn.addEventListener("pointerdown", stop);
-  clearBtn.addEventListener("click", (e) => {
-    stop(e);
+  insertsWrap.appendChild(chip("Clear", "Clear template", () => {
     state(node).template = "";
     persist(node);
     render(node);
-  });
-  insertsWrap.appendChild(clearBtn);
-
-  const resetBtn = document.createElement("button");
-  resetBtn.type = "button";
-  resetBtn.className = "ds-isa-insert-btn";
-  resetBtn.textContent = "Reset";
-  resetBtn.addEventListener("pointerdown", stop);
-  resetBtn.addEventListener("click", (e) => {
-    stop(e);
+  }));
+  insertsWrap.appendChild(chip("Reset", "Reset template", () => {
     state(node).template = DEFAULT_STATE.template;
     persist(node);
     render(node);
-  });
-  insertsWrap.appendChild(resetBtn);
+  }));
 
   configSec.appendChild(insertsWrap);
   card.appendChild(configSec);
@@ -810,52 +789,22 @@ function buildCard(node) {
   const actionsRow = document.createElement("div");
   actionsRow.className = "ds-isa-actions";
 
-  const openBtn = document.createElement("button");
-  openBtn.type = "button";
-  openBtn.className = "ds-isa-action-btn";
-  openBtn.appendChild(DSIcon("external-link", { size: 12 }));
-  openBtn.append("Open");
-  openBtn.addEventListener("pointerdown", stop);
-  openBtn.addEventListener("click", (e) => {
-    stop(e);
-    openLast(node);
-  });
-
-  const copyBtn = document.createElement("button");
-  copyBtn.type = "button";
-  copyBtn.className = "ds-isa-action-btn";
-  copyBtn.appendChild(DSIcon("copy", { size: 12 }));
-  copyBtn.append("Copy");
-  copyBtn.addEventListener("pointerdown", stop);
-  copyBtn.addEventListener("click", (e) => {
-    stop(e);
-    copyLast(node);
-  });
-
-  const folderBtn = document.createElement("button");
-  folderBtn.type = "button";
-  folderBtn.className = "ds-isa-action-btn";
-  folderBtn.appendChild(DSIcon("folder", { size: 12 }));
-  folderBtn.append("Folder");
-  folderBtn.addEventListener("pointerdown", stop);
-  folderBtn.addEventListener("click", (e) => {
-    stop(e);
-    openFolder(node);
-  });
-
-  actionsRow.append(openBtn, copyBtn, folderBtn);
-
-  ["png", "jpg", "webp"].forEach((fmt) => {
-    const fmtBtn = document.createElement("button");
-    fmtBtn.type = "button";
-    fmtBtn.className = "ds-isa-action-btn";
-    fmtBtn.dataset.format = fmt;
-    fmtBtn.textContent = fmt.toUpperCase();
-    fmtBtn.addEventListener("pointerdown", stop);
-    fmtBtn.addEventListener("click", (e) => {
+  const action = (options, onClick) => btn({
+    ...options,
+    compact: true,
+    onClick: (e) => {
       stop(e);
-      saveManual(node, fmt);
-    });
+      onClick();
+    },
+  }).root;
+  actionsRow.append(
+    action({ icon: "external-link", label: "Open" }, () => openLast(node)),
+    action({ icon: "copy", label: "Copy" }, () => copyLast(node)),
+    action({ icon: "folder", label: "Folder" }, () => openFolder(node)),
+  );
+  ["png", "jpg", "webp"].forEach((fmt) => {
+    const fmtBtn = action({ label: fmt.toUpperCase() }, () => saveManual(node, fmt));
+    fmtBtn.dataset.format = fmt;
     actionsRow.appendChild(fmtBtn);
   });
 
@@ -977,35 +926,15 @@ function updatePreview(node) {
 }
 
 async function showBrowser(node) {
-  const modal = document.createElement("div");
-  modal.className = "ds-isa-modal";
-  modal.addEventListener("pointerdown", (e) => {
-    if (e.target === modal) modal.remove();
-    else stop(e);
-  });
+  const modal = Modal({ title: "Browse Output Folders", icon: "folder", width: 420 });
+  modal.root.addEventListener("pointerdown", stop);
 
-  const box = document.createElement("div");
-  box.className = "ds-isa-browser";
-  box.innerHTML = `
-    <div class="ds-isa-browser-head">
-      <div class="ds-isa-browser-title">Browse Output Folders</div>
-      <button class="ds-isa-popup-close" data-close title="Close"></button>
-    </div>
-    <div class="ds-isa-browser-path" data-path></div>
-    <div class="ds-isa-dirlist" data-list></div>
-    <div class="ds-isa-browser-foot">
-      <button class="ds-isa-foot-btn" data-up>↑ Up</button>
-      <button class="ds-isa-foot-btn ds-isa-btn-primary" data-select>Select This Folder</button>
-    </div>
-  `;
-  modal.appendChild(box);
-  document.body.appendChild(modal);
+  const pathEl = document.createElement("div");
+  pathEl.className = "ds-isa-browser-path";
+  const list = document.createElement("div");
+  list.className = "ds-isa-dirlist";
+  modal.body.append(pathEl, list);
 
-  const closeBtn = box.querySelector("[data-close]");
-  closeBtn.appendChild(DSIcon("x", { size: 14 }));
-
-  const pathEl = box.querySelector("[data-path]");
-  const list = box.querySelector("[data-list]");
   let current = node.dirInput?.value || "";
 
   const load = async () => {
@@ -1018,52 +947,60 @@ async function showBrowser(node) {
       const d = await r.json();
       current = d.current || current;
       pathEl.textContent = current;
-      list.innerHTML = "";
+      list.replaceChildren();
       for (const name of d.dirs || []) {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "ds-isa-dir";
-        b.textContent = `📁 ${name}`;
-        b.addEventListener("pointerdown", stop);
-        b.addEventListener("click", (e) => {
-          stop(e);
-          current = `${current.replace(/[\\/]$/, "")}/${name}`;
-          load();
-        });
-        list.appendChild(b);
+        list.appendChild(btn({
+          icon: "folder",
+          label: name,
+          variant: "ghost",
+          className: "ds-isa-dir",
+          onClick: (e) => {
+            stop(e);
+            current = `${current.replace(/[\\/]$/, "")}/${name}`;
+            load();
+          },
+        }).root);
       }
       if (!(d.dirs || []).length) {
-        list.innerHTML = `<div class="ds-isa-no-dirs">No subfolders found</div>`;
+        const empty = document.createElement("div");
+        empty.className = "ds-isa-no-dirs";
+        empty.textContent = "No subfolders found";
+        list.appendChild(empty);
       }
     } catch (e) {
       console.warn("[DS Image Save Advance] browse failed:", e);
     }
   };
 
-  closeBtn.addEventListener("pointerdown", stop);
-  closeBtn.addEventListener("click", (e) => {
-    stop(e);
-    modal.remove();
-  });
+  const spacer = document.createElement("span");
+  spacer.style.flex = "1";
+  modal.footer.append(
+    btn({
+      icon: "chevron-up",
+      label: "Up",
+      onClick: (e) => {
+        stop(e);
+        const p = current.replace(/[\\/]$/, "");
+        const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+        current = i > 1 ? p.slice(0, i) : "";
+        load();
+      },
+    }).root,
+    spacer,
+    btn({
+      label: "Select This Folder",
+      variant: "primary",
+      onClick: (e) => {
+        stop(e);
+        state(node).save_dir = current;
+        persist(node);
+        render(node);
+        modal.close();
+      },
+    }).root,
+  );
 
-  box.querySelector("[data-up]").addEventListener("pointerdown", stop);
-  box.querySelector("[data-up]").addEventListener("click", (e) => {
-    stop(e);
-    const p = current.replace(/[\\/]$/, "");
-    const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
-    current = i > 1 ? p.slice(0, i) : "";
-    load();
-  });
-
-  box.querySelector("[data-select]").addEventListener("pointerdown", stop);
-  box.querySelector("[data-select]").addEventListener("click", (e) => {
-    stop(e);
-    state(node).save_dir = current;
-    persist(node);
-    render(node);
-    modal.remove();
-  });
-
+  modal.open();
   load();
 }
 

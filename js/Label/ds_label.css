@@ -1,0 +1,50 @@
+/* DS Label editor — layout and the live preview stage. Controls come from the shared DS UI. */
+
+.ds-label-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  max-height: 260px;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  background: repeating-conic-gradient(
+    color-mix(in srgb, var(--ds-color-text, #e5e7eb) 6%, transparent) 0% 25%,
+    transparent 0% 50%
+  ) 50% / 16px 16px;
+}
+
+.ds-label-preview {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.ds-label-stage-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 4px;
+  font-size: 9px;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+.ds-label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-sm, 6px);
+}
+
+.ds-label-row > .ds-ui-dropdown {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ds-label-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ds-gap-sm, 6px);
+}
