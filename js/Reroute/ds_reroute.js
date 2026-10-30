@@ -40,11 +40,9 @@ function registerDSRerouteNodeType() {
       this.hideSlotLabels = true;
       this.resizable = true;
 
-      // Rounded container shape with Deathshot theme colors
+      // Rounded container shape; colors come from the global DS theme
       this.shape = LiteGraph.ROUND_SHAPE;
-      this.color = "#161a23";
-      this.bgcolor = "#0e1016";
-      this.boxcolor = "rgba(255, 255, 255, 0.14)";
+      window.DSGlobalTheme?.applyNodeBase(this);
 
       this.flags = {
         no_title: true,

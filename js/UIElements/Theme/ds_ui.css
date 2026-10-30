@@ -6,8 +6,7 @@
 /* ========================================================================= */
 /* 1. Base Variables & Shell Scoping                                         */
 /* ========================================================================= */
-:root,
-[data-ds-themed="true"] {
+:root {
   --ds-color-base: var(--ds-bg, #0b0d12);
   --ds-color-card: var(--ds-panel, #12151c);
   --ds-color-card-border: var(--ds-border, #242a36);
@@ -216,6 +215,112 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
 }
 
 /* ========================================================================= */
+/* 2.1 Core: Modal                                                           */
+/* ========================================================================= */
+.ds-ui-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--ds-color-base, #0b0d12) 70%, transparent);
+}
+
+.ds-ui-modal {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: 100%;
+  background: var(--ds-color-base, #0b0d12);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-popup, 8px);
+  box-shadow: var(--ds-shadow, 0 8px 24px rgba(0, 0, 0, 0.6));
+  color: var(--ds-color-text, #e5e7eb);
+  font-family: var(--ds-font);
+  overflow: hidden;
+}
+
+.ds-ui-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-gap-md, 8px);
+  padding: var(--ds-gap-lg, 12px) var(--ds-gap-lg, 12px) var(--ds-gap-lg, 12px) var(--ds-gap-xl, 16px);
+  border-bottom: 1px solid var(--ds-color-border, #242a36);
+}
+
+.ds-ui-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-md, 8px);
+  min-width: 0;
+}
+
+.ds-ui-modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--ds-radius-control, 5px);
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 15%, transparent);
+  color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-ui-modal-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ds-ui-modal-subtitle {
+  font-size: 10px;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+.ds-ui-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-gap-md, 8px);
+  min-height: 0;
+  padding: var(--ds-gap-lg, 12px);
+  overflow-y: auto;
+}
+
+.ds-ui-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-gap-sm, 6px);
+  padding: var(--ds-gap-md, 8px) var(--ds-gap-lg, 12px);
+  border-top: 1px solid var(--ds-color-border, #242a36);
+}
+
+.ds-ui-modal-foot:empty {
+  display: none;
+}
+
+/* Grouped icon/text buttons that read as one control (B/I/U, alignment). */
+.ds-ui-btn-group {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.ds-ui-btn-group > .ds-ui-btn:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+
+.ds-ui-btn-group > .ds-ui-btn:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* ========================================================================= */
 /* 3. Controls: Button                                                       */
 /* ========================================================================= */
 .ds-ui-btn {
@@ -315,6 +420,17 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
   color: var(--ds-color-on-accent, #0a0c10);
 }
 
+/* Ghost: list rows and quiet toolbar actions; no fill or border until hovered. */
+.ds-ui-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.ds-ui-btn-ghost:hover {
+  background: var(--ds-btn-hover, #1e2433);
+  border-color: transparent;
+}
+
 .ds-ui-btn-compact {
   height: var(--ds-btn-height-compact, 22px);
   padding: 0 6px;
@@ -386,6 +502,94 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
 .ds-ui-input:focus-visible {
   border-color: var(--ds-color-accent, #67e8f9);
   box-shadow: 0 0 0 2px var(--ds-color-focus-ring, rgba(103, 232, 249, 0.25));
+}
+
+/* ========================================================================= */
+/* 3.2 Controls: Input Row (boxed label + bare input + compact actions)      */
+/* Also used as a box for Toggle rows: Toggle({ className: "ds-ui-input-row" }) */
+/* ========================================================================= */
+.ds-ui-input-row {
+  --ds-action-inset: calc((var(--ds-control-h, 28px) - 2px - var(--ds-control-h-compact, 22px)) / 2);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-sm, 6px);
+  width: 100%;
+  height: var(--ds-control-h, 28px);
+  min-width: 0;
+  padding: 0 var(--ds-action-inset) 0 var(--ds-control-pad-x, 8px);
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
+  border-radius: var(--ds-radius-control, 5px);
+  transition: border-color var(--ds-transition);
+}
+
+.ds-ui-toggle-row.ds-ui-input-row {
+  padding-right: var(--ds-control-pad-x, 8px);
+}
+
+.ds-ui-input-row > .ds-ui-toggle-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ds-ui-input-row .ds-ui-toggle-label {
+  max-width: 100%;
+}
+
+.ds-ui-input-row:hover {
+  border-color: var(--ds-color-border-hover, #374151);
+}
+
+.ds-ui-input-row:focus-within {
+  border-color: var(--ds-color-accent, #67e8f9);
+}
+
+.ds-ui-input-row-label,
+.ds-ui-input-row .ds-ui-toggle-label {
+  flex: 0 0 auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-color-muted-text, #9ca3af);
+  user-select: none;
+}
+
+.ds-ui-input-row-field {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--ds-color-text, #e5e7eb);
+  font-family: var(--ds-font);
+  font-size: 11px;
+}
+
+.ds-ui-input-row-field.is-mono {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-ui-input-row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-gap-xs, 4px);
+  flex: 0 0 auto;
+}
+
+/* Action buttons sit the same distance from the row's top, bottom and right edge,
+   with a corner radius concentric to the row's. */
+.ds-ui-input-row-actions > .ds-ui-btn {
+  border-radius: max(2px, calc(var(--ds-radius-control, 5px) - 1px - var(--ds-action-inset)));
 }
 
 /* ========================================================================= */
@@ -702,9 +906,7 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
 .ds-ui-slider-number::-webkit-inner-spin-button,
 .ds-ui-slider-number::-webkit-outer-spin-button,
 input[type="number"].ds-ui-input::-webkit-inner-spin-button,
-input[type="number"].ds-ui-input::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
+input[type="number"].ds-ui-input::-webkit-outer-spin-button {
   -webkit-appearance: none !important;
   appearance: none !important;
   margin: 0 !important;
@@ -2415,144 +2617,4 @@ input[type="number"]::-webkit-outer-spin-button {
   padding-top: 10px;
   border-top: 1px solid var(--ds-color-border, #242a36);
   flex-shrink: 0;
-}
-
-/* ============================================================
-   DS System — 60FPS Modern Theme Animations for DS Nodes
-   ============================================================ */
-
-/* 1. Cyber Pulse */
-@keyframes ds-anim-cyber-pulse {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(0, 240, 255, 0.4), inset 0 0 12px rgba(0, 240, 255, 0.12);
-    border-color: rgba(0, 240, 255, 0.65);
-  }
-  50% {
-    box-shadow: 0 0 24px rgba(255, 0, 127, 0.45), inset 0 0 14px rgba(255, 0, 127, 0.15);
-    border-color: rgba(255, 0, 127, 0.65);
-  }
-}
-[data-ds-theme-anim="cyber_pulse"] {
-  animation: ds-anim-cyber-pulse 3.8s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 2. Aurora Borealis */
-@keyframes ds-anim-aurora {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-@keyframes ds-anim-aurora-glow {
-  0%, 100% { box-shadow: 0 0 18px rgba(0, 255, 179, 0.25); border-color: rgba(0, 255, 179, 0.5); }
-  50% { box-shadow: 0 0 26px rgba(56, 189, 248, 0.35); border-color: rgba(56, 189, 248, 0.6); }
-}
-[data-ds-theme-anim="aurora"] {
-  animation: ds-anim-aurora-glow 6s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 3. Matrix Stream */
-@keyframes ds-anim-matrix-glow {
-  0%, 100% { box-shadow: 0 0 12px rgba(0, 255, 102, 0.25); border-color: rgba(0, 255, 102, 0.4); }
-  50% { box-shadow: 0 0 24px rgba(0, 255, 102, 0.5); border-color: rgba(0, 255, 102, 0.75); }
-}
-[data-ds-theme-anim="matrix"] {
-  animation: ds-anim-matrix-glow 4s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 4. Nebula Flow */
-@keyframes ds-anim-nebula {
-  0% { background-position: 0% 50%; box-shadow: 0 0 18px rgba(168, 85, 247, 0.28); border-color: rgba(168, 85, 247, 0.45); }
-  50% { background-position: 100% 50%; box-shadow: 0 0 28px rgba(236, 72, 153, 0.35); border-color: rgba(236, 72, 153, 0.6); }
-  100% { background-position: 0% 50%; box-shadow: 0 0 18px rgba(168, 85, 247, 0.28); border-color: rgba(168, 85, 247, 0.45); }
-}
-[data-ds-theme-anim="nebula"] {
-  animation: ds-anim-nebula 8s ease infinite;
-  will-change: box-shadow, border-color, background-position;
-}
-
-/* 5. Electric Shimmer */
-@keyframes ds-anim-electric-glow {
-  0%, 100% { box-shadow: 0 0 14px rgba(56, 189, 248, 0.25); border-color: rgba(56, 189, 248, 0.4); }
-  50% { box-shadow: 0 0 24px rgba(129, 140, 248, 0.4); border-color: rgba(129, 140, 248, 0.65); }
-}
-[data-ds-theme-anim="electric"] {
-  animation: ds-anim-electric-glow 3.5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 6. Synthwave 1984 */
-@keyframes ds-anim-synthwave {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(255, 42, 133, 0.35);
-    border-color: rgba(255, 42, 133, 0.55);
-  }
-  50% {
-    box-shadow: 0 0 24px rgba(255, 153, 0, 0.42);
-    border-color: rgba(255, 153, 0, 0.65);
-  }
-}
-[data-ds-theme-anim="synthwave"] {
-  animation: ds-anim-synthwave 4.5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 7. Molten Magma */
-@keyframes ds-anim-magma-pulse {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(255, 59, 0, 0.3);
-    border-color: rgba(255, 59, 0, 0.45);
-  }
-  50% {
-    box-shadow: 0 0 28px rgba(255, 170, 0, 0.5);
-    border-color: rgba(255, 170, 0, 0.7);
-  }
-}
-[data-ds-theme-anim="magma"] {
-  animation: ds-anim-magma-pulse 4.2s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 8. Quantum Flux */
-@keyframes ds-anim-quantum {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(0, 229, 255, 0.35);
-    border-color: rgba(0, 229, 255, 0.55);
-  }
-  50% {
-    box-shadow: 0 0 26px rgba(217, 70, 239, 0.42);
-    border-color: rgba(217, 70, 239, 0.65);
-  }
-}
-[data-ds-theme-anim="quantum"] {
-  animation: ds-anim-quantum 5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 9. Bioluminescent Deep */
-@keyframes ds-anim-biolum {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(0, 245, 196, 0.22);
-    border-color: rgba(0, 245, 196, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 26px rgba(0, 245, 196, 0.5), 0 0 45px rgba(2, 132, 199, 0.2);
-    border-color: rgba(0, 245, 196, 0.7);
-  }
-}
-[data-ds-theme-anim="biolum"] {
-  animation: ds-anim-biolum 5.5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 10. Imperial Gold Sheen */
-@keyframes ds-anim-gold-glow {
-  0%, 100% { box-shadow: 0 0 14px rgba(234, 179, 8, 0.25); border-color: rgba(234, 179, 8, 0.4); }
-  50% { box-shadow: 0 0 24px rgba(254, 240, 138, 0.42); border-color: rgba(254, 240, 138, 0.65); }
-}
-[data-ds-theme-anim="gold_sheen"] {
-  animation: ds-anim-gold-glow 4.8s ease-in-out infinite;
-  will-change: box-shadow, border-color;
 }

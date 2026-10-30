@@ -35,7 +35,10 @@ DEFAULT_CONFIG = {
     "fontSize": 14,
     "downloadedFonts": [],
     "custom": {},
+    "motion": "on",
 }
+
+MOTION_MODES = ("on", "pause_on_run", "off")
 
 
 def _load_json(path, fallback):
@@ -78,6 +81,7 @@ def save_appearance(cfg):
         "fontSize": int(cfg.get("fontSize", DEFAULT_CONFIG["fontSize"])),
         "downloadedFonts": list(cfg.get("downloadedFonts") or []),
         "custom": dict(cfg.get("custom") or {}),
+        "motion": cfg.get("motion") if cfg.get("motion") in MOTION_MODES else DEFAULT_CONFIG["motion"],
     }
     cleaned["fontSize"] = max(10, min(24, cleaned["fontSize"]))
     return _save_json(APPEARANCE_FILE, cleaned)

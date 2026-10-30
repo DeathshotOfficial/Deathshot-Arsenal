@@ -1184,10 +1184,9 @@
   letter-spacing: 0.4px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(255, 0, 127, 0.25));
-  border: 1px solid rgba(0, 240, 255, 0.4);
-  color: #00f0ff;
-  text-shadow: 0 0 6px rgba(0, 240, 255, 0.6);
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent, #67e8f9) 45%, transparent);
+  color: var(--ds-color-accent, #67e8f9);
   flex-shrink: 0;
 }
 
@@ -1203,21 +1202,6 @@
   height: 12px;
   border-radius: 2px;
   border: 1px solid rgba(0, 0, 0, 0.4);
-}
-
-.ds-tm-theme-swatches-mini.anim-preview {
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.ds-tm-theme-swatches-mini.anim-preview::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  background-size: 200% 100%;
-  animation: ds-anim-electric-shimmer 2.2s linear infinite;
-  pointer-events: none;
 }
 
 /* Multi-Element Micro-Theme Builder */
@@ -1336,9 +1320,10 @@
 
 /* Live DS Node Mock Surface */
 .ds-tm-ds-mock-card {
+  position: relative;
   background: var(--ds-color-card, var(--ds-panel, #12151c));
   border: 1px solid var(--ds-color-border, var(--ds-border, #242a36));
-  border-radius: 6px;
+  border-radius: var(--ds-radius-card, 8px);
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -1824,236 +1809,6 @@
 .ds-tm-toast.error {
   border-color: var(--ds-color-danger, var(--ds-danger, #f87171));
   color: var(--ds-color-danger, var(--ds-danger, #f87171));
-}
-
-/* ============================================================
-   Hardware-Accelerated 60FPS Modern Theme Animations
-   ============================================================ */
-
-/* 1. Cyber Pulse */
-@keyframes ds-anim-cyber-pulse {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(0, 240, 255, 0.4), inset 0 0 12px rgba(0, 240, 255, 0.12);
-    border-color: rgba(0, 240, 255, 0.65);
-  }
-  50% {
-    box-shadow: 0 0 24px rgba(255, 0, 127, 0.45), inset 0 0 14px rgba(255, 0, 127, 0.15);
-    border-color: rgba(255, 0, 127, 0.65);
-  }
-}
-.ds-tm-window[data-ds-theme-anim="cyber_pulse"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="cyber_pulse"],
-.ds-tm-mock-node[data-ds-theme-anim="cyber_pulse"],
-[data-ds-theme-anim="cyber_pulse"] {
-  animation: ds-anim-cyber-pulse 3.8s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 2. Aurora Borealis */
-@keyframes ds-anim-aurora {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-@keyframes ds-anim-aurora-glow {
-  0%, 100% { box-shadow: 0 0 18px rgba(0, 255, 179, 0.25); border-color: rgba(0, 255, 179, 0.5); }
-  50% { box-shadow: 0 0 26px rgba(56, 189, 248, 0.35); border-color: rgba(56, 189, 248, 0.6); }
-}
-.ds-tm-window[data-ds-theme-anim="aurora"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="aurora"],
-.ds-tm-mock-node[data-ds-theme-anim="aurora"],
-[data-ds-theme-anim="aurora"] {
-  animation: ds-anim-aurora-glow 6s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-.ds-tm-window[data-ds-theme-anim="aurora"] .ds-tm-header,
-.ds-tm-ds-mock-card[data-ds-theme-anim="aurora"] .ds-tm-ds-mock-head {
-  background: linear-gradient(135deg, rgba(3,8,16,0.92), rgba(0,255,179,0.12), rgba(56,189,248,0.12), rgba(3,8,16,0.92)) !important;
-  background-size: 300% 300% !important;
-  animation: ds-anim-aurora 7s ease infinite;
-}
-
-/* 3. Matrix Stream */
-@keyframes ds-anim-matrix-glow {
-  0%, 100% { box-shadow: 0 0 12px rgba(0, 255, 102, 0.25); border-color: rgba(0, 255, 102, 0.4); }
-  50% { box-shadow: 0 0 24px rgba(0, 255, 102, 0.5); border-color: rgba(0, 255, 102, 0.75); }
-}
-@keyframes ds-anim-matrix-stream {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 36px; }
-}
-.ds-tm-window[data-ds-theme-anim="matrix"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="matrix"],
-.ds-tm-mock-node[data-ds-theme-anim="matrix"],
-[data-ds-theme-anim="matrix"] {
-  animation: ds-anim-matrix-glow 4s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-.ds-tm-window[data-ds-theme-anim="matrix"] .ds-tm-header,
-.ds-tm-ds-mock-card[data-ds-theme-anim="matrix"] .ds-tm-ds-mock-head {
-  background-image: repeating-linear-gradient(180deg, rgba(0,255,102,0.06) 0px, transparent 2px, transparent 18px) !important;
-  background-size: 100% 18px !important;
-  animation: ds-anim-matrix-stream 1.8s linear infinite;
-}
-
-/* 4. Nebula Flow */
-@keyframes ds-anim-nebula {
-  0% { background-position: 0% 50%; box-shadow: 0 0 18px rgba(168, 85, 247, 0.28); border-color: rgba(168, 85, 247, 0.45); }
-  50% { background-position: 100% 50%; box-shadow: 0 0 28px rgba(236, 72, 153, 0.35); border-color: rgba(236, 72, 153, 0.6); }
-  100% { background-position: 0% 50%; box-shadow: 0 0 18px rgba(168, 85, 247, 0.28); border-color: rgba(168, 85, 247, 0.45); }
-}
-.ds-tm-window[data-ds-theme-anim="nebula"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="nebula"],
-.ds-tm-mock-node[data-ds-theme-anim="nebula"],
-[data-ds-theme-anim="nebula"] {
-  animation: ds-anim-nebula 8s ease infinite;
-  will-change: box-shadow, border-color, background-position;
-}
-.ds-tm-window[data-ds-theme-anim="nebula"] .ds-tm-header,
-.ds-tm-ds-mock-card[data-ds-theme-anim="nebula"] .ds-tm-ds-mock-head {
-  background: linear-gradient(135deg, rgba(6,3,12,0.95), rgba(168,85,247,0.14), rgba(236,72,153,0.12), rgba(6,3,12,0.95)) !important;
-  background-size: 250% 250% !important;
-  animation: ds-anim-aurora 8s ease infinite;
-}
-
-/* 5. Electric Shimmer */
-@keyframes ds-anim-electric-glow {
-  0%, 100% { box-shadow: 0 0 14px rgba(56, 189, 248, 0.25); border-color: rgba(56, 189, 248, 0.4); }
-  50% { box-shadow: 0 0 24px rgba(129, 140, 248, 0.4); border-color: rgba(129, 140, 248, 0.65); }
-}
-@keyframes ds-anim-electric-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.ds-tm-window[data-ds-theme-anim="electric"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="electric"],
-.ds-tm-mock-node[data-ds-theme-anim="electric"],
-[data-ds-theme-anim="electric"] {
-  animation: ds-anim-electric-glow 3.5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-.ds-tm-window[data-ds-theme-anim="electric"] .ds-tm-header::after,
-.ds-tm-ds-mock-card[data-ds-theme-anim="electric"] .ds-tm-ds-mock-head::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(56,189,248,0.8), rgba(129,140,248,0.9), transparent);
-  background-size: 200% 100%;
-  animation: ds-anim-electric-shimmer 2.4s linear infinite;
-}
-
-/* 6. Synthwave 1984 */
-@keyframes ds-anim-synthwave {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(255, 42, 133, 0.35);
-    border-color: rgba(255, 42, 133, 0.55);
-  }
-  50% {
-    box-shadow: 0 0 24px rgba(255, 153, 0, 0.42);
-    border-color: rgba(255, 153, 0, 0.65);
-  }
-}
-.ds-tm-window[data-ds-theme-anim="synthwave"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="synthwave"],
-.ds-tm-mock-node[data-ds-theme-anim="synthwave"],
-[data-ds-theme-anim="synthwave"] {
-  animation: ds-anim-synthwave 4.5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-.ds-tm-window[data-ds-theme-anim="synthwave"] .ds-tm-header,
-.ds-tm-ds-mock-card[data-ds-theme-anim="synthwave"] .ds-tm-ds-mock-head {
-  background: linear-gradient(90deg, rgba(12,6,20,0.95), rgba(255,42,133,0.12), rgba(255,153,0,0.1), rgba(12,6,20,0.95)) !important;
-  background-size: 200% 100% !important;
-  animation: ds-anim-aurora 5s ease infinite;
-}
-
-/* 7. Molten Magma */
-@keyframes ds-anim-magma-pulse {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(255, 59, 0, 0.3);
-    border-color: rgba(255, 59, 0, 0.45);
-  }
-  50% {
-    box-shadow: 0 0 28px rgba(255, 170, 0, 0.5);
-    border-color: rgba(255, 170, 0, 0.7);
-  }
-}
-.ds-tm-window[data-ds-theme-anim="magma"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="magma"],
-.ds-tm-mock-node[data-ds-theme-anim="magma"],
-[data-ds-theme-anim="magma"] {
-  animation: ds-anim-magma-pulse 4.2s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 8. Quantum Flux */
-@keyframes ds-anim-quantum {
-  0%, 100% {
-    box-shadow: 0 0 16px rgba(0, 229, 255, 0.35);
-    border-color: rgba(0, 229, 255, 0.55);
-  }
-  50% {
-    box-shadow: 0 0 26px rgba(217, 70, 239, 0.42);
-    border-color: rgba(217, 70, 239, 0.65);
-  }
-}
-.ds-tm-window[data-ds-theme-anim="quantum"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="quantum"],
-.ds-tm-mock-node[data-ds-theme-anim="quantum"],
-[data-ds-theme-anim="quantum"] {
-  animation: ds-anim-quantum 5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 9. Bioluminescent Deep */
-@keyframes ds-anim-biolum {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(0, 245, 196, 0.22);
-    border-color: rgba(0, 245, 196, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 26px rgba(0, 245, 196, 0.5), 0 0 45px rgba(2, 132, 199, 0.2);
-    border-color: rgba(0, 245, 196, 0.7);
-  }
-}
-.ds-tm-window[data-ds-theme-anim="biolum"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="biolum"],
-.ds-tm-mock-node[data-ds-theme-anim="biolum"],
-[data-ds-theme-anim="biolum"] {
-  animation: ds-anim-biolum 5.5s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-
-/* 10. Imperial Gold Sheen */
-@keyframes ds-anim-gold-glow {
-  0%, 100% { box-shadow: 0 0 14px rgba(234, 179, 8, 0.25); border-color: rgba(234, 179, 8, 0.4); }
-  50% { box-shadow: 0 0 24px rgba(254, 240, 138, 0.42); border-color: rgba(254, 240, 138, 0.65); }
-}
-@keyframes ds-anim-gold-sheen {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.ds-tm-window[data-ds-theme-anim="gold_sheen"],
-.ds-tm-ds-mock-card[data-ds-theme-anim="gold_sheen"],
-.ds-tm-mock-node[data-ds-theme-anim="gold_sheen"],
-[data-ds-theme-anim="gold_sheen"] {
-  animation: ds-anim-gold-glow 4.8s ease-in-out infinite;
-  will-change: box-shadow, border-color;
-}
-.ds-tm-window[data-ds-theme-anim="gold_sheen"] .ds-tm-header::after,
-.ds-tm-ds-mock-card[data-ds-theme-anim="gold_sheen"] .ds-tm-ds-mock-head::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(234,179,8,0.85), rgba(254,240,138,0.95), transparent);
-  background-size: 200% 100%;
-  animation: ds-anim-gold-sheen 3.2s linear infinite;
 }
 
 /* ============================================================

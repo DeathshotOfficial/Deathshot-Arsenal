@@ -253,11 +253,6 @@ app.registerExtension({
       this.shape = "round";
       protectDSResizeCorners(this);
 
-      // Default dark palette so LiteGraph base NEVER shows bright yellow
-      this.color = "#161b24";
-      this.bgcolor = "#0b0f17";
-      this.boxcolor = "#242a36";
-
       // Spacious, high-grade dimensions on canvas
       const curW = Number(this.size?.[0]) || 0;
       const curH = Number(this.size?.[1]) || 0;
@@ -352,10 +347,6 @@ app.registerExtension({
         this._dsDoc = sanitizeDoc(props.ds_notes_data);
         this.properties.ds_notes_data = this._dsDoc;
       }
-
-      this.color = "#161b24";
-      this.bgcolor = "#0b0f17";
-      this.boxcolor = "#242a36";
 
       // Upgrade squished old dimensions
       if (this.size) {

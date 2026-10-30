@@ -12,6 +12,7 @@ import { Card } from "./Core/Card.js";
 import { Field } from "./Core/Field.js";
 import { Section } from "./Core/Section.js";
 import { Popup } from "./Core/Popup.js";
+import { Modal } from "./Core/Modal.js";
 import { normalizeDSWidgetHost, protectDSResizeCorners, isTextEditableElement } from "./Core/system.js";
 
 // Containers
@@ -20,6 +21,7 @@ import { Panel } from "./Containers/Panel.js";
 // Controls
 import { Button } from "./Controls/Button.js";
 import { Input } from "./Controls/Input.js";
+import { InputRow } from "./Controls/InputRow.js";
 import { Dropdown } from "./Controls/Dropdown.js";
 import { Slider } from "./Controls/Slider.js";
 import { Stepper, Spinbox } from "./Controls/Stepper.js";
@@ -84,10 +86,12 @@ export {
   Field,
   Section,
   Popup,
+  Modal,
   normalizeDSWidgetHost,
   protectDSResizeCorners,
   Button,
   Input,
+  InputRow,
   Dropdown,
   Slider,
   Stepper,
@@ -155,6 +159,16 @@ export function installDSUI() {
     link.href = "/extensions/DeathshotArsenal/UIElements/Theme/ds_ui.css";
     document.head.appendChild(link);
   }
+
+  // 3. Inject live-theme effects stylesheet
+  const fxStyleId = "ds-ui-fx-style";
+  if (!document.getElementById(fxStyleId)) {
+    const link = document.createElement("link");
+    link.id = fxStyleId;
+    link.rel = "stylesheet";
+    link.href = "/extensions/DeathshotArsenal/UIElements/Theme/ds_fx.css";
+    document.head.appendChild(link);
+  }
 }
 
 // Automatically install stylesheets on import
@@ -177,8 +191,10 @@ if (typeof window !== "undefined") {
   window.DSUI.Field = Field;
   window.DSUI.Section = Section;
   window.DSUI.Popup = Popup;
+  window.DSUI.Modal = Modal;
   window.DSUI.Button = Button;
   window.DSUI.Input = Input;
+  window.DSUI.InputRow = InputRow;
   window.DSUI.Dropdown = Dropdown;
   window.DSUI.Slider = Slider;
   window.DSUI.Stepper = Stepper;

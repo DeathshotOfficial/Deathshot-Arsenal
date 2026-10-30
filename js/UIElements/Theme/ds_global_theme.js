@@ -16,9 +16,9 @@ import {
   installDSCanvasNavigationBridge,
 } from "../Core/system.js";
 import { installDSUI } from "../index.js";
+import { ensureFxLayer, setFx } from "./fx.js";
 
 const DS_NODE_PREFIX = "DS_";
-const NODE_BASE_STYLE_ID = "ds-global-node-base-style";
 
 const DS_SHELL_ROOT_SELECTOR = [
   '[class*="ds-"][class*="-root"]',
@@ -53,12 +53,15 @@ const DS_TITLE_SELECTOR = [
   '[data-ds-themed="true"] .node-title',
 ].join(", ");
 
+// custom: per-theme variable overrides, { [themeId]: { "--ds-accent": "#..." } }
+// motion: live-theme effects — "on", "pause_on_run" (paused while a prompt runs) or "off"
 const DEFAULT_CONFIG = {
   theme: "deathshot_dark",
   font: "Inter",
   fontSize: 14,
   downloadedFonts: [],
   custom: {},
+  motion: "on",
 };
 
 const GOOGLE_FONT_LINK_ID = "ds-global-font-link";
@@ -67,14 +70,30 @@ const GLOBAL_STYLE_ID = "ds-global-theme-style";
 
 let themes = {};
 const STORAGE_GLOBAL_CONFIG = "DS_THEME_GLOBAL_CONFIG";
+
+// Older configs stored one flat override map that leaked onto every theme;
+// it belongs to the theme that was active when it was saved.
+function normalizeConfig(cfg) {
+  const merged = { ...DEFAULT_CONFIG, ...(cfg || {}) };
+  const custom = merged.custom || {};
+  const keys = Object.keys(custom);
+  if (keys.length && keys.every((k) => k.startsWith("--"))) {
+    merged.custom = { [merged.theme]: custom };
+  }
+  return merged;
+}
+
 let cachedConfig = null;
 try {
   const raw = localStorage.getItem(STORAGE_GLOBAL_CONFIG);
   if (raw) cachedConfig = JSON.parse(raw);
 } catch (_) {}
-let config = { ...DEFAULT_CONFIG, ...(cachedConfig || {}) };
+let config = normalizeConfig(cachedConfig);
 let ready = false;
 let observer = null;
+let queueRunning = false;
+// Theme currently painted on the page; differs from config while previewing.
+let appliedTheme = null;
 const loadedFontLinks = new Set();
 
 function fontFamilyStack(name) {
@@ -92,19 +111,13 @@ function googleFontParam(name) {
   return encodeURIComponent(name).replace(/%20/g, "+");
 }
 
-function getTheme(id) {
-  const targetId = id || config.theme || "deathshot_dark";
+function getTheme(id, cfg = config) {
+  const targetId = id || cfg.theme || "deathshot_dark";
   const base = themes[targetId] || themes.deathshot_dark || null;
   if (!base) return null;
-  const custom = config?.custom;
-  if (targetId === config.theme && custom && Object.keys(custom).length > 0) {
-    return {
-      ...base,
-      vars: {
-        ...(base.vars || {}),
-        ...custom,
-      },
-    };
+  const custom = cfg.custom?.[targetId];
+  if (custom && Object.keys(custom).length > 0) {
+    return { ...base, vars: { ...(base.vars || {}), ...custom } };
   }
   return base;
 }
@@ -141,15 +154,15 @@ function isTransparentColor(color) {
   return false;
 }
 
+// Colors the engine painted itself are remembered in node._dsBaseColors so a
+// theme change can repaint them; anything else on the node is the user's.
 function hasCustomNodeColors(node) {
   const props = node?.properties || {};
-  return Boolean(
-    props.node_color ||
-    props.ds_bg_color ||
-    props.ds_title_color ||
-    node?.color ||
-    node?.bgcolor
-  );
+  if (props.node_color || props.ds_bg_color || props.ds_title_color) return true;
+  if (!node?.color && !node?.bgcolor) return false;
+  const own = node._dsBaseColors;
+  if (!own) return true;
+  return node.color !== own.color || node.bgcolor !== own.bgcolor;
 }
 
 function shouldSkipNodeBase(node) {
@@ -387,7 +400,13 @@ function computeOverhaulVars(theme) {
     "--ds-selection": vars["--ds-selection"] || `color-mix(in srgb, ${accent} 25%, transparent)`,
     "--ds-shadow": vars["--ds-shadow"] || "0 8px 24px rgba(0, 0, 0, 0.6)",
     "--ds-glow": vars["--ds-glow"] || "none",
+    "--ds-fx-a": vars["--ds-fx-a"] || accent,
+    "--ds-fx-b": vars["--ds-fx-b"] || vars["--ds-accent-2"] || accent,
   };
+}
+
+function resolveVars(theme) {
+  return { ...(theme?.vars || {}), ...computeSmartContrastVars(theme), ...computeOverhaulVars(theme) };
 }
 
 function getNodeTitleBarBg(node, theme) {
@@ -537,78 +556,41 @@ function getNodeBasePalette(theme) {
   return { panel, bg, border, text, accent, onAccent, onAccentShadow, onPanel, onBg, titleColor };
 }
 
-function styleNodeDomWidgets(node, palette) {
-  if (!node?.widgets?.length) return;
-  const theme = getTheme(config.theme) || {};
-  const vars = theme.vars || {};
-  const overhaulVars = computeOverhaulVars(theme);
-  const allVars = { ...vars, ...overhaulVars };
-
-  for (const widget of node.widgets) {
-    const el = widget?.element;
-    if (!el || el.nodeType !== 1) continue;
-
-    const isOverhaulCard = Boolean(
-      el.classList?.contains("ds-ui-card") ||
-      el.dataset?.dsUiHost === "true" ||
-      el.querySelector?.(".ds-ui-card")
-    );
-
-    if (
-      isOverhaulCard ||
-      el.classList?.contains("ds-seed-root") ||
-      el.dataset?.dsTransparent === "true" ||
-      node?.type === "DS_Seed" ||
-      node?.comfyClass === "DS_Seed"
-    ) {
-      if (!isOverhaulCard) {
-        el.style.setProperty("background-color", "transparent", "important");
-        el.style.setProperty("background", "transparent", "important");
-      }
-      Object.entries(allVars).forEach(([k, v]) => {
-        try { el.style.setProperty(k, v); } catch (_) {}
-      });
-
-      let parent = el.parentElement;
-      for (let depth = 0; depth < 4 && parent; depth += 1) {
-        if (parent.id === "graph-canvas" || parent.classList?.contains("litegraph")) break;
-        parent.style.setProperty("background-color", "transparent", "important");
-        parent.style.setProperty("background", "transparent", "important");
-        delete parent.dataset.dsNodeBase;
-        Object.entries(allVars).forEach(([k, v]) => {
-          try { parent.style.setProperty(k, v); } catch (_) {}
-        });
-        parent = parent.parentElement;
-      }
-      continue;
-    }
-
-    el.style.backgroundColor = palette.bg;
-    el.style.color = palette.text;
-    el.dataset.dsNodeBase = "true";
+// The node face is the node's first DOM widget. Theme variables reach it by
+// inheritance from :root, so it only needs a marker and the effects overlay.
+function markNodeFace(node) {
+  const el = node?.widgets?.find((w) => w?.element?.nodeType === 1)?.element;
+  if (!el) return;
+  el.dataset.dsFace = "true";
+  const isCard = el.classList.contains("ds-ui-card") || el.dataset.dsUiHost === "true" || el.querySelector(".ds-ui-card");
+  const isBare = el.classList.contains("ds-seed-root") || el.dataset.dsTransparent === "true";
+  if (!isCard && !isBare) {
     try { normalizeDSWidgetHost(el); } catch (_) {}
-
-    Object.entries(allVars).forEach(([k, v]) => {
-      try { el.style.setProperty(k, v); } catch (_) {}
-    });
-
-    let parent = el.parentElement;
-    for (let depth = 0; depth < 4 && parent; depth += 1) {
-      if (parent.id === "graph-canvas" || parent.classList?.contains("litegraph")) break;
-      parent.style.backgroundColor = palette.bg;
-      parent.style.borderRadius = "8px";
-      parent.dataset.dsNodeBase = "true";
-      Object.entries(allVars).forEach(([k, v]) => {
-        try { parent.style.setProperty(k, v); } catch (_) {}
-      });
-      parent = parent.parentElement;
-    }
   }
+  attachFaceFx(el);
+}
+
+// The overlay goes in ComfyUI's .dom-widget wrapper, next to the face, so node
+// code that rebuilds its own children can never remove it.
+function attachFaceFx(faceEl) {
+  const host = faceEl.parentElement;
+  if (!host?.classList.contains("dom-widget")) return;
+  ensureFxLayer(host, appliedTheme?.fx);
+}
+
+function syncAllFx(theme) {
+  document.querySelectorAll(".ds-fx").forEach((el) => setFx(el, theme?.fx));
+}
+
+function applyMotion(cfg = config) {
+  const motion = cfg.motion === "off" ? "off" : cfg.motion === "pause_on_run" && queueRunning ? "paused" : "on";
+  document.documentElement.dataset.dsMotion = motion;
 }
 
 function applyNodeBaseTheme(node, theme = getTheme(config.theme)) {
   if (!isDSNode(node)) return;
   try { protectDSResizeCorners(node); } catch (_) {}
+  markNodeFace(node);
   if (!theme || node._dsNodeBaseOptOut) return;
 
   const palette = getNodeBasePalette(theme);
@@ -621,6 +603,7 @@ function applyNodeBaseTheme(node, theme = getTheme(config.theme)) {
     if (!chromeless) {
       node.color = palette.panel;
     }
+    node._dsBaseColors = { color: node.color, bgcolor: node.bgcolor };
   }
 
   delete node.title_color;
@@ -653,7 +636,6 @@ function applyNodeBaseTheme(node, theme = getTheme(config.theme)) {
   if (drawNoop(node.onDrawTitleBar)) delete node.onDrawTitleBar;
   if (drawNoop(node.onDrawForeground)) delete node.onDrawForeground;
 
-  styleNodeDomWidgets(node, palette);
   node._dsThemedBase = true;
   node.setDirtyCanvas?.(true, false);
 }
@@ -664,27 +646,6 @@ function applyNodeBaseToAll(theme = getTheme(config.theme)) {
     applyNodeBaseTheme(node, theme);
   }
   app.graph.setDirtyCanvas?.(true, true);
-}
-
-function updateNodeBaseStylesheet(theme) {
-  const palette = getNodeBasePalette(theme);
-  let style = document.getElementById(NODE_BASE_STYLE_ID);
-  if (!style) {
-    style = document.createElement("style");
-    style.id = NODE_BASE_STYLE_ID;
-    document.head.appendChild(style);
-  }
-
-  style.textContent = `
-    [data-ds-node-base="true"] {
-      background-color: ${palette.bg} !important;
-      color: ${palette.text} !important;
-    }
-    .litegraph .litegraph-node[data-ds-node-base="true"],
-    div[style*="pointer-events"] [data-ds-node-base="true"] {
-      background-color: ${palette.bg} !important;
-    }
-  `;
 }
 
 function scheduleNodeBaseApply(node) {
@@ -763,65 +724,29 @@ function wrapDSNodeCreated(nodeType, nodeData) {
   };
 }
 
-function applyVarsToElement(el, theme, cfg) {
-  if (!el || !theme) return;
-  const vars = theme.vars || {};
-  Object.entries(vars).forEach(([k, v]) => {
-    el.style.setProperty(k, v);
-  });
-
-  const smartVars = computeSmartContrastVars(theme);
-  Object.entries(smartVars).forEach(([k, v]) => {
-    el.style.setProperty(k, v);
-  });
-
-  const overhaulVars = computeOverhaulVars(theme);
-  Object.entries(overhaulVars).forEach(([k, v]) => {
-    el.style.setProperty(k, v);
-  });
-
-  const stack = fontFamilyStack(cfg.font);
-  const sizePx = `${cfg.fontSize}px`;
-  el.style.setProperty("--ds-font", stack);
-  el.style.setProperty("--ds-font-family", stack);
-  el.style.setProperty("--ds-font-size", sizePx);
-  el.style.setProperty("--font", stack);
-  el.style.setProperty("--font-size", sizePx);
-  el.style.fontFamily = stack;
-  el.style.fontSize = sizePx;
+// Theme variables live on :root; marked elements pick up the shared DS
+// typography, scrollbar and control rules from the global stylesheet.
+function markThemed(el, cfg = config) {
+  if (!el) return;
   el.dataset.dsTheme = cfg.theme;
   el.dataset.dsThemed = "true";
-  if (theme.animated) {
-    el.dataset.dsThemeAnim = theme.animationType || "animated";
-  } else {
-    delete el.dataset.dsThemeAnim;
-  }
-
-  if (theme.glass) {
-    el.style.setProperty("--ds-glass-blur", `${theme.glass.blur || 0}px`);
-    el.style.setProperty("--ds-glass-opacity", String(theme.glass.opacity ?? 1));
-  }
 }
 
 function applyToAllRoots(cfg = config) {
-  const theme = getTheme(cfg.theme);
+  const theme = getTheme(cfg.theme, cfg);
   if (!theme) return;
-
-  if (theme.animated) {
-    document.documentElement.dataset.dsThemeAnim = theme.animationType || "animated";
-  } else {
-    delete document.documentElement.dataset.dsThemeAnim;
-  }
+  appliedTheme = theme;
 
   document.querySelectorAll(DS_ROOT_SELECTOR).forEach((el) => {
-    applyVarsToElement(el, theme, cfg);
-    if (el.matches?.(DS_SHELL_ROOT_SELECTOR)) {
+    markThemed(el, cfg);
+    if (el.matches(DS_SHELL_ROOT_SELECTOR)) {
       try { normalizeDSWidgetHost(el, null, { shell: true }); } catch (_) {}
     }
   });
 
   updateGlobalStylesheet(theme, cfg);
-  updateNodeBaseStylesheet(theme);
+  syncAllFx(theme);
+  applyMotion(cfg);
   applyNodeBaseToAll(theme);
 }
 
@@ -834,9 +759,11 @@ function updateGlobalStylesheet(theme, cfg) {
   document.head.appendChild(style);
 
   const vars = theme?.vars || {};
-  const smartVars = computeSmartContrastVars(theme);
-  const overhaulVars = computeOverhaulVars(theme);
-  const allVars = { ...vars, ...smartVars, ...overhaulVars };
+  const allVars = resolveVars(theme);
+  if (theme?.glass) {
+    allVars["--ds-glass-blur"] = `${theme.glass.blur || 0}px`;
+    allVars["--ds-glass-opacity"] = String(theme.glass.opacity ?? 1);
+  }
 
   const decl = Object.entries(allVars)
     .map(([k, v]) => `  ${k}: ${v};`)
@@ -853,8 +780,9 @@ function updateGlobalStylesheet(theme, cfg) {
   const sbDesc = roots.map(s => `${s} *::-webkit-scrollbar-button, ${s} *::-webkit-scrollbar-button:single-button, ${s} ::-webkit-scrollbar-button, ${s} ::-webkit-scrollbar-button:single-button`).join(", ");
   const sbAll = [sbDirect, sbDesc].join(", ");
 
+  // html:root outranks the :root defaults in ds_ui.css regardless of stylesheet order.
   style.textContent = `
-    :root {
+    html:root {
 ${decl}
       --ds-font: ${stack};
       --ds-font-family: ${stack};
@@ -862,10 +790,6 @@ ${decl}
     }
 
     ${DS_ROOT_SELECTOR} {
-${decl}
-      --ds-font: ${stack};
-      --ds-font-family: ${stack};
-      --ds-font-size: ${cfg.fontSize}px;
       --font: ${stack};
       --font-size: ${cfg.fontSize}px;
       font-family: ${stack};
@@ -877,11 +801,8 @@ ${decl}
     .ds-timer-wrapper {
       --ds-node-bg: var(--ds-panel);
       --ds-text-main: var(--ds-text);
-      --ds-text-muted: var(--ds-text-muted);
       --ds-accent-color: var(--ds-accent);
       --ds-border-color: var(--ds-border);
-      --ds-font-family: var(--ds-font);
-      --ds-font-size: var(--ds-font-size);
     }
     .monitor-node-container {
       --bg-glass: var(--ds-panel);
@@ -1048,30 +969,30 @@ ${decl}
     /* Modern unified scrollbar (thin, themed) — applies to ALL scroll areas inside DS nodes */
     [data-ds-themed="true"],
     [data-ds-themed="true"] *,
-    [data-ds-node-base="true"],
-    [data-ds-node-base="true"] * {
+    [data-ds-face="true"],
+    [data-ds-face="true"] * {
       scrollbar-width: thin !important;
       scrollbar-color: var(--ds-scrollbar) var(--ds-panel) !important;
     }
     [data-ds-themed="true"]::-webkit-scrollbar,
     [data-ds-themed="true"] *::-webkit-scrollbar,
-    [data-ds-node-base="true"]::-webkit-scrollbar,
-    [data-ds-node-base="true"] *::-webkit-scrollbar {
+    [data-ds-face="true"]::-webkit-scrollbar,
+    [data-ds-face="true"] *::-webkit-scrollbar {
       width: 6px !important;
       height: 6px !important;
     }
     [data-ds-themed="true"]::-webkit-scrollbar-track,
     [data-ds-themed="true"] *::-webkit-scrollbar-track,
-    [data-ds-node-base="true"]::-webkit-scrollbar-track,
-    [data-ds-node-base="true"] *::-webkit-scrollbar-track,
+    [data-ds-face="true"]::-webkit-scrollbar-track,
+    [data-ds-face="true"] *::-webkit-scrollbar-track,
     [class*="ds-"]::-webkit-scrollbar-track,
     [class*="ds-"] *::-webkit-scrollbar-track {
       background: var(--ds-scrollbar-track, transparent) !important;
     }
     [data-ds-themed="true"]::-webkit-scrollbar-thumb,
     [data-ds-themed="true"] *::-webkit-scrollbar-thumb,
-    [data-ds-node-base="true"]::-webkit-scrollbar-thumb,
-    [data-ds-node-base="true"] *::-webkit-scrollbar-thumb,
+    [data-ds-face="true"]::-webkit-scrollbar-thumb,
+    [data-ds-face="true"] *::-webkit-scrollbar-thumb,
     [class*="ds-"]::-webkit-scrollbar-thumb,
     [class*="ds-"] *::-webkit-scrollbar-thumb {
       background: var(--ds-scrollbar, var(--ds-border, #374151)) !important;
@@ -1079,24 +1000,20 @@ ${decl}
     }
     [data-ds-themed="true"]::-webkit-scrollbar-thumb:hover,
     [data-ds-themed="true"] *::-webkit-scrollbar-thumb:hover,
-    [data-ds-node-base="true"]::-webkit-scrollbar-thumb:hover,
-    [data-ds-node-base="true"] *::-webkit-scrollbar-thumb:hover,
+    [data-ds-face="true"]::-webkit-scrollbar-thumb:hover,
+    [data-ds-face="true"] *::-webkit-scrollbar-thumb:hover,
     [class*="ds-"]::-webkit-scrollbar-thumb:hover,
     [class*="ds-"] *::-webkit-scrollbar-thumb:hover {
       background: var(--ds-accent) !important;
     }
 
-    /* Hide default scrollbar arrows/buttons across all engines */
-    *::-webkit-scrollbar-button,
-    *::-webkit-scrollbar-button:single-button,
-    *::-webkit-scrollbar-button:vertical:decrement,
-    *::-webkit-scrollbar-button:vertical:increment,
+    /* Hide default scrollbar arrows/buttons inside DS surfaces */
     [data-ds-themed="true"]::-webkit-scrollbar-button,
     [data-ds-themed="true"] *::-webkit-scrollbar-button,
     [data-ds-themed="true"] ::-webkit-scrollbar-button,
-    [data-ds-node-base="true"]::-webkit-scrollbar-button,
-    [data-ds-node-base="true"] *::-webkit-scrollbar-button,
-    [data-ds-node-base="true"] ::-webkit-scrollbar-button,
+    [data-ds-face="true"]::-webkit-scrollbar-button,
+    [data-ds-face="true"] *::-webkit-scrollbar-button,
+    [data-ds-face="true"] ::-webkit-scrollbar-button,
     [class*="ds-"]::-webkit-scrollbar-button,
     [class*="ds-"] *::-webkit-scrollbar-button,
     [class*="ds-"] ::-webkit-scrollbar-button,
@@ -1113,8 +1030,8 @@ ${decl}
     }
     [data-ds-themed="true"]::-webkit-scrollbar-corner,
     [data-ds-themed="true"] *::-webkit-scrollbar-corner,
-    [data-ds-node-base="true"]::-webkit-scrollbar-corner,
-    [data-ds-node-base="true"] *::-webkit-scrollbar-corner {
+    [data-ds-face="true"]::-webkit-scrollbar-corner,
+    [data-ds-face="true"] *::-webkit-scrollbar-corner {
       background: transparent !important;
     }
     [data-ds-themed="true"] ::selection {
@@ -1123,9 +1040,9 @@ ${decl}
 
     /* Final aggressive pass using the exact same roots as theming engine */
     ${sbAll},
-    [data-ds-node-base="true"]::-webkit-scrollbar-button,
-    [data-ds-node-base="true"] *::-webkit-scrollbar-button,
-    [data-ds-node-base="true"] ::-webkit-scrollbar-button {
+    [data-ds-face="true"]::-webkit-scrollbar-button,
+    [data-ds-face="true"] *::-webkit-scrollbar-button,
+    [data-ds-face="true"] ::-webkit-scrollbar-button {
       display: none !important;
       height: 0 !important;
       width: 0 !important;
@@ -1227,10 +1144,10 @@ async function fetchConfig() {
     if (data?.config) {
       // Merge: localStorage overrides server for the theme field so a user's
       // last-applied theme is never clobbered by a stale server default.
-      const serverConfig = { ...DEFAULT_CONFIG, ...data.config };
+      const serverConfig = normalizeConfig(data.config);
       if (lsConfig) {
         // Keep localStorage theme + font; only take server values for fields not in localStorage
-        config = { ...serverConfig, ...lsConfig };
+        config = normalizeConfig({ ...serverConfig, ...lsConfig });
       } else {
         config = serverConfig;
         try { localStorage.setItem(STORAGE_GLOBAL_CONFIG, JSON.stringify(config)); } catch (_) {}
@@ -1243,7 +1160,7 @@ async function fetchConfig() {
 }
 
 async function saveConfig(partial) {
-  config = { ...config, ...partial };
+  config = normalizeConfig({ ...config, ...partial });
   config.fontSize = Math.max(10, Math.min(24, Number(config.fontSize) || 14));
   try {
     localStorage.setItem(STORAGE_GLOBAL_CONFIG, JSON.stringify(config));
@@ -1288,7 +1205,7 @@ async function applyConfig(cfg = config, { save = false } = {}) {
     if (!result.success) return result;
     cfg = config;
   } else {
-    config = { ...DEFAULT_CONFIG, ...cfg };
+    config = normalizeConfig(cfg);
   }
 
   const theme = getTheme(config.theme);
@@ -1308,24 +1225,28 @@ async function applyConfig(cfg = config, { save = false } = {}) {
   return { success: true, config, theme };
 }
 
+// DS faces mount into ComfyUI's .dom-widget wrapper after node creation (and
+// again when ComfyUI remounts them); give each one its effects overlay.
 function startObserver() {
   if (observer) return;
   observer = new MutationObserver((mutations) => {
-    const theme = getTheme(config.theme);
-    if (!theme) return;
     for (const m of mutations) {
       for (const node of m.addedNodes) {
         if (node.nodeType !== 1) continue;
-        if (node.matches?.(DS_ROOT_SELECTOR)) {
-          applyVarsToElement(node, theme, config);
-        }
-        node.querySelectorAll?.(DS_ROOT_SELECTOR).forEach((el) => {
-          applyVarsToElement(el, theme, config);
-        });
+        if (node.dataset.dsFace === "true") attachFaceFx(node);
+        else node.querySelectorAll?.('[data-ds-face="true"]').forEach(attachFaceFx);
+        if (node.matches(DS_ROOT_SELECTOR)) markThemed(node);
       }
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function watchQueue() {
+  api.addEventListener("status", ({ detail }) => {
+    queueRunning = (detail?.exec_info?.queue_remaining ?? 0) > 0;
+    applyMotion();
+  });
 }
 
 const DSGlobalTheme = {
@@ -1333,10 +1254,10 @@ const DSGlobalTheme = {
   getThemes: () => ({ ...themes }),
   getTheme,
   apply: (partial, opts) => applyConfig({ ...config, ...partial }, opts),
-  applyToElement: (el) => applyVarsToElement(el, getTheme(config.theme), config),
+  applyToElement: (el) => markThemed(el),
   preview: (partial) => {
-    const previewCfg = { ...config, ...partial };
-    const theme = getTheme(previewCfg.theme);
+    const previewCfg = normalizeConfig({ ...config, ...partial });
+    const theme = getTheme(previewCfg.theme, previewCfg);
     if (theme) {
       applyToAllRoots(previewCfg);
       if (partial.font) loadFont(previewCfg);
@@ -1359,11 +1280,6 @@ const DSGlobalTheme = {
     if (isNodeFace) {
       try { normalizeDSWidgetHost(rootEl, graphNode, { shell: true }); } catch (_) {}
     }
-    // Force global stylesheet (including aggressive no-arrow rules) to be present/updated
-    const theme = getTheme(config.theme);
-    if (theme) {
-      updateGlobalStylesheet(theme, config);
-    }
     const apply = () => {
       this.applyToElement(rootEl);
       if (isNodeFace) {
@@ -1380,19 +1296,7 @@ const DSGlobalTheme = {
     if (node) node._dsNodeBaseOptOut = true;
   },
   getVar(name, fallback = "") {
-    const theme = getTheme(config.theme);
-    if (theme?.vars?.[name] !== undefined) {
-      return theme.vars[name];
-    }
-    const smart = computeSmartContrastVars(theme);
-    if (smart[name] !== undefined) {
-      return smart[name];
-    }
-    const overhaul = computeOverhaulVars(theme);
-    if (overhaul[name] !== undefined) {
-      return overhaul[name];
-    }
-    return fallback;
+    return resolveVars(appliedTheme || getTheme(config.theme))[name] ?? fallback;
   },
   getRelativeLuminance: (col) => getRelativeLuminance(col),
   getContrastTextColor: (bg, darkText = "#111827", lightText = "#ffffff") => getContrastTextColor(bg, darkText, lightText),
@@ -1430,19 +1334,6 @@ app.registerExtension({
       try { protectDSResizeCorners(node); } catch (_) {}
       scheduleNodeBaseApply(node);
       patchNodeSerialize(node);
-      const theme = getTheme(config.theme);
-      if (theme) {
-        requestAnimationFrame(() => {
-          const domRoot = node._dsSeedRoot || node.domWidget?.element || node.rootEl || (node.widgets && node.widgets.find(w => w?.element)?.element);
-          if (domRoot) {
-            const allVars = { ...(theme.vars || {}), ...computeOverhaulVars(theme) };
-            Object.entries(allVars).forEach(([k, v]) => {
-              try { domRoot.style.setProperty(k, v); } catch (_) {}
-            });
-            node.setDirtyCanvas?.(true, true);
-          }
-        });
-      }
     }
   },
 
@@ -1524,6 +1415,7 @@ app.registerExtension({
     await loadFont(config);
     applyToAllRoots(config);
     startObserver();
+    watchQueue();
     ready = true;
     dispatchChange();
     setTimeout(() => applyNodeBaseToAll(getTheme(config.theme)), 250);
