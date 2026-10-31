@@ -77,58 +77,19 @@
   box-sizing: border-box;
 }
 
-/* ------------------------------------------------------------
-   Zero Native Scrollbars (Hardware-Accelerated Themed Track/Thumb)
-   ------------------------------------------------------------ */
-.ds-tm-window *::-webkit-scrollbar,
-.ds-tm-modal-overlay *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
 
-.ds-tm-window *::-webkit-scrollbar-track,
-.ds-tm-modal-overlay *::-webkit-scrollbar-track {
-  background: var(--ds-color-card, var(--ds-panel, #12151c));
-}
 
-.ds-tm-window *::-webkit-scrollbar-thumb,
-.ds-tm-modal-overlay *::-webkit-scrollbar-thumb {
-  background: var(--ds-scrollbar, var(--ds-color-border, #242a36));
-  border-radius: 3px;
-}
 
-.ds-tm-window *::-webkit-scrollbar-thumb:hover,
-.ds-tm-modal-overlay *::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, var(--ds-accent, #67e8f9));
-}
 
-.ds-tm-window *::-webkit-scrollbar-button,
-.ds-tm-modal-overlay *::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  max-width: 0 !important;
-  max-height: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  content: none !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-}
 
-.ds-tm-window *::-webkit-scrollbar-corner,
-.ds-tm-modal-overlay *::-webkit-scrollbar-corner {
-  background: transparent;
-}
 
-/* Firefox scrollbar */
-.ds-tm-window,
-.ds-tm-window * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--ds-scrollbar, var(--ds-color-border, #242a36)) var(--ds-color-card, var(--ds-panel, #12151c));
-}
+
+
+
+
+
+
+
 
 /* ------------------------------------------------------------
    Zero Native Steppers (Hide browser arrows on number inputs)

@@ -874,7 +874,6 @@ function buildRoot(node) {
       }
     }
 
-    node._dsSyncHubHeight?.();
     applyTheme();
     scheduleAlign(node);
   };
@@ -1912,7 +1911,6 @@ app.registerExtension({
       origCreated?.apply(this, arguments);
 
       this._dsInitialized = false;
-      this._dsUserResized = false;
       this.widgets_start_y = 2;
       this.resizable = true;
       this.shape = LiteGraph.ROUND_SHAPE;
@@ -1923,19 +1921,8 @@ app.registerExtension({
 
       this.computeSize = function (out) {
         out = out || [0, 0];
-        const isResizing = (this.graph?.canvas?.resizing_node === this || app?.canvas?.resizing_node === this);
-        if (isResizing) {
-          out[0] = MIN_W;
-          out[1] = MIN_H;
-          return out;
-        }
-        if (this._dsUserResized && this.size) {
-          out[0] = Math.max(MIN_W, this.size[0]);
-          out[1] = Math.max(MIN_H, this.size[1]);
-          return out;
-        }
-        out[0] = DEFAULT_W;
-        out[1] = DEFAULT_H;
+        out[0] = MIN_W;
+        out[1] = MIN_H;
         return out;
       };
 
@@ -1944,13 +1931,8 @@ app.registerExtension({
         this._dsConfigured = true;
         if (this.size) {
           this.size[0] = Math.max(MIN_W, this.size[0]);
-          if (!this._dsUserResized || this.size[1] < 400) {
-            this.size[1] = DEFAULT_H;
-          } else {
-            this.size[1] = Math.max(MIN_H, this.size[1]);
-          }
+          if (this.size[1] < 400) this.size[1] = DEFAULT_H;
         }
-        this._dsSyncHubHeight?.();
         scheduleAlign(this);
       }, 50);
 
@@ -1988,44 +1970,15 @@ app.registerExtension({
       this.rootEl = root;
       this._domRoot = root;
 
-      this._dsSyncHubHeight = () => {
-        const rootEl = this._domRoot;
-        if (!rootEl) return;
-        const topY = Number.isFinite(this._hubWidget?.y)
-          ? this._hubWidget.y
-          : 30;
-        const nodeH = this.size?.[1] || DEFAULT_H;
-        const widgetH = Math.max(100, nodeH - topY - 16);
-        rootEl.style.boxSizing = "border-box";
-        rootEl.style.width = "100%";
-        rootEl.style.height = `${widgetH}px`;
-        rootEl.style.maxHeight = `${widgetH}px`;
-        if (rootEl.parentElement) {
-          rootEl.parentElement.style.height = `${widgetH}px`;
-          rootEl.parentElement.style.maxHeight = `${widgetH}px`;
-          rootEl.parentElement.style.overflow = "hidden";
-        }
-      };
-
       this._hubWidget = this.addDOMWidget("hub_ui", "custom", root, {
         serialize: false,
         hideOnZoom: false,
-        margin: 6,
+        margin: 5,
+        // ComfyUI stretches the widget to fill the node below this height, in the same frame as the node draw.
+        getMinHeight: () => MIN_H - 20,
         getValue: () => null,
         setValue: () => { },
       });
-      this._hubWidget.computeSize = () => {
-        const topY = Number.isFinite(this._hubWidget?.y)
-          ? this._hubWidget.y
-          : 30;
-        const nodeH = this.size?.[1] || DEFAULT_H;
-        const widgetH = Math.max(100, nodeH - topY - 16);
-        this._dsSyncHubHeight?.();
-        return [
-          this.size?.[0] || DEFAULT_W,
-          widgetH,
-        ];
-      };
 
       normalizeDSWidgetHost(root, this, { shell: true });
       protectDSResizeCorners(this);
@@ -2105,13 +2058,7 @@ app.registerExtension({
       if (info?.size && Array.isArray(info.size)) {
         const savedW = Math.max(MIN_W, info.size[0]);
         const savedH = info.size[1];
-        if (savedH < 400) {
-          this.size = [savedW, DEFAULT_H];
-          this._dsUserResized = false;
-        } else {
-          this.size = [savedW, Math.max(MIN_H, savedH)];
-          this._dsUserResized = true;
-        }
+        this.size = [savedW, savedH < 400 ? DEFAULT_H : Math.max(MIN_H, savedH)];
       }
       if (window.DSGlobalTheme && this.dom) {
         try {
@@ -2120,7 +2067,6 @@ app.registerExtension({
         } catch (_) { }
       }
       this._renderUI?.();
-      this._dsSyncHubHeight?.();
       scheduleAlign(this);
     };
 
@@ -2132,14 +2078,10 @@ app.registerExtension({
 
     const origResize = nodeType.prototype.onResize;
     nodeType.prototype.onResize = function (size) {
-      if (this._dsInitialized) {
-        this._dsUserResized = true;
-      }
       if (size) {
         this.size[0] = Math.max(MIN_W, size[0]);
         this.size[1] = Math.max(MIN_H, size[1]);
       }
-      this._dsSyncHubHeight?.();
       scheduleAlign(this);
       origResize?.apply(this, arguments);
     };

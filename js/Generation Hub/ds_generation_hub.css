@@ -15,8 +15,7 @@
 }
 
 /* ========================================================================= */
-/* Outer Container: 5px margin from node edge,
-10px vertical card gap       */
+/* Outer Container: 10px vertical card gap */
 /* ========================================================================= */
 [data-ds-ui-host="true"].ds-hub-container,
 .ds-hub-container {
@@ -34,7 +33,7 @@
   overflow-y: auto !important;
   overflow-x: hidden !important;
   position: relative;
-  padding: 0 5px 5px 5px !important;
+  padding: 0 !important;
   pointer-events: auto !important;
 }
 
@@ -74,53 +73,17 @@
   min-height: 110px;
 }
 
-/* Custom scrollbars across all hub components */
-.ds-hub-container,
-.ds-hub-container *,
-.ds-hub-gear-popover,
-.ds-hub-gear-popover * {
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ds-scrollbar, var(--ds-color-border)) transparent !important;
-}
 
-.ds-hub-container *::-webkit-scrollbar,
-.ds-hub-container::-webkit-scrollbar,
-.ds-hub-gear-popover *::-webkit-scrollbar,
-.ds-hub-gear-popover::-webkit-scrollbar {
-  width: 5px !important;
-  height: 5px !important;
-}
 
-.ds-hub-container *::-webkit-scrollbar-track,
-.ds-hub-container::-webkit-scrollbar-track,
-.ds-hub-gear-popover *::-webkit-scrollbar-track,
-.ds-hub-gear-popover::-webkit-scrollbar-track {
-  background: var(--ds-scrollbar-track, transparent) !important;
-}
 
-.ds-hub-container *::-webkit-scrollbar-thumb,
-.ds-hub-container::-webkit-scrollbar-thumb,
-.ds-hub-gear-popover *::-webkit-scrollbar-thumb,
-.ds-hub-gear-popover::-webkit-scrollbar-thumb {
-  background: var(--ds-scrollbar, var(--ds-color-border)) !important;
-  border-radius: 4px !important;
-}
 
-.ds-hub-container *::-webkit-scrollbar-thumb:hover,
-.ds-hub-container::-webkit-scrollbar-thumb:hover,
-.ds-hub-gear-popover *::-webkit-scrollbar-thumb:hover,
-.ds-hub-gear-popover::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent) !important;
-}
 
-.ds-hub-container *::-webkit-scrollbar-button,
-.ds-hub-container::-webkit-scrollbar-button,
-.ds-hub-gear-popover *::-webkit-scrollbar-button,
-.ds-hub-gear-popover::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
+
+
+
+
+
+
 
 /* Detection Badges */
 .ds-hub-detect-badge {
@@ -221,9 +184,15 @@ Height) — Strictly centered */
 
 .ds-hub-chips-wrap {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--ds-gap-xs, 4px);
+}
+
+/* All megapixel chips share one row at the minimum node width. */
+.ds-hub-chips-wrap > .ds-ui-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 2px;
 }
 
 .ds-ui-text-editor.ds-hub-prompt-ta {

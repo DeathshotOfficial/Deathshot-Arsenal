@@ -585,36 +585,14 @@ app.registerExtension({
         this._dsPreview.mount();
 
         const minWidgetH = () => (this._dsState?.collapsed ? 140 : 240);
-        const getWidgetHeight = () => {
-          const widgetY = Number(domWidget?.y ?? this._getWidgetY?.() ?? NATIVE_LANE_H);
-          const nodeHeight = Number(this.size?.[1] ?? (this._dsState?.collapsed ? MIN_COLLAPSED_H : DEFAULT_EXPANDED_H));
-          return Math.max(minWidgetH(), nodeHeight - widgetY - CARD_MARGIN);
-        };
-        this._dsGetWidgetHeight = getWidgetHeight;
-
         const domWidget = this.addDOMWidget("ds_outpaint_ui", "custom", card.root, {
           serialize: false,
           margin: CARD_MARGIN,
           getMinHeight: minWidgetH,
-          getHeight: getWidgetHeight,
         });
         this._dsDOMWidget = domWidget;
 
-        domWidget.computeSize = (width) => [width || this.size?.[0] || DEFAULT_W, getWidgetHeight()];
-
-        this._dsSyncLayout = () => {
-          if (!this.size) return;
-          const targetH = getWidgetHeight();
-          if (domWidget) {
-            domWidget.computedHeight = targetH;
-          }
-          if (card.root) {
-            card.root.style.height = "100%";
-          }
-          if (card.root?.parentElement) {
-            card.root.parentElement.style.height = `${targetH}px`;
-          }
-        };
+        card.root.style.height = "100%";
 
         normalizeDSWidgetHost(card.root, this, { shell: false });
         protectDSResizeCorners(this);
@@ -626,7 +604,6 @@ app.registerExtension({
           if (directionChanged) persist(this);
           this._dsPreview?.setState(this._dsState, this._dsImage);
           this._dsUpdateUI?.();
-          this._dsSyncLayout?.();
           this.setDirtyCanvas?.(true, true);
         };
         this._dsRefreshPreview = refresh;
@@ -637,7 +614,6 @@ app.registerExtension({
             persist(this);
             syncHiddenWidgets(this);
             this._dsUpdateUI?.();
-            this._dsSyncLayout?.();
             refresh();
             this.setDirtyCanvas?.(true, true);
           } catch (e) {
@@ -868,7 +844,6 @@ app.registerExtension({
           this._dsState.expanded_height = h;
           persist(this);
         }
-        this._dsSyncLayout?.();
         this._dsPreview?.setState?.(this._dsState, this._dsImage);
         this.setDirtyCanvas?.(true, true);
       } catch (e) {
@@ -893,7 +868,6 @@ app.registerExtension({
         this._dsState.expanded_height = h;
         persist(this);
       }
-      this._dsSyncLayout?.();
       this._dsPreview?.setState?.(this._dsState, this._dsImage);
       this.setDirtyCanvas?.(true, true);
       return result;
@@ -923,20 +897,17 @@ app.registerExtension({
         persist(this);
 
         this._dsUpdateUI?.();
-        this._dsSyncLayout?.();
         this._dsRefreshPreview?.();
         this.setDirtyCanvas?.(true, true);
 
         setTimeout(() => {
           this.size = [loadedW, loadedH];
-          this._dsSyncLayout?.();
           this._dsPreview?.setState?.(this._dsState, this._dsImage);
           this._dsRefreshPreview?.();
           this.setDirtyCanvas?.(true, true);
         }, 50);
         setTimeout(() => {
           this.size = [loadedW, loadedH];
-          this._dsSyncLayout?.();
           this.setDirtyCanvas?.(true, true);
         }, 200);
       } catch (e) {

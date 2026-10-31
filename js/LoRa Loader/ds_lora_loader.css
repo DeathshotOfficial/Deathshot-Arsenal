@@ -363,8 +363,6 @@
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ds-scrollbar, #353b46) transparent;
 }
 
 .ds-lora-modal-foot {

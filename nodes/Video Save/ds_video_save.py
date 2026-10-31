@@ -692,6 +692,7 @@ class DS_VideoSave:
                 save_output=save_output,
                 prompt=prompt,
                 extra_pnginfo=extra_pnginfo,
+                unique_id=unique_id,
             )
 
         primary_path = saved_paths[0] if saved_paths else ""
@@ -749,9 +750,23 @@ class DS_VideoSave:
         save_output: bool,
         prompt: Optional[Dict[str, Any]],
         extra_pnginfo: Optional[Dict[str, Any]],
+        unique_id: Optional[str] = None,
     ) -> Tuple[List[str], Optional[str], bool]:
         ffmpeg_bin = get_ffmpeg_path()
         num_frames = Images.shape[0]
+        last_pct = -1
+
+        # Feeds the node's own status bar; ComfyUI's generic progress event would also draw its native overlay.
+        def report(done: int):
+            nonlocal last_pct
+            pct = done * 100 // max(1, num_frames)
+            if pct == last_pct:
+                return
+            last_pct = pct
+            server.PromptServer.instance.send_sync(
+                "ds_video_progress",
+                {"node_id": str(unique_id), "done": done, "total": num_frames, "percent": pct},
+            )
         H, W = int(Images.shape[1]), int(Images.shape[2])
         # FFmpeg requires even dimensions for YUV formats
         even_w = W if W % 2 == 0 else W - 1
@@ -821,6 +836,7 @@ class DS_VideoSave:
                         proc.stdin.write(arr_16.tobytes())
                     except (BrokenPipeError, OSError):
                         break
+                    report(idx + 1)
 
                 try:
                     proc.stdin.flush()
@@ -854,6 +870,7 @@ class DS_VideoSave:
 
                     pil_img.save(frame_path, "PNG", pnginfo=pnginfo, compress_level=4)
                     output_paths.append(frame_path)
+                    report(idx + 1)
 
             return output_paths, None, False
 
@@ -1090,6 +1107,7 @@ class DS_VideoSave:
                 except (BrokenPipeError, OSError):
                     broken_pipe = True
                     break
+                report(i + 1)
 
             try:
                 proc.stdin.flush()
@@ -1127,6 +1145,7 @@ class DS_VideoSave:
                         save_output=save_output,
                         prompt=prompt,
                         extra_pnginfo=extra_pnginfo,
+                        unique_id=unique_id,
                     )
                 raise RuntimeError(f"FFmpeg failed with returncode {proc.returncode}: {stderr_text.strip() or 'Unknown error'}")
 

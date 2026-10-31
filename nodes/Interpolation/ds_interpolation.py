@@ -13,7 +13,6 @@ import torch
 import torch.nn.functional as F
 
 import comfy.model_management
-import comfy.utils
 import server
 from aiohttp import web
 
@@ -384,7 +383,8 @@ class DS_Interpolation:
             output_slots[-1] = frames[-1:].to(device="cpu", dtype=torch.float32)
 
         total_tasks = len(tasks)
-        pbar = comfy.utils.ProgressBar(total_tasks) if total_tasks > 0 else None
+        unique_id = kwargs.get("unique_id")
+        tasks_done = 0
         frames_processed_since_cache_clear = 0
         batch_size = max(1, min(64, int(batch_size)))
 
@@ -438,8 +438,12 @@ class DS_Interpolation:
                     for b_idx, (out_idx, _, _, _) in enumerate(batch_tasks):
                         output_slots[out_idx] = middle_frames_cpu[b_idx : b_idx + 1]
 
-                    if pbar:
-                        pbar.update(current_bs)
+                    # Feeds the node's own status bar; ComfyUI's generic progress event would also draw its native overlay.
+                    tasks_done += current_bs
+                    server.PromptServer.instance.send_sync(
+                        "ds_interpolation_progress",
+                        {"node_id": str(unique_id), "done": tasks_done, "total": total_tasks},
+                    )
 
                     frames_processed_since_cache_clear += current_bs
                     if frames_processed_since_cache_clear >= clear_cache_after_n_frames:

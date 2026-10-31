@@ -199,8 +199,8 @@
   display: flex !important;
   flex-direction: column !important;
   gap: var(--ds-gap-xs, 4px) !important;
-  min-height: 140px !important;
-  flex: 1 1 50% !important;
+  min-height: 0 !important;
+  flex: 0 1 auto !important;
   overflow: hidden !important;
 }
 
@@ -329,38 +329,26 @@
   flex-shrink: 0 !important;
 }
 
-/* Attribute Chips Grid Surface: Fills ALL remaining vertical space in Section 1 */
+/* Attribute chips take their natural height and only scroll when the node is too short for them. */
 .ds-rand-chips-grid {
   display: flex !important;
   flex-wrap: wrap !important;
   align-content: flex-start !important;
   gap: 4px !important;
-  flex: 1 1 auto !important;
-  min-height: 80px !important;
-  height: 100% !important;
+  flex: 0 1 auto !important;
+  min-height: 52px !important;
   max-height: none !important;
   overflow-y: auto !important;
   padding: 6px !important;
   border-radius: var(--ds-radius-control, 5px) !important;
   background: var(--ds-color-panel-2, #161a23) !important;
   border: 1px solid var(--ds-color-border, #242a36) !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ds-color-border-hover, #374151) transparent !important;
 }
 
-.ds-rand-chips-grid::-webkit-scrollbar {
-  width: 5px;
-}
-.ds-rand-chips-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
-.ds-rand-chips-grid::-webkit-scrollbar-thumb {
-  background: var(--ds-color-border-hover, #374151);
-  border-radius: 3px;
-}
-.ds-rand-chips-grid::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, #67e8f9);
-}
+
+
+
+
 
 /* Individual Category Chip (UIElements Button variant) */
 .ds-rand-chip-btn {
@@ -376,7 +364,7 @@
   display: flex !important;
   flex-direction: column !important;
   gap: var(--ds-gap-xs, 4px) !important;
-  flex: 1 1 50% !important;
+  flex: 1 1 auto !important;
   min-height: 100px !important;
   overflow: hidden !important;
 }

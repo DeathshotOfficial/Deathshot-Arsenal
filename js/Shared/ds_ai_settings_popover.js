@@ -127,22 +127,11 @@ function ensureStyles() {
       flex: 1 1 auto;
       min-height: 0;
       box-sizing: border-box;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
     }
-    .ds-ai-gear-popover .ds-sensei-gear-scroll-body::-webkit-scrollbar {
-      width: 5px;
-    }
-    .ds-ai-gear-popover .ds-sensei-gear-scroll-body::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .ds-ai-gear-popover .ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb {
-      background: color-mix(in srgb, var(--ds-color-text) 20%, transparent);
-      border-radius: 4px;
-    }
-    .ds-ai-gear-popover .ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb:hover {
-      background: color-mix(in srgb, var(--ds-color-text) 35%, transparent);
-    }
+    
+    
+    
+    
     .ds-ai-gear-popover .ds-sensei-gear-scroll-body > * {
       flex-shrink: 0;
     }

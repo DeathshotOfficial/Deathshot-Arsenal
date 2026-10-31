@@ -98,20 +98,16 @@ function injectNodeStyles() {
   flex-shrink: 0;
 }
 .dsui-card .ds-ui-card-body > .dsgif-settings.dsui-grow {
-  flex: 0 1 auto;
-  max-height: 420px;
-  overflow-y: auto;
-}
-.dsui-card .ds-ui-card-body > .dsgif-settings.is-collapsed {
-  display: none !important;
+  flex: 0 0 auto;
+  overflow: hidden;
 }
 .dsgif-field-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: var(--ds-gap-sm, 6px);
   width: 100%;
 }
 .dsgif-field-row > * {
-  flex: 1 1 0;
   min-width: 0;
 }
 .dsgif-fps-row {
@@ -387,7 +383,7 @@ function buildGifGenerator(node, card) {
     active: isMenuOpen,
     onClick: (e) => {
       e.stopPropagation();
-      setMenuOpen(!isMenuOpen);
+      setMenuOpen(!isMenuOpen, { resize: true });
     },
   });
   menuToggle.root.setAttribute("aria-pressed", isMenuOpen ? "true" : "false");
@@ -397,10 +393,16 @@ function buildGifGenerator(node, card) {
     className: "dsgif-settings",
   });
 
-  function setMenuOpen(open) {
+  function setMenuOpen(open, { resize = false } = {}) {
     isMenuOpen = Boolean(open);
-    settingsPanel.root.classList.toggle("is-collapsed", !isMenuOpen);
-    settingsPanel.setVisible(isMenuOpen);
+    // Toggling from the button adds or removes exactly the settings height, so the preview keeps the size the user set.
+    const panelH = isMenuOpen ? settingsItem?.minHeight : settingsPanel.root.offsetHeight;
+    const nodeH = node.size[1];
+    settingsItem?.show(isMenuOpen);
+    if (resize) {
+      const delta = (panelH + LAYOUT.GAP) * (isMenuOpen ? 1 : -1);
+      node.setSize([node.size[0], Math.max(node.computeSize()[1], nodeH + delta)]);
+    }
     menuToggle.setActive(isMenuOpen);
     menuToggle.setIcon(isMenuOpen ? "chevron-up" : "chevron-down");
     card.commit(() => {
@@ -716,7 +718,6 @@ function buildGifGenerator(node, card) {
   settingsPanel.append(Section({ title: "Quality & Compression" }));
 
   const sliderQuality = Slider({
-    label: "Quality",
     min: 1,
     max: 100,
     step: 1,
@@ -728,7 +729,6 @@ function buildGifGenerator(node, card) {
   });
 
   const sliderCompression = Slider({
-    label: "Compression",
     min: 0,
     max: 100,
     step: 1,
@@ -748,7 +748,6 @@ function buildGifGenerator(node, card) {
   settingsPanel.append(qualCompRow);
 
   const sliderColors = Slider({
-    label: "Colors",
     min: 2,
     max: 256,
     step: 1,
@@ -1325,8 +1324,19 @@ function buildGifGenerator(node, card) {
   resetBtn.root.style.fontWeight = "600";
   settingsPanel.append(resetBtn);
 
-  // Append settings panel directly below menu toggle
-  card.grow(settingsPanel.root, { minHeight: 80 });
+  // Settings take their full content height (the node grows to fit); the preview below takes any extra space.
+  const settingsItem = card.grow(settingsPanel.root, { minHeight: 80 });
+  new ResizeObserver(() => {
+    if (!isMenuOpen) return;
+    settingsPanel.root.style.minHeight = "0px";
+    const root = settingsPanel.root;
+    const natural = root.scrollHeight + root.offsetHeight - root.clientHeight;
+    settingsPanel.root.style.minHeight = `${natural}px`;
+    if (natural !== settingsItem.minHeight) {
+      settingsItem.minHeight = natural;
+      card.relayout();
+    }
+  }).observe(settingsPanel.root);
 
   // Initial display setup for settings panel
   setMenuOpen(isMenuOpen);

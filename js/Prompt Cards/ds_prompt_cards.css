@@ -13,20 +13,12 @@
 .dom-widget:has(> [class*="ds-cards-"]) {
   pointer-events: none !important;
   overflow: hidden !important;
-  scrollbar-width: none !important;
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
 }
 
-.dom-widget:has(> .ds-prompt-cards-card)::-webkit-scrollbar,
-.dom-widget:has(> .ds-cards-root)::-webkit-scrollbar,
-.ds-prompt-cards-card::-webkit-scrollbar,
-.ds-cards-root::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
+
 
 .ds-prompt-cards-card,
 .ds-cards-root {
@@ -338,37 +330,17 @@
   border-radius: 6px !important;
   pointer-events: auto !important;
   box-sizing: border-box !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ds-scrollbar, var(--ds-color-border, #374151)) transparent !important;
 }
 
-/* Modern Themed Pill Scrollbar (Fully rounded, NO red track, NO sharp arrows) */
-.ds-cards-body::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
 
-.ds-cards-body::-webkit-scrollbar-thumb {
-  background: var(--ds-scrollbar, var(--ds-color-border, #374151)) !important;
-  border-radius: 999px !important;
-}
 
-.ds-cards-body::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, #67e8f9) !important;
-}
 
-.ds-cards-body::-webkit-scrollbar-track {
-  background: transparent !important;
-  border-radius: 999px !important;
-}
 
-.ds-cards-body::-webkit-scrollbar-button,
-.ds-cards-body::-webkit-scrollbar-button:single-button,
-.ds-cards-body::-webkit-scrollbar-corner {
-  display: none !important;
-  height: 0 !important;
-  width: 0 !important;
-}
+
+
+
+
+
 
 /* ============================================================
    5. GRID VIEW
@@ -674,29 +646,15 @@
   overflow-y: auto;
   box-sizing: border-box;
   flex: 1 1 auto;
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ds-scrollbar, var(--ds-color-border, #374151)) transparent !important;
 }
 
-.ds-prompt-text::-webkit-scrollbar {
-  width: 4px !important;
-  height: 4px !important;
-}
 
-.ds-prompt-text::-webkit-scrollbar-thumb {
-  background: var(--ds-scrollbar, var(--ds-color-border, #374151)) !important;
-  border-radius: 999px !important;
-}
 
-.ds-prompt-text::-webkit-scrollbar-track {
-  background: transparent !important;
-}
 
-.ds-prompt-text::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
+
+
+
+
 
 .ds-cards-list .ds-prompt-text {
   flex: 1 1 0% !important;

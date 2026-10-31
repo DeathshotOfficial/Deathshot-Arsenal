@@ -1287,15 +1287,12 @@ app.registerExtension({
       }
     });
 
-    api.addEventListener("progress", (e) => {
+    api.addEventListener("ds_video_progress", (e) => {
       const d = e?.detail;
       if (!d) return;
       for (const n of app.graph?._nodes || []) {
-        if (n?.type === TYPE && String(n.id) === String(d.node)) {
-          if (d.max > 0) {
-            const pct = (d.value / d.max) * 100;
-            n._statusBar?.setProgress(pct, `Encoding (${Math.round(pct)}%)...`);
-          }
+        if (n?.type === TYPE && String(n.id) === String(d.node_id)) {
+          n._statusBar?.setProgress(d.percent, `Encoding frame ${d.done}/${d.total}`);
         }
       }
     });

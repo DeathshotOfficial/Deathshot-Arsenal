@@ -42,7 +42,6 @@
   --ds-btn-height-compact: 22px;
   --ds-btn-padding: 0 10px;
 
-  --ds-ui-margin: 10px;
   --ds-radius-card: 8px;
   --ds-radius-control: 5px;
   --ds-radius-popup: 8px;
@@ -63,10 +62,9 @@
   --ds-transition: 120ms ease;
 }
 
-/* 10px Outer Node UI Margin */
+/* The DOM widget margin already places the face 5px inside the node. */
 [data-ds-ui-host="true"] {
   box-sizing: border-box !important;
-  padding: 0 var(--ds-ui-margin, 10px) var(--ds-ui-margin, 10px) var(--ds-ui-margin, 10px) !important;
   width: 100% !important;
   height: 100% !important;
   overflow: hidden !important;
@@ -143,6 +141,10 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
   display: flex;
   align-items: center;
   gap: var(--ds-gap-xs, 4px);
+}
+
+.ds-ui-card-actions:empty {
+  display: none;
 }
 
 .ds-ui-card-body {
@@ -727,7 +729,6 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
   min-height: 0;
   max-height: 240px;
   overflow-y: auto;
-  scrollbar-width: thin;
   padding-right: 2px;
 }
 
@@ -866,7 +867,6 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
   white-space: nowrap;
   pointer-events: none;
   line-height: 1;
-  transform: translateY(1.5px);
   box-sizing: border-box;
 }
 
@@ -1168,7 +1168,9 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
   min-width: 34px;
   height: 20px;
   background: var(--ds-color-panel-2, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
+  /* Inset shadow instead of a border: borders snap to whole device pixels and
+     shift the thumb visually when the canvas is zoomed out. */
+  box-shadow: inset 0 0 0 1px var(--ds-color-border, #242a36);
   border-radius: 4px;
   transition: all var(--ds-transition);
   box-sizing: border-box;
@@ -1177,8 +1179,8 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
 
 .ds-ui-toggle-thumb {
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 3px;
+  left: 3px;
   width: 14px;
   height: 14px;
   background: var(--ds-color-muted-text, #9ca3af);
@@ -1188,7 +1190,7 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
 
 .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
   background: var(--ds-color-accent, #67e8f9);
-  border-color: var(--ds-color-accent, #67e8f9);
+  box-shadow: inset 0 0 0 1px var(--ds-color-accent, #67e8f9);
 }
 
 .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {
@@ -1529,109 +1531,17 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
   font-size: 9px;
 }
 
-/* ========================================================================= */
-/* Unified Scrollbar System (Variables & Arrow Hiding)                       */
-/* ========================================================================= */
-[data-ds-ui-host="true"],
-[data-ds-ui-host="true"] *,
-.ds-ui-card,
-.ds-ui-card *,
-.ds-ui-popup,
-.ds-ui-popup *,
-[data-ds-themed="true"],
-[data-ds-themed="true"] *,
-[class*="ds-"],
-[class*="ds-"] * {
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ds-scrollbar, var(--ds-color-border, #374151)) var(--ds-scrollbar-track, transparent) !important;
-}
 
-[data-ds-ui-host="true"]::-webkit-scrollbar,
-[data-ds-ui-host="true"] *::-webkit-scrollbar,
-.ds-ui-card::-webkit-scrollbar,
-.ds-ui-card *::-webkit-scrollbar,
-.ds-ui-popup::-webkit-scrollbar,
-.ds-ui-popup *::-webkit-scrollbar,
-[data-ds-themed="true"]::-webkit-scrollbar,
-[data-ds-themed="true"] *::-webkit-scrollbar,
-[class*="ds-"]::-webkit-scrollbar,
-[class*="ds-"] *::-webkit-scrollbar {
-  width: 5px !important;
-  height: 5px !important;
-}
 
-[data-ds-ui-host="true"]::-webkit-scrollbar-track,
-[data-ds-ui-host="true"] *::-webkit-scrollbar-track,
-.ds-ui-card::-webkit-scrollbar-track,
-.ds-ui-card *::-webkit-scrollbar-track,
-.ds-ui-popup::-webkit-scrollbar-track,
-.ds-ui-popup *::-webkit-scrollbar-track,
-[data-ds-themed="true"]::-webkit-scrollbar-track,
-[data-ds-themed="true"] *::-webkit-scrollbar-track,
-[class*="ds-"]::-webkit-scrollbar-track,
-[class*="ds-"] *::-webkit-scrollbar-track {
-  background: var(--ds-scrollbar-track, transparent) !important;
-}
 
-[data-ds-ui-host="true"]::-webkit-scrollbar-thumb,
-[data-ds-ui-host="true"] *::-webkit-scrollbar-thumb,
-.ds-ui-card::-webkit-scrollbar-thumb,
-.ds-ui-card *::-webkit-scrollbar-thumb,
-.ds-ui-popup::-webkit-scrollbar-thumb,
-.ds-ui-popup *::-webkit-scrollbar-thumb,
-[data-ds-themed="true"]::-webkit-scrollbar-thumb,
-[data-ds-themed="true"] *::-webkit-scrollbar-thumb,
-[class*="ds-"]::-webkit-scrollbar-thumb,
-[class*="ds-"] *::-webkit-scrollbar-thumb {
-  background: var(--ds-scrollbar, var(--ds-color-border, #374151)) !important;
-  border-radius: 4px !important;
-}
 
-[data-ds-ui-host="true"]::-webkit-scrollbar-thumb:hover,
-[data-ds-ui-host="true"] *::-webkit-scrollbar-thumb:hover,
-.ds-ui-card::-webkit-scrollbar-thumb:hover,
-.ds-ui-card *::-webkit-scrollbar-thumb:hover,
-.ds-ui-popup::-webkit-scrollbar-thumb:hover,
-.ds-ui-popup *::-webkit-scrollbar-thumb:hover,
-[data-ds-themed="true"]::-webkit-scrollbar-thumb:hover,
-[data-ds-themed="true"] *::-webkit-scrollbar-thumb:hover,
-[class*="ds-"]::-webkit-scrollbar-thumb:hover,
-[class*="ds-"] *::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, #67e8f9) !important;
-}
 
-/* Eliminate all native scrollbar buttons/arrows in general */
-*::-webkit-scrollbar-button,
-*::-webkit-scrollbar-button:single-button,
-*::-webkit-scrollbar-button:double-button,
-*::-webkit-scrollbar-button:start,
-*::-webkit-scrollbar-button:end,
-*::-webkit-scrollbar-button:decrement,
-*::-webkit-scrollbar-button:increment,
-*::-webkit-scrollbar-button:vertical:decrement,
-*::-webkit-scrollbar-button:vertical:increment,
-*::-webkit-scrollbar-button:horizontal:decrement,
-*::-webkit-scrollbar-button:horizontal:increment,
-[data-ds-ui-host="true"]::-webkit-scrollbar-button,
-[data-ds-ui-host="true"] *::-webkit-scrollbar-button,
-[data-ds-themed="true"]::-webkit-scrollbar-button,
-[data-ds-themed="true"] *::-webkit-scrollbar-button,
-[class*="ds-"]::-webkit-scrollbar-button,
-[class*="ds-"] *::-webkit-scrollbar-button,
-::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  max-width: 0 !important;
-  max-height: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  content: none !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-}
+
+
+
+
+
+
 
 /* ========================================================================= */
 /* 10. Fullscreen Video Player Modal (Unified Design System)                 */
@@ -2541,7 +2451,6 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
   background: var(--ds-color-panel-2, color-mix(in srgb, var(--ds-color-base) 25%, transparent));
   border-radius: 6px;
   border: 1px solid var(--ds-color-border, #242a36);
-  scrollbar-width: thin;
 }
 
 .ds-civitai-tag-chip {

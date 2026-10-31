@@ -5,7 +5,6 @@
 
 export const DS_TOKENS = Object.freeze({
   // Geometry & Rhythm
-  uiMargin: 10,             // 10px outer margin between node boundary and DOM UI
   radiusCard: 8,            // 8px rounded corners for cards/sections
   radiusControl: 5,         // 5px soft rounded corners for controls & buttons
   radiusPopup: 8,           // 8px rounded corners for menus and popovers
@@ -40,7 +39,6 @@ export const DS_TOKENS = Object.freeze({
 });
 
 export const DS_CSS_VARS = Object.freeze({
-  "--ds-ui-margin": `${DS_TOKENS.uiMargin}px`,
   "--ds-radius-card": `${DS_TOKENS.radiusCard}px`,
   "--ds-radius-control": `${DS_TOKENS.radiusControl}px`,
   "--ds-radius-popup": `${DS_TOKENS.radiusPopup}px`,

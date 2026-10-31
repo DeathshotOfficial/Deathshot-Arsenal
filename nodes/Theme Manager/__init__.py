@@ -1,3 +1,1 @@
-from .ds_theme_manager import DS_ThemeManager
-
-__all__ = ["DS_ThemeManager"]
+from .ds_theme_manager import register_theme_manager_routes  # noqa: F401  (importing registers the /ds/theme routes)

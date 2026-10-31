@@ -27,8 +27,8 @@ const DEFAULT_W = 320;
 const MIN_W = 260;
 const CARD_MARGIN = 5;
 
-const COLLAPSED_CARD_H = 119;
-const EXPANDED_CARD_H = 358;
+const COLLAPSED_CARD_H = 117;
+const EXPANDED_CARD_H = 349;
 
 const MODEL_OPTIONS = [
   "sudo_rife4_269.662_testV1_scale1.pth",
@@ -195,12 +195,10 @@ function bodyTop(node) {
   } catch (_) {}
 
   const slotH = globalThis.LiteGraph?.NODE_SLOT_HEIGHT ?? 20;
-  const titleH = globalThis.LiteGraph?.NODE_TITLE_HEIGHT ?? 30;
   const inputs = (node.inputs ?? []).filter((i) => !i.widget).length;
   const outputs = (node.outputs ?? []).length;
   const rows = Math.max(inputs, outputs);
-  const startY = Number(node.constructor?.slot_start_y) || titleH;
-  return rows ? rows * slotH + startY : 0;
+  return rows ? rows * slotH + (node.constructor.slot_start_y || 0) : 0;
 }
 
 class DSInterpolationController {
@@ -576,26 +574,18 @@ class DSInterpolationController {
   }
 
   minCardHeight() {
-    const s = getState(this.node);
-    const isCollapsed = Boolean(s.collapsed);
-
-    const pad = 20; // 10px top + 10px bottom
-    const gaps = 12; // 6px gap * 2
-    const statusH = 22;
-    const ckptH = 39;
-
-    let collapseH = 26; // collapse header height
-    if (!isCollapsed) {
-      let panelH = 0;
-      if (this.optionsPanel && this.optionsPanel.offsetHeight > 0) {
-        panelH = this.optionsPanel.offsetHeight;
-      } else {
-        panelH = EXPANDED_CARD_H - (pad + statusH + ckptH + 26 + gaps);
-      }
-      collapseH += panelH;
-    }
-
-    return pad + statusH + ckptH + collapseH + gaps;
+    const { root, body } = this.card;
+    const rows = [...body.children].filter((el) => el.offsetParent);
+    // Not laid out yet (node off-screen or hidden by zoom): fall back to the design heights.
+    if (!rows.length) return getState(this.node).collapsed ? COLLAPSED_CARD_H : EXPANDED_CARD_H;
+    const rootStyle = getComputedStyle(root);
+    const bodyGap = parseFloat(getComputedStyle(body).rowGap) || 0;
+    const content = rows.reduce((h, el) => h + el.offsetHeight, 0) + bodyGap * (rows.length - 1);
+    return Math.ceil(
+      content +
+      parseFloat(rootStyle.paddingTop) + parseFloat(rootStyle.paddingBottom) +
+      parseFloat(rootStyle.borderTopWidth) + parseFloat(rootStyle.borderBottomWidth)
+    );
   }
 
   relayout({ shrink = false } = {}) {
@@ -714,7 +704,7 @@ app.registerExtension({
       hideWidgets(this);
       if (this._controller) {
         this._controller.syncState();
-        requestAnimationFrame(() => this._controller?.relayout({ shrink: getState(this).collapsed }));
+        requestAnimationFrame(() => this._controller?.relayout({ shrink: true }));
       }
       return result;
     };
@@ -724,7 +714,7 @@ app.registerExtension({
       hideWidgets(this);
       if (this._controller) {
         this._controller.syncState();
-        requestAnimationFrame(() => this._controller?.relayout({ shrink: getState(this).collapsed }));
+        requestAnimationFrame(() => this._controller?.relayout({ shrink: true }));
       }
       return result;
     };
@@ -786,10 +776,10 @@ app.registerExtension({
       });
 
       requestAnimationFrame(() => {
-        controller.relayout({ shrink: getState(this).collapsed });
+        controller.relayout({ shrink: true });
       });
       setTimeout(() => {
-        controller.relayout({ shrink: getState(this).collapsed });
+        controller.relayout({ shrink: true });
       }, 50);
       return result;
     };
@@ -801,10 +791,10 @@ app.registerExtension({
       hideWidgets(node);
       node._controller?.syncState();
       requestAnimationFrame(() => {
-        node._controller?.relayout({ shrink: getState(node).collapsed });
+        node._controller?.relayout({ shrink: true });
       });
       setTimeout(() => {
-        node._controller?.relayout({ shrink: getState(node).collapsed });
+        node._controller?.relayout({ shrink: true });
       }, 50);
     }
   },
@@ -814,10 +804,10 @@ app.registerExtension({
       hideWidgets(node);
       node._controller?.syncState();
       requestAnimationFrame(() => {
-        node._controller?.relayout({ shrink: getState(node).collapsed });
+        node._controller?.relayout({ shrink: true });
       });
       setTimeout(() => {
-        node._controller?.relayout({ shrink: getState(node).collapsed });
+        node._controller?.relayout({ shrink: true });
       }, 50);
     }
   },
@@ -837,15 +827,12 @@ app.registerExtension({
       }
     });
 
-    api.addEventListener("progress", (e) => {
+    api.addEventListener("ds_interpolation_progress", (e) => {
       const d = e?.detail;
       if (!d) return;
       for (const n of app.graph?._nodes || []) {
-        if (n?.type === TYPE && String(n.id) === String(d.node)) {
-          if (d.max > 0) {
-            const pct = (d.value / d.max) * 100;
-            n._controller?.statusBar?.setProgress(pct, `Interpolating (${Math.round(pct)}%)...`);
-          }
+        if (n?.type === TYPE && String(n.id) === String(d.node_id)) {
+          n._controller?.statusBar?.setProgress((d.done / d.total) * 100, `Interpolating ${d.done}/${d.total}`);
         }
       }
     });

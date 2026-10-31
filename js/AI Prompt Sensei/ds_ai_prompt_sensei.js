@@ -1257,6 +1257,14 @@ function alignOutputs(node) {
     }
   }
 
+  // The image input sits on the image section row, level with the image output, instead of behind the card top.
+  const imageIn = node.inputs?.find((inp) => inp.name === "image");
+  const imageY = node.outputs[0]?.pos?.[1];
+  if (imageIn && Number.isFinite(imageY) && imageIn.pos?.[1] !== imageY) {
+    imageIn.pos = [0, imageY];
+    changed = true;
+  }
+
   if (changed) {
     node.setDirtyCanvas?.(true, true);
   }

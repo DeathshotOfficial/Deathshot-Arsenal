@@ -2605,28 +2605,13 @@ function injectReminderStyles() {
       font-size: 10.5px !important;
     }
 
-/* Custom Webkit Scrollbars (Zero Native Scrollbars) */
-    .ds-reminder-popover *::-webkit-scrollbar,
-    .ds-rem-modal-backdrop *::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
 
-.ds-reminder-popover *::-webkit-scrollbar-track,
-    .ds-rem-modal-backdrop *::-webkit-scrollbar-track {
-      background: transparent;
-    }
 
-.ds-reminder-popover *::-webkit-scrollbar-thumb,
-    .ds-rem-modal-backdrop *::-webkit-scrollbar-thumb {
-      background: var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent));
-      border-radius: 4px;
-    }
 
-.ds-reminder-popover *::-webkit-scrollbar-thumb:hover,
-    .ds-rem-modal-backdrop *::-webkit-scrollbar-thumb:hover {
-      background: var(--ds-color-accent, #67e8f9);
-    }
+
+
+
+
 
 /* Fullscreen Overlay */
     .ds-reminder-fs-overlay {

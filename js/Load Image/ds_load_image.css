@@ -354,8 +354,6 @@
 .ds-li-browser-list {
   max-height: 360px;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ds-color-border, #242a36) transparent;
   display: flex;
   flex-direction: column;
   gap: 4px;

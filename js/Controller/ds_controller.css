@@ -192,33 +192,17 @@ bottom and right edge of their row {
   flex: 1 1 auto !important;
   box-sizing: border-box !important;
   min-height: 40px !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ds-color-border, #374151) transparent !important;
 }
 
-.ds-controller-settings-list::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
 
-.ds-controller-settings-list::-webkit-scrollbar-track {
-  background: transparent !important;
-}
 
-.ds-controller-settings-list::-webkit-scrollbar-thumb {
-  background: var(--ds-color-border, #374151) !important;
-  border-radius: 4px !important;
-}
 
-.ds-controller-settings-list::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, #67e8f9) !important;
-}
 
-.ds-controller-settings-list::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
+
+
+
+
+
 
 .ds-controller-settings-item {
   display: flex;

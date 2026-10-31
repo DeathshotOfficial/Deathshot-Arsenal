@@ -507,26 +507,17 @@
   overflow-x: hidden;
   background: var(--ip-surface);
   box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ip-border) transparent;
 }
 
 .ds-ip-grid[hidden] {
   display: none !important;
 }
 
-.ds-ip-grid::-webkit-scrollbar {
-  width: 5px;
-}
 
-.ds-ip-grid::-webkit-scrollbar-thumb {
-  background: var(--ip-border);
-  border-radius: 4px;
-}
 
-.ds-ip-grid::-webkit-scrollbar-track {
-  background: transparent;
-}
+
+
+
 
 @keyframes dsipTileIn {
   from {

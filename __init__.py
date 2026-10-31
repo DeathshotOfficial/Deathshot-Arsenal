@@ -288,13 +288,11 @@ except Exception as e:
     print(f"[DeathshotArsenal] Failed to load DS_VideoTiming: {e}", flush=True)
     DS_VideoTiming = None
 
-# DS Theme Manager
+# DS Theme Manager (extension only; the module registers the /ds/theme routes)
 try:
-    _mod = _load_node_pkg("theme_manager", "Theme Manager")
-    DS_ThemeManager = _mod.DS_ThemeManager
+    _load_node_pkg("theme_manager", "Theme Manager")
 except Exception as e:
-    print(f"[DeathshotArsenal] Failed to load DS_ThemeManager: {e}", flush=True)
-    DS_ThemeManager = None
+    print(f"[DeathshotArsenal] Failed to load Theme Manager routes: {e}", flush=True)
 
 # DS Group Switch
 try:
@@ -745,7 +743,6 @@ NODE_CLASS_MAPPINGS = {
     **({"DS_ThePurger": DS_ThePurger} if DS_ThePurger is not None else {}),
     **({"DS_Controller": DS_Controller} if DS_Controller is not None else {}),
     **({"DS_ImageDescriber": DS_ImageDescriber} if DS_ImageDescriber is not None else {}),
-    **({"DS_ThemeManager": DS_ThemeManager} if DS_ThemeManager is not None else {}),
     **({"DS_GifGenerator": DS_GifGenerator} if DS_GifGenerator is not None else {}),
     **({"DSStripper": DS_Stripper} if DS_Stripper is not None else {}),
 }
@@ -787,7 +784,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **({"DS_ThePurger": "DS The Purger"} if DS_ThePurger is not None else {}),
     **({"DS_Controller": "DS Controller"} if DS_Controller is not None else {}),
     **({"DS_ImageDescriber": "DS Image Describer"} if DS_ImageDescriber is not None else {}),
-    **({"DS_ThemeManager": "DS Theme Manager"} if DS_ThemeManager is not None else {}),
     **({"DS_GifGenerator": "DS GIF Generator"} if DS_GifGenerator is not None else {}),
     **({"DSStripper": "DS Stripper"} if DS_Stripper is not None else {}),
 }

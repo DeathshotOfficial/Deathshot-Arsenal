@@ -17,6 +17,7 @@ import {
 } from "../Core/system.js";
 import { installDSUI } from "../index.js";
 import { ensureFxLayer, setFx } from "./fx.js";
+import { installOverlayScrollbar } from "./scrollbar.js";
 
 const DS_NODE_PREFIX = "DS_";
 
@@ -591,6 +592,8 @@ function applyNodeBaseTheme(node, theme = getTheme(config.theme)) {
   if (!isDSNode(node)) return;
   try { protectDSResizeCorners(node); } catch (_) {}
   markNodeFace(node);
+  // Badges sit above the title bar; on a node without a base they float in mid-air.
+  if (node._dsNodeBaseOptOut) node.drawBadges = () => {};
   if (!theme || node._dsNodeBaseOptOut) return;
 
   const palette = getNodeBasePalette(theme);
@@ -773,12 +776,6 @@ function updateGlobalStylesheet(theme, cfg) {
   const accent = vars["--ds-accent"] || vars["--accent"] || "#67e8f9";
   const accentRgb = hexToRgbTriplet(accent);
 
-  // Build strong selectors for scrollbar hiding using the same roots the theming uses
-  const rootList = DS_ROOT_SELECTOR;
-  const roots = rootList.split(", ");
-  const sbDirect = roots.map(s => `${s}::-webkit-scrollbar-button, ${s}::-webkit-scrollbar-button:single-button`).join(", ");
-  const sbDesc = roots.map(s => `${s} *::-webkit-scrollbar-button, ${s} *::-webkit-scrollbar-button:single-button, ${s} ::-webkit-scrollbar-button, ${s} ::-webkit-scrollbar-button:single-button`).join(", ");
-  const sbAll = [sbDirect, sbDesc].join(", ");
 
   // html:root outranks the :root defaults in ds_ui.css regardless of stylesheet order.
   style.textContent = `
@@ -862,89 +859,34 @@ ${decl}
       text-shadow: var(--ds-on-accent-shadow) !important;
     }
 
-    /* Modern unified scrollbar (thin, themed) — applies to ALL scroll areas inside DS nodes */
-    [data-ds-themed="true"],
-    [data-ds-themed="true"] *,
-    [data-ds-face="true"],
-    [data-ds-face="true"] * {
-      scrollbar-width: thin !important;
-      scrollbar-color: var(--ds-scrollbar) var(--ds-panel) !important;
+    /* Native scrollbars inside DS surfaces take no space; scrollbar.js draws one overlay thumb.
+       Only ::-webkit-scrollbar is used; Chromium ignores it once scrollbar-width/color are set. */
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar {
+      width: 0;
+      height: 0;
     }
-    [data-ds-themed="true"]::-webkit-scrollbar,
-    [data-ds-themed="true"] *::-webkit-scrollbar,
-    [data-ds-face="true"]::-webkit-scrollbar,
-    [data-ds-face="true"] *::-webkit-scrollbar {
-      width: 6px !important;
-      height: 6px !important;
+    .ds-sb-thumb {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10000;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--ds-color-text) 30%, transparent);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, background-color 120ms ease;
     }
-    [data-ds-themed="true"]::-webkit-scrollbar-track,
-    [data-ds-themed="true"] *::-webkit-scrollbar-track,
-    [data-ds-face="true"]::-webkit-scrollbar-track,
-    [data-ds-face="true"] *::-webkit-scrollbar-track,
-    [class*="ds-"]::-webkit-scrollbar-track,
-    [class*="ds-"] *::-webkit-scrollbar-track {
-      background: var(--ds-scrollbar-track, transparent) !important;
+    .ds-sb-thumb.is-visible {
+      opacity: 1;
+      pointer-events: auto;
     }
-    [data-ds-themed="true"]::-webkit-scrollbar-thumb,
-    [data-ds-themed="true"] *::-webkit-scrollbar-thumb,
-    [data-ds-face="true"]::-webkit-scrollbar-thumb,
-    [data-ds-face="true"] *::-webkit-scrollbar-thumb,
-    [class*="ds-"]::-webkit-scrollbar-thumb,
-    [class*="ds-"] *::-webkit-scrollbar-thumb {
-      background: var(--ds-scrollbar, var(--ds-border, #374151)) !important;
-      border-radius: 4px !important;
-    }
-    [data-ds-themed="true"]::-webkit-scrollbar-thumb:hover,
-    [data-ds-themed="true"] *::-webkit-scrollbar-thumb:hover,
-    [data-ds-face="true"]::-webkit-scrollbar-thumb:hover,
-    [data-ds-face="true"] *::-webkit-scrollbar-thumb:hover,
-    [class*="ds-"]::-webkit-scrollbar-thumb:hover,
-    [class*="ds-"] *::-webkit-scrollbar-thumb:hover {
-      background: var(--ds-accent) !important;
-    }
-
-    /* Hide default scrollbar arrows/buttons inside DS surfaces */
-    [data-ds-themed="true"]::-webkit-scrollbar-button,
-    [data-ds-themed="true"] *::-webkit-scrollbar-button,
-    [data-ds-themed="true"] ::-webkit-scrollbar-button,
-    [data-ds-face="true"]::-webkit-scrollbar-button,
-    [data-ds-face="true"] *::-webkit-scrollbar-button,
-    [data-ds-face="true"] ::-webkit-scrollbar-button,
-    [class*="ds-"]::-webkit-scrollbar-button,
-    [class*="ds-"] *::-webkit-scrollbar-button,
-    [class*="ds-"] ::-webkit-scrollbar-button,
-    [class*="ds-"]::-webkit-scrollbar-button:single-button,
-    [class*="ds-"] *::-webkit-scrollbar-button:single-button {
-      display: none !important;
-      height: 0 !important;
-      width: 0 !important;
-      background: transparent !important;
-      border: none !important;
-      content: none !important;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-    }
-    [data-ds-themed="true"]::-webkit-scrollbar-corner,
-    [data-ds-themed="true"] *::-webkit-scrollbar-corner,
-    [data-ds-face="true"]::-webkit-scrollbar-corner,
-    [data-ds-face="true"] *::-webkit-scrollbar-corner {
-      background: transparent !important;
+    .ds-sb-thumb:hover,
+    .ds-sb-thumb.is-dragging {
+      background: var(--ds-color-accent);
     }
     [data-ds-themed="true"] ::selection {
-      background: var(--ds-selection) !important;
-    }
-
-    /* Final aggressive pass using the exact same roots as theming engine */
-    ${sbAll},
-    [data-ds-face="true"]::-webkit-scrollbar-button,
-    [data-ds-face="true"] *::-webkit-scrollbar-button,
-    [data-ds-face="true"] ::-webkit-scrollbar-button {
-      display: none !important;
-      height: 0 !important;
-      width: 0 !important;
-      background: transparent !important;
-      border: none !important;
-      content: none !important;
+      background: var(--ds-selection);
     }
   `;
 }
@@ -1301,6 +1243,7 @@ app.registerExtension({
     }
 
     installDSUI();
+    installOverlayScrollbar();
     installDSCanvasNavigationBridge();
     await fetchThemes();
     // Always reconcile server config with localStorage. fetchConfig() merges them with
