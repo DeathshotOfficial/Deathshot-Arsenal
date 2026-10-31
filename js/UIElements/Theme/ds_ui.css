@@ -866,7 +866,6 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
   white-space: nowrap;
   pointer-events: none;
   line-height: 1;
-  transform: translateY(1.5px);
   box-sizing: border-box;
 }
 

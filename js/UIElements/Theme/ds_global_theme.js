@@ -773,12 +773,6 @@ function updateGlobalStylesheet(theme, cfg) {
   const accent = vars["--ds-accent"] || vars["--accent"] || "#67e8f9";
   const accentRgb = hexToRgbTriplet(accent);
 
-  // Build strong selectors for scrollbar hiding using the same roots the theming uses
-  const rootList = DS_ROOT_SELECTOR;
-  const roots = rootList.split(", ");
-  const sbDirect = roots.map(s => `${s}::-webkit-scrollbar-button, ${s}::-webkit-scrollbar-button:single-button`).join(", ");
-  const sbDesc = roots.map(s => `${s} *::-webkit-scrollbar-button, ${s} *::-webkit-scrollbar-button:single-button, ${s} ::-webkit-scrollbar-button, ${s} ::-webkit-scrollbar-button:single-button`).join(", ");
-  const sbAll = [sbDirect, sbDesc].join(", ");
 
   // html:root outranks the :root defaults in ds_ui.css regardless of stylesheet order.
   style.textContent = `
@@ -862,89 +856,40 @@ ${decl}
       text-shadow: var(--ds-on-accent-shadow) !important;
     }
 
-    /* Modern unified scrollbar (thin, themed) — applies to ALL scroll areas inside DS nodes */
-    [data-ds-themed="true"],
-    [data-ds-themed="true"] *,
-    [data-ds-face="true"],
-    [data-ds-face="true"] * {
-      scrollbar-width: thin !important;
-      scrollbar-color: var(--ds-scrollbar) var(--ds-panel) !important;
+    /* Scrollbars inside DS surfaces: slim thumb, no arrows, shown only while the area is hovered.
+       Only ::-webkit-scrollbar is used; Chromium ignores it once scrollbar-width/color are set. */
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+      background: transparent;
     }
-    [data-ds-themed="true"]::-webkit-scrollbar,
-    [data-ds-themed="true"] *::-webkit-scrollbar,
-    [data-ds-face="true"]::-webkit-scrollbar,
-    [data-ds-face="true"] *::-webkit-scrollbar {
-      width: 6px !important;
-      height: 6px !important;
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-button,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-button {
+      display: none;
+      width: 0;
+      height: 0;
     }
-    [data-ds-themed="true"]::-webkit-scrollbar-track,
-    [data-ds-themed="true"] *::-webkit-scrollbar-track,
-    [data-ds-face="true"]::-webkit-scrollbar-track,
-    [data-ds-face="true"] *::-webkit-scrollbar-track,
-    [class*="ds-"]::-webkit-scrollbar-track,
-    [class*="ds-"] *::-webkit-scrollbar-track {
-      background: var(--ds-scrollbar-track, transparent) !important;
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-track,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-track,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-corner,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-corner {
+      background: transparent;
     }
-    [data-ds-themed="true"]::-webkit-scrollbar-thumb,
-    [data-ds-themed="true"] *::-webkit-scrollbar-thumb,
-    [data-ds-face="true"]::-webkit-scrollbar-thumb,
-    [data-ds-face="true"] *::-webkit-scrollbar-thumb,
-    [class*="ds-"]::-webkit-scrollbar-thumb,
-    [class*="ds-"] *::-webkit-scrollbar-thumb {
-      background: var(--ds-scrollbar, var(--ds-border, #374151)) !important;
-      border-radius: 4px !important;
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-thumb,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: 3px;
     }
-    [data-ds-themed="true"]::-webkit-scrollbar-thumb:hover,
-    [data-ds-themed="true"] *::-webkit-scrollbar-thumb:hover,
-    [data-ds-face="true"]::-webkit-scrollbar-thumb:hover,
-    [data-ds-face="true"] *::-webkit-scrollbar-thumb:hover,
-    [class*="ds-"]::-webkit-scrollbar-thumb:hover,
-    [class*="ds-"] *::-webkit-scrollbar-thumb:hover {
-      background: var(--ds-accent) !important;
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal):hover::-webkit-scrollbar-thumb,
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) :hover::-webkit-scrollbar-thumb {
+      background: color-mix(in srgb, var(--ds-color-text) 25%, transparent);
     }
-
-    /* Hide default scrollbar arrows/buttons inside DS surfaces */
-    [data-ds-themed="true"]::-webkit-scrollbar-button,
-    [data-ds-themed="true"] *::-webkit-scrollbar-button,
-    [data-ds-themed="true"] ::-webkit-scrollbar-button,
-    [data-ds-face="true"]::-webkit-scrollbar-button,
-    [data-ds-face="true"] *::-webkit-scrollbar-button,
-    [data-ds-face="true"] ::-webkit-scrollbar-button,
-    [class*="ds-"]::-webkit-scrollbar-button,
-    [class*="ds-"] *::-webkit-scrollbar-button,
-    [class*="ds-"] ::-webkit-scrollbar-button,
-    [class*="ds-"]::-webkit-scrollbar-button:single-button,
-    [class*="ds-"] *::-webkit-scrollbar-button:single-button {
-      display: none !important;
-      height: 0 !important;
-      width: 0 !important;
-      background: transparent !important;
-      border: none !important;
-      content: none !important;
-      appearance: none !important;
-      -webkit-appearance: none !important;
-    }
-    [data-ds-themed="true"]::-webkit-scrollbar-corner,
-    [data-ds-themed="true"] *::-webkit-scrollbar-corner,
-    [data-ds-face="true"]::-webkit-scrollbar-corner,
-    [data-ds-face="true"] *::-webkit-scrollbar-corner {
-      background: transparent !important;
+    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-thumb:hover {
+      background: var(--ds-color-accent);
     }
     [data-ds-themed="true"] ::selection {
-      background: var(--ds-selection) !important;
-    }
-
-    /* Final aggressive pass using the exact same roots as theming engine */
-    ${sbAll},
-    [data-ds-face="true"]::-webkit-scrollbar-button,
-    [data-ds-face="true"] *::-webkit-scrollbar-button,
-    [data-ds-face="true"] ::-webkit-scrollbar-button {
-      display: none !important;
-      height: 0 !important;
-      width: 0 !important;
-      background: transparent !important;
-      border: none !important;
-      content: none !important;
+      background: var(--ds-selection);
     }
   `;
 }
