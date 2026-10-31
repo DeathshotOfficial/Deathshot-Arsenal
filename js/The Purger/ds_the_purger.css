@@ -25,7 +25,7 @@ and floating toolbar gear configuration popover.
   padding: 12px;
   border-radius: 8px;
   background: var(--ds-panel, #0f1219);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent));
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
   color: var(--ds-text, #f8fafc);
   font-family: var(--ds-font, "Inter", system-ui, -apple-system, sans-serif);
@@ -45,7 +45,7 @@ and floating toolbar gear configuration popover.
 }
 
 .ds-purger-gear-popover::-webkit-scrollbar-thumb {
-  background: var(--ds-border, rgba(255, 255, 255, 0.18));
+  background: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent));
   border-radius: 2px;
 }
 
@@ -62,7 +62,7 @@ and floating toolbar gear configuration popover.
   justify-content: space-between;
   padding-bottom: 10px;
   margin-bottom: 10px;
-  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
 }
 
 .ds-purger-popover-head-left {
@@ -118,7 +118,7 @@ and floating toolbar gear configuration popover.
 
 .ds-purger-popover-close:hover {
   background: var(--ds-btn-hover, #222733);
-  border-color: var(--ds-border, rgba(255, 255, 255, 0.14));
+  border-color: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent));
   color: var(--ds-text, #f8fafc);
 }
 
@@ -139,14 +139,14 @@ and floating toolbar gear configuration popover.
   padding: 7px 9px;
   border-radius: 5px;
   background: var(--ds-panel-2, #181c24);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 8%, transparent));
   gap: 10px;
   transition: border-color 0.15s ease;
   box-sizing: border-box;
 }
 
 .ds-purger-settings-row:hover {
-  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.22));
+  border-color: var(--ds-border-active, color-mix(in srgb, var(--ds-color-text) 22%, transparent));
 }
 
 .ds-purger-settings-row-text {
@@ -195,7 +195,7 @@ and floating toolbar gear configuration popover.
   align-items: center;
   justify-content: space-between;
   padding-top: 10px;
-  border-top: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  border-top: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
 }
 
 .ds-ui-btn.ds-purger-btn {
@@ -267,7 +267,7 @@ and floating toolbar gear configuration popover.
   flex: 1 1 0 !important;
   min-width: 24px !important;
   height: 3.5px !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 10%, transparent) !important;
   border-radius: 2px !important;
   overflow: hidden !important;
   position: relative !important;

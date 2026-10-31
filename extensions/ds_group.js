@@ -1134,8 +1134,8 @@ function injectGroupStyles() {
         position: fixed;
         z-index: 99999;
         width: 270px;
-        background: var(--ds-bg-surface-elevated, var(--ds-panel-2, #161a23));
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+        background: var(--ds-color-panel-2, var(--ds-panel-2, #161a23));
+        border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent));
         border-radius: 8px;
         box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
         padding: 10px;
@@ -1221,7 +1221,7 @@ function injectGroupStyles() {
 
 .ds-grp-popover-sep {
         height: 1px;
-        background: var(--ds-border, rgba(255, 255, 255, 0.10));
+        background: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
         margin: 8px 0;
     }
 
@@ -1286,7 +1286,7 @@ function injectGroupStyles() {
         border-radius: 4px;
         overflow: hidden;
         cursor: crosshair;
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.15));
+        border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 15%, transparent));
         touch-action: none;
     }
 
@@ -1301,7 +1301,7 @@ function injectGroupStyles() {
         width: 10px;
         height: 10px;
         border-radius: 50%;
-        border: 2px solid #ffffff;
+        border: 2px solid var(--ds-color-text);
         box-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
         transform: translate(-50%, -50%);
         pointer-events: none;
@@ -1314,7 +1314,7 @@ function injectGroupStyles() {
         border-radius: 4px;
         overflow: hidden;
         cursor: pointer;
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.15));
+        border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 15%, transparent));
         touch-action: none;
         flex-shrink: 0;
     }
@@ -1330,7 +1330,7 @@ function injectGroupStyles() {
         left: 0;
         right: 0;
         height: 4px;
-        background: #ffffff;
+        background: var(--ds-color-text);
         border: 1px solid #000000;
         box-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
         transform: translateY(-50%);
@@ -1348,7 +1348,7 @@ function injectGroupStyles() {
         width: 28px;
         height: 24px;
         border-radius: 4px;
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.2));
+        border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 20%, transparent));
         box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
         flex-shrink: 0;
     }
@@ -1359,7 +1359,7 @@ function injectGroupStyles() {
         flex: 1;
         height: 24px;
         background: var(--ds-bg, #0b0d12);
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.15));
+        border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 15%, transparent));
         border-radius: 4px;
         padding: 0 6px;
         gap: 3px;

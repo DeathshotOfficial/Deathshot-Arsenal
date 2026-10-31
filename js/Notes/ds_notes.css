@@ -33,7 +33,7 @@
   padding: 6px 10px;
   height: 38px;
   min-height: 38px;
-  background: var(--ds-color-panel, rgba(18, 22, 30, 0.7));
+  background: var(--ds-color-card, rgba(18, 22, 30, 0.7));
   border-bottom: 1px solid var(--ds-color-card-border, #242a36);
   box-sizing: border-box;
   flex-shrink: 0;
@@ -77,7 +77,7 @@
   padding: 0 10px;
   background: var(--ds-color-panel-2, #1d2331);
   border: 1px solid var(--ds-color-border, #313a4c);
-  border-radius: var(--ds-radius-btn, 6px);
+  border-radius: var(--ds-radius-control, 6px);
   color: var(--ds-color-text, #ffffff);
   font-size: 11.5px;
   font-weight: 600;
@@ -89,10 +89,10 @@
 }
 
 .ds-notes-edit-btn:hover {
-  background: var(--ds-color-btn-hover, #283144);
+  background: var(--ds-btn-hover, #283144);
   border-color: var(--ds-color-accent, #67e8f9);
   color: var(--ds-color-accent, #67e8f9);
-  box-shadow: 0 0 10px rgba(103, 232, 249, 0.25);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent) 25%, transparent);
 }
 
 .ds-notes-card-body,
@@ -120,21 +120,21 @@
   padding: 0 !important;
   background: var(--ds-color-panel-2, #1d2331) !important;
   border: 1px solid var(--ds-color-border, #313a4c) !important;
-  border-radius: var(--ds-radius-btn, 4px) !important;
-  color: var(--ds-color-text-subtle, #94a3b8) !important;
+  border-radius: var(--ds-radius-control, 4px) !important;
+  color: var(--ds-color-muted-text, #94a3b8) !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   box-sizing: border-box !important;
 }
 
 .ds-notes-card-btn:hover {
-  background: var(--ds-color-btn-hover, #283144) !important;
+  background: var(--ds-btn-hover, #283144) !important;
   border-color: var(--ds-color-accent, #67e8f9) !important;
   color: var(--ds-color-accent, #67e8f9) !important;
 }
 
 .ds-notes-card-btn.is-active {
-  background: var(--ds-color-accent-subtle, rgba(103, 232, 249, 0.15)) !important;
+  background: var(--ds-selection, color-mix(in srgb, var(--ds-color-accent) 15%, transparent)) !important;
   border-color: var(--ds-color-accent, #67e8f9) !important;
   color: var(--ds-color-accent, #67e8f9) !important;
 }
@@ -165,13 +165,13 @@
   cursor: pointer !important;
   border-radius: var(--ds-radius-control, 6px) !important;
   border: 1px dashed var(--ds-color-border, #313a4c) !important;
-  background: rgba(255, 255, 255, 0.02) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 2%, transparent) !important;
   transition: all 0.15s ease !important;
   user-select: none !important;
 }
 
 .ds-notes-empty-state:hover {
-  background: rgba(103, 232, 249, 0.04) !important;
+  background: color-mix(in srgb, var(--ds-color-accent) 4%, transparent) !important;
   border-color: var(--ds-color-accent, #67e8f9) !important;
 }
 
@@ -236,7 +236,7 @@
   justify-content: space-between;
   padding: 6px 10px;
   height: 38px;
-  background: var(--ds-color-panel, rgba(18, 22, 30, 0.7));
+  background: var(--ds-color-card, rgba(18, 22, 30, 0.7));
   border-bottom: 1px solid var(--ds-color-card-border, #242a36);
 }
 
@@ -259,7 +259,7 @@
 .ds-notes-editor-scroll::-webkit-scrollbar-thumb,
 .ds-notes-code-textarea::-webkit-scrollbar-thumb,
 .ds-notes-code-pre::-webkit-scrollbar-thumb {
-  background: var(--ds-border, rgba(255, 255, 255, 0.2));
+  background: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 20%, transparent));
   border-radius: 999px;
 }
 
@@ -277,7 +277,7 @@
   position: fixed;
   inset: 0;
   z-index: 999999;
-  background: rgba(0, 0, 0, 0.82);
+  background: color-mix(in srgb, var(--ds-color-base) 82%, transparent);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -301,7 +301,7 @@
   background: var(--ds-color-card, #12151c);
   border: 1px solid var(--ds-color-card-border, #242a36);
   border-radius: var(--ds-radius-card, 8px);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px color-mix(in srgb, var(--ds-color-text) 4%, transparent);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -463,7 +463,7 @@
   border: none;
   outline: none;
   resize: none;
-  background: #080b10;
+  background: var(--ds-color-base);
   color: #a5f3fc;
   font-family: "JetBrains Mono", Consolas, "Fira Code", monospace;
   font-size: 13px;
@@ -512,7 +512,7 @@
   margin: 16px 0 10px 0;
   color: var(--ds-accent, #67e8f9);
   line-height: 1.3;
-  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
   padding-bottom: 6px;
 }
 
@@ -713,14 +713,14 @@
 }
 
 .ds-notes-callout-tip {
-  background: rgba(103, 232, 249, 0.08);
-  border-color: rgba(103, 232, 249, 0.3);
+  background: color-mix(in srgb, var(--ds-color-accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--ds-color-accent) 30%, transparent);
   color: #e0f2fe;
 }
 
 .ds-notes-callout-tip .ds-notes-callout-icon,
 .ds-notes-callout-tip .ds-notes-callout-title {
-  color: #38bdf8;
+  color: var(--ds-color-accent);
 }
 
 .ds-notes-callout-note {
@@ -735,19 +735,19 @@
 }
 
 .ds-notes-callout-warning {
-  background: rgba(250, 204, 21, 0.08);
-  border-color: rgba(250, 204, 21, 0.3);
+  background: color-mix(in srgb, var(--ds-color-warning, #facc15) 8%, transparent);
+  border-color: color-mix(in srgb, var(--ds-color-warning, #facc15) 30%, transparent);
   color: #fef9c3;
 }
 
 .ds-notes-callout-warning .ds-notes-callout-icon,
 .ds-notes-callout-warning .ds-notes-callout-title {
-  color: #facc15;
+  color: var(--ds-color-warning, #facc15);
 }
 
 .ds-notes-callout-danger {
-  background: rgba(244, 63, 94, 0.08);
-  border-color: rgba(244, 63, 94, 0.3);
+  background: color-mix(in srgb, var(--ds-color-danger) 8%, transparent);
+  border-color: color-mix(in srgb, var(--ds-color-danger) 30%, transparent);
   color: #ffe4e6;
 }
 
@@ -757,14 +757,14 @@
 }
 
 .ds-notes-callout-success {
-  background: rgba(52, 211, 153, 0.08);
-  border-color: rgba(52, 211, 153, 0.3);
+  background: color-mix(in srgb, var(--ds-color-success) 8%, transparent);
+  border-color: color-mix(in srgb, var(--ds-color-success) 30%, transparent);
   color: #d1fae5;
 }
 
 .ds-notes-callout-success .ds-notes-callout-icon,
 .ds-notes-callout-success .ds-notes-callout-title {
-  color: #34d399;
+  color: var(--ds-color-success);
 }
 
 /* ------------------------------------------------------------
@@ -787,7 +787,7 @@
   background: #141923;
   border-bottom: 1px solid var(--ds-border, #222938);
   font-size: 11.5px;
-  color: #94a3b8;
+  color: var(--ds-color-muted-text);
   font-family: monospace;
 }
 
@@ -803,7 +803,7 @@
   font-family: "JetBrains Mono", Consolas, "Fira Code", monospace;
   font-size: 12.5px;
   line-height: 1.55;
-  color: #e2e8f0;
+  color: var(--ds-color-text);
   overflow: auto;
   max-height: 340px;
   white-space: pre-wrap;
@@ -898,18 +898,18 @@
 
 .ds-notes-doc-btn-download {
   background: #0284c7;
-  color: #ffffff !important;
-  border: 1px solid #38bdf8;
+  color: var(--ds-color-text) !important;
+  border: 1px solid var(--ds-color-accent);
 }
 
 .ds-notes-doc-btn-download:hover {
   background: #0369a1;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent) 45%, transparent);
 }
 
 .ds-notes-doc-btn-view {
   background: #4f46e5;
-  color: #ffffff !important;
+  color: var(--ds-color-text) !important;
   border: 1px solid #818cf8;
 }
 
@@ -926,23 +926,23 @@
 
 .ds-notes-doc-btn-read:hover {
   background: #7df0ff;
-  box-shadow: 0 0 10px rgba(103, 232, 249, 0.45);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent) 45%, transparent);
 }
 
 .ds-notes-doc-btn-github {
   background: #24292f;
-  color: #ffffff !important;
+  color: var(--ds-color-text) !important;
   border: 1px solid #484f58;
 }
 
 .ds-notes-doc-btn-github:hover {
   background: #32383f;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-text) 20%, transparent);
 }
 
 .ds-notes-doc-btn-sponsor {
   background: #db2777;
-  color: #ffffff !important;
+  color: var(--ds-color-text) !important;
   border: 1px solid #f472b6;
 }
 
@@ -1046,8 +1046,8 @@
 }
 
 .ds-notes-youtube-card:hover {
-  border-color: #ef4444;
-  box-shadow: 0 4px 18px rgba(239, 68, 68, 0.25);
+  border-color: var(--ds-color-danger);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--ds-color-danger) 25%, transparent);
   transform: translateY(-1px);
 }
 
@@ -1056,9 +1056,9 @@
   align-items: center;
   gap: 8px;
   padding: 7px 12px;
-  background: rgba(239, 68, 68, 0.14);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: color-mix(in srgb, var(--ds-color-danger) 14%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-danger) 20%, transparent);
+  color: var(--ds-color-danger);
   font-weight: 750;
   font-size: 12px;
 }
@@ -1080,13 +1080,13 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: #ef4444;
-  color: #ffffff;
+  background: var(--ds-color-danger);
+  color: var(--ds-color-text);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ds-color-danger) 40%, transparent);
 }
 
 .ds-notes-youtube-play svg {
@@ -1106,7 +1106,7 @@
 .ds-notes-youtube-title {
   font-weight: 700;
   font-size: 13.5px;
-  color: #ffffff;
+  color: var(--ds-color-text);
   margin-bottom: 2px;
 }
 
@@ -1118,7 +1118,7 @@
 
 .ds-notes-youtube-url {
   font-size: 11px;
-  color: #64748b;
+  color: var(--ds-color-muted-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1179,7 +1179,7 @@
 .ds-notes-discord-name {
   font-weight: 750;
   font-size: 13.5px;
-  color: #ffffff;
+  color: var(--ds-color-text);
   margin-bottom: 3px;
 }
 
@@ -1190,7 +1190,7 @@
 
 .ds-notes-discord-join {
   background: #5865f2;
-  color: #ffffff;
+  color: var(--ds-color-text);
   padding: 6px 14px;
   border-radius: 6px;
   font-size: 12px;
@@ -1288,7 +1288,7 @@
   position: fixed;
   inset: 0;
   z-index: 1000003;
-  background: rgba(0, 0, 0, 0.76);
+  background: color-mix(in srgb, var(--ds-color-base) 76%, transparent);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -1304,7 +1304,7 @@
   border-radius: var(--ds-radius-card, 8px);
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px color-mix(in srgb, var(--ds-color-text) 5%, transparent);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1399,7 +1399,7 @@
 .ds-notes-form-input:focus,
 .ds-notes-dialog-body input[type="text"]:focus {
   border-color: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring, rgba(103, 232, 249, 0.25)) !important;
+  box-shadow: 0 0 0 2px var(--ds-color-focus-ring, color-mix(in srgb, var(--ds-color-accent) 25%, transparent)) !important;
 }
 
 /* ------------------------------------------------------------
@@ -1539,7 +1539,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid #ffffff;
+  border: 2px solid var(--ds-color-text);
   box-shadow: 0 0 3px rgba(0, 0, 0, 0.9), inset 0 0 2px rgba(0, 0, 0, 0.6);
   position: absolute;
   top: 0;
@@ -1575,7 +1575,7 @@
   width: 8px;
   height: 18px;
   border-radius: 4px;
-  background: #ffffff;
+  background: var(--ds-color-text);
   border: 1px solid rgba(0, 0, 0, 0.4);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
   position: absolute;
@@ -1596,14 +1596,14 @@
 .ds-notes-swatch-cell {
   aspect-ratio: 1;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 10%, transparent);
   cursor: pointer;
   transition: transform 0.1s ease, border-color 0.1s ease;
 }
 
 .ds-notes-swatch-cell:hover {
   transform: scale(1.15);
-  border-color: #ffffff;
+  border-color: var(--ds-color-text);
   z-index: 1;
 }
 
@@ -1669,7 +1669,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 30%, transparent);
   vertical-align: middle;
   flex-shrink: 0;
 }

@@ -127,7 +127,7 @@
   flex: 1 1 0 !important;
   min-width: 24px !important;
   height: 4px !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 10%, transparent) !important;
   border-radius: 2px !important;
   overflow: hidden !important;
   position: relative !important;

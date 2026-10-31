@@ -1504,7 +1504,7 @@ function injectSnapStyles() {
       height: 38px !important;
       padding: 0 10px !important;
       margin: 0 !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, rgba(255, 255, 255, 0.18))) !important;
+      border: 1px solid var(--ds-btn-border, var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent))) !important;
       border-radius: var(--ds-radius-control, 6px) !important;
       background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
       color: var(--ds-btn-text, var(--ds-color-text, #e2e8f0)) !important;
@@ -1656,7 +1656,7 @@ function injectSnapStyles() {
 .ds-snap-divider {
       width: 1px !important;
       height: 18px !important;
-      background: var(--ds-color-border, rgba(255, 255, 255, 0.12)) !important;
+      background: var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 12%, transparent)) !important;
       margin: 0 3px !important;
       flex-shrink: 0 !important;
     }

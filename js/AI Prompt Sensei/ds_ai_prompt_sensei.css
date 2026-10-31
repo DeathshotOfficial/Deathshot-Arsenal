@@ -488,7 +488,7 @@ Segmented Controls & Groups                                     */
 
 .ds-sensei-segmented {
   display: inline-flex;
-  background: var(--ds-color-base, rgba(0, 0, 0, 0.3));
+  background: var(--ds-color-base, color-mix(in srgb, var(--ds-color-base) 30%, transparent));
   border: 1px solid var(--ds-color-border, #242a36);
   border-radius: var(--ds-radius-control, 5px);
   padding: 2px;
@@ -621,8 +621,8 @@ Segmented Controls & Groups                                     */
 
 .ds-sensei-prompt-area.is-generating {
   border-color: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 0 1px var(--ds-color-accent, #67e8f9), 0 0 10px rgba(103, 232, 249, 0.25) !important;
-  background: var(--ds-color-panel, rgba(15, 23, 42, 0.6)) !important;
+  box-shadow: 0 0 0 1px var(--ds-color-accent, #67e8f9), 0 0 10px color-mix(in srgb, var(--ds-color-accent) 25%, transparent) !important;
+  background: var(--ds-color-card, rgba(15, 23, 42, 0.6)) !important;
 }
 
 .ds-sensei-ar-badge {
@@ -734,7 +734,7 @@ Segmented Controls & Groups                                     */
   font-family: monospace, var(--ds-font);
   font-size: 10px;
   opacity: 0.9;
-  color: #fecaca;
+  color: var(--ds-color-danger);
   word-break: break-all;
 }
 
@@ -760,205 +760,6 @@ Segmented Controls & Groups                                     */
   font-family: var(--ds-font, inherit);
   color: var(--ds-color-text, #e2e8f0);
   padding: 4px;
-}
-
-/* ========================================================================= */
-/* 17. LM Studio Toolbar Gear Popover                                       */
-/* ========================================================================= */
-
-.ds-sensei-gear-popover {
-  position: fixed;
-  width: 380px !important;
-  max-width: 95vw !important;
-  max-height: min(94vh, 900px) !important;
-  background: var(--ds-color-card, #0f141c) !important;
-  border: 1px solid var(--ds-color-card-border, #334155) !important;
-  border-radius: var(--ds-radius-popup, 8px);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 1px var(--ds-color-accent, #67e8f9);
-  z-index: 100010;
-  display: flex !important;
-  flex-direction: column !important;
-  padding: 12px;
-  gap: 10px;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif);
-  color: var(--ds-color-text, #f8fafc);
-  user-select: none;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
-}
-
-.ds-sensei-gear-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.1));
-  padding-bottom: 8px;
-}
-
-.ds-sensei-gear-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ds-sensei-gear-badge {
-  font-size: 10px;
-  font-weight: 800;
-  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 15%, transparent);
-  border: 1px solid var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-accent, #67e8f9);
-  padding: 1px 5px;
-  border-radius: var(--ds-radius-badge, 4px);
-  letter-spacing: 0.05em;
-}
-
-.ds-sensei-gear-title {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ds-color-text, #f8fafc);
-  line-height: 1.2;
-}
-
-.ds-sensei-gear-sub {
-  display: block;
-  font-size: 10px;
-  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.6));
-  line-height: 1.2;
-}
-
-.ds-sensei-gear-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1 1 0%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.ds-sensei-gear-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.65));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.ds-sensei-gear-row-2col {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.ds-sensei-gear-section-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ds-color-accent, #67e8f9);
-  margin-top: 2px;
-}
-
-.ds-sensei-gear-behavior-box {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.25));
-  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--ds-radius-control, 6px);
-  padding: 8px 10px;
-}
-
-.ds-sensei-gear-tabs {
-  display: flex;
-  gap: 4px;
-  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.35));
-  padding: 3px;
-  border-radius: var(--ds-radius-control, 6px);
-  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
-}
-
-.ds-sensei-gear-tab-btn {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.65));
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--ds-radius-tab, 4px);
-  cursor: pointer;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-sensei-gear-tab-btn:hover {
-  color: var(--ds-color-text, #f8fafc);
-  background: var(--ds-color-surface-hover, rgba(255, 255, 255, 0.06));
-}
-
-.ds-sensei-gear-tab-btn.is-active {
-  color: var(--ds-color-accent, #67e8f9);
-  background: var(--ds-color-surface, rgba(255, 255, 255, 0.1));
-  border-color: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 40%, transparent);
-}
-
-.ds-sensei-gear-status-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 10px;
-  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.25));
-  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
-  border-radius: var(--ds-radius-control, 6px);
-  font-size: 11px;
-}
-
-.ds-sensei-gear-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.ds-sensei-gear-status-dot.is-loaded {
-  background: #34d399;
-  box-shadow: 0 0 6px #34d399;
-}
-
-.ds-sensei-gear-status-dot.is-idle {
-  background: var(--ds-color-muted-text, #64748b);
-}
-
-.ds-sensei-gear-rescan-btn {
-  height: 24px;
-  line-height: 22px;
-  padding: 0 8px;
-  font-size: 10px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-
-.ds-sensei-gear-unload-btn {
-  width: 100%;
-  height: 28px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
 }
 
 /* ========================================================================= */
@@ -1152,7 +953,7 @@ Segmented Controls & Groups                                     */
   width: 100%;
   height: 26px;
   border-radius: var(--ds-btn-radius, 5px);
-  border: 1px dashed var(--ds-color-border, rgba(255, 255, 255, 0.15)) !important;
+  border: 1px dashed var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 15%, transparent)) !important;
   background: var(--ds-btn-bg, #1a1e28) !important;
   color: var(--ds-color-accent, #67e8f9) !important;
   font-family: var(--ds-font, inherit);
@@ -1186,8 +987,8 @@ Segmented Controls & Groups                                     */
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.25));
-  border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
+  background: var(--ds-color-panel-2, color-mix(in srgb, var(--ds-color-base) 25%, transparent));
+  border: 1px solid var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 8%, transparent));
   border-radius: 5px;
   font-size: 11px;
   font-weight: 600;
@@ -1249,7 +1050,7 @@ Status Line & Mode Dimming                                          */
   align-items: center !important;
   font-size: 11px !important;
   color: var(--ds-color-muted-text, #94a3b8) !important;
-  background: var(--ds-color-surface, rgba(0, 0, 0, 0.2)) !important;
+  background: var(--ds-color-panel-2, color-mix(in srgb, var(--ds-color-base) 20%, transparent)) !important;
   border: 1px solid var(--ds-color-border, #242a36) !important;
   border-radius: var(--ds-radius-control, 4px) !important;
   padding: 4px 8px !important;
@@ -1258,80 +1059,6 @@ Status Line & Mode Dimming                                          */
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-}
-
-/* ========================================================================= */
-/* Gear Menu Scrollable Body & Slim Arrowless Scrollbar                      */
-/* ========================================================================= */
-
-.ds-sensei-gear-scroll-body {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  padding-right: 6px;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  box-sizing: border-box !important;
-}
-
-.ds-sensei-gear-popover ::-webkit-scrollbar,
-.ds-sensei-gear-scroll-body::-webkit-scrollbar {
-  width: 4px !important;
-  height: 4px !important;
-}
-
-.ds-sensei-gear-popover ::-webkit-scrollbar-track,
-.ds-sensei-gear-scroll-body::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-
-.ds-sensei-gear-popover ::-webkit-scrollbar-thumb,
-.ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb {
-  background: rgba(103, 232, 249, 0.25) !important;
-  border-radius: 4px !important;
-}
-
-.ds-sensei-gear-popover ::-webkit-scrollbar-thumb:hover,
-.ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(103, 232, 249, 0.55) !important;
-}
-
-.ds-sensei-gear-popover ::-webkit-scrollbar-button,
-.ds-sensei-gear-scroll-body::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-/* Hardware Detection Card & VRAM Warning */
-.ds-sensei-gear-hw-card {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 6px !important;
-  padding: 8px 10px !important;
-  background: rgba(15, 23, 42, 0.65) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 6px) !important;
-  font-size: 11px !important;
-  box-sizing: border-box !important;
-}
-
-.ds-sensei-gear-hw-top {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-  width: 100% !important;
-}
-
-.ds-sensei-gear-hw-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  min-width: 0 !important;
-  flex: 1 1 auto !important;
 }
 
 .ds-sensei-hw-name {
@@ -1351,8 +1078,8 @@ Status Line & Mode Dimming                                          */
   font-size: 10px !important;
   font-weight: 700 !important;
   color: var(--ds-accent, #67e8f9) !important;
-  background: rgba(103, 232, 249, 0.14) !important;
-  border: 1px solid rgba(103, 232, 249, 0.25) !important;
+  background: color-mix(in srgb, var(--ds-color-accent) 14%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent) 25%, transparent) !important;
   border-radius: 4px !important;
   cursor: pointer !important;
   white-space: nowrap !important;
@@ -1360,34 +1087,8 @@ Status Line & Mode Dimming                                          */
 }
 
 .ds-sensei-autotune-btn:hover {
-  background: rgba(103, 232, 249, 0.25) !important;
+  background: color-mix(in srgb, var(--ds-color-accent) 25%, transparent) !important;
   border-color: var(--ds-accent, #67e8f9) !important;
-}
-
-.ds-sensei-gear-hw-warn {
-  display: none;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 6px 8px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  border-radius: var(--ds-radius-control, 4px);
-  color: #fcd34d;
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.ds-sensei-gear-hw-warn.is-visible {
-  display: flex !important;
-}
-
-.ds-sensei-gear-hw-warn:empty {
-  display: none !important;
-  padding: 0 !important;
-  border: none !important;
-  margin: 0 !important;
-  height: 0 !important;
-  min-height: 0 !important;
 }
 
 /* ========================================================================= */
@@ -1460,7 +1161,7 @@ Status Line & Mode Dimming                                          */
 
 .ds-sensei-preview-square:hover {
   border-color: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 10px rgba(103, 232, 249, 0.15) !important;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent) 15%, transparent) !important;
 }
 
 .ds-sensei-preview-square .ds-sensei-preview-img {
@@ -1477,7 +1178,7 @@ Status Line & Mode Dimming                                          */
 }
 
 .ds-sensei-preview-square.ds-sensei-preview-ignored {
-  border-color: rgba(245, 158, 11, 0.3) !important;
+  border-color: color-mix(in srgb, var(--ds-color-warning, #facc15) 30%, transparent) !important;
 }
 
 .ds-sensei-preview-square.ds-sensei-preview-ignored .ds-sensei-preview-img {
@@ -1491,8 +1192,8 @@ Status Line & Mode Dimming                                          */
   left: 50% !important;
   transform: translateX(-50%) !important;
   background: rgba(15, 20, 28, 0.92) !important;
-  color: #f59e0b !important;
-  border: 1px solid rgba(245, 158, 11, 0.45) !important;
+  color: var(--ds-color-warning, #facc15) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-warning, #facc15) 45%, transparent) !important;
   border-radius: 4px !important;
   font-size: 9.5px !important;
   font-weight: 700 !important;
@@ -1531,19 +1232,19 @@ Status Line & Mode Dimming                                          */
 
 .ds-sensei-dropzone-square.ds-sensei-dropzone-ignored {
   opacity: 0.7 !important;
-  border-color: rgba(245, 158, 11, 0.35) !important;
+  border-color: color-mix(in srgb, var(--ds-color-warning, #facc15) 35%, transparent) !important;
   background: rgba(15, 20, 28, 0.5) !important;
 }
 
 .ds-sensei-dropzone-square.ds-sensei-dropzone-ignored .ds-sensei-ignored-title {
-  color: #f59e0b !important;
+  color: var(--ds-color-warning, #facc15) !important;
 }
 
 .ds-sensei-dropzone-square:hover,
 .ds-sensei-dropzone-square.drag-over {
   border-color: var(--ds-color-accent, #67e8f9) !important;
-  background: rgba(103, 232, 249, 0.08) !important;
-  box-shadow: 0 0 12px rgba(103, 232, 249, 0.2) !important;
+  background: color-mix(in srgb, var(--ds-color-accent) 8%, transparent) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ds-color-accent) 20%, transparent) !important;
 }
 
 .ds-sensei-dropzone-square-title {
@@ -1591,8 +1292,8 @@ Status Line & Mode Dimming                                          */
 
 .ds-sensei-img-res-badge {
   color: var(--ds-color-muted-text, #9ca3af) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 6%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 10%, transparent) !important;
   padding: 0 5px !important;
   white-space: nowrap !important;
   overflow: visible !important;
@@ -1616,7 +1317,7 @@ Status Line & Mode Dimming                                          */
   justify-content: space-between !important;
   gap: 6px !important;
   background: rgba(10, 12, 18, 0.55) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 6%, transparent) !important;
   border-radius: 6px !important;
   padding: 6px 8px !important;
   box-sizing: border-box !important;
@@ -1632,7 +1333,7 @@ Status Line & Mode Dimming                                          */
   justify-content: space-between !important;
   gap: 2px !important;
   background: rgba(18, 22, 32, 0.75) !important;
-  border: 1px solid rgba(103, 232, 249, 0.18) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent) 18%, transparent) !important;
   border-radius: 4px !important;
   padding: 4px 6px !important;
   margin: 0 !important;
@@ -1665,9 +1366,9 @@ Status Line & Mode Dimming                                          */
   text-transform: uppercase !important;
   padding: 1px 6px !important;
   border-radius: 3px !important;
-  background: rgba(34, 197, 94, 0.15) !important;
-  color: #4ade80 !important;
-  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+  background: color-mix(in srgb, var(--ds-color-success) 15%, transparent) !important;
+  color: var(--ds-color-success) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-success) 30%, transparent) !important;
   flex-shrink: 0 !important;
   min-width: 72px !important;
   height: 16px !important;
@@ -1676,16 +1377,16 @@ Status Line & Mode Dimming                                          */
 }
 
 .ds-sensei-llm-live-badge.is-generating {
-  background: rgba(245, 158, 11, 0.15) !important;
-  color: #fbbf24 !important;
-  border-color: rgba(245, 158, 11, 0.4) !important;
+  background: color-mix(in srgb, var(--ds-color-warning, #facc15) 15%, transparent) !important;
+  color: var(--ds-color-warning, #facc15) !important;
+  border-color: color-mix(in srgb, var(--ds-color-warning, #facc15) 40%, transparent) !important;
   animation: ds-pulse-glow 1.5s infinite ease-in-out !important;
 }
 
 .ds-sensei-llm-live-badge.is-idle {
-  background: rgba(148, 163, 184, 0.12) !important;
-  color: #94a3b8 !important;
-  border-color: rgba(148, 163, 184, 0.25) !important;
+  background: color-mix(in srgb, var(--ds-color-muted-text) 12%, transparent) !important;
+  color: var(--ds-color-muted-text) !important;
+  border-color: color-mix(in srgb, var(--ds-color-muted-text) 25%, transparent) !important;
 }
 
 .ds-sensei-llm-live-dot {
@@ -1710,10 +1411,10 @@ Status Line & Mode Dimming                                          */
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   align-items: center !important;
-  background: rgba(0, 0, 0, 0.35) !important;
+  background: color-mix(in srgb, var(--ds-color-base) 35%, transparent) !important;
   border-radius: 3px !important;
   padding: 0 6px !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 5%, transparent) !important;
   gap: 6px !important;
   height: 20px !important;
   min-height: 20px !important;
@@ -1739,7 +1440,7 @@ Status Line & Mode Dimming                                          */
 
 .ds-sensei-llm-pill b,
 .ds-sensei-llm-pill-val {
-  color: #f1f5f9 !important;
+  color: var(--ds-color-text) !important;
   font-weight: 700 !important;
   font-variant-numeric: tabular-nums !important;
   white-space: nowrap !important;
@@ -1754,7 +1455,7 @@ Status Line & Mode Dimming                                          */
   justify-content: space-between !important;
   gap: 3.5px !important;
   background: rgba(15, 19, 28, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 5%, transparent) !important;
   border-radius: 4px !important;
   padding: 4px 6px !important;
   margin: 0 !important;
@@ -1779,7 +1480,7 @@ Status Line & Mode Dimming                                          */
   gap: 4px !important;
   font-size: 8.5px !important;
   font-weight: 700 !important;
-  color: #94a3b8 !important;
+  color: var(--ds-color-muted-text) !important;
   width: 48px !important;
   flex-shrink: 0 !important;
   line-height: 1 !important;
@@ -1788,7 +1489,7 @@ Status Line & Mode Dimming                                          */
 .ds-sensei-hw-bar-track {
   flex: 1 1 0 !important;
   height: 4px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 8%, transparent) !important;
   border-radius: 2px !important;
   overflow: hidden !important;
   position: relative !important;
@@ -1802,21 +1503,21 @@ Status Line & Mode Dimming                                          */
 }
 
 .ds-sensei-hw-bar-fill.normal {
-  background: linear-gradient(90deg, #22c55e, #10b981) !important;
+  background: linear-gradient(90deg, var(--ds-color-success), var(--ds-color-success)) !important;
 }
 
 .ds-sensei-hw-bar-fill.warning {
-  background: linear-gradient(90deg, #f59e0b, #eab308) !important;
+  background: linear-gradient(90deg, var(--ds-color-warning, #facc15), var(--ds-color-warning, #facc15)) !important;
 }
 
 .ds-sensei-hw-bar-fill.critical {
-  background: linear-gradient(90deg, #ef4444, #f43f5e) !important;
+  background: linear-gradient(90deg, var(--ds-color-danger), var(--ds-color-danger)) !important;
 }
 
 .ds-sensei-hw-bar-val {
   font-size: 8.5px !important;
   font-weight: 600 !important;
-  color: #cbd5e1 !important;
+  color: var(--ds-color-muted-text) !important;
   font-variant-numeric: tabular-nums !important;
   min-width: 86px !important;
   width: auto !important;
@@ -1851,9 +1552,9 @@ Status Line & Mode Dimming                                          */
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
   border-radius: 5px !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: #e2e8f0 !important;
+  background: color-mix(in srgb, var(--ds-color-text) 6%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 12%, transparent) !important;
+  color: var(--ds-color-text) !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   white-space: nowrap !important;
@@ -1861,15 +1562,15 @@ Status Line & Mode Dimming                                          */
 }
 
 .ds-sensei-mem-btn:hover {
-  background: rgba(103, 232, 249, 0.15) !important;
+  background: color-mix(in srgb, var(--ds-color-accent) 15%, transparent) !important;
   border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: #67e8f9 !important;
+  color: var(--ds-color-accent) !important;
 }
 
 .ds-sensei-mem-btn.is-active {
-  background: rgba(34, 197, 94, 0.2) !important;
-  border-color: #22c55e !important;
-  color: #4ade80 !important;
+  background: color-mix(in srgb, var(--ds-color-success) 20%, transparent) !important;
+  border-color: var(--ds-color-success) !important;
+  color: var(--ds-color-success) !important;
 }
 
 /* Header Summary Badges for Collapsed Cards */
@@ -1877,10 +1578,10 @@ Status Line & Mode Dimming                                          */
   font-size: 9px !important;
   font-weight: 600 !important;
   color: var(--ds-color-muted-text, #94a3b8) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 5%, transparent) !important;
   padding: 1px 6px !important;
   border-radius: 4px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 8%, transparent) !important;
   margin-right: 4px !important;
   white-space: nowrap !important;
 }
@@ -1890,10 +1591,10 @@ Status Line & Mode Dimming                                          */
   font-size: 9px !important;
   font-weight: 600 !important;
   color: var(--ds-color-muted-text, #94a3b8) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 5%, transparent) !important;
   padding: 1px 6px !important;
   border-radius: 4px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid color-mix(in srgb, var(--ds-color-text) 8%, transparent) !important;
   margin-right: 4px !important;
   white-space: nowrap !important;
 }
@@ -1901,4 +1602,14 @@ Status Line & Mode Dimming                                          */
 @keyframes ds-pulse-glow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+.ds-sensei-order-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds-sensei-order-label svg {
+  color: var(--ds-color-accent, #67e8f9);
 }

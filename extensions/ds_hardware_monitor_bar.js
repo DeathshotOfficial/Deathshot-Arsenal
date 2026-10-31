@@ -506,12 +506,12 @@ import { api } from "/scripts/api.js";
       }
       .hpm-tiny-dot.hpm-dot-rewind {
         background: var(--hpm-amber) !important;
-        box-shadow: 0 0 10px rgba(239,195,107,.8) !important;
+        box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-warning, #facc15) 80%, transparent) !important;
         opacity: 1 !important;
       }
       .hpm-tiny-dot.is-paused {
         background: var(--hpm-amber) !important;
-        box-shadow: 0 0 8px rgba(239,195,107,.5) !important;
+        box-shadow: 0 0 8px color-mix(in srgb, var(--ds-color-warning, #facc15) 50%, transparent) !important;
         opacity: 1 !important;
         animation: hpmDotPulse 1.2s ease-in-out infinite !important;
       }
@@ -560,9 +560,9 @@ import { api } from "/scripts/api.js";
         opacity: 0.85 !important;
       }
       .hpm-live-pill.is-paused {
-        background: rgba(239, 195, 107, 0.18) !important;
+        background: color-mix(in srgb, var(--ds-color-warning, #facc15) 18%, transparent) !important;
         color: var(--hpm-amber) !important;
-        border-color: rgba(239, 195, 107, 0.4) !important;
+        border-color: color-mix(in srgb, var(--ds-color-warning, #facc15) 40%, transparent) !important;
       }
       .hpm-tiny-dot.is-paused {
         opacity: 0.7 !important;

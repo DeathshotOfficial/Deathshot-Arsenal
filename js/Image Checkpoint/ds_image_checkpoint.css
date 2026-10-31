@@ -117,7 +117,7 @@
   50% {
     border-color: var(--ds-color-accent-hover, #22d3ee);
     box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 65%, transparent);
-    color: #ffffff;
+    color: var(--ds-color-text);
     background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 16%, var(--ds-btn-bg, #161a23));
   }
 }

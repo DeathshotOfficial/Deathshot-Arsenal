@@ -171,8 +171,8 @@
   font-size: 9px;
   font-weight: 700;
   padding: 1px 6px;
-  background: rgba(103, 232, 249, 0.1);
-  border: 1px solid rgba(103, 232, 249, 0.25);
+  background: color-mix(in srgb, var(--ds-color-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent) 25%, transparent);
   border-radius: 10px;
   color: var(--ds-color-accent, #67e8f9);
 }
@@ -335,7 +335,7 @@
   width: 100% !important;
   height: 18px !important;
   padding: 0 6px !important;
-  background: rgba(18, 21, 28, 0.9) !important;
+  background: color-mix(in srgb, var(--ds-color-base) 90%, transparent) !important;
   border-bottom: 1px solid var(--ds-color-border, var(--ds-border, #242a36)) !important;
   font-size: 9px !important;
   font-weight: 600 !important;
@@ -492,7 +492,7 @@
 .ds-lv-progress-track {
   width: 100% !important;
   height: 3px !important;
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 20%, transparent) !important;
   border-radius: 2px !important;
   position: relative !important;
   overflow: visible !important;
@@ -520,7 +520,7 @@
   width: 8px !important;
   height: 8px !important;
   border-radius: 50% !important;
-  background: #fff !important;
+  background: var(--ds-color-text) !important;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.6) !important;
   transition: transform 0.12s ease !important;
 }

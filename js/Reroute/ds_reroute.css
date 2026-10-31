@@ -19,7 +19,7 @@
   height: 22px;
   box-sizing: border-box !important;
   border-radius: 5px;
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent));
   background: var(--ds-input-bg, #080a0e);
   color: var(--ds-text, #fcee0a);
   font-family: var(--ds-font, Inter, system-ui, sans-serif);

@@ -1675,7 +1675,7 @@ function injectReminderStyles() {
       height: 38px !important;
       padding: 0 10px !important;
       margin: 0 !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, rgba(255, 255, 255, 0.18))) !important;
+      border: 1px solid var(--ds-btn-border, var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent))) !important;
       border-radius: var(--ds-radius-control, 6px) !important;
       background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
       color: var(--ds-btn-text, var(--ds-color-text, #e2e8f0)) !important;
@@ -1768,29 +1768,29 @@ function injectReminderStyles() {
     }
 
 .ds-reminder-tb-badge.is-alert {
-      background: #ef4444 !important;
-      color: #ffffff !important;
+      background: var(--ds-color-danger) !important;
+      color: var(--ds-color-text) !important;
       animation: dsRemPulse 1s infinite alternate !important;
     }
 
 @keyframes dsRemPulse {
-      from { transform: scale(1); box-shadow: 0 0 0 rgba(239, 68, 68, 0.4); }
-      to { transform: scale(1.18); box-shadow: 0 0 10px rgba(239, 68, 68, 0.9); }
+      from { transform: scale(1); box-shadow: 0 0 0 color-mix(in srgb, var(--ds-color-danger) 40%, transparent); }
+      to { transform: scale(1.18); box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-danger) 90%, transparent); }
     }
 
 .ds-reminder-tb-btn.is-trigger-pulsing {
-      border-color: #ef4444 !important;
-      color: #ef4444 !important;
+      border-color: var(--ds-color-danger) !important;
+      color: var(--ds-color-danger) !important;
     }
 
 .ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-bell-svg {
-      color: #ef4444 !important;
-      stroke: #ef4444 !important;
+      color: var(--ds-color-danger) !important;
+      stroke: var(--ds-color-danger) !important;
     }
 
 .ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-tb-icon-box {
       animation: dsBellRingAlert 0.45s ease-in-out infinite !important;
-      color: #ef4444 !important;
+      color: var(--ds-color-danger) !important;
     }
 
 @keyframes dsBellRingAlert {
@@ -1801,8 +1801,8 @@ function injectReminderStyles() {
     }
 
 @keyframes dsRemBorderPulse {
-      from { border-color: rgba(239, 68, 68, 0.5); }
-      to { border-color: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
+      from { border-color: color-mix(in srgb, var(--ds-color-danger) 50%, transparent); }
+      to { border-color: var(--ds-color-danger); box-shadow: 0 0 12px color-mix(in srgb, var(--ds-color-danger) 60%, transparent); }
     }
 
 /* Official Deathshot Soft-Rectangle Toggle Switch */
@@ -1874,7 +1874,7 @@ function injectReminderStyles() {
       background: var(--ds-color-card, #12151c) !important;
       border: 1px solid var(--ds-color-card-border, var(--ds-color-border, #242a36)) !important;
       border-radius: var(--ds-radius-card, 8px) !important;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px color-mix(in srgb, var(--ds-color-text) 6%, transparent) !important;
       display: flex !important;
       flex-direction: column !important;
       font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
@@ -2011,7 +2011,7 @@ function injectReminderStyles() {
       font-size: 11px !important;
       font-weight: 600 !important;
       border-bottom: 1px solid var(--ds-color-border, #242a36) !important;
-      background: rgba(0, 0, 0, 0.14) !important;
+      background: color-mix(in srgb, var(--ds-color-base) 14%, transparent) !important;
       color: var(--ds-color-text, #f8fafc) !important;
       box-sizing: border-box !important;
     }
@@ -2064,12 +2064,12 @@ function injectReminderStyles() {
     }
 
 .ds-rem-item:hover {
-      border-color: rgba(255, 255, 255, 0.25) !important;
+      border-color: color-mix(in srgb, var(--ds-color-text) 25%, transparent) !important;
     }
 
 .ds-rem-item.is-triggered {
-      border-color: #ef4444 !important;
-      background: rgba(239, 68, 68, 0.14) !important;
+      border-color: var(--ds-color-danger) !important;
+      background: color-mix(in srgb, var(--ds-color-danger) 14%, transparent) !important;
     }
 
 .ds-rem-item.is-disabled {
@@ -2141,13 +2141,13 @@ function injectReminderStyles() {
       font-weight: 800 !important;
       text-transform: uppercase !important;
       letter-spacing: 0.04em !important;
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: color-mix(in srgb, var(--ds-color-text) 8%, transparent) !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
     }
 
 .ds-rem-badge-triggered {
-      background: #ef4444 !important;
-      color: #ffffff !important;
+      background: var(--ds-color-danger) !important;
+      color: var(--ds-color-text) !important;
     }
 
 .ds-rem-badge-scheduled {
@@ -2157,12 +2157,12 @@ function injectReminderStyles() {
     }
 
 .ds-rem-badge-completed {
-      background: rgba(34, 197, 94, 0.15) !important;
-      color: #4ade80 !important;
+      background: color-mix(in srgb, var(--ds-color-success) 15%, transparent) !important;
+      color: var(--ds-color-success) !important;
     }
 
 .ds-rem-badge-disabled {
-      background: rgba(255, 255, 255, 0.06) !important;
+      background: color-mix(in srgb, var(--ds-color-text) 6%, transparent) !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
     }
 
@@ -2289,7 +2289,7 @@ function injectReminderStyles() {
       position: fixed !important;
       inset: 0 !important;
       z-index: 100050 !important;
-      background: rgba(0, 0, 0, 0.7) !important;
+      background: color-mix(in srgb, var(--ds-color-base) 70%, transparent) !important;
       backdrop-filter: blur(6px) !important;
       display: grid !important;
       place-items: center !important;
@@ -2619,7 +2619,7 @@ function injectReminderStyles() {
 
 .ds-reminder-popover *::-webkit-scrollbar-thumb,
     .ds-rem-modal-backdrop *::-webkit-scrollbar-thumb {
-      background: var(--ds-color-border, rgba(255, 255, 255, 0.18));
+      background: var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent));
       border-radius: 4px;
     }
 

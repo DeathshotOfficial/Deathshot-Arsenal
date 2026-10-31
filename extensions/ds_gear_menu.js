@@ -641,7 +641,7 @@ function injectGearStyles() {
       border: 1px solid transparent;
       border-radius: 6px;
       background: transparent;
-      color: #e2e8f0 !important;
+      color: var(--ds-color-text) !important;
       cursor: pointer;
       transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
       user-select: none;
@@ -650,12 +650,12 @@ function injectGearStyles() {
     }
 
     .ds-actionbar-gear-btn svg {
-      stroke: #e2e8f0;
+      stroke: var(--ds-color-text);
       transition: stroke 0.15s ease, transform 0.25s ease;
     }
 
     .ds-actionbar-gear-btn:hover {
-      background: rgba(255, 255, 255, 0.12) !important;
+      background: color-mix(in srgb, var(--ds-color-text) 12%, transparent) !important;
       color: var(--ds-accent, #67e8f9) !important;
       border-color: var(--ds-accent, #67e8f9) !important;
       transform: scale(1.05);
@@ -666,7 +666,7 @@ function injectGearStyles() {
     }
 
     .ds-actionbar-gear-btn.is-active {
-      background: rgba(255, 255, 255, 0.15) !important;
+      background: color-mix(in srgb, var(--ds-color-text) 15%, transparent) !important;
       color: var(--ds-accent, #67e8f9) !important;
       border-color: var(--ds-accent, #67e8f9) !important;
     }
@@ -677,11 +677,11 @@ function injectGearStyles() {
 
     .selection-toolbox button:has(.ds-gear-svg),
     .selection-toolbox button:has(.ds-actionbar-gear-btn-icon) {
-      color: #e2e8f0 !important;
+      color: var(--ds-color-text) !important;
     }
 
     .selection-toolbox button:has(.ds-gear-svg) svg {
-      stroke: #e2e8f0;
+      stroke: var(--ds-color-text);
     }
 
     .selection-toolbox button:has(.ds-gear-svg):hover,
@@ -723,14 +723,14 @@ function injectGearStyles() {
       z-index: 99999;
       min-width: 190px;
       max-width: 280px;
-      background: var(--ds-bg-surface-elevated, var(--ds-panel-2, #181c24));
-      border: 1px solid var(--ds-border-color, var(--ds-border, rgba(255, 255, 255, 0.14)));
+      background: var(--ds-color-panel-2, var(--ds-panel-2, #181c24));
+      border: 1px solid var(--ds-color-border, var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent)));
       border-radius: 6px;
-      box-shadow: var(--ds-shadow-modal, 0 12px 32px rgba(0, 0, 0, 0.5));
+      box-shadow: var(--ds-shadow, 0 12px 32px rgba(0, 0, 0, 0.5));
       padding: 4px;
       font-family: var(--ds-font, Inter, system-ui, sans-serif);
       font-size: 12px;
-      color: var(--ds-text-primary, var(--ds-text, #f8fafc));
+      color: var(--ds-color-text, var(--ds-text, #f8fafc));
       animation: dsPopIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
       user-select: none;
     }
@@ -748,7 +748,7 @@ function injectGearStyles() {
 
     .ds-gear-menu-separator {
       height: 1px;
-      background: var(--ds-border, rgba(255, 255, 255, 0.1));
+      background: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
       margin: 4px 2px;
     }
 
@@ -811,7 +811,7 @@ function injectGearStyles() {
       width: 14px;
       height: 14px;
       border-radius: 3px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid color-mix(in srgb, var(--ds-color-text) 20%, transparent);
       flex-shrink: 0;
     }
 
@@ -830,10 +830,10 @@ function injectGearStyles() {
       left: 100%;
       margin-left: 4px;
       min-width: 140px;
-      background: var(--ds-bg-surface-elevated, var(--ds-panel-2, #181c24));
-      border: 1px solid var(--ds-border-color, var(--ds-border, rgba(255, 255, 255, 0.14)));
+      background: var(--ds-color-panel-2, var(--ds-panel-2, #181c24));
+      border: 1px solid var(--ds-color-border, var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent)));
       border-radius: 6px;
-      box-shadow: var(--ds-shadow-modal, 0 12px 32px rgba(0, 0, 0, 0.5));
+      box-shadow: var(--ds-shadow, 0 12px 32px rgba(0, 0, 0, 0.5));
       padding: 4px;
       z-index: 100000;
     }
@@ -856,7 +856,7 @@ function injectGearStyles() {
       content: "";
       width: 11px;
       height: 11px;
-      background-color: #0a0c10;
+      background-color: var(--ds-color-on-accent);
       -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E") center / contain no-repeat;
     }
