@@ -1,15 +1,4 @@
-/**
- * DeathshotArsenal — DS Prompt Cards Stylesheet
- * Fully integrated with UIElements design tokens, rounded surfaces, and Card-as-Base hierarchy.
- */
-
-/* ============================================================
-   1. ROOT CARD SURFACE (Canonical 5px node margin, 10px UI padding)
-   ============================================================ */
-
-/* ComfyUI's DOM widget wrapper container - must be click-through and NEVER scroll */
 .dom-widget:has(> .ds-prompt-cards-card),
-.dom-widget:has(> .ds-cards-root),
 .dom-widget:has(> [class*="ds-cards-"]) {
   pointer-events: none !important;
   overflow: hidden !important;
@@ -18,27 +7,14 @@
   background: transparent !important;
 }
 
-
-
-.ds-prompt-cards-card,
-.ds-cards-root {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-  min-width: 0 !important;
-  margin: 0 !important;
-  padding: var(--ds-card-padding, 10px) !important; /* EXACT 10px Card-to-UI padding on ALL 4 sides */
-  display: flex !important;
-  flex-direction: column !important;
-  gap: var(--ds-gap-md, 8px) !important;
-  background: var(--ds-color-card, var(--ds-panel, #12151c)) !important;
-  border: 1px solid var(--ds-color-card-border, var(--ds-border, #242a36)) !important;
-  border-radius: var(--ds-radius-card, 8px) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif) !important;
-  overflow: hidden !important;
-  pointer-events: none !important; /* Empty card area belongs to canvas for dragging */
+.ds-ui-card.ds-prompt-cards-card {
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  gap: var(--ds-gap-md, 8px);
+  overflow: hidden;
+  /* Empty card area belongs to the canvas for dragging; beats the inline auto set by normalizeDSWidgetHost. */
+  pointer-events: none !important;
   user-select: none;
   position: relative;
 
@@ -56,42 +32,7 @@
   --btn-action-icon: 12px;
 }
 
-/* All interactive child elements inside card capture pointer events */
-.ds-cards-root > * {
-  box-sizing: border-box !important;
-  margin: 0 !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  pointer-events: auto !important;
-}
-
-.ds-cards-root * {
-  box-sizing: border-box;
-}
-
-/* Allow text selection and editing */
-.ds-cards-root .prompt-text,
-.ds-cards-root .search-input {
-  user-select: text;
-  cursor: text;
-}
-
-/* Ensure all interactive elements have pointer-events */
-.ds-cards-root button,
-.ds-cards-root input,
-.ds-cards-root textarea,
-.ds-cards-root .ds-card,
-.ds-cards-root .ds-cards-body {
-  pointer-events: auto !important;
-}
-
-/* ============================================================
-   2. CONTENT SIZE MODES (Small, Med, Large)
-   ============================================================ */
-
-/* Small (S) - True Ultra-Compact Thumbnail Mode */
-.ds-prompt-cards-card[data-psize="small"],
-.ds-cards-root[data-psize="small"] {
+.ds-prompt-cards-card[data-psize="small"] {
   --preview-h: 75px;
   --list-card-h: 88px;
   --list-preview-w: 75px;
@@ -105,9 +46,7 @@
   --btn-action-icon: 10px;
 }
 
-/* Medium (M) - Balanced Standard Mode */
-.ds-prompt-cards-card[data-psize="med"],
-.ds-cards-root[data-psize="med"] {
+.ds-prompt-cards-card[data-psize="med"] {
   --preview-h: 140px;
   --list-card-h: 120px;
   --list-preview-w: 110px;
@@ -121,9 +60,7 @@
   --btn-action-icon: 12px;
 }
 
-/* Large (L) - Full Pose & Detail Reference Mode */
-.ds-prompt-cards-card[data-psize="large"],
-.ds-cards-root[data-psize="large"] {
+.ds-prompt-cards-card[data-psize="large"] {
   --preview-h: 240px;
   --list-card-h: 165px;
   --list-preview-w: 180px;
@@ -203,44 +140,14 @@
 
 /* Action Buttons */
 .ds-ui-btn.ds-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 10px;
-  height: 28px;
-  border-radius: 6px;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.ds-ui-btn.ds-btn.primary {
-  border-radius: var(--ds-radius-control, 5px);
-}
-
-.ds-ui-btn.ds-btn.primary svg {
-  stroke: var(--ds-color-on-accent, #0a0c10);
-}
-
 /* Icon Buttons */
-.ds-ui-btn.ds-icon-btn {
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  flex-shrink: 0;
-}
-
 .ds-ui-btn.ds-icon-btn svg {
   width: 14px;
   height: 14px;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
 }
 
 /* Sub-toolbar (Filters & Search) */
@@ -262,20 +169,11 @@
 .ds-ui-btn.ds-filter-pill {
   padding: 3px 8px;
   height: 24px;
-  border-radius: var(--ds-radius-control, 5px);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .ds-ui-btn.ds-filter-pill svg {
   width: 11px;
   height: 11px;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
 }
 
 /* Search Input */
@@ -331,16 +229,6 @@
   pointer-events: auto !important;
   box-sizing: border-box !important;
 }
-
-
-
-
-
-
-
-
-
-
 
 /* ============================================================
    5. GRID VIEW
@@ -612,49 +500,25 @@
 }
 
 .ds-ui-btn.ds-type-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
   min-height: 20px;
   padding: 2px 7px;
-  border-radius: var(--ds-radius-control, 5px);
 }
 
 .ds-ui-btn.ds-type-tag svg {
   width: 11px;
   height: 11px;
-  stroke: currentColor;
-  stroke-width: 2;
-  fill: none;
 }
 
 /* Prompt Textarea */
 .ds-prompt-text {
-  width: 100%;
   min-height: var(--prompt-min-h);
   max-height: var(--prompt-max-h);
-  background: var(--ds-input-bg, var(--ds-color-panel-2, #161a23));
-  border: 1px solid var(--ds-color-border, var(--ds-border, #242a36));
-  color: var(--ds-color-text, #e5e7eb);
   padding: 5px 7px;
-  border-radius: var(--ds-radius-control, 5px);
   font-size: var(--prompt-font-size);
-  line-height: 1.4;
-  resize: vertical;
   white-space: pre-wrap;
   overflow-y: auto;
-  box-sizing: border-box;
   flex: 1 1 auto;
 }
-
-
-
-
-
-
-
-
 
 .ds-cards-list .ds-prompt-text {
   flex: 1 1 0% !important;
@@ -667,12 +531,6 @@
   font-size: var(--prompt-font-size);
 }
 
-.ds-prompt-text:focus {
-  outline: none;
-  border-color: var(--ds-color-accent, #67e8f9);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-color-accent) 12%, transparent);
-}
-
 /* Card Action Buttons (Pin, Copy, Paste, Delete) */
 .ds-card-actions {
   display: flex;
@@ -683,8 +541,9 @@
 
 .ds-card-actions .ds-ui-btn.ds-icon-btn {
   width: var(--btn-action-size);
+  min-width: var(--btn-action-size);
+  max-width: var(--btn-action-size);
   height: var(--btn-action-size);
-  border-radius: 5px;
 }
 
 .ds-card-actions .ds-ui-btn.ds-icon-btn svg {
@@ -764,67 +623,16 @@
    10. DETAIL MODAL
    ============================================================ */
 
-.ds-pc-modal {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 999999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  isolation: isolate;
-  font-family: var(--ds-font, Inter, "Segoe UI", system-ui, sans-serif);
-}
-
-.ds-pc-modal-backdrop {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw;
-  height: 100vh;
-  background: color-mix(in srgb, var(--ds-color-base) 78%, transparent) !important;
-  backdrop-filter: blur(3px);
-  opacity: 1 !important;
-}
-
-.ds-pc-modal-content {
-  position: relative;
-  z-index: 1;
-  width: min(840px, 94vw);
-  max-height: 92vh;
-  background: var(--ds-color-card, #12151c) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  border: 1px solid var(--ds-color-card-border, #242a36) !important;
-  border-radius: var(--ds-radius-card, 8px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.ds-pc-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border-bottom: 1px solid var(--ds-color-border, #242a36);
-}
-
-.ds-pc-modal-title {
-  font-weight: 700;
-  font-size: 13.5px;
-  color: var(--ds-color-accent, #67e8f9);
-}
-
 .ds-pc-modal-actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .ds-pc-modal-image-wrap {
-  background: var(--ds-color-base, #0b0d12) !important;
+  background: var(--ds-color-panel-2, #161a23);
+  border-radius: var(--ds-radius-control, 5px);
   padding: 16px;
   display: flex;
   align-items: center;
@@ -864,53 +672,21 @@
 }
 
 .ds-pc-modal-controls {
-  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  border-bottom: 1px solid var(--ds-color-border, #242a36);
-  background: var(--ds-color-card, #12151c) !important;
-}
-
-.ds-pc-modal-body {
-  padding: 12px 14px;
-  flex: 1;
-  min-height: 120px;
-  overflow: auto;
 }
 
 .ds-pc-modal-prompt {
-  width: 100%;
   min-height: 140px;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
   padding: 12px;
-  border-radius: 6px;
   font-size: 14px;
   line-height: 1.5;
-  resize: vertical;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-.ds-pc-modal-prompt:focus {
-  outline: none;
-  border-color: var(--ds-color-accent, #67e8f9);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-color-accent) 15%, transparent);
-}
-
-.ds-pc-modal-footer {
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid var(--ds-color-border, #242a36);
-  background: var(--ds-color-panel-2, #161a23) !important;
 }
 
 .ds-pc-hint {
+  margin-right: auto;
   font-size: 11px;
   color: var(--ds-color-muted-text, #9ca3af);
   opacity: 0.85;
