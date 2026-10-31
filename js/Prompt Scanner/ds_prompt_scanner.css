@@ -75,17 +75,17 @@
 
 .dps-status-dot[data-state="success"] {
   background: var(--ds-color-success, #34d399);
-  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ds-color-success) 60%, transparent);
 }
 
 .dps-status-dot[data-state="warning"] {
   background: var(--ds-color-warning, #facc15);
-  box-shadow: 0 0 6px rgba(250, 204, 21, 0.5);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ds-color-warning, #facc15) 50%, transparent);
 }
 
 .dps-status-dot[data-state="error"] {
   background: var(--ds-color-danger, #f87171);
-  box-shadow: 0 0 6px rgba(248, 113, 113, 0.6);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ds-color-danger) 60%, transparent);
 }
 
 .dps-status-dot[data-state="running"] {

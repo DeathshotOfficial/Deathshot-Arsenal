@@ -1,22 +1,22 @@
 /* Deathshot Arsenal — DS Generation Hub Stylesheet (UI Overhaul Specs) */
 
+/* Deathshot Arsenal — DS Generation Hub Stylesheet (UI Overhaul Specs) */
+
 /* Remove browser-native number spinner arrows across all engines */
 .ds-hub-container input[type="number"]::-webkit-outer-spin-button,
-.ds-hub-container input[type="number"]::-webkit-inner-spin-button,
-.ds-hub-modal input[type="number"]::-webkit-outer-spin-button,
-.ds-hub-modal input[type="number"]::-webkit-inner-spin-button {
+.ds-hub-container input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none !important;
   margin: 0 !important;
 }
-.ds-hub-container input[type="number"],
-.ds-hub-modal input[type="number"] {
+
+.ds-hub-container input[type="number"] {
   -moz-appearance: textfield !important;
   appearance: textfield !important;
 }
 
-
 /* ========================================================================= */
-/* Outer Container: 5px margin from node edge, 10px vertical card gap       */
+/* Outer Container: 5px margin from node edge,
+10px vertical card gap       */
 /* ========================================================================= */
 [data-ds-ui-host="true"].ds-hub-container,
 .ds-hub-container {
@@ -39,7 +39,8 @@
 }
 
 /* ========================================================================= */
-/* Card Surface Hierarchy: 4 cards of identical width, 10px padding inside */
+/* Card Surface Hierarchy: 4 cards of identical width,
+10px padding inside */
 /* ========================================================================= */
 [data-ds-ui-host="true"].ds-hub-container > .ds-ui-card,
 .ds-hub-container > .ds-ui-card,
@@ -73,45 +74,11 @@
   min-height: 110px;
 }
 
-.ds-hub-card .ds-ui-card-head {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: var(--ds-gap-sm, 6px) !important;
-  user-select: none !important;
-  min-height: 20px;
-}
-
-.ds-hub-card .ds-ui-card-title-group {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  min-width: 0;
-}
-
-.ds-hub-card .ds-ui-card-title {
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.06em !important;
-  text-transform: uppercase !important;
-  color: var(--ds-color-text) !important;
-}
-
-.ds-hub-card .ds-ui-card-body {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: var(--ds-gap-sm, 6px) !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
 /* Custom scrollbars across all hub components */
 .ds-hub-container,
 .ds-hub-container *,
 .ds-hub-gear-popover,
-.ds-hub-gear-popover *,
-.ds-hub-modal,
-.ds-hub-modal * {
+.ds-hub-gear-popover * {
   scrollbar-width: thin !important;
   scrollbar-color: var(--ds-scrollbar, var(--ds-color-border)) transparent !important;
 }
@@ -119,43 +86,37 @@
 .ds-hub-container *::-webkit-scrollbar,
 .ds-hub-container::-webkit-scrollbar,
 .ds-hub-gear-popover *::-webkit-scrollbar,
-.ds-hub-gear-popover::-webkit-scrollbar,
-.ds-hub-modal *::-webkit-scrollbar,
-.ds-hub-modal::-webkit-scrollbar {
+.ds-hub-gear-popover::-webkit-scrollbar {
   width: 5px !important;
   height: 5px !important;
 }
+
 .ds-hub-container *::-webkit-scrollbar-track,
 .ds-hub-container::-webkit-scrollbar-track,
 .ds-hub-gear-popover *::-webkit-scrollbar-track,
-.ds-hub-gear-popover::-webkit-scrollbar-track,
-.ds-hub-modal *::-webkit-scrollbar-track,
-.ds-hub-modal::-webkit-scrollbar-track {
+.ds-hub-gear-popover::-webkit-scrollbar-track {
   background: var(--ds-scrollbar-track, transparent) !important;
 }
+
 .ds-hub-container *::-webkit-scrollbar-thumb,
 .ds-hub-container::-webkit-scrollbar-thumb,
 .ds-hub-gear-popover *::-webkit-scrollbar-thumb,
-.ds-hub-gear-popover::-webkit-scrollbar-thumb,
-.ds-hub-modal *::-webkit-scrollbar-thumb,
-.ds-hub-modal::-webkit-scrollbar-thumb {
+.ds-hub-gear-popover::-webkit-scrollbar-thumb {
   background: var(--ds-scrollbar, var(--ds-color-border)) !important;
   border-radius: 4px !important;
 }
+
 .ds-hub-container *::-webkit-scrollbar-thumb:hover,
 .ds-hub-container::-webkit-scrollbar-thumb:hover,
 .ds-hub-gear-popover *::-webkit-scrollbar-thumb:hover,
-.ds-hub-gear-popover::-webkit-scrollbar-thumb:hover,
-.ds-hub-modal *::-webkit-scrollbar-thumb:hover,
-.ds-hub-modal::-webkit-scrollbar-thumb:hover {
+.ds-hub-gear-popover::-webkit-scrollbar-thumb:hover {
   background: var(--ds-color-accent) !important;
 }
+
 .ds-hub-container *::-webkit-scrollbar-button,
 .ds-hub-container::-webkit-scrollbar-button,
 .ds-hub-gear-popover *::-webkit-scrollbar-button,
-.ds-hub-gear-popover::-webkit-scrollbar-button,
-.ds-hub-modal *::-webkit-scrollbar-button,
-.ds-hub-modal::-webkit-scrollbar-button {
+.ds-hub-gear-popover::-webkit-scrollbar-button {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
@@ -175,6 +136,7 @@
   gap: 4px;
   line-height: 1.2;
 }
+
 .ds-hub-detect-badge.is-subtle {
   background: var(--ds-color-panel-2);
   border-color: var(--ds-color-border);
@@ -212,43 +174,13 @@
   min-width: 0;
 }
 
-/* Centralized Dropdown Trigger adjustments inside Hub */
-.ds-hub-container .ds-ui-dropdown-trigger {
-  background: var(--ds-color-panel-2) !important;
-  border: 1px solid var(--ds-color-border) !important;
-  color: var(--ds-color-text) !important;
-}
-.ds-hub-container .ds-ui-dropdown-trigger:hover {
-  border-color: var(--ds-color-border-hover) !important;
-}
-.ds-hub-container .ds-ui-dropdown-trigger:focus-visible,
-.ds-hub-container .ds-ui-dropdown-trigger.is-open {
-  border-color: var(--ds-color-accent) !important;
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring) !important;
-}
-
-/* Manual Inputs (Width, Height) — Strictly centered */
-.ds-hub-input-number {
+/* Manual Inputs (Width,
+Height) — Strictly centered */
+.ds-ui-input.ds-hub-input-number {
   flex: 1;
   min-width: 0;
-  height: 28px;
-  border-radius: var(--ds-radius-control, 5px);
-  border: 1px solid var(--ds-color-border) !important;
-  background: var(--ds-input-bg, var(--ds-color-panel-2)) !important;
-  color: var(--ds-color-text) !important;
-  padding: 0 8px;
-  font-size: 12px;
-  font-weight: 600;
-  outline: none;
-  box-sizing: border-box;
-  font-family: inherit;
-  text-align: center !important;
+  text-align: center;
   font-variant-numeric: tabular-nums;
-  transition: border-color var(--ds-transition, 0.15s ease), box-shadow var(--ds-transition, 0.15s ease);
-}
-.ds-hub-input-number:focus {
-  border-color: var(--ds-color-accent) !important;
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring) !important;
 }
 
 /* Dedicated MP Input Field */
@@ -258,26 +190,14 @@
   gap: 4px;
   margin-left: 2px;
 }
-.ds-hub-mp-input {
-  width: 48px;
-  height: 22px;
-  border-radius: var(--ds-radius-control, 5px);
-  border: 1px solid var(--ds-color-border) !important;
-  background: var(--ds-input-bg, var(--ds-color-panel-2)) !important;
-  color: var(--ds-color-text) !important;
-  font-size: 11px;
-  font-weight: 600;
-  outline: none;
-  text-align: center !important;
+
+.ds-ui-input.ds-hub-mp-input {
+  width: 56px;
+  height: var(--ds-control-h-compact, 22px);
+  text-align: center;
   font-variant-numeric: tabular-nums;
-  line-height: 20px;
-  box-sizing: border-box;
-  transition: border-color var(--ds-transition, 0.15s ease), box-shadow var(--ds-transition, 0.15s ease);
 }
-.ds-hub-mp-input:focus {
-  border-color: var(--ds-color-accent) !important;
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring) !important;
-}
+
 .ds-hub-mp-unit {
   font-size: 10px;
   font-weight: 600;
@@ -290,6 +210,7 @@
   flex-direction: column;
   gap: 4px;
 }
+
 .ds-hub-preset-label {
   font-size: 9.5px;
   font-weight: 700;
@@ -297,6 +218,7 @@
   text-transform: uppercase;
   color: var(--ds-color-muted-text);
 }
+
 .ds-hub-chips-wrap {
   display: flex;
   flex-wrap: wrap;
@@ -304,35 +226,12 @@
   gap: var(--ds-gap-xs, 4px);
 }
 
-/* Prompt Section */
-.ds-hub-prompt-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: relative;
-  flex: 1 1 auto;
-}
-.ds-hub-prompt-ta {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--ds-input-bg, var(--ds-color-panel-2)) !important;
-  border: 1px solid var(--ds-color-border) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  color: var(--ds-color-text) !important;
-  font-family: inherit;
-  font-size: 12px;
-  line-height: 1.45;
-  padding: 8px 10px;
+.ds-ui-text-editor.ds-hub-prompt-ta {
   resize: none;
   min-height: 60px;
   flex: 1 1 auto;
-  outline: none;
-  transition: border-color var(--ds-transition, 0.15s ease), box-shadow var(--ds-transition, 0.15s ease);
 }
-.ds-hub-prompt-ta:focus {
-  border-color: var(--ds-color-accent) !important;
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring) !important;
-}
+
 .ds-hub-triggers-badge {
   font-size: 9.5px;
   font-weight: 600;
@@ -349,6 +248,7 @@
   flex-direction: column;
   gap: 4px;
 }
+
 .ds-hub-lora-row {
   display: flex;
   align-items: center;
@@ -359,13 +259,16 @@
   border-radius: var(--ds-radius-control, 5px);
   transition: all var(--ds-transition, 0.15s ease);
 }
+
 .ds-hub-lora-row.is-off {
   opacity: 0.55;
 }
+
 .ds-hub-lora-row.is-dragover {
   border-color: var(--ds-color-accent) !important;
   background: color-mix(in srgb, var(--ds-color-accent) 10%, transparent) !important;
 }
+
 .ds-hub-drag-handle {
   cursor: grab;
   color: var(--ds-color-muted-text);
@@ -375,55 +278,23 @@
   display: flex;
   align-items: center;
 }
+
 .ds-hub-drag-handle:active {
   cursor: grabbing;
 }
+
 .ds-hub-lora-row .ds-ui-dropdown {
   flex: 1;
   min-width: 0;
 }
+
 .ds-hub-lora-row .ds-ui-stepper {
-  width: 68px;
-  height: 26px;
+  width: 76px;
   flex-shrink: 0;
-  gap: 2px;
 }
-.ds-hub-lora-row .ds-ui-stepper-btn {
-  width: 18px;
-  height: 100%;
-  padding: 0;
-}
-.ds-hub-lora-row .ds-ui-stepper-value {
-  height: 100%;
-  font-size: 11px;
-  padding: 0;
-  min-width: 0;
-  text-align: center !important;
-  font-variant-numeric: tabular-nums;
-}
+
 .ds-hub-lora-row .ds-ui-toggle-row {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: center;
   flex-shrink: 0;
-}
-.ds-hub-lora-row .ds-ui-toggle-track {
-  width: 30px;
-  min-width: 30px;
-  height: 18px;
-  flex-shrink: 0;
-  cursor: pointer;
-  border-radius: 4px;
-}
-.ds-hub-lora-row .ds-ui-toggle-thumb {
-  width: 12px;
-  height: 12px;
-  top: 2px;
-  left: 2px;
-}
-.ds-hub-lora-row .is-on .ds-ui-toggle-thumb {
-  transform: translateX(12px);
 }
 
 .ds-hub-add-btn {
@@ -444,71 +315,10 @@
   outline: none;
   transition: all var(--ds-transition, 0.15s ease);
 }
+
 .ds-hub-add-btn:hover {
   border-color: var(--ds-color-accent) !important;
   background: var(--ds-btn-hover) !important;
-}
-
-/* Modals & Popovers */
-.ds-hub-modal-overlay {
-  display: none !important;
-}
-.ds-hub-modal {
-  position: fixed;
-  z-index: 99999;
-  width: 390px;
-  max-width: calc(100vw - 24px);
-  max-height: 85vh;
-  background: var(--ds-color-card) !important;
-  border: 1px solid var(--ds-color-card-border) !important;
-  border-radius: var(--ds-radius-card, 8px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  overflow: hidden;
-  font-family: inherit;
-  color: var(--ds-color-text) !important;
-}
-.ds-hub-modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--ds-color-border);
-  background: var(--ds-color-panel-2);
-}
-.ds-hub-modal-head strong {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ds-color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ds-hub-modal-body {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  flex: 1;
-}
-.ds-hub-modal-foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--ds-color-border);
-  background: var(--ds-color-panel-2);
-}
-.ds-hub-modal-status-text {
-  font-size: 11px;
-  color: var(--ds-color-muted-text);
-  line-height: 1.4;
-  flex: 1;
-  min-width: 140px;
 }
 
 /* Gear Menu Popover */
@@ -528,6 +338,7 @@
   font-family: inherit;
   color: var(--ds-color-text) !important;
 }
+
 .ds-hub-gear-head {
   padding: 10px 12px;
   font-size: 12px;
@@ -541,6 +352,7 @@
   align-items: center;
   justify-content: space-between;
 }
+
 .ds-hub-gear-body {
   padding: 10px 12px;
   display: flex;
@@ -556,6 +368,7 @@
   flex-direction: column;
   gap: 4px;
 }
+
 .ds-hub-order-card {
   display: flex;
   align-items: center;
@@ -571,15 +384,19 @@
   user-select: none;
   transition: all var(--ds-transition, 0.15s ease);
 }
+
 .ds-hub-order-card:active {
   cursor: grabbing;
 }
+
 .ds-hub-order-card > * {
   pointer-events: none;
 }
+
 .ds-hub-order-card.is-dragging {
   opacity: 0.55;
 }
+
 .ds-hub-order-card.is-dragover {
   border-color: var(--ds-color-accent);
   background: color-mix(in srgb, var(--ds-color-accent) 12%, transparent);
@@ -595,12 +412,14 @@
   border-radius: 6px;
   padding: 8px 10px;
 }
+
 .ds-hub-preset-mgr-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
 }
+
 .ds-hub-preset-mgr-title {
   font-size: 10px;
   font-weight: 700;
@@ -608,38 +427,13 @@
   letter-spacing: 0.05em;
   color: var(--ds-color-muted-text);
 }
+
 .ds-hub-preset-mgr-actions {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-.ds-hub-btn-xs {
-  height: 22px;
-  padding: 0 8px;
-  font-size: 10px;
-}
-.ds-hub-btn-danger-xs {
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--ds-font, inherit);
-  font-size: 10px;
-  font-weight: 600;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: var(--ds-btn-radius, 4px);
-  background: color-mix(in srgb, var(--ds-color-danger) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ds-color-danger) 30%, transparent);
-  color: var(--ds-color-danger);
-  cursor: pointer;
-  outline: none;
-  transition: all var(--ds-transition, 0.15s ease);
-}
-.ds-hub-btn-danger-xs:hover {
-  background: var(--ds-color-danger);
-  color: #fff;
-}
+
 .ds-hub-preset-mgr-list {
   display: flex;
   flex-direction: column;
@@ -648,46 +442,41 @@
   overflow-y: auto;
   padding-right: 2px;
 }
+
 .ds-hub-preset-manage-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 2px 2px 2px 8px;
+  border-radius: var(--ds-radius-control, 5px);
   background: var(--ds-color-card);
   border: 1px solid var(--ds-color-border);
   color: var(--ds-color-text);
   font-size: 11px;
 }
+
 .ds-hub-preset-manage-row:hover {
   border-color: var(--ds-color-border-hover);
 }
+
 .ds-hub-preset-add-form {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 6px 8px;
-  background: var(--ds-color-card);
-  border: 1px dashed var(--ds-color-accent);
-  border-radius: 4px;
-}
-.ds-hub-preset-add-inputs {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: var(--ds-gap-xs, 4px);
+  padding: 6px 8px;
+  border: 1px dashed var(--ds-color-accent);
+  border-radius: var(--ds-radius-control, 5px);
 }
-.ds-hub-input-xs {
-  flex: 1;
-  height: 22px;
-  background: var(--ds-input-bg, var(--ds-color-panel-2));
-  border: 1px solid var(--ds-color-border);
-  border-radius: 3px;
-  color: var(--ds-color-text);
-  font-size: 10.5px;
-  padding: 0 5px;
-  box-sizing: border-box;
+
+.ds-hub-preset-detail {
+  color: var(--ds-color-muted-text);
+  font-size: 10px;
 }
-.ds-hub-input-xs:focus {
-  outline: none;
-  border-color: var(--ds-color-accent);
+
+.ds-hub-preset-category {
+  padding: 4px 2px 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ds-color-accent);
 }

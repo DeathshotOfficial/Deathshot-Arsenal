@@ -178,7 +178,7 @@
   background: var(--ds-color-accent, #67e8f9) !important;
   color: var(--ds-color-on-accent, #0a0c10) !important;
   border-color: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 10px rgba(103, 232, 249, 0.4) !important;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent) 40%, transparent) !important;
 }
 
 /* ================= Card Body ================= */
@@ -447,4 +447,16 @@
 
 .ds-rand-textarea::placeholder {
   color: var(--ds-color-muted-text, #9ca3af) !important;
+}
+
+/* AI settings tab (shared AI popover) */
+.ds-rand-ai-hint {
+  display: block;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--ds-color-muted-text, #9ca3af);
+}
+
+.ds-ui-btn.ds-rand-ai-reset {
+  align-self: flex-end;
 }

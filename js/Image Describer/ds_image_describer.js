@@ -16,6 +16,8 @@ import {
   Spinbox,
   Toggle,
   Button,
+  Input,
+  InputRow,
   installDSUI,
 } from "../UIElements/index.js";
 
@@ -420,62 +422,57 @@ app.registerExtension({
       const controlsEl = document.createElement("div");
       controlsEl.className = "ds-describer-controls";
 
-      // Run / Stop Button
-      const runBtn = document.createElement("button");
-      runBtn.type = "button";
-      runBtn.className = "ds-ui-btn ds-ui-btn-primary";
-      runBtn.innerHTML = `${DSIconMarkup("play", { size: 12 })} Run`;
-      runBtn.addEventListener("click", onRunStopClick);
+      const runBtnApi = Button({ icon: "play", label: "Run", variant: "primary", onClick: onRunStopClick });
+      const runBtn = runBtnApi.root;
+      const setRunning = (running) => {
+        runBtnApi.setIcon(running ? "stop" : "play");
+        runBtnApi.setLabel(running ? "Stop" : "Run");
+      };
 
-      // Rerun Button
-      const rerunBtn = document.createElement("button");
-      rerunBtn.type = "button";
-      rerunBtn.className = "ds-ui-btn ds-ui-btn-secondary";
-      rerunBtn.innerHTML = `${DSIconMarkup("rotate-cw", { size: 11 })} Rerun`;
-      rerunBtn.title = "Clear cache & re-analyze with current settings";
-      rerunBtn.addEventListener("click", onRerunClick);
+      const rerunBtn = Button({
+        icon: "rotate-cw",
+        label: "Rerun",
+        tooltip: "Clear cache & re-analyze with current settings",
+        onClick: onRerunClick,
+      }).root;
 
-      // Continue Button (active when paused)
-      const continueBtn = document.createElement("button");
-      continueBtn.type = "button";
-      continueBtn.className = "ds-ui-btn ds-ui-btn-secondary ds-describer-btn-continue";
-      continueBtn.innerHTML = `${DSIconMarkup("continue", { size: 11 })} Continue`;
-      continueBtn.title = "Resume paused workflow execution with current prompt";
-      continueBtn.addEventListener("click", onContinueClick);
+      const continueBtn = Button({
+        icon: "continue",
+        label: "Continue",
+        className: "ds-describer-btn-continue",
+        tooltip: "Resume paused workflow execution with current prompt",
+        onClick: onContinueClick,
+      }).root;
 
-      // Copy Button
-      const copyBtn = document.createElement("button");
-      copyBtn.type = "button";
-      copyBtn.className = "ds-ui-btn ds-ui-btn-secondary";
-      copyBtn.innerHTML = `${DSIconMarkup("copy", { size: 11 })} Copy`;
-      copyBtn.title = "Copy prompt to clipboard";
-      copyBtn.addEventListener("click", async () => {
-        const txt = textareaEl.value;
-        const ok = await copyToClipboard(txt);
-        showToast(ok ? "Prompt copied to clipboard!" : "Failed to copy prompt");
-      });
+      const copyBtn = Button({
+        icon: "copy",
+        label: "Copy",
+        tooltip: "Copy prompt to clipboard",
+        onClick: async () => {
+          const ok = await copyToClipboard(textareaEl.value);
+          showToast(ok ? "Prompt copied to clipboard!" : "Failed to copy prompt");
+        },
+      }).root;
 
-      // Clear Button
-      const clearBtn = document.createElement("button");
-      clearBtn.type = "button";
-      clearBtn.className = "ds-ui-btn ds-ui-btn-secondary";
-      clearBtn.innerHTML = `${DSIconMarkup("trash-2", { size: 11 })} Clear`;
-      clearBtn.title = "Clear prompt field";
-      clearBtn.addEventListener("click", () => {
-        if (!textareaEl.value) return;
-        card.set(wText, "");
-        textareaEl.value = "";
-        updateWordCount();
-        showToast("Prompt cleared");
-      });
+      const clearBtn = Button({
+        icon: "trash-2",
+        label: "Clear",
+        tooltip: "Clear prompt field",
+        onClick: () => {
+          if (!textareaEl.value) return;
+          card.set(wText, "");
+          textareaEl.value = "";
+          updateWordCount();
+          showToast("Prompt cleared");
+        },
+      }).root;
 
-      // Kill LLM Button
-      const killBtn = document.createElement("button");
-      killBtn.type = "button";
-      killBtn.className = "ds-ui-btn ds-ui-btn-secondary";
-      killBtn.innerHTML = `${DSIconMarkup("power", { size: 11 })} Kill LLM`;
-      killBtn.title = "Stop generation and eject model from VRAM immediately";
-      killBtn.addEventListener("click", onKillLLMClick);
+      const killBtn = Button({
+        icon: "power",
+        label: "Kill",
+        tooltip: "Stop generation and eject model from VRAM immediately",
+        onClick: onKillLLMClick,
+      }).root;
 
       controlsEl.append(runBtn, rerunBtn, continueBtn, copyBtn, clearBtn, killBtn);
       card.fixed(controlsEl, { height: 28 });
@@ -585,20 +582,21 @@ app.registerExtension({
       countEl.className = "ds-describer-word-count";
       countEl.textContent = "0 words · 0 chars";
 
-      const restoreBtn = document.createElement("button");
-      restoreBtn.type = "button";
-      restoreBtn.className = "ds-describer-restore-btn";
-      restoreBtn.textContent = "Restore generated text";
+      const restoreBtn = Button({
+        label: "Restore generated text",
+        compact: true,
+        variant: "ghost",
+        onClick: () => {
+          if (lastGeneratedText) {
+            textareaEl.value = lastGeneratedText;
+            card.set(wText, lastGeneratedText);
+            updateWordCount();
+            restoreBtn.style.display = "none";
+            showToast("Restored generated prompt");
+          }
+        },
+      }).root;
       restoreBtn.style.display = "none";
-      restoreBtn.addEventListener("click", () => {
-        if (lastGeneratedText) {
-          textareaEl.value = lastGeneratedText;
-          card.set(wText, lastGeneratedText);
-          updateWordCount();
-          restoreBtn.style.display = "none";
-          showToast("Restored generated prompt");
-        }
-      });
 
       footerEl.append(countEl, restoreBtn);
       editorGrowEl.append(textareaWrap, footerEl);
@@ -649,7 +647,7 @@ app.registerExtension({
             });
             setStatus("Stopped", "Generation stopped by user");
             isRunning = false;
-            runBtn.innerHTML = `${DSIconMarkup("play", { size: 12 })} Run`;
+            setRunning(false);
             textareaEl.classList.remove("is-generating");
           } catch (e) {
             console.error("[Image Describer] Stop error:", e);
@@ -716,7 +714,7 @@ app.registerExtension({
       async function runStandaloneGeneration(imgB64) {
         isRunning = true;
         setStatus("Loading model", "Loading vision model...");
-        runBtn.innerHTML = `${DSIconMarkup("stop", { size: 12 })} Stop`;
+        setRunning(true);
         textareaEl.classList.add("is-generating");
 
         try {
@@ -750,7 +748,7 @@ app.registerExtension({
           setStatus("Error", String(e));
         } finally {
           isRunning = false;
-          runBtn.innerHTML = `${DSIconMarkup("play", { size: 12 })} Run`;
+          setRunning(false);
           textareaEl.classList.remove("is-generating");
         }
       }
@@ -798,24 +796,13 @@ app.registerExtension({
         const head = document.createElement("div");
         head.className = "ds-describer-settings-head";
         head.innerHTML = `<span>DS Image Describer Settings</span>`;
-        const closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
-        closeBtn.innerHTML = DSIconMarkup("x", { size: 12 });
-        closeBtn.addEventListener("click", closeSettings);
-        head.appendChild(closeBtn);
+        head.appendChild(Button({ icon: "x", compact: true, tooltip: "Close", onClick: closeSettings }).root);
 
         // Tabs
         const tabsEl = document.createElement("div");
-        tabsEl.className = "ds-describer-gear-tabs";
-        const tabModel = document.createElement("button");
-        tabModel.type = "button";
-        tabModel.className = "ds-describer-gear-tab-btn is-active";
-        tabModel.textContent = "Model & Sampling";
-        const tabControl = document.createElement("button");
-        tabControl.type = "button";
-        tabControl.className = "ds-describer-gear-tab-btn";
-        tabControl.textContent = "Workflow & Execution";
+        tabsEl.className = "ds-ui-btn-group ds-describer-gear-tabs";
+        const tabModel = Button({ label: "Model & Sampling", active: true }).root;
+        const tabControl = Button({ label: "Workflow & Execution" }).root;
         tabsEl.append(tabModel, tabControl);
 
         const bodyEl = document.createElement("div");
@@ -1028,39 +1015,33 @@ app.registerExtension({
             // Seed Field with Roll Button
             const seedField = document.createElement("div");
             seedField.className = "ds-describer-gear-field";
-            const sHdr = document.createElement("div");
-            sHdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;width:100%;";
             const sLbl = document.createElement("label");
             sLbl.className = "ds-describer-gear-label";
             sLbl.textContent = "Seed";
+            seedField.appendChild(sLbl);
 
-            const rollBtn = document.createElement("button");
-            rollBtn.type = "button";
-            rollBtn.style.cssText = "height:18px;line-height:18px;padding:0 6px;font-size:10px;font-weight:700;color:var(--ds-color-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;";
-            rollBtn.innerHTML = `🎲 <span>Roll</span>`;
-
-            sHdr.append(sLbl, rollBtn);
-            seedField.appendChild(sHdr);
-
-            const seedInput = document.createElement("input");
-            seedInput.type = "number";
-            seedInput.className = "ds-ui-input";
-            seedInput.style.textAlign = "center";
-            seedInput.value = currentSettings.seed ?? -1;
-            seedInput.placeholder = "-1 for random";
-            seedInput.addEventListener("change", () => {
-              currentSettings.seed = parseInt(seedInput.value) || -1;
-              saveSettings();
+            const seedRow = InputRow({
+              value: currentSettings.seed ?? -1,
+              placeholder: "-1 for random",
+              mono: true,
+              onChange: (val) => {
+                currentSettings.seed = parseInt(val) || -1;
+                saveSettings();
+              },
+              actions: [Button({
+                icon: "dice",
+                label: "Roll",
+                compact: true,
+                onClick: () => {
+                  const newSeed = Math.floor(Math.random() * 1000000000);
+                  seedRow.setValue(newSeed);
+                  currentSettings.seed = newSeed;
+                  saveSettings();
+                  showToast(`New Seed: ${newSeed}`);
+                },
+              })],
             });
-
-            rollBtn.addEventListener("click", () => {
-              const newSeed = Math.floor(Math.random() * 1000000000);
-              seedInput.value = newSeed;
-              currentSettings.seed = newSeed;
-              saveSettings();
-              showToast(`New Seed: ${newSeed}`);
-            });
-
+            const seedInput = seedRow.root;
             seedField.appendChild(seedInput);
             bodyEl.appendChild(seedField);
 
@@ -1070,31 +1051,31 @@ app.registerExtension({
             promptHdr.textContent = "Prompt Customization";
             bodyEl.appendChild(promptHdr);
 
-            const inputPrefix = document.createElement("input");
-            inputPrefix.className = "ds-ui-input";
-            inputPrefix.value = currentSettings.prefix || "";
-            inputPrefix.placeholder = "e.g. cinematic photograph, masterwork";
-            inputPrefix.addEventListener("change", () => {
-              currentSettings.prefix = inputPrefix.value;
-              saveSettings();
+            const inputPrefix = Input({
+              value: currentSettings.prefix || "",
+              placeholder: "e.g. cinematic photograph, masterwork",
+              onChange: (val) => {
+                currentSettings.prefix = val;
+                saveSettings();
+              },
             });
             const fieldPrefix = Field({ label: "Prefix (Prepended to prompt)", control: inputPrefix });
             bodyEl.appendChild(fieldPrefix.root);
 
-            const inputSuffix = document.createElement("input");
-            inputSuffix.className = "ds-ui-input";
-            inputSuffix.value = currentSettings.suffix || "";
-            inputSuffix.placeholder = "e.g. 35mm film grain, 4k";
-            inputSuffix.addEventListener("change", () => {
-              currentSettings.suffix = inputSuffix.value;
-              saveSettings();
+            const inputSuffix = Input({
+              value: currentSettings.suffix || "",
+              placeholder: "e.g. 35mm film grain, 4k",
+              onChange: (val) => {
+                currentSettings.suffix = val;
+                saveSettings();
+              },
             });
             const fieldSuffix = Field({ label: "Suffix (Appended to prompt)", control: inputSuffix });
             bodyEl.appendChild(fieldSuffix.root);
 
             // System Prompt Editor
             const txtSys = document.createElement("textarea");
-            txtSys.className = "ds-describer-sys-textarea";
+            txtSys.className = "ds-ui-text-editor ds-describer-sys-textarea";
             txtSys.value = currentSettings.system_prompt || "";
             txtSys.placeholder = "Leave blank to use default system prompt for active preset...";
             txtSys.addEventListener("change", () => {
@@ -1338,12 +1319,7 @@ app.registerExtension({
         const head = document.createElement("div");
         head.className = "ds-describer-log-head";
         head.innerHTML = `<span>DS Image Describer Log Stream</span>`;
-        const closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
-        closeBtn.innerHTML = DSIconMarkup("x", { size: 12 });
-        closeBtn.addEventListener("click", () => modal.remove());
-        head.appendChild(closeBtn);
+        head.appendChild(Button({ icon: "x", compact: true, tooltip: "Close", onClick: () => modal.remove() }).root);
 
         // Make modal draggable by header
         let isDragging = false;
@@ -1474,7 +1450,7 @@ app.registerExtension({
         isRunning = false;
         isPaused = false;
         continueBtn.classList.remove("is-active-pause");
-        runBtn.innerHTML = `${DSIconMarkup("play", { size: 12 })} Run`;
+        setRunning(false);
         textareaEl.classList.remove("is-generating");
         setStatus("Done", "Analysis complete");
         if (detail.text) {

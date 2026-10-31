@@ -130,8 +130,16 @@ function sanitizeDoc(doc) {
     settings: {
       bgColor: isYellow ? "" : bg,
     },
-    html: typeof doc.html === "string" ? doc.html : DEFAULT_DOC.html,
+    html: typeof doc.html === "string" ? upgradeBlockButtons(doc.html) : DEFAULT_DOC.html,
   };
+}
+
+// Notes saved before the shared-UI move store their block buttons without the
+// shared DS button classes.
+function upgradeBlockButtons(html) {
+  return html
+    .replace(/class="ds-notes-block-delete-btn"/g, 'class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn"')
+    .replace(/class="ds-notes-copy-code-btn"/g, 'class="ds-ui-btn ds-ui-btn-compact ds-notes-copy-code-btn"');
 }
 
 function saveSelection(container) {
@@ -253,11 +261,6 @@ app.registerExtension({
       this.shape = "round";
       protectDSResizeCorners(this);
 
-      // Default dark palette so LiteGraph base NEVER shows bright yellow
-      this.color = "#161b24";
-      this.bgcolor = "#0b0f17";
-      this.boxcolor = "#242a36";
-
       // Spacious, high-grade dimensions on canvas
       const curW = Number(this.size?.[0]) || 0;
       const curH = Number(this.size?.[1]) || 0;
@@ -352,10 +355,6 @@ app.registerExtension({
         this._dsDoc = sanitizeDoc(props.ds_notes_data);
         this.properties.ds_notes_data = this._dsDoc;
       }
-
-      this.color = "#161b24";
-      this.bgcolor = "#0b0f17";
-      this.boxcolor = "#242a36";
 
       // Upgrade squished old dimensions
       if (this.size) {
@@ -554,7 +553,7 @@ app.registerExtension({
       `;
 
       const tabsGroup = document.createElement("div");
-      tabsGroup.className = "ds-notes-view-tabs";
+      tabsGroup.className = "ds-ui-btn-group ds-notes-view-tabs";
 
       const tabEdit = document.createElement("button");
       tabEdit.className = "ds-ui-btn is-active";
@@ -1462,7 +1461,7 @@ app.registerExtension({
       options.forEach((opt) => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = `ds-notes-chip-btn ${opt.id === activeVal ? "is-active" : ""}`;
+        btn.className = `ds-ui-btn ds-ui-btn-compact ds-notes-chip-btn ${opt.id === activeVal ? "is-active" : ""}`;
         if (opt.icon) {
           btn.innerHTML = `<span class="ds-notes-menu-icon" style="display:inline-flex;align-items:center;margin-right:6px;">${opt.icon}</span><span>${opt.label}</span>`;
         } else {
@@ -1524,7 +1523,7 @@ app.registerExtension({
       tabDefs.forEach((t) => {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = `ds-notes-color-tab ${t.id === currentTab ? "is-active" : ""}`;
+        btn.className = `ds-ui-btn ds-ui-btn-compact ds-notes-color-tab ${t.id === currentTab ? "is-active" : ""}`;
         btn.textContent = t.label;
         btn.addEventListener("click", () => {
           currentTab = t.id;
@@ -1588,7 +1587,7 @@ app.registerExtension({
 
       const hexInput = document.createElement("input");
       hexInput.type = "text";
-      hexInput.className = "ds-notes-color-hex-input";
+      hexInput.className = "ds-ui-input ds-notes-color-hex-input";
       hexInput.maxLength = 7;
       hexInput.spellcheck = false;
 
@@ -1902,7 +1901,7 @@ app.registerExtension({
     <div class="ds-notes-callout-title">${item.title}</div>
     <div class="ds-notes-callout-body" contenteditable="true">Write your note, instructions, or caveats here...</div>
   </div>
-  <button type="button" class="ds-notes-block-delete-btn" title="Delete block">${DSIconMarkup("x", { size: 12 })}</button>
+  <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" title="Delete block">${DSIconMarkup("x", { size: 12 })}</button>
 </div><p><br></p>`;
           this._dsInsertHTML(html);
         });
@@ -1959,8 +1958,8 @@ app.registerExtension({
   <div class="ds-notes-code-header">
     <span class="ds-notes-code-lang">${lang}</span>
     <div style="display:flex;align-items:center;gap:6px;">
-      <button type="button" class="ds-notes-copy-code-btn" data-copy-code>${DSIconMarkup("copy", { size: 12 })} <span>Copy</span></button>
-      <button type="button" class="ds-notes-block-delete-btn" style="opacity:1;" title="Delete code block">${DSIconMarkup("x", { size: 12 })}</button>
+      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-notes-copy-code-btn" data-copy-code>${DSIconMarkup("copy", { size: 12 })} <span>Copy</span></button>
+      <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" style="opacity:1;" title="Delete code block">${DSIconMarkup("x", { size: 12 })}</button>
     </div>
   </div>
   <pre class="ds-notes-code-pre" contenteditable="true"><code># Paste or write your ${lang} code here...</code></pre>
@@ -2025,7 +2024,7 @@ app.registerExtension({
         title: "Insert Table / Grid",
         bodyContent: container,
         onConfirm: () => {
-          let tableHtml = `<div class="ds-notes-table-wrap" contenteditable="false"><button type="button" class="ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete table">${DSIconMarkup("x", { size: 12 })}</button><table class="ds-notes-table"><thead><tr>`;
+          let tableHtml = `<div class="ds-notes-table-wrap" contenteditable="false"><button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete table">${DSIconMarkup("x", { size: 12 })}</button><table class="ds-notes-table"><thead><tr>`;
           for (let c = 1; c <= selCols; c++) {
             tableHtml += `<th contenteditable="true">Header ${c}</th>`;
           }
@@ -2099,14 +2098,14 @@ app.registerExtension({
           if (mode === "embed" && videoId) {
             const embedHtml = `
 <div class="ds-notes-youtube-embed-wrap" contenteditable="false">
-  <button type="button" class="ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete embed">${DSIconMarkup("x", { size: 12 })}</button>
+  <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" style="position:absolute;top:6px;right:6px;z-index:2;" title="Delete embed">${DSIconMarkup("x", { size: 12 })}</button>
   <iframe src="https://www.youtube-nocookie.com/embed/${videoId}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div><p><br></p>`;
             this._dsInsertHTML(embedHtml);
           } else {
             const cardHtml = `
 <a href="${url}" target="_blank" rel="noopener noreferrer" class="ds-notes-youtube-card" contenteditable="false">
-  <div class="ds-notes-youtube-header">${DSIconMarkup("youtube", { size: 14 })} <span>YouTube Video</span> <button type="button" class="ds-notes-block-delete-btn" title="Delete card">${DSIconMarkup("x", { size: 12 })}</button></div>
+  <div class="ds-notes-youtube-header">${DSIconMarkup("youtube", { size: 14 })} <span>YouTube Video</span> <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" title="Delete card">${DSIconMarkup("x", { size: 12 })}</button></div>
   <div class="ds-notes-youtube-body">
     <div class="ds-notes-youtube-play">${DSIconMarkup("play", { size: 14 })}</div>
     <div class="ds-notes-youtube-info">
@@ -2232,7 +2231,7 @@ app.registerExtension({
 <div class="ds-notes-folder-hint" contenteditable="false">
   <div class="ds-notes-folder-hint-title">
     <span class="ds-notes-folder-hint-title-text">${DSIconMarkup("folder", { size: 14 })} <span>${rootDir}</span></span>
-    <button type="button" class="ds-notes-block-delete-btn" title="Delete folder hint">${DSIconMarkup("x", { size: 12 })}</button>
+    <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" title="Delete folder hint">${DSIconMarkup("x", { size: 12 })}</button>
   </div>
   <div class="ds-notes-folder-hint-tree">   └── ${file}</div>
 </div><p><br></p>`;
@@ -2316,7 +2315,7 @@ app.registerExtension({
 <a href="${href}" target="_blank" rel="noopener noreferrer" class="ds-notes-discord-card" contenteditable="false">
   <div class="ds-notes-discord-top">
     <div style="display:flex;align-items:center;gap:6px;">${DSIconMarkup("discord", { size: 14 })} <span>${badgeLabel}</span></div>
-    <button type="button" class="ds-notes-block-delete-btn" title="Delete card">${DSIconMarkup("x", { size: 12 })}</button>
+    <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" title="Delete card">${DSIconMarkup("x", { size: 12 })}</button>
   </div>
   <div class="ds-notes-discord-content">
     <div class="ds-notes-discord-info">
@@ -2525,7 +2524,7 @@ app.registerExtension({
           if (titleContainer) {
             titleContainer.innerHTML = `
               <span class="ds-notes-folder-hint-title-text">${DSIconMarkup("folder", { size: 14 })} <span>${rootDir}</span></span>
-              <button type="button" class="ds-notes-block-delete-btn" title="Delete folder hint">${DSIconMarkup("x", { size: 12 })}</button>
+              <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-notes-block-delete-btn" title="Delete folder hint">${DSIconMarkup("x", { size: 12 })}</button>
             `;
           }
           if (treeEl) treeEl.textContent = `   └── ${file}`;

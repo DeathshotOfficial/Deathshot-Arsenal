@@ -6,6 +6,7 @@ import {
   Stepper,
   Toggle,
   Button,
+  Input,
   Dropdown,
   protectDSResizeCorners,
   normalizeDSWidgetHost,
@@ -1113,9 +1114,7 @@ function buildImageSettingsSection(node) {
 
   const customMPWrap = document.createElement("div");
   customMPWrap.className = "ds-hub-mp-wrap";
-  const mpInput = document.createElement("input");
-  mpInput.type = "number";
-  mpInput.className = "ds-hub-mp-input";
+  const mpInput = Input({ type: "number", className: "ds-hub-mp-input" }).root;
   mpInput.value = Number(s.mp || 1.0).toFixed(1);
   mpInput.step = "0.1";
   mpInput.title = "Enter custom MP target";
@@ -1160,9 +1159,7 @@ function buildImageSettingsSection(node) {
   wLabel.className = "ds-hub-label";
   wLabel.textContent = "Width";
 
-  const wInput = document.createElement("input");
-  wInput.type = "number";
-  wInput.className = "ds-hub-input-number";
+  const wInput = Input({ type: "number", className: "ds-hub-input-number" }).root;
   wInput.value = s.width || 1024;
   wInput.step = "16";
   isolateInputKeys(wInput);
@@ -1185,9 +1182,7 @@ function buildImageSettingsSection(node) {
   hLabel.className = "ds-hub-label";
   hLabel.textContent = "Height";
 
-  const hInput = document.createElement("input");
-  hInput.type = "number";
-  hInput.className = "ds-hub-input-number";
+  const hInput = Input({ type: "number", className: "ds-hub-input-number" }).root;
   hInput.value = s.height || 1024;
   hInput.step = "16";
   isolateInputKeys(hInput);
@@ -1360,7 +1355,7 @@ function buildPromptSection(node) {
   const s = getState(node);
 
   const ta = document.createElement("textarea");
-  ta.className = "ds-hub-prompt-ta";
+  ta.className = "ds-ui-text-editor ds-hub-prompt-ta";
   ta.placeholder = "Enter your prompt here...";
   ta.value = s.prompt || "";
   ta.spellcheck = false;
@@ -1430,6 +1425,105 @@ function buildPromptSection(node) {
 // ---------------------------------------------------------------------------
 let _activeGearPopover = null;
 
+// Preset manager block for the settings popover: title with Add / Restore
+// actions, an inline add form and a list of deletable rows.
+function presetManager({ title, fields, onSave, onRestore, renderList }) {
+  const sec = document.createElement("div");
+  sec.className = "ds-hub-preset-mgr-section";
+
+  const head = document.createElement("div");
+  head.className = "ds-hub-preset-mgr-head";
+  const titleEl = document.createElement("span");
+  titleEl.className = "ds-hub-preset-mgr-title";
+  titleEl.textContent = title;
+
+  const form = document.createElement("div");
+  form.className = "ds-hub-preset-add-form";
+  form.style.display = "none";
+  const inputs = fields.map((f) => {
+    const input = Input({ type: f.type || "text", placeholder: f.placeholder, value: f.value ?? "" });
+    if (f.step) input.root.step = f.step;
+    if (f.width) input.root.style.width = `${f.width}px`;
+    isolateInputKeys(input.root);
+    return input;
+  });
+  const resetForm = () => {
+    form.style.display = "none";
+    inputs.forEach((input, i) => input.setValue(fields[i].value ?? ""));
+  };
+  form.append(
+    ...inputs.map((i) => i.root),
+    Button({
+      label: "Save",
+      compact: true,
+      variant: "primary",
+      onClick: () => {
+        if (onSave(inputs.map((i) => i.root.value.trim())) === false) return;
+        resetForm();
+        renderList(list);
+      },
+    }).root,
+    Button({ icon: "x", compact: true, tooltip: "Cancel", onClick: resetForm }).root,
+  );
+
+  const actions = document.createElement("div");
+  actions.className = "ds-hub-preset-mgr-actions";
+  actions.append(
+    Button({
+      icon: "plus",
+      label: "Add",
+      compact: true,
+      onClick: () => {
+        const open = form.style.display === "none";
+        form.style.display = open ? "flex" : "none";
+        if (open) inputs[0].root.focus();
+      },
+    }).root,
+    Button({
+      label: "Restore Defaults",
+      compact: true,
+      onClick: () => {
+        onRestore();
+        renderList(list);
+      },
+    }).root,
+  );
+  head.append(titleEl, actions);
+
+  const list = document.createElement("div");
+  list.className = "ds-hub-preset-mgr-list";
+  renderList(list);
+
+  sec.append(head, form, list);
+  return sec;
+}
+
+function presetRow(name, detail, onDelete) {
+  const row = document.createElement("div");
+  row.className = "ds-hub-preset-manage-row";
+  const label = document.createElement("span");
+  const strong = document.createElement("strong");
+  strong.textContent = name;
+  label.appendChild(strong);
+  if (detail) {
+    const muted = document.createElement("span");
+    muted.className = "ds-hub-preset-detail";
+    muted.textContent = ` ${detail}`;
+    label.appendChild(muted);
+  }
+  row.append(label, Button({
+    icon: "x",
+    compact: true,
+    variant: "ghost",
+    tooltip: "Delete Preset",
+    onClick: (e) => {
+      e.stopPropagation();
+      onDelete();
+    },
+  }).root);
+  return row;
+}
+
 function openGearPopover(node, anchorEl) {
   if (_activeGearPopover) {
     _activeGearPopover.remove();
@@ -1447,11 +1541,7 @@ function openGearPopover(node, anchorEl) {
   const head = document.createElement("div");
   head.className = "ds-hub-gear-head";
   head.innerHTML = `<span>Generation Hub Settings</span>`;
-  const closeBtn = document.createElement("button");
-  closeBtn.type = "button";
-  closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
-  closeBtn.title = "Close";
-  closeBtn.appendChild(DSIcon("x", { size: 14 }));
+  const closeBtn = Button({ icon: "x", compact: true, tooltip: "Close" }).root;
   let outsideHandler = null;
   const closePopover = () => {
     if (_activeGearPopover === popover) {
@@ -1620,363 +1710,132 @@ function openGearPopover(node, anchorEl) {
   renderOrderCards();
   body.appendChild(orderList);
 
-  // 1. ASPECT RATIO PRESETS MANAGER
-  const arSec = document.createElement("div");
-  arSec.className = "ds-hub-preset-mgr-section";
+  const refresh = () => node._renderUI?.();
 
-  const arHead = document.createElement("div");
-  arHead.className = "ds-hub-preset-mgr-head";
-  const arTitle = document.createElement("span");
-  arTitle.className = "ds-hub-preset-mgr-title";
-  arTitle.textContent = "Aspect Ratio Presets";
-
-  const arActions = document.createElement("div");
-  arActions.className = "ds-hub-preset-mgr-actions";
-
-  const arAddBtn = document.createElement("button");
-  arAddBtn.type = "button";
-  arAddBtn.className = "ds-hub-btn-xs";
-  arAddBtn.textContent = "+ Add";
-
-  const arRestoreBtn = document.createElement("button");
-  arRestoreBtn.type = "button";
-  arRestoreBtn.className = "ds-hub-btn-danger-xs";
-  arRestoreBtn.textContent = "Restore Defaults";
-
-  arActions.append(arAddBtn, arRestoreBtn);
-  arHead.append(arTitle, arActions);
-  arSec.appendChild(arHead);
-
-  const arAddForm = document.createElement("div");
-  arAddForm.className = "ds-hub-preset-add-form";
-  arAddForm.style.display = "none";
-  arAddForm.innerHTML = `
-    <div class="ds-hub-preset-add-inputs">
-      <input type="text" class="ds-hub-input-xs ar-name-in" placeholder="Ratio (e.g. 21:9)" />
-      <input type="number" class="ds-hub-input-xs ar-w-in" placeholder="W" style="width:50px" />
-      <input type="number" class="ds-hub-input-xs ar-h-in" placeholder="H" style="width:50px" />
-      <button type="button" class="ds-hub-btn-xs save-ar-btn">Save</button>
-      <button type="button" class="ds-hub-btn-danger-xs cancel-ar-btn">✕</button>
-    </div>
-  `;
-  arSec.appendChild(arAddForm);
-
-  const arListEl = document.createElement("div");
-  arListEl.className = "ds-hub-preset-mgr-list";
-
-  const renderARList = () => {
-    arListEl.textContent = "";
-    const list = getARPresets();
-    for (let i = 0; i < list.length; i++) {
-      const item = list[i];
-      const row = document.createElement("div");
-      row.className = "ds-hub-preset-manage-row";
-      row.innerHTML = `<span><strong>${item.name}</strong> <span style="color:var(--ds-text-muted);font-size:10px">(${item.w}:${item.h})</span></span>`;
-
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "ds-hub-icon-btn";
-      del.innerHTML = "×";
-      del.title = "Delete Preset";
-      del.onclick = (e) => {
-        e.stopPropagation();
-        list.splice(i, 1);
-        saveARPresets(list);
-        renderARList();
-        node._renderUI?.();
-      };
-
-      row.appendChild(del);
-      arListEl.appendChild(row);
-    }
-  };
-
-  arAddBtn.onclick = () => {
-    arAddForm.style.display = arAddForm.style.display === "none" ? "flex" : "none";
-    if (arAddForm.style.display === "flex") {
-      arAddForm.querySelector(".ar-name-in")?.focus();
-    }
-  };
-
-  arAddForm.querySelector(".cancel-ar-btn").onclick = () => {
-    arAddForm.style.display = "none";
-  };
-
-  arAddForm.querySelector(".save-ar-btn").onclick = () => {
-    const nameIn = arAddForm.querySelector(".ar-name-in")?.value.trim();
-    let wIn = parseFloat(arAddForm.querySelector(".ar-w-in")?.value);
-    let hIn = parseFloat(arAddForm.querySelector(".ar-h-in")?.value);
-
-    if (nameIn && (!wIn || !hIn) && nameIn.includes(":")) {
-      const parts = nameIn.split(":");
-      wIn = parseFloat(parts[0]);
-      hIn = parseFloat(parts[1]);
-    }
-
-    if (!nameIn || !wIn || !hIn) {
-      alert("Please provide a valid ratio (e.g. 21:9).");
-      return;
-    }
-
-    const list = getARPresets();
-    list.push({ name: nameIn, w: wIn, h: hIn });
-    saveARPresets(list);
-    arAddForm.style.display = "none";
-    arAddForm.querySelector(".ar-name-in").value = "";
-    arAddForm.querySelector(".ar-w-in").value = "";
-    arAddForm.querySelector(".ar-h-in").value = "";
-    renderARList();
-    node._renderUI?.();
-  };
-
-  arRestoreBtn.onclick = () => {
-    restoreDefaultARPresets();
-    renderARList();
-    node._renderUI?.();
-  };
-
-  renderARList();
-  arSec.appendChild(arListEl);
-  body.appendChild(arSec);
-
-  // 2. RESOLUTION PRESETS MANAGER
-  const resSec = document.createElement("div");
-  resSec.className = "ds-hub-preset-mgr-section";
-
-  const resHead = document.createElement("div");
-  resHead.className = "ds-hub-preset-mgr-head";
-  const resTitle = document.createElement("span");
-  resTitle.className = "ds-hub-preset-mgr-title";
-  resTitle.textContent = "Resolution Presets";
-
-  const resActions = document.createElement("div");
-  resActions.className = "ds-hub-preset-mgr-actions";
-
-  const resAddBtn = document.createElement("button");
-  resAddBtn.type = "button";
-  resAddBtn.className = "ds-hub-btn-xs";
-  resAddBtn.textContent = "+ Add";
-
-  const resRestoreBtn = document.createElement("button");
-  resRestoreBtn.type = "button";
-  resRestoreBtn.className = "ds-hub-btn-danger-xs";
-  resRestoreBtn.textContent = "Restore Defaults";
-
-  resActions.append(resAddBtn, resRestoreBtn);
-  resHead.append(resTitle, resActions);
-  resSec.appendChild(resHead);
-
-  const resAddForm = document.createElement("div");
-  resAddForm.className = "ds-hub-preset-add-form";
-  resAddForm.style.display = "none";
-  resAddForm.innerHTML = `
-    <div class="ds-hub-preset-add-inputs">
-      <input type="text" class="ds-hub-input-xs res-cat-in" placeholder="Category" style="width:80px" value="Custom" />
-      <input type="number" class="ds-hub-input-xs res-w-in" placeholder="Width" style="width:60px" />
-      <input type="number" class="ds-hub-input-xs res-h-in" placeholder="Height" style="width:60px" />
-      <button type="button" class="ds-hub-btn-xs save-res-btn">Save</button>
-      <button type="button" class="ds-hub-btn-danger-xs cancel-res-btn">✕</button>
-    </div>
-  `;
-  resSec.appendChild(resAddForm);
-
-  const resListEl = document.createElement("div");
-  resListEl.className = "ds-hub-preset-mgr-list";
-
-  const renderResList = () => {
-    resListEl.textContent = "";
-    const list = getResPresets();
-    for (let gIdx = 0; gIdx < list.length; gIdx++) {
-      const group = list[gIdx];
-      const catHead = document.createElement("div");
-      catHead.style.fontSize = "10px";
-      catHead.style.fontWeight = "700";
-      catHead.style.color = "var(--ds-accent)";
-      catHead.style.padding = "4px 2px 2px 2px";
-      catHead.textContent = group.category;
-      resListEl.appendChild(catHead);
-
-      for (let j = 0; j < (group.items || []).length; j++) {
-        const item = group.items[j];
-        const row = document.createElement("div");
-        row.className = "ds-hub-preset-manage-row";
-        row.innerHTML = `<span><strong>${item.label}</strong> ${item.ar ? `<span style="color:var(--ds-text-muted);font-size:10px">[${item.ar}]</span>` : ""}</span>`;
-
-        const del = document.createElement("button");
-        del.type = "button";
-        del.className = "ds-hub-icon-btn";
-        del.innerHTML = "×";
-        del.title = "Delete Preset";
-        del.onclick = (e) => {
-          e.stopPropagation();
-          group.items.splice(j, 1);
-          saveResPresets(list);
-          renderResList();
-          node._renderUI?.();
-        };
-
-        row.appendChild(del);
-        resListEl.appendChild(row);
+  body.appendChild(presetManager({
+    title: "Aspect Ratio Presets",
+    fields: [
+      { placeholder: "Ratio (e.g. 21:9)" },
+      { type: "number", placeholder: "W", width: 50 },
+      { type: "number", placeholder: "H", width: 50 },
+    ],
+    onSave: ([name, wRaw, hRaw]) => {
+      let w = parseFloat(wRaw);
+      let h = parseFloat(hRaw);
+      if (name && (!w || !h) && name.includes(":")) {
+        [w, h] = name.split(":").map(parseFloat);
       }
-    }
-  };
-
-  resAddBtn.onclick = () => {
-    resAddForm.style.display = resAddForm.style.display === "none" ? "flex" : "none";
-    if (resAddForm.style.display === "flex") {
-      resAddForm.querySelector(".res-w-in")?.focus();
-    }
-  };
-
-  resAddForm.querySelector(".cancel-res-btn").onclick = () => {
-    resAddForm.style.display = "none";
-  };
-
-  resAddForm.querySelector(".save-res-btn").onclick = () => {
-    const cat = resAddForm.querySelector(".res-cat-in")?.value.trim() || "Custom";
-    const w = parseInt(resAddForm.querySelector(".res-w-in")?.value, 10);
-    const h = parseInt(resAddForm.querySelector(".res-h-in")?.value, 10);
-
-    if (!w || !h || w < 64 || h < 64) {
-      alert("Please provide valid width and height.");
-      return;
-    }
-
-    const list = getResPresets();
-    let group = list.find(g => g.category.toLowerCase() === cat.toLowerCase());
-    if (!group) {
-      group = { category: cat, items: [] };
-      list.push(group);
-    }
-    const label = `${w} × ${h}`;
-    const ar = findClosestAR(w, h, getARPresets());
-    group.items.push({ label, w, h, ar });
-    saveResPresets(list);
-
-    resAddForm.style.display = "none";
-    resAddForm.querySelector(".res-w-in").value = "";
-    resAddForm.querySelector(".res-h-in").value = "";
-    renderResList();
-    node._renderUI?.();
-  };
-
-  resRestoreBtn.onclick = () => {
-    restoreDefaultResPresets();
-    renderResList();
-    node._renderUI?.();
-  };
-
-  renderResList();
-  resSec.appendChild(resListEl);
-  body.appendChild(resSec);
-
-  // 3. MEGAPIXEL PRESETS MANAGER
-  const mpSec = document.createElement("div");
-  mpSec.className = "ds-hub-preset-mgr-section";
-
-  const mpHead = document.createElement("div");
-  mpHead.className = "ds-hub-preset-mgr-head";
-  const mpTitle = document.createElement("span");
-  mpTitle.className = "ds-hub-preset-mgr-title";
-  mpTitle.textContent = "Megapixel Presets";
-
-  const mpActions = document.createElement("div");
-  mpActions.className = "ds-hub-preset-mgr-actions";
-
-  const mpAddBtn = document.createElement("button");
-  mpAddBtn.type = "button";
-  mpAddBtn.className = "ds-hub-btn-xs";
-  mpAddBtn.textContent = "+ Add";
-
-  const mpRestoreBtn = document.createElement("button");
-  mpRestoreBtn.type = "button";
-  mpRestoreBtn.className = "ds-hub-btn-danger-xs";
-  mpRestoreBtn.textContent = "Restore Defaults";
-
-  mpActions.append(mpAddBtn, mpRestoreBtn);
-  mpHead.append(mpTitle, mpActions);
-  mpSec.appendChild(mpHead);
-
-  const mpAddForm = document.createElement("div");
-  mpAddForm.className = "ds-hub-preset-add-form";
-  mpAddForm.style.display = "none";
-  mpAddForm.innerHTML = `
-    <div class="ds-hub-preset-add-inputs">
-      <input type="number" step="0.1" class="ds-hub-input-xs mp-val-in" placeholder="MP (e.g. 2.5)" />
-      <button type="button" class="ds-hub-btn-xs save-mp-btn">Save</button>
-      <button type="button" class="ds-hub-btn-danger-xs cancel-mp-btn">✕</button>
-    </div>
-  `;
-  mpSec.appendChild(mpAddForm);
-
-  const mpListEl = document.createElement("div");
-  mpListEl.className = "ds-hub-preset-mgr-list";
-
-  const renderMPList = () => {
-    mpListEl.textContent = "";
-    const list = getMPPresets();
-    for (let i = 0; i < list.length; i++) {
-      const item = list[i];
-      const row = document.createElement("div");
-      row.className = "ds-hub-preset-manage-row";
-      row.innerHTML = `<span><strong>${item.name}</strong> <span style="color:var(--ds-text-muted);font-size:10px">(${item.mp} MP)</span></span>`;
-
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "ds-hub-icon-btn";
-      del.innerHTML = "×";
-      del.title = "Delete Preset";
-      del.onclick = (e) => {
-        e.stopPropagation();
-        list.splice(i, 1);
-        saveMPPresets(list);
-        renderMPList();
-        node._renderUI?.();
+      if (!name || !w || !h) {
+        alert("Please provide a valid ratio (e.g. 21:9).");
+        return false;
+      }
+      const list = getARPresets();
+      list.push({ name, w, h });
+      saveARPresets(list);
+      refresh();
+    },
+    onRestore: () => {
+      restoreDefaultARPresets();
+      refresh();
+    },
+    renderList: (listEl) => {
+      const rerender = () => {
+        listEl.replaceChildren();
+        const list = getARPresets();
+        list.forEach((item, i) => listEl.appendChild(presetRow(item.name, `(${item.w}:${item.h})`, () => {
+          list.splice(i, 1);
+          saveARPresets(list);
+          rerender();
+          refresh();
+        })));
       };
+      rerender();
+    },
+  }));
 
-      row.appendChild(del);
-      mpListEl.appendChild(row);
-    }
-  };
+  body.appendChild(presetManager({
+    title: "Resolution Presets",
+    fields: [
+      { placeholder: "Category", value: "Custom", width: 80 },
+      { type: "number", placeholder: "Width", width: 60 },
+      { type: "number", placeholder: "Height", width: 60 },
+    ],
+    onSave: ([catRaw, wRaw, hRaw]) => {
+      const cat = catRaw || "Custom";
+      const w = parseInt(wRaw, 10);
+      const h = parseInt(hRaw, 10);
+      if (!w || !h || w < 64 || h < 64) {
+        alert("Please provide valid width and height.");
+        return false;
+      }
+      const list = getResPresets();
+      let group = list.find((g) => g.category.toLowerCase() === cat.toLowerCase());
+      if (!group) {
+        group = { category: cat, items: [] };
+        list.push(group);
+      }
+      group.items.push({ label: `${w} × ${h}`, w, h, ar: findClosestAR(w, h, getARPresets()) });
+      saveResPresets(list);
+      refresh();
+    },
+    onRestore: () => {
+      restoreDefaultResPresets();
+      refresh();
+    },
+    renderList: (listEl) => {
+      const rerender = () => {
+        listEl.replaceChildren();
+        const list = getResPresets();
+        for (const group of list) {
+          const catHead = document.createElement("div");
+          catHead.className = "ds-hub-preset-category";
+          catHead.textContent = group.category;
+          listEl.appendChild(catHead);
+          (group.items || []).forEach((item, j) => listEl.appendChild(presetRow(item.label, item.ar ? `[${item.ar}]` : "", () => {
+            group.items.splice(j, 1);
+            saveResPresets(list);
+            rerender();
+            refresh();
+          })));
+        }
+      };
+      rerender();
+    },
+  }));
 
-  mpAddBtn.onclick = () => {
-    mpAddForm.style.display = mpAddForm.style.display === "none" ? "flex" : "none";
-    if (mpAddForm.style.display === "flex") {
-      mpAddForm.querySelector(".mp-val-in")?.focus();
-    }
-  };
-
-  mpAddForm.querySelector(".cancel-mp-btn").onclick = () => {
-    mpAddForm.style.display = "none";
-  };
-
-  mpAddForm.querySelector(".save-mp-btn").onclick = () => {
-    const val = parseFloat(mpAddForm.querySelector(".mp-val-in")?.value);
-    if (!val || val <= 0) {
-      alert("Please provide a valid MP value (e.g. 2.5).");
-      return;
-    }
-
-    const list = getMPPresets();
-    const rounded = Math.round(val * 10) / 10;
-    list.push({ name: `${rounded.toFixed(1)} MP`, mp: rounded });
-    saveMPPresets(list);
-
-    mpAddForm.style.display = "none";
-    mpAddForm.querySelector(".mp-val-in").value = "";
-    renderMPList();
-    node._renderUI?.();
-  };
-
-  mpRestoreBtn.onclick = () => {
-    restoreDefaultMPPresets();
-    renderMPList();
-    node._renderUI?.();
-  };
-
-  renderMPList();
-  mpSec.appendChild(mpListEl);
-  body.appendChild(mpSec);
+  body.appendChild(presetManager({
+    title: "Megapixel Presets",
+    fields: [{ type: "number", step: "0.1", placeholder: "MP (e.g. 2.5)" }],
+    onSave: ([raw]) => {
+      const val = parseFloat(raw);
+      if (!val || val <= 0) {
+        alert("Please provide a valid MP value (e.g. 2.5).");
+        return false;
+      }
+      const rounded = Math.round(val * 10) / 10;
+      const list = getMPPresets();
+      list.push({ name: `${rounded.toFixed(1)} MP`, mp: rounded });
+      saveMPPresets(list);
+      refresh();
+    },
+    onRestore: () => {
+      restoreDefaultMPPresets();
+      refresh();
+    },
+    renderList: (listEl) => {
+      const rerender = () => {
+        listEl.replaceChildren();
+        const list = getMPPresets();
+        list.forEach((item, i) => listEl.appendChild(presetRow(item.name, `(${item.mp} MP)`, () => {
+          list.splice(i, 1);
+          saveMPPresets(list);
+          rerender();
+          refresh();
+        })));
+      };
+      rerender();
+    },
+  }));
 
   popover.append(head, body);
   document.body.appendChild(popover);

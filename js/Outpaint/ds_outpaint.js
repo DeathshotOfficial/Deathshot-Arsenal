@@ -768,7 +768,7 @@ app.registerExtension({
             title.textContent = label;
             const input = document.createElement("input");
             input.type = "number";
-            input.className = "ds-op-number";
+            input.className = "ds-ui-input ds-op-number";
             input.value = String(s[key]);
             input.min = "0";
             input.max = "16384";

@@ -322,8 +322,8 @@ function makeVueFace(node) {
       </div>
     </div>
     <div class="ds-vc-actions">
-      <button class="ds-vc-btn" data-action="copy" type="button">Copy</button>
-      <button class="ds-vc-btn" data-action="refresh" type="button">Refresh</button>
+      <button class="ds-ui-btn ds-ui-btn-compact ds-vc-btn" data-action="copy" type="button">Copy</button>
+      <button class="ds-ui-btn ds-ui-btn-compact ds-vc-btn" data-action="refresh" type="button">Refresh</button>
     </div>
   `;
 

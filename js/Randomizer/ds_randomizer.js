@@ -10,6 +10,7 @@ import { api } from "/scripts/api.js";
 import {
   Card,
   Button,
+  Toggle,
   DSIcon,
   DSIconMarkup,
   installDSUI,
@@ -19,6 +20,125 @@ import {
 import { openAISettingsPopover } from "../Shared/ds_ai_settings_popover.js";
 
 installDSUI();
+
+const DEFAULT_AI_SYSTEM_PROMPT = `You are an elite prompt refinement and variation engine for advanced image/video generation models.
+Your task is to rewrite a given prompt by randomizing ONLY the specifically requested semantic categories, while preserving all other elements of the prompt intact.
+
+CRITICAL RULES:
+0. ABSOLUTE MANDATORY DIRECTIVE — NO THINKING / NO CHAIN-OF-THOUGHT:
+   - Thinking mode is STRICTLY DISABLED for all models.
+   - DO NOT output "Thinking Process:", do NOT output <think> tags, and do NOT output analysis, planning, breakdowns, or internal reasoning steps.
+   - Output ONLY the final edited prompt text directly. The very first character of your response MUST be the first character of the prompt.
+1. SEMANTIC PHRASE RECOGNITION:
+   - Understand complete descriptive phrases as single attributes. For example, if "hair" or "hair_color" is selected, the phrase "long wavy natural red hair" must be recognized in its entirety and replaced with a cohesive new hair description (e.g., "short messy lavender-tinted curls", "sleek raven-black straight bob", "waist-length braided neon turquoise hair").
+2. TARGETED RANDOMIZATION ONLY:
+   - Only modify, replace, or enhance parts of the prompt that directly belong to the SELECTED TARGET CATEGORIES.
+   - Do NOT alter unselected elements (e.g., if "clothing" is NOT selected, keep "blue summer dress" exactly as-is; if "camera" is NOT selected, keep "cinematic 35mm photograph" exactly as-is).
+3. CONTEXTUAL WEAVING OF MISSING ATTRIBUTES:
+   - If a selected category is NOT present in the source prompt, naturally and seamlessly weave a vivid, fitting detail for that category into the prompt without disrupting the grammar or flow.
+4. MAXIMUM CREATIVE DIVERSITY:
+   - Use your extensive knowledge to introduce diverse, vivid, high-fidelity styles, materials, palettes, lighting scenarios, and environments beyond standard basic dictionaries.
+5. CLEAN, RAW OUTPUT:
+   - Return ONLY the final modified prompt text.
+   - Absolutely NO conversational filler, NO intros ("Here is your prompt:"), NO explanations, NO quotes, and NO markdown code fences.`;
+
+// Randomizer's tab in the shared AI settings popover.
+function renderAISettingsTab(scroll, node, ai, save) {
+  const section = (text) => {
+    const el = document.createElement("div");
+    el.className = "ds-sensei-gear-section-label";
+    el.textContent = text;
+    return el;
+  };
+  const box = (...toggles) => {
+    const el = document.createElement("div");
+    el.className = "ds-sensei-gear-behavior-box";
+    el.append(...toggles.map((t) => t.root));
+    return el;
+  };
+  const toggle = (key, label, description, defaultOn = true) => Toggle({
+    label,
+    description,
+    checked: defaultOn ? ai[key] !== false : Boolean(ai[key]),
+    onChange: (checked) => {
+      ai[key] = checked;
+      save();
+    },
+  });
+
+  scroll.append(
+    section("Workflow & Behavior Options"),
+    box(
+      toggle("auto_load", "Auto-load & randomize on workflow Queue", "When OFF, Queue skips the LLM and uses the prompt from Run (or the source prompt if there is none)."),
+      toggle("pause_for_edit", "Use edited preview on Queue", "When ON, Queue uses the preview you generated with Run and edited, instead of generating a new one.", false),
+      toggle("auto_unload", "Auto-unload model after prompt creation", "Frees LLM VRAM immediately so diffusion has 100% memory."),
+      toggle("free_comfy_memory", "Free ComfyUI models before loading LLM", "Soft unloads cached diffusion models before allocating LLM VRAM."),
+      toggle("randomize_seed", "Randomize seed each generation", "Generates a fresh random variation on every queue run."),
+    ),
+    section("System Prompt"),
+  );
+
+  const sysDesc = document.createElement("small");
+  sysDesc.className = "ds-rand-ai-hint";
+  sysDesc.textContent = "Used for full prompt rewrites (Attribute Replacement Only OFF). Attribute mode uses its own fixed output format.";
+  const sysTa = document.createElement("textarea");
+  sysTa.className = "ds-ai-textarea ds-ui-text-editor";
+  sysTa.spellcheck = true;
+  sysTa.placeholder = "Enter custom system prompt (leave empty for default)...";
+  sysTa.value = ai.system_prompt || DEFAULT_AI_SYSTEM_PROMPT;
+  sysTa.oninput = () => { ai.system_prompt = sysTa.value.trim(); };
+  sysTa.onchange = () => {
+    ai.system_prompt = sysTa.value.trim();
+    save();
+  };
+  attachTextHistory(sysTa);
+  const resetSys = Button({
+    label: "Reset Default System Prompt",
+    compact: true,
+    icon: "refresh-cw",
+    onClick: () => {
+      ai.system_prompt = DEFAULT_AI_SYSTEM_PROMPT;
+      sysTa.value = DEFAULT_AI_SYSTEM_PROMPT;
+      save();
+    },
+  });
+  resetSys.root.classList.add("ds-rand-ai-reset");
+
+  const clearCache = Button({
+    label: "Clear Variation Cache",
+    compact: true,
+    icon: "trash-2",
+    variant: "danger",
+    tooltip: "Reset the per-category variation history for this node",
+    onClick: async () => {
+      try {
+        await fetch("/ds/randomizer/ai_reset_history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ node_id: node?.id != null ? String(node.id) : "" }),
+        });
+        clearCache.setLabel("Cleared!");
+      } catch (_) {
+        clearCache.setLabel("Error");
+      }
+      setTimeout(() => clearCache.setLabel("Clear Variation Cache"), 1800);
+    },
+  });
+
+  scroll.append(
+    sysDesc,
+    sysTa,
+    resetSys.root,
+    section("Variation & Coherence"),
+    box(
+      toggle("variation_cache", "Variation Cache (no repeats)", "Tracks used values per category and tells the LLM to avoid them (10-run batches)."),
+      toggle("contextual_coherence", "Contextual Coherence", "Instructs the LLM to reason about pose, height, surfaces and clothing before choosing values."),
+      toggle("attributes_only", "Attribute Replacement Only (Fast)", "Only generates new attributes and swaps them in-place (~1s), preserving the exact rest of your prompt intact. When OFF, rewrites the entire prompt."),
+    ),
+    clearCache.root,
+  );
+}
+
 
 const TYPE = "DS_Randomizer";
 const EXT = "DeathshotArsenal.Randomizer";
@@ -365,20 +485,22 @@ app.registerExtension({
 
       // Floating Toolbar Gear Popover hook (via window.DSGearMenu)
       this._toggleRandomizerGearPopover = function (anchor) {
+        const ai = self.properties.ds_randomizer_ai_settings;
+        const save = () => {
+          if (ai.model) {
+            try {
+              localStorage.setItem("DS_AI_preferred_model", ai.model);
+            } catch (_) {}
+          }
+          saveState();
+        };
         openAISettingsPopover({
           node: self,
           anchorEl: anchor,
           title: "DS Randomizer — AI Settings",
-          getSettings: () => self.properties.ds_randomizer_ai_settings,
-          saveSettings: (newSettings) => {
-            self.properties.ds_randomizer_ai_settings = { ...newSettings };
-            if (newSettings.model) {
-              try {
-                localStorage.setItem("DS_AI_preferred_model", newSettings.model);
-              } catch (_) {}
-            }
-            saveState();
-          },
+          builtIn: ai,
+          onChange: save,
+          renderSettings: (scroll) => renderAISettingsTab(scroll, self, ai, save),
         });
       };
       this._openRandomizerGearPopover = this._toggleRandomizerGearPopover;

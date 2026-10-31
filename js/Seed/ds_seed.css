@@ -18,22 +18,14 @@
 }
 
 /* Seed Input Wrapper */
-.ds-seed-input-wrap {
+.ds-ui-input-row.ds-seed-input-wrap {
   width: 100%;
   height: 32px;
   min-width: 0;
   display: flex;
   align-items: stretch;
   overflow: hidden;
-  border: 1px solid var(--ds-color-border, #242a36);
   border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-color-panel-2, #161a23);
-  transition: border-color var(--ds-transition, 120ms ease);
-}
-
-.ds-seed-input-wrap:focus-within {
-  border-color: var(--ds-color-accent, #67e8f9);
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring);
 }
 
 /* Up/down chevron spinner column on the right */
@@ -45,45 +37,24 @@
   border-left: 1px solid var(--ds-color-border, #242a36);
 }
 
-.ds-seed-spin-btn {
+.ds-ui-stepper-spinner-btn.ds-seed-spin-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--ds-color-text-muted, #6b7280);
-  cursor: pointer;
   padding: 0;
-  line-height: 1;
-  transition: color var(--ds-transition, 120ms ease), background var(--ds-transition, 120ms ease);
 }
 
-.ds-seed-spin-btn:hover {
-  color: var(--ds-color-accent, #67e8f9);
-  background: var(--ds-color-hover, rgba(103, 232, 249, 0.07));
-}
-
-.ds-seed-spin-btn:not(:last-child) {
-  border-bottom: 1px solid var(--ds-color-border, #242a36);
-}
-
-.ds-seed-input {
+.ds-ui-input-row-field.ds-seed-input {
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
   height: 100%;
   margin: 0;
   padding: 0 10px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--ds-color-text, #e5e7eb);
   font: 700 13px/1 var(--ds-font, Inter, system-ui, sans-serif);
   font-variant-numeric: tabular-nums;
   text-align: center;
-  user-select: text;
 }
 
 /* Action Buttons Row */
@@ -117,4 +88,3 @@
 [data-ds-ui-host="true"]:has(> .ds-seed-card) {
   padding-bottom: 5px !important;
 }
-

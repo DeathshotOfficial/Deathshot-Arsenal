@@ -4,6 +4,15 @@
  * Zero duplicate rules, full CSS variable inheritance, 5px node margin, 10px card padding.
  */
 
+/**
+ * DeathshotArsenal UI System — DS Gallery Stylesheet
+ * Strict adherence to DeathshotArsenal Design System & Design Tokens.
+ * Zero duplicate rules,
+full CSS variable inheritance,
+5px node margin,
+10px card padding.
+ */
+
 /* ========================================================================= */
 /* 1. Host & Card Container                                                  */
 /* ========================================================================= */
@@ -86,7 +95,7 @@
   text-overflow: ellipsis;
 }
 
-.ds-gallery-search-wrap {
+.ds-ui-input-row.ds-gallery-search-wrap {
   flex: 1 1 120px;
   min-width: 70px;
   max-width: 260px;
@@ -96,24 +105,12 @@
   align-items: center;
 }
 
-.ds-gallery-search-input {
+.ds-ui-input-row-field.ds-gallery-search-input {
   width: 100%;
   height: 100%;
-  background: var(--ds-input-bg, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
   border-radius: var(--ds-radius-control, 5px);
   padding: 0 20px 0 22px;
-  color: var(--ds-color-text, #e5e7eb);
-  font-size: 11px;
-  font-family: inherit;
-  outline: none;
   box-sizing: border-box;
-  transition: border-color var(--ds-transition, 120ms ease);
-}
-
-.ds-gallery-search-input:focus {
-  border-color: var(--ds-color-accent, #67e8f9);
-  box-shadow: 0 0 0 1px var(--ds-color-accent, #67e8f9);
 }
 
 .ds-gallery-search-icon {
@@ -128,24 +125,14 @@
   justify-content: center;
 }
 
-.ds-gallery-search-clear {
+.ds-ui-btn.ds-gallery-search-clear {
   position: absolute;
   right: 6px;
-  background: transparent;
-  border: none;
-  color: var(--ds-color-muted-text, #9ca3af);
-  cursor: pointer;
   padding: 0;
   display: none;
-  font-size: 11px;
-  line-height: 1;
 }
 
-.ds-gallery-search-clear:hover {
-  color: var(--ds-color-text, #e5e7eb);
-}
-
-.ds-gallery-search-wrap.has-val .ds-gallery-search-clear {
+.ds-ui-input-row.ds-gallery-search-wrap.has-val .ds-ui-btn.ds-gallery-search-clear {
   display: block;
 }
 
@@ -182,7 +169,7 @@
 .ds-gallery-progress-bar {
   width: 100%;
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--ds-color-text) 10%, transparent);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -195,7 +182,9 @@
 }
 
 /* ========================================================================= */
-/* 4. Toolbar (Filter Chips, Sort, Count)                                    */
+/* 4. Toolbar (Filter Chips,
+Sort,
+Count)                                    */
 /* ========================================================================= */
 .ds-gallery-toolbar {
   display: flex;
@@ -239,7 +228,7 @@
 
 .ds-gallery-chip:hover {
   color: var(--ds-color-text, #e5e7eb) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 5%, transparent) !important;
 }
 
 .ds-gallery-chip.is-active {
@@ -328,7 +317,7 @@
   aspect-ratio: 1 / 1;
   position: relative;
   overflow: hidden;
-  background: #050608;
+  background: var(--ds-color-base);
   display: grid;
   place-items: center;
 }
@@ -364,7 +353,7 @@
   padding: 2px 6px;
   border-radius: var(--ds-radius-badge, 4px);
   background: var(--ds-color-danger, #ef4444);
-  color: #ffffff;
+  color: var(--ds-color-text);
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -410,7 +399,7 @@
   height: 20px;
   border-radius: var(--ds-radius-badge, 4px);
   border: 1px solid var(--ds-color-border, #242a36);
-  background: rgba(10, 12, 16, 0.7);
+  background: color-mix(in srgb, var(--ds-color-base) 70%, transparent);
   display: grid;
   place-items: center;
   color: transparent;
@@ -543,7 +532,6 @@
   box-sizing: border-box;
 }
 
-
 /* ========================================================================= */
 /* 10. Settings Popover                                                      */
 /* ========================================================================= */
@@ -640,7 +628,7 @@
 
 .ds-gallery-settings-segmented .ds-ui-btn:hover:not(.is-active) {
   color: var(--ds-color-text, #f8fafc);
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--ds-color-text) 5%, transparent);
 }
 
 .ds-gallery-settings-segmented .ds-ui-btn.is-active {
@@ -764,6 +752,7 @@
 }
 
 .ds-gallery-lightbox-prev { left: 20px; }
+
 .ds-gallery-lightbox-next { right: 20px; }
 
 /* ========================================================================= */
@@ -979,6 +968,7 @@
 }
 
 .ds-gallery-player-prev { left: 24px; }
+
 .ds-gallery-player-next { right: 24px; }
 
 .ds-gallery-player-controls-wrap {
@@ -1118,16 +1108,16 @@
 }
 
 .ds-gallery-time-current {
-  color: #ffffff;
+  color: var(--ds-color-text);
   font-weight: 700;
 }
 
 .ds-gallery-time-sep {
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--ds-color-text) 40%, transparent);
 }
 
 .ds-gallery-time-total {
-  color: rgba(255, 255, 255, 0.7);
+  color: color-mix(in srgb, var(--ds-color-text) 70%, transparent);
 }
 
 .ds-gallery-player-vol-group {
@@ -1411,8 +1401,8 @@
   left: 28px;
   z-index: 45;
   background: rgba(15, 23, 42, 0.94);
-  border: 1px solid rgba(103, 232, 249, 0.4);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(103, 232, 249, 0.18);
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent) 40%, transparent);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px color-mix(in srgb, var(--ds-color-accent) 18%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: 8px;
@@ -1444,8 +1434,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(103, 232, 249, 0.18);
-  border: 1px solid rgba(103, 232, 249, 0.35);
+  background: color-mix(in srgb, var(--ds-color-accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-color-accent) 35%, transparent);
   color: var(--ds-color-accent, #67e8f9);
   display: flex;
   align-items: center;
@@ -1463,7 +1453,7 @@
 .ds-gallery-continue-label {
   font-size: 10px;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--ds-color-muted-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1471,48 +1461,34 @@
 .ds-gallery-continue-time {
   font-size: 13px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--ds-color-text);
   font-variant-numeric: tabular-nums;
 }
 
-.ds-gallery-continue-btn {
+.ds-ui-btn.ds-gallery-continue-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 650;
   border-radius: var(--ds-radius-control, 6px);
-  background: var(--ds-color-accent, #67e8f9);
-  color: #0b0f19;
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 8px rgba(103, 232, 249, 0.35);
-}
-
-.ds-gallery-continue-btn:hover {
-  background: #a5f3fc;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(103, 232, 249, 0.5);
 }
 
 .ds-gallery-continue-close {
   cursor: pointer;
-  color: #94a3b8;
+  color: var(--ds-color-muted-text);
   border-radius: 4px;
   transition: color 0.15s ease, background 0.15s ease;
 }
 
 .ds-gallery-continue-close:hover {
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--ds-color-text);
+  background: color-mix(in srgb, var(--ds-color-text) 10%, transparent);
 }
 
 .ds-gallery-continue-progress-bar {
   width: 100%;
   height: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--ds-color-text) 10%, transparent);
   overflow: hidden;
 }
 

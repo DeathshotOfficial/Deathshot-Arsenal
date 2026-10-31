@@ -241,10 +241,10 @@ function buildUI(node) {
   const card = Card({ className: "ds-seed-card" });
 
   const field = document.createElement("div");
-  field.className = "ds-seed-input-wrap";
+  field.className = "ds-ui-input-row ds-seed-input-wrap";
 
   const input = document.createElement("input");
-  input.className = "ds-seed-input";
+  input.className = "ds-ui-input-row-field is-mono ds-seed-input";
   input.type = "text";
   input.inputMode = "numeric";
   input.autocomplete = "off";
@@ -259,13 +259,13 @@ function buildUI(node) {
 
   const spinUp = document.createElement("button");
   spinUp.type = "button";
-  spinUp.className = "ds-seed-spin-btn";
+  spinUp.className = "ds-ui-stepper-spinner-btn ds-seed-spin-btn";
   spinUp.title = "Increment seed";
   spinUp.appendChild(DSIcon("chevron-up", { size: 10 }));
 
   const spinDn = document.createElement("button");
   spinDn.type = "button";
-  spinDn.className = "ds-seed-spin-btn";
+  spinDn.className = "ds-ui-stepper-spinner-btn ds-seed-spin-btn";
   spinDn.title = "Decrement seed";
   spinDn.appendChild(DSIcon("chevron-down", { size: 10 }));
 

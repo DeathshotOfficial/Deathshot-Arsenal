@@ -5,6 +5,15 @@
    and floating toolbar gear configuration popover.
    ============================================================ */
 
+/* ============================================================
+   Deathshot Arsenal — DS The Purger Stylesheet
+   Strict DeathshotArsenal Design System:
+   Theme variables,
+compact geometry,
+custom switches,
+and floating toolbar gear configuration popover.
+   ============================================================ */
+
 /* ------------------------------------------------------------------------- */
 /* Popover Container                                                         */
 /* ------------------------------------------------------------------------- */
@@ -16,7 +25,7 @@
   padding: 12px;
   border-radius: 8px;
   background: var(--ds-panel, #0f1219);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent));
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
   color: var(--ds-text, #f8fafc);
   font-family: var(--ds-font, "Inter", system-ui, -apple-system, sans-serif);
@@ -30,13 +39,16 @@
 .ds-purger-gear-popover::-webkit-scrollbar {
   width: 4px;
 }
+
 .ds-purger-gear-popover::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .ds-purger-gear-popover::-webkit-scrollbar-thumb {
-  background: var(--ds-border, rgba(255, 255, 255, 0.18));
+  background: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent));
   border-radius: 2px;
 }
+
 .ds-purger-gear-popover::-webkit-scrollbar-thumb:hover {
   background: var(--ds-accent, #67e8f9);
 }
@@ -50,7 +62,7 @@
   justify-content: space-between;
   padding-bottom: 10px;
   margin-bottom: 10px;
-  border-bottom: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
 }
 
 .ds-purger-popover-head-left {
@@ -106,7 +118,7 @@
 
 .ds-purger-popover-close:hover {
   background: var(--ds-btn-hover, #222733);
-  border-color: var(--ds-border, rgba(255, 255, 255, 0.14));
+  border-color: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent));
   color: var(--ds-text, #f8fafc);
 }
 
@@ -127,14 +139,14 @@
   padding: 7px 9px;
   border-radius: 5px;
   background: var(--ds-panel-2, #181c24);
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 8%, transparent));
   gap: 10px;
   transition: border-color 0.15s ease;
   box-sizing: border-box;
 }
 
 .ds-purger-settings-row:hover {
-  border-color: var(--ds-border-active, rgba(255, 255, 255, 0.22));
+  border-color: var(--ds-border-active, color-mix(in srgb, var(--ds-color-text) 22%, transparent));
 }
 
 .ds-purger-settings-row-text {
@@ -175,33 +187,6 @@
   gap: 3px;
 }
 
-.ds-purger-order-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  background: var(--ds-bg, #0b0d12);
-  color: var(--ds-text-muted, #94a3b8);
-  cursor: pointer;
-  padding: 0;
-  outline: none;
-  transition: all 0.15s ease;
-}
-
-.ds-purger-order-btn:hover:not(:disabled) {
-  background: var(--ds-btn-hover, #222733);
-  border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-accent, #67e8f9);
-}
-
-.ds-purger-order-btn:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-}
-
 /* ------------------------------------------------------------------------- */
 /* Popover Footer                                                            */
 /* ------------------------------------------------------------------------- */
@@ -210,95 +195,17 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 10px;
-  border-top: 1px solid var(--ds-border, rgba(255, 255, 255, 0.1));
+  border-top: 1px solid var(--ds-border, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
 }
 
-.ds-purger-footer-btn {
-  height: 25px;
-  padding: 0 10px;
-  border-radius: 5px;
-  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.14));
-  background: var(--ds-panel-2, #181c24);
-  color: var(--ds-text-muted, #94a3b8);
-  font-size: 10.5px;
-  font-weight: 600;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
-}
-
-.ds-purger-footer-btn:hover {
-  background: var(--ds-btn-hover, #222733);
-  border-color: var(--ds-accent, #67e8f9);
-  color: var(--ds-text, #f8fafc);
-}
-
-/* ------------------------------------------------------------------------- */
-/* Button Row & Action Buttons                                              */
-/* ------------------------------------------------------------------------- */
-.ds-purger-buttons-row {
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 5px !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 0 !important;
-  pointer-events: none !important;
-}
-
-.ds-purger-buttons-row > * {
-  box-sizing: border-box !important;
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  pointer-events: auto !important;
-}
-
-.ds-purger-btn {
-  box-sizing: border-box !important;
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  height: 24px !important;
-  padding: 0 4px !important;
-  font-family: var(--ds-font, "Inter", system-ui, sans-serif) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.02em !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  background: var(--ds-btn-bg, #161a23) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  cursor: pointer !important;
-  user-select: none !important;
-  outline: none !important;
-  transition: all var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-purger-btn:hover {
-  background: var(--ds-btn-hover, #1e2433) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-purger-btn:active,
-.ds-purger-btn.is-active,
-.ds-purger-btn.is-selected {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-on-accent, #0a0c10) !important;
-  font-weight: 800 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+.ds-ui-btn.ds-purger-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 4px;
 }
 
 /* In-built Status Bar below buttons */
-.dsui-card .ds-ui-status-bar,
-.ds-purger-card .ds-ui-status-bar {
+.dsui-card .ds-ui-status-bar {
   box-sizing: border-box !important;
   display: flex !important;
   align-items: center !important;
@@ -320,8 +227,7 @@
   transition: all var(--ds-transition, 120ms ease) !important;
 }
 
-.dsui-card .ds-ui-status-dot,
-.ds-purger-card .ds-ui-status-dot {
+.dsui-card .ds-ui-status-dot {
   width: 6px !important;
   height: 6px !important;
   border-radius: 50% !important;
@@ -330,25 +236,12 @@
   transition: background 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-.ds-purger-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-dot {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 6px var(--ds-color-accent, #67e8f9) !important;
-  animation: ds-status-pulse 1.2s infinite ease-in-out !important;
-}
-
-.ds-purger-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-dot {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 5px var(--ds-color-accent, #67e8f9) !important;
-}
-
-.dsui-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-dot,
-.ds-purger-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-dot {
+.dsui-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-dot {
   background: var(--ds-color-danger, #ef4444) !important;
   box-shadow: 0 0 5px var(--ds-color-danger, #ef4444) !important;
 }
 
-.dsui-card .ds-ui-status-label,
-.ds-purger-card .ds-ui-status-label {
+.dsui-card .ds-ui-status-label {
   font-size: 10px !important;
   font-weight: 600 !important;
   white-space: nowrap !important;
@@ -358,35 +251,30 @@
   min-width: 0 !important;
 }
 
-.dsui-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-label,
-.ds-purger-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-label {
+.dsui-card .ds-ui-status-bar[data-state="running"] .ds-ui-status-label {
   color: var(--ds-color-accent, #67e8f9) !important;
 }
 
-.dsui-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-label,
-.ds-purger-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-label {
+.dsui-card .ds-ui-status-bar[data-state="success"] .ds-ui-status-label {
   color: var(--ds-color-text, #e5e7eb) !important;
 }
 
-.dsui-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-label,
-.ds-purger-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-label {
+.dsui-card .ds-ui-status-bar[data-state="error"] .ds-ui-status-label {
   color: var(--ds-color-danger, #ef4444) !important;
 }
 
-.dsui-card .ds-ui-status-track,
-.ds-purger-card .ds-ui-status-track {
+.dsui-card .ds-ui-status-track {
   flex: 1 1 0 !important;
   min-width: 24px !important;
   height: 3.5px !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: color-mix(in srgb, var(--ds-color-text) 10%, transparent) !important;
   border-radius: 2px !important;
   overflow: hidden !important;
   position: relative !important;
   display: none !important;
 }
 
-.dsui-card .ds-ui-status-fill,
-.ds-purger-card .ds-ui-status-fill {
+.dsui-card .ds-ui-status-fill {
   height: 100% !important;
   width: 0% !important;
   background: var(--ds-color-accent, #67e8f9) !important;
@@ -394,16 +282,14 @@
   transition: width 0.15s ease !important;
 }
 
-.dsui-card .ds-ui-status-fill.is-indeterminate,
-.ds-purger-card .ds-ui-status-fill.is-indeterminate {
+.dsui-card .ds-ui-status-fill.is-indeterminate {
   width: 100% !important;
   background: linear-gradient(90deg, transparent, var(--ds-color-accent, #67e8f9), transparent) !important;
   background-size: 200% 100% !important;
   animation: ds-status-shimmer 1.5s infinite linear !important;
 }
 
-.dsui-card .ds-ui-status-percent,
-.ds-purger-card .ds-ui-status-percent {
+.dsui-card .ds-ui-status-percent {
   font-size: 9px !important;
   font-weight: 700 !important;
   font-variant-numeric: tabular-nums !important;

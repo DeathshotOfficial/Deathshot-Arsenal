@@ -149,6 +149,7 @@ export function Dropdown(options = {}) {
 
       const labelSpan = document.createElement("span");
       labelSpan.textContent = text;
+      if (item.style) Object.assign(labelSpan.style, item.style);
       row.appendChild(labelSpan);
 
       if (isSelected) {

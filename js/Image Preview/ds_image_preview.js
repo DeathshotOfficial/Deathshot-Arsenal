@@ -559,12 +559,12 @@ function buildUI(node) {
   card.innerHTML = `
     <div class="ds-ip-options-row">
       <div class="ds-ip-tab-group" role="tablist">
-        <button type="button" class="ds-ip-tab-btn active is-active" data-mode="preview" role="tab" aria-selected="true" title="Preview mode · Inspect without saving"></button>
-        <button type="button" class="ds-ip-tab-btn" data-mode="save" role="tab" aria-selected="false" title="Save mode · Write every queued image to disk"></button>
+        <button type="button" class="ds-ui-btn ds-ip-tab-btn active is-active" data-mode="preview" role="tab" aria-selected="true" title="Preview mode · Inspect without saving"></button>
+        <button type="button" class="ds-ui-btn ds-ip-tab-btn" data-mode="save" role="tab" aria-selected="false" title="Save mode · Write every queued image to disk"></button>
       </div>
-      <button type="button" class="ds-ip-btn ds-ip-copy" title="Copy image to clipboard"></button>
-      <button type="button" class="ds-ip-btn ds-ip-open" title="Open image in new window"></button>
-      <button type="button" class="ds-ip-btn ds-ip-save" title="Save output"></button>
+      <button type="button" class="ds-ui-btn ds-ip-btn ds-ip-copy" title="Copy image to clipboard"></button>
+      <button type="button" class="ds-ui-btn ds-ip-btn ds-ip-open" title="Open image in new window"></button>
+      <button type="button" class="ds-ui-btn ds-ip-btn ds-ip-save" title="Save output"></button>
     </div>
     <div class="ds-ip-info-row">
       <div class="ds-ip-info-message">

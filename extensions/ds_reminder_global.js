@@ -654,7 +654,7 @@ class FullscreenReminderOverlay {
     overlay.innerHTML = `
       <div class="ds-reminder-fs-backdrop" title="Click anywhere outside to dismiss"></div>
       <div class="ds-reminder-fs-card" role="dialog" aria-modal="true">
-        <button type="button" class="ds-reminder-fs-close-btn" id="ds-reminder-fs-close-btn" title="Dismiss Reminder (Esc)" aria-label="Close">
+        <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-reminder-fs-close-btn" id="ds-reminder-fs-close-btn" title="Dismiss Reminder (Esc)" aria-label="Close">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ds-icon ds-icon-x">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1150,7 +1150,7 @@ class DSReminderToolbarManager {
       alertBannerHtml = `
         <div class="ds-rem-pop-alert-banner">
           <div class="ds-rem-alert-badge">🔔 ${triggered.length} DUE NOW</div>
-          <button type="button" class="ds-rem-btn-turn-off-all" id="ds-rem-pop-dismiss-all">Turn Off All</button>
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-rem-btn-turn-off-all" id="ds-rem-pop-dismiss-all">Turn Off All</button>
         </div>
       `;
     }
@@ -1166,7 +1166,7 @@ class DSReminderToolbarManager {
         </div>
         <div class="ds-rem-pop-head-actions">
           <div id="ds-rem-pop-add-mount"></div>
-          <button type="button" class="ds-rem-pop-close-btn" id="ds-rem-pop-close-btn" title="Close" aria-label="Close">
+          <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-rem-pop-close-btn" id="ds-rem-pop-close-btn" title="Close" aria-label="Close">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ds-icon ds-icon-x">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1256,7 +1256,7 @@ class DSReminderToolbarManager {
         <span class="ds-rem-badge ds-rem-badge-triggered">DUE NOW</span>
       `;
       turnOffBtnHtml = `
-        <button type="button" class="ds-rem-btn-turn-off" title="Turn Off Reminder Alarm">Turn Off</button>
+        <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-rem-btn-turn-off" title="Turn Off Reminder Alarm">Turn Off</button>
       `;
     } else {
       metaHtml = `
@@ -1275,13 +1275,13 @@ class DSReminderToolbarManager {
       </div>
       <div class="ds-rem-item-actions">
         ${turnOffBtnHtml}
-        <button type="button" class="ds-rem-btn-icon ds-rem-btn-edit" title="Edit">
+        <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-rem-btn-icon ds-rem-btn-edit" title="Edit">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
         </button>
-        <button type="button" class="ds-rem-btn-icon ds-rem-btn-delete" title="Delete">
+        <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-rem-btn-icon ds-rem-btn-delete" title="Delete">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -1391,7 +1391,7 @@ class DSReminderToolbarManager {
       <div class="ds-rem-editor-card" data-ds-themed="true">
         <div class="ds-rem-editor-header">
           <strong class="ds-rem-editor-title">${isEdit ? "Edit Reminder" : "Create Reminder"}</strong>
-          <button type="button" class="ds-rem-pop-close-btn" id="ds-rem-modal-cancel-x" title="Close" aria-label="Close">
+          <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-rem-pop-close-btn" id="ds-rem-modal-cancel-x" title="Close" aria-label="Close">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ds-icon ds-icon-x">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1401,17 +1401,17 @@ class DSReminderToolbarManager {
         <div class="ds-rem-editor-body">
           <label class="ds-rem-form-group">
             <span class="ds-rem-form-label">Description / Task</span>
-            <input type="text" class="ds-rem-input" id="ds-rem-input-title" placeholder="e.g. Check the rice, Turn off oven" value="${escapeHtml(titleVal)}" maxlength="140" />
+            <input type="text" class="ds-ui-input ds-rem-input" id="ds-rem-input-title" placeholder="e.g. Check the rice, Turn off oven" value="${escapeHtml(titleVal)}" maxlength="140" />
           </label>
 
           <div class="ds-rem-form-group">
             <span class="ds-rem-form-label">Time Selection Mode</span>
             <div class="ds-rem-segmented-row" id="ds-rem-mode-segmented">
-              <button type="button" class="ds-rem-seg-btn ${modeVal === "duration" ? "is-active" : ""}" data-mode="duration">
+              <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-rem-seg-btn ${modeVal === "duration" ? "is-active" : ""}" data-mode="duration">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 <span>Countdown / Duration</span>
               </button>
-              <button type="button" class="ds-rem-seg-btn ${modeVal === "clock" ? "is-active" : ""}" data-mode="clock">
+              <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-rem-seg-btn ${modeVal === "clock" ? "is-active" : ""}" data-mode="clock">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 10"></polyline></svg>
                 <span>Clock Time</span>
               </button>
@@ -1436,7 +1436,7 @@ class DSReminderToolbarManager {
             <!-- Clock time configuration -->
             <div id="ds-rem-clock-panel" class="ds-rem-subpanel ${modeVal === "clock" ? "is-active" : "is-hidden"}">
               <span class="ds-rem-form-label">Alarm Time (24h HH:MM)</span>
-              <input type="time" class="ds-rem-input ds-rem-time-input" id="ds-rem-input-clock" value="${clockVal}" />
+              <input type="time" class="ds-ui-input ds-rem-input ds-rem-time-input" id="ds-rem-input-clock" value="${clockVal}" />
             </div>
           </div>
 
@@ -1642,7 +1642,7 @@ function injectReminderStyles() {
     document.head.appendChild(style);
   }
   style.textContent = `
-    /* Action dock button & Top Action Bar integration */
+/* Action dock button & Top Action Bar integration */
     .ds-reminder-toolbar-group,
     div.ds-reminder-toolbar-group {
       display: inline-flex !important;
@@ -1658,12 +1658,14 @@ function injectReminderStyles() {
       margin: 0 4px 0 2px !important;
       outline: none !important;
     }
-    .ds-reminder-toolbar-group::before,
+
+.ds-reminder-toolbar-group::before,
     .ds-reminder-toolbar-group::after {
       display: none !important;
       content: none !important;
     }
-    .ds-reminder-tb-btn {
+
+.ds-reminder-tb-btn {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -1673,7 +1675,7 @@ function injectReminderStyles() {
       height: 38px !important;
       padding: 0 10px !important;
       margin: 0 !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, rgba(255, 255, 255, 0.18))) !important;
+      border: 1px solid var(--ds-btn-border, var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent))) !important;
       border-radius: var(--ds-radius-control, 6px) !important;
       background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
       color: var(--ds-btn-text, var(--ds-color-text, #e2e8f0)) !important;
@@ -1685,19 +1687,22 @@ function injectReminderStyles() {
       vertical-align: middle !important;
       font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
     }
-    .ds-reminder-tb-btn:hover,
+
+.ds-reminder-tb-btn:hover,
     .ds-reminder-tb-btn.is-active {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
       box-shadow: none !important;
     }
-    .ds-reminder-tb-btn::before,
+
+.ds-reminder-tb-btn::before,
     .ds-reminder-tb-btn::after {
       display: none !important;
       content: none !important;
     }
-    .ds-reminder-tb-icon-box {
+
+.ds-reminder-tb-icon-box {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -1708,7 +1713,8 @@ function injectReminderStyles() {
       transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
       will-change: transform;
     }
-    .ds-reminder-bell-svg {
+
+.ds-reminder-bell-svg {
       stroke: var(--ds-btn-text, var(--ds-color-text, currentColor)) !important;
       color: var(--ds-btn-text, var(--ds-color-text, currentColor)) !important;
       display: block !important;
@@ -1718,23 +1724,27 @@ function injectReminderStyles() {
       transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.15s ease, stroke 0.15s ease !important;
       will-change: transform;
     }
-    .ds-reminder-tb-btn:hover .ds-reminder-tb-icon-box,
+
+.ds-reminder-tb-btn:hover .ds-reminder-tb-icon-box,
     .ds-reminder-tb-btn.is-active .ds-reminder-tb-icon-box {
       animation: dsBellRingHover 0.75s ease-in-out infinite alternate !important;
       color: var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-reminder-tb-btn:hover .ds-reminder-bell-svg,
+
+.ds-reminder-tb-btn:hover .ds-reminder-bell-svg,
     .ds-reminder-tb-btn.is-active .ds-reminder-bell-svg {
       color: var(--ds-color-accent, #67e8f9) !important;
       stroke: var(--ds-color-accent, #67e8f9) !important;
     }
-    @keyframes dsBellRingHover {
+
+@keyframes dsBellRingHover {
       0% { transform: rotate(18deg) scale(1.1); }
       35% { transform: rotate(-16deg) scale(1.1); }
       70% { transform: rotate(14deg) scale(1.08); }
       100% { transform: rotate(-10deg) scale(1.05); }
     }
-    .ds-reminder-tb-badge {
+
+.ds-reminder-tb-badge {
       position: absolute !important;
       top: -3px !important;
       right: -2px !important;
@@ -1756,39 +1766,46 @@ function injectReminderStyles() {
       pointer-events: none !important;
       box-shadow: 0 0 6px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 50%, transparent) !important;
     }
-    .ds-reminder-tb-badge.is-alert {
-      background: #ef4444 !important;
-      color: #ffffff !important;
+
+.ds-reminder-tb-badge.is-alert {
+      background: var(--ds-color-danger) !important;
+      color: var(--ds-color-text) !important;
       animation: dsRemPulse 1s infinite alternate !important;
     }
-    @keyframes dsRemPulse {
-      from { transform: scale(1); box-shadow: 0 0 0 rgba(239, 68, 68, 0.4); }
-      to { transform: scale(1.18); box-shadow: 0 0 10px rgba(239, 68, 68, 0.9); }
+
+@keyframes dsRemPulse {
+      from { transform: scale(1); box-shadow: 0 0 0 color-mix(in srgb, var(--ds-color-danger) 40%, transparent); }
+      to { transform: scale(1.18); box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-danger) 90%, transparent); }
     }
-    .ds-reminder-tb-btn.is-trigger-pulsing {
-      border-color: #ef4444 !important;
-      color: #ef4444 !important;
+
+.ds-reminder-tb-btn.is-trigger-pulsing {
+      border-color: var(--ds-color-danger) !important;
+      color: var(--ds-color-danger) !important;
     }
-    .ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-bell-svg {
-      color: #ef4444 !important;
-      stroke: #ef4444 !important;
+
+.ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-bell-svg {
+      color: var(--ds-color-danger) !important;
+      stroke: var(--ds-color-danger) !important;
     }
-    .ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-tb-icon-box {
+
+.ds-reminder-tb-btn.is-trigger-pulsing .ds-reminder-tb-icon-box {
       animation: dsBellRingAlert 0.45s ease-in-out infinite !important;
-      color: #ef4444 !important;
+      color: var(--ds-color-danger) !important;
     }
-    @keyframes dsBellRingAlert {
+
+@keyframes dsBellRingAlert {
       0%, 100% { transform: rotate(0deg) scale(1.12); }
       25% { transform: rotate(24deg) scale(1.18); }
       50% { transform: rotate(-24deg) scale(1.18); }
       75% { transform: rotate(16deg) scale(1.12); }
     }
-    @keyframes dsRemBorderPulse {
-      from { border-color: rgba(239, 68, 68, 0.5); }
-      to { border-color: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
+
+@keyframes dsRemBorderPulse {
+      from { border-color: color-mix(in srgb, var(--ds-color-danger) 50%, transparent); }
+      to { border-color: var(--ds-color-danger); box-shadow: 0 0 12px color-mix(in srgb, var(--ds-color-danger) 60%, transparent); }
     }
 
-    /* Official Deathshot Soft-Rectangle Toggle Switch */
+/* Official Deathshot Soft-Rectangle Toggle Switch */
     .ds-rem-toggle-btn {
       all: unset !important;
       position: relative !important;
@@ -1807,7 +1824,8 @@ function injectReminderStyles() {
       box-sizing: border-box !important;
       flex-shrink: 0 !important;
     }
-    .ds-rem-toggle-track {
+
+.ds-rem-toggle-track {
       display: block !important;
       width: 32px !important;
       height: 18px !important;
@@ -1819,12 +1837,14 @@ function injectReminderStyles() {
       box-sizing: border-box !important;
       overflow: hidden !important;
     }
-    .ds-rem-toggle-btn.is-on .ds-rem-toggle-track {
+
+.ds-rem-toggle-btn.is-on .ds-rem-toggle-track {
       background: var(--ds-color-accent, #67e8f9) !important;
       border-color: var(--ds-color-accent, #67e8f9) !important;
       box-shadow: 0 0 8px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 35%, transparent) !important;
     }
-    .ds-rem-toggle-thumb {
+
+.ds-rem-toggle-thumb {
       position: absolute !important;
       top: 2px !important;
       left: 2px !important;
@@ -1835,12 +1855,13 @@ function injectReminderStyles() {
       transition: transform var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease) !important;
       pointer-events: none !important;
     }
-    .ds-rem-toggle-btn.is-on .ds-rem-toggle-thumb {
+
+.ds-rem-toggle-btn.is-on .ds-rem-toggle-thumb {
       transform: translateX(14px) !important;
       background: var(--ds-color-on-accent, #0a0c10) !important;
     }
 
-    /* Popover */
+/* Popover */
     .ds-reminder-popover {
       position: fixed !important;
       z-index: 100000 !important;
@@ -1853,7 +1874,7 @@ function injectReminderStyles() {
       background: var(--ds-color-card, #12151c) !important;
       border: 1px solid var(--ds-color-card-border, var(--ds-color-border, #242a36)) !important;
       border-radius: var(--ds-radius-card, 8px) !important;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px color-mix(in srgb, var(--ds-color-text) 6%, transparent) !important;
       display: flex !important;
       flex-direction: column !important;
       font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
@@ -1862,11 +1883,13 @@ function injectReminderStyles() {
       overflow: hidden !important;
       animation: dsRemPopIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
-    @keyframes dsRemPopIn {
+
+@keyframes dsRemPopIn {
       from { opacity: 0; transform: translateY(-4px) scale(0.98); }
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .ds-rem-pop-header {
+
+.ds-rem-pop-header {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
@@ -1876,7 +1899,8 @@ function injectReminderStyles() {
       gap: 16px !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-pop-brand {
+
+.ds-rem-pop-brand {
       display: flex !important;
       align-items: center !important;
       gap: 8px !important;
@@ -1889,18 +1913,21 @@ function injectReminderStyles() {
       min-width: 0 !important;
       user-select: none !important;
     }
-    .ds-rem-brand-title {
+
+.ds-rem-brand-title {
       font-weight: 800 !important;
       white-space: nowrap !important;
     }
-    .ds-rem-pop-head-actions {
+
+.ds-rem-pop-head-actions {
       display: flex !important;
       align-items: center !important;
       gap: 8px !important;
       flex-shrink: 0 !important;
       margin-left: auto !important;
     }
-    .ds-rem-btn-small {
+
+.ds-rem-btn-small {
       height: 26px !important;
       padding: 0 10px !important;
       font-size: 10.5px !important;
@@ -1915,42 +1942,34 @@ function injectReminderStyles() {
       box-sizing: border-box !important;
       user-select: none !important;
     }
-    .ds-rem-btn-small:hover {
+
+.ds-rem-btn-small:hover {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
     }
-    .ds-rem-pop-close-btn {
-      width: 24px !important;
-      height: 24px !important;
-      min-width: 24px !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
-      background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
-      color: var(--ds-btn-text, var(--ds-color-text, #f8fafc)) !important;
-      cursor: pointer !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      line-height: 1 !important;
-      border-radius: var(--ds-radius-control, 4px) !important;
-      transition: all 0.12s ease !important;
-      user-select: none !important;
-      box-sizing: border-box !important;
-    }
-    .ds-rem-pop-close-btn:hover {
-      color: var(--ds-color-accent, #67e8f9) !important;
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-      background: var(--ds-btn-hover, #202633) !important;
-    }
-    .ds-rem-pop-close-btn svg {
-      display: block !important;
-      margin: auto !important;
-      pointer-events: none !important;
-      stroke: currentColor !important;
-    }
-    .ds-rem-pop-alert-banner {
+
+.ds-ui-btn.ds-rem-pop-close-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border-radius: var(--ds-radius-control, 4px);
+  box-sizing: border-box;
+}
+
+.ds-ui-btn.ds-rem-pop-close-btn svg {
+  display: block;
+  margin: auto;
+  pointer-events: none;
+  stroke: currentColor;
+}
+
+.ds-rem-pop-alert-banner {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
@@ -1960,48 +1979,31 @@ function injectReminderStyles() {
       animation: dsRemBorderPulse 1.2s infinite alternate !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-alert-badge {
+
+.ds-rem-alert-badge {
       font-size: 11px !important;
       font-weight: 800 !important;
       color: var(--ds-color-danger, #ef4444) !important;
       letter-spacing: 0.5px !important;
     }
-    .ds-rem-btn-turn-off-all {
-      height: 22px !important;
-      padding: 0 10px !important;
-      font-size: 10px !important;
-      font-weight: 700 !important;
-      border-radius: var(--ds-radius-control, 4px) !important;
-      background: var(--ds-color-danger, #ef4444) !important;
-      color: #fff !important;
-      border: 1px solid var(--ds-color-danger, #ef4444) !important;
-      cursor: pointer !important;
-      transition: all 0.12s ease !important;
-      box-sizing: border-box !important;
-    }
-    .ds-rem-btn-turn-off-all:hover {
-      background: color-mix(in srgb, var(--ds-color-danger, #ef4444) 85%, black) !important;
-      transform: scale(1.03) !important;
-    }
-    .ds-rem-btn-turn-off {
-      height: 22px !important;
-      padding: 0 8px !important;
-      font-size: 10px !important;
-      font-weight: 700 !important;
-      border-radius: var(--ds-radius-control, 4px) !important;
-      background: var(--ds-color-danger, #ef4444) !important;
-      color: #ffffff !important;
-      border: 1px solid var(--ds-color-danger, #ef4444) !important;
-      cursor: pointer !important;
-      transition: all 0.12s ease !important;
-      margin-right: 4px !important;
-      flex-shrink: 0 !important;
-      box-sizing: border-box !important;
-    }
-    .ds-rem-btn-turn-off:hover {
-      background: color-mix(in srgb, var(--ds-color-danger, #ef4444) 85%, black) !important;
-    }
-    .ds-rem-pop-global-toggle-row {
+
+.ds-ui-btn.ds-rem-btn-turn-off-all {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: var(--ds-radius-control, 4px);
+  box-sizing: border-box;
+}
+
+.ds-ui-btn.ds-rem-btn-turn-off {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--ds-radius-control, 4px);
+  margin-right: 4px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.ds-rem-pop-global-toggle-row {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
@@ -2009,20 +2011,23 @@ function injectReminderStyles() {
       font-size: 11px !important;
       font-weight: 600 !important;
       border-bottom: 1px solid var(--ds-color-border, #242a36) !important;
-      background: rgba(0, 0, 0, 0.14) !important;
+      background: color-mix(in srgb, var(--ds-color-base) 14%, transparent) !important;
       color: var(--ds-color-text, #f8fafc) !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-pop-global-toggle-row .ds-ui-toggle-row {
+
+.ds-rem-pop-global-toggle-row .ds-ui-toggle-row {
       width: 100% !important;
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
     }
-    .ds-rem-pop-global-toggle-row .ds-rem-toggle-btn {
+
+.ds-rem-pop-global-toggle-row .ds-rem-toggle-btn {
       margin-left: auto !important;
     }
-    .ds-rem-pop-list {
+
+.ds-rem-pop-list {
       display: flex !important;
       flex-direction: column !important;
       overflow-y: auto !important;
@@ -2031,7 +2036,8 @@ function injectReminderStyles() {
       gap: 6px !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-empty-state {
+
+.ds-rem-empty-state {
       padding: 28px 14px !important;
       text-align: center !important;
       display: flex !important;
@@ -2041,7 +2047,7 @@ function injectReminderStyles() {
       font-size: 11.5px !important;
     }
 
-    /* List item */
+/* List item */
     .ds-rem-item {
       display: flex !important;
       align-items: center !important;
@@ -2056,26 +2062,33 @@ function injectReminderStyles() {
       transition: background 0.12s ease, border-color 0.12s ease !important;
       user-select: none !important;
     }
-    .ds-rem-item:hover {
-      border-color: rgba(255, 255, 255, 0.25) !important;
+
+.ds-rem-item:hover {
+      border-color: color-mix(in srgb, var(--ds-color-text) 25%, transparent) !important;
     }
-    .ds-rem-item.is-triggered {
-      border-color: #ef4444 !important;
-      background: rgba(239, 68, 68, 0.14) !important;
+
+.ds-rem-item.is-triggered {
+      border-color: var(--ds-color-danger) !important;
+      background: color-mix(in srgb, var(--ds-color-danger) 14%, transparent) !important;
     }
-    .ds-rem-item.is-disabled {
+
+.ds-rem-item.is-disabled {
       opacity: 0.55 !important;
     }
-    .ds-rem-item.is-dragging {
+
+.ds-rem-item.is-dragging {
       opacity: 0.25 !important;
     }
-    .ds-rem-item.drag-over-top {
+
+.ds-rem-item.drag-over-top {
       border-top: 2px solid var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-rem-item.drag-over-bottom {
+
+.ds-rem-item.drag-over-bottom {
       border-bottom: 2px solid var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-rem-drag-handle {
+
+.ds-rem-drag-handle {
       cursor: grab !important;
       color: var(--ds-color-muted-text, #64748b) !important;
       font-size: 12px !important;
@@ -2083,10 +2096,12 @@ function injectReminderStyles() {
       flex: 0 0 auto !important;
       user-select: none !important;
     }
-    .ds-rem-drag-handle:active {
+
+.ds-rem-drag-handle:active {
       cursor: grabbing !important;
     }
-    .ds-rem-item-content {
+
+.ds-rem-item-content {
       display: flex !important;
       flex-direction: column !important;
       flex: 1 1 auto !important;
@@ -2094,7 +2109,8 @@ function injectReminderStyles() {
       gap: 3px !important;
       overflow: hidden !important;
     }
-    .ds-rem-item-title {
+
+.ds-rem-item-title {
       font-size: 11.5px !important;
       font-weight: 700 !important;
       color: var(--ds-color-text, #f8fafc) !important;
@@ -2103,89 +2119,85 @@ function injectReminderStyles() {
       text-overflow: ellipsis !important;
       line-height: 1.2 !important;
     }
-    .ds-rem-item-meta {
+
+.ds-rem-item-meta {
       display: flex !important;
       align-items: center !important;
       gap: 6px !important;
       line-height: 1 !important;
     }
-    .ds-rem-item-time {
+
+.ds-rem-item-time {
       font-size: 9.5px !important;
       font-family: monospace, var(--ds-font, sans-serif) !important;
       font-weight: 700 !important;
       color: var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-rem-badge {
+
+.ds-rem-badge {
       font-size: 8px !important;
       padding: 1px 5px !important;
       border-radius: var(--ds-radius-badge, 3px) !important;
       font-weight: 800 !important;
       text-transform: uppercase !important;
       letter-spacing: 0.04em !important;
-      background: rgba(255, 255, 255, 0.08) !important;
+      background: color-mix(in srgb, var(--ds-color-text) 8%, transparent) !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
     }
-    .ds-rem-badge-triggered {
-      background: #ef4444 !important;
-      color: #ffffff !important;
+
+.ds-rem-badge-triggered {
+      background: var(--ds-color-danger) !important;
+      color: var(--ds-color-text) !important;
     }
-    .ds-rem-badge-scheduled {
+
+.ds-rem-badge-scheduled {
       background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 15%, transparent) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       border: 1px solid color-mix(in srgb, var(--ds-color-accent, #67e8f9) 30%, transparent) !important;
     }
-    .ds-rem-badge-completed {
-      background: rgba(34, 197, 94, 0.15) !important;
-      color: #4ade80 !important;
+
+.ds-rem-badge-completed {
+      background: color-mix(in srgb, var(--ds-color-success) 15%, transparent) !important;
+      color: var(--ds-color-success) !important;
     }
-    .ds-rem-badge-disabled {
-      background: rgba(255, 255, 255, 0.06) !important;
+
+.ds-rem-badge-disabled {
+      background: color-mix(in srgb, var(--ds-color-text) 6%, transparent) !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
     }
-    .ds-rem-item-actions {
+
+.ds-rem-item-actions {
       display: flex !important;
       align-items: center !important;
       gap: 4px !important;
       flex: 0 0 auto !important;
     }
-    .ds-rem-btn-icon {
-      width: 24px !important;
-      height: 24px !important;
-      border-radius: var(--ds-radius-control, 4px) !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
-      background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
-      color: var(--ds-btn-text, var(--ds-color-text, #f8fafc)) !important;
-      cursor: pointer !important;
-      display: grid !important;
-      place-items: center !important;
-      padding: 0 !important;
-      transition: all 0.12s ease !important;
-      box-sizing: border-box !important;
-    }
-    .ds-rem-btn-icon svg {
-      stroke: currentColor !important;
-      fill: none !important;
-      pointer-events: none !important;
-    }
-    .ds-rem-btn-icon:hover {
-      background: var(--ds-btn-hover, #202633) !important;
-      color: var(--ds-color-accent, #67e8f9) !important;
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-    }
-    .ds-rem-btn-delete:hover {
-      border-color: var(--ds-color-danger, #ef4444) !important;
-      color: var(--ds-color-danger, #ef4444) !important;
-      background: var(--ds-btn-hover, #202633) !important;
-    }
 
-    /* Custom Deathshot Dropdown */
+.ds-ui-btn.ds-rem-btn-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--ds-radius-control, 4px);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.ds-ui-btn.ds-rem-btn-icon svg {
+  stroke: currentColor;
+  fill: none;
+  pointer-events: none;
+}
+
+/* Custom Deathshot Dropdown */
     .ds-rem-dropdown {
       position: relative !important;
       width: 100% !important;
       user-select: none !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-dropdown-trigger {
+
+.ds-rem-dropdown-trigger {
       height: 30px !important;
       padding: 0 26px 0 10px !important;
       background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
@@ -2201,17 +2213,20 @@ function injectReminderStyles() {
       transition: border-color 0.15s ease, background 0.15s ease !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-dropdown-trigger:hover,
+
+.ds-rem-dropdown-trigger:hover,
     .ds-rem-dropdown.open .ds-rem-dropdown-trigger {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
     }
-    .ds-rem-dropdown-val {
+
+.ds-rem-dropdown-val {
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
     }
-    .ds-rem-dropdown-arrow {
+
+.ds-rem-dropdown-arrow {
       position: absolute !important;
       right: 8px !important;
       top: 50% !important;
@@ -2222,11 +2237,13 @@ function injectReminderStyles() {
       display: grid !important;
       place-items: center !important;
     }
-    .ds-rem-dropdown.open .ds-rem-dropdown-arrow {
+
+.ds-rem-dropdown.open .ds-rem-dropdown-arrow {
       transform: translateY(-50%) rotate(180deg) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-rem-dropdown-menu {
+
+.ds-rem-dropdown-menu {
       display: none !important;
       position: absolute !important;
       top: calc(100% + 4px) !important;
@@ -2242,10 +2259,12 @@ function injectReminderStyles() {
       padding: 4px !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-dropdown.open .ds-rem-dropdown-menu {
+
+.ds-rem-dropdown.open .ds-rem-dropdown-menu {
       display: block !important;
     }
-    .ds-rem-dropdown-item {
+
+.ds-rem-dropdown-item {
       padding: 7px 9px !important;
       border-radius: var(--ds-radius-control, 4px) !important;
       font-size: 11px !important;
@@ -2253,29 +2272,32 @@ function injectReminderStyles() {
       cursor: pointer !important;
       transition: background 0.1s ease, color 0.1s ease !important;
     }
-    .ds-rem-dropdown-item:hover {
+
+.ds-rem-dropdown-item:hover {
       background: var(--ds-color-panel-2, #181d26) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-rem-dropdown-item.active {
+
+.ds-rem-dropdown-item.active {
       background: var(--ds-color-panel-2, #181d26) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       font-weight: 700 !important;
     }
 
-    /* Modal dialog */
+/* Modal dialog */
     .ds-rem-modal-backdrop {
       position: fixed !important;
       inset: 0 !important;
       z-index: 100050 !important;
-      background: rgba(0, 0, 0, 0.7) !important;
+      background: color-mix(in srgb, var(--ds-color-base) 70%, transparent) !important;
       backdrop-filter: blur(6px) !important;
       display: grid !important;
       place-items: center !important;
       padding: 16px !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-editor-card {
+
+.ds-rem-editor-card {
       width: 380px !important;
       min-width: 360px !important;
       max-width: 95vw !important;
@@ -2294,7 +2316,8 @@ function injectReminderStyles() {
       animation: dsRemPopIn 0.15s ease-out !important;
       flex-shrink: 0 !important;
     }
-    .ds-rem-editor-header {
+
+.ds-rem-editor-header {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
@@ -2303,86 +2326,59 @@ function injectReminderStyles() {
       font-size: 13px !important;
       font-weight: 700 !important;
     }
-    .ds-rem-editor-body {
+
+.ds-rem-editor-body {
       display: flex !important;
       flex-direction: column !important;
       gap: 12px !important;
     }
-    .ds-rem-form-group {
+
+.ds-rem-form-group {
       display: flex !important;
       flex-direction: column !important;
       gap: 5px !important;
     }
-    .ds-rem-form-label {
+
+.ds-rem-form-label {
       font-size: 10px !important;
       font-weight: 800 !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
       text-transform: uppercase !important;
       letter-spacing: 0.05em !important;
     }
-    .ds-rem-input {
-      height: 30px !important;
-      padding: 0 10px !important;
-      border-radius: var(--ds-radius-control, 5px) !important;
-      background: var(--ds-color-panel-2, #181d26) !important;
-      border: 1px solid var(--ds-color-border, #242a36) !important;
-      color: var(--ds-color-text, #f8fafc) !important;
-      font-size: 11.5px !important;
-      font-family: inherit !important;
-      outline: none !important;
-      box-sizing: border-box !important;
-      width: 100% !important;
-      transition: border-color 0.15s ease !important;
-    }
-    .ds-rem-input:focus {
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-    }
-    /* Segmented Mode Selection Row */
+
+.ds-ui-input.ds-rem-input {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--ds-radius-control, 5px);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Segmented Mode Selection Row */
     .ds-rem-segmented-row {
       display: flex !important;
       gap: 6px !important;
       width: 100% !important;
     }
-    .ds-rem-seg-btn {
-      flex: 1 !important;
-      height: 32px !important;
-      font-size: 11.5px !important;
-      font-weight: 600 !important;
-      border-radius: var(--ds-radius-control, 5px) !important;
-      background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
-      color: var(--ds-btn-text, var(--ds-color-muted-text, #94a3b8)) !important;
-      cursor: pointer !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 6px !important;
-      transition: all 0.12s ease !important;
-      user-select: none !important;
-      outline: none !important;
-      box-sizing: border-box !important;
-    }
-    .ds-rem-seg-btn svg {
-      stroke: currentColor !important;
-      pointer-events: none !important;
-    }
-    .ds-rem-seg-btn:hover:not(.is-active) {
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-      color: var(--ds-color-accent, #67e8f9) !important;
-      background: var(--ds-btn-hover, #202633) !important;
-    }
-    .ds-rem-seg-btn.is-active {
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-      background: var(--ds-color-accent, #67e8f9) !important;
-      color: var(--ds-color-on-accent, #0a0c10) !important;
-      font-weight: 700 !important;
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 35%, transparent) !important;
-    }
-    .ds-rem-seg-btn.is-active svg {
-      stroke: var(--ds-color-on-accent, #0a0c10) !important;
-      color: var(--ds-color-on-accent, #0a0c10) !important;
-    }
-    .ds-rem-tab-content-container {
+
+.ds-ui-btn.ds-rem-seg-btn {
+  flex: 1;
+  height: 32px;
+  border-radius: var(--ds-radius-control, 5px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.ds-ui-btn.ds-rem-seg-btn svg {
+  stroke: currentColor;
+  pointer-events: none;
+}
+
+.ds-rem-tab-content-container {
       position: relative !important;
       min-height: 85px !important;
       display: flex !important;
@@ -2390,7 +2386,8 @@ function injectReminderStyles() {
       width: 100% !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-subpanel {
+
+.ds-rem-subpanel {
       display: flex !important;
       flex-direction: column !important;
       gap: 6px !important;
@@ -2402,16 +2399,19 @@ function injectReminderStyles() {
       justify-content: center !important;
       width: 100% !important;
     }
-    .ds-rem-subpanel.is-hidden {
+
+.ds-rem-subpanel.is-hidden {
       display: none !important;
     }
-    .ds-rem-quick-chips {
+
+.ds-rem-quick-chips {
       display: flex !important;
       gap: 5px !important;
       flex-wrap: wrap !important;
       margin-bottom: 2px !important;
     }
-    .ds-rem-chip {
+
+.ds-rem-chip {
       height: 24px !important;
       padding: 0 8px !important;
       font-size: 10.5px !important;
@@ -2424,18 +2424,21 @@ function injectReminderStyles() {
       transition: all 0.12s ease !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-chip:hover {
+
+.ds-rem-chip:hover {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
     }
-    .ds-rem-stepper-row {
+
+.ds-rem-stepper-row {
       display: flex !important;
       align-items: center !important;
       gap: 6px !important;
       width: 100% !important;
     }
-    .ds-rem-step-btn,
+
+.ds-rem-step-btn,
     .ds-rem-editor-card .ds-ui-stepper-btn,
     .ds-reminder-popover .ds-ui-stepper-btn {
       width: 28px !important;
@@ -2450,20 +2453,23 @@ function injectReminderStyles() {
       transition: all 0.12s ease !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-step-btn svg,
+
+.ds-rem-step-btn svg,
     .ds-rem-editor-card .ds-ui-stepper-btn svg,
     .ds-reminder-popover .ds-ui-stepper-btn svg {
       stroke: currentColor !important;
       pointer-events: none !important;
     }
-    .ds-rem-step-btn:hover,
+
+.ds-rem-step-btn:hover,
     .ds-rem-editor-card .ds-ui-stepper-btn:hover,
     .ds-reminder-popover .ds-ui-stepper-btn:hover {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
     }
-    .ds-rem-stepper-display {
+
+.ds-rem-stepper-display {
       flex: 1 !important;
       height: 28px !important;
       display: flex !important;
@@ -2478,18 +2484,21 @@ function injectReminderStyles() {
       color: var(--ds-color-accent, #67e8f9) !important;
       font-family: monospace, var(--ds-font, sans-serif) !important;
     }
-    .ds-rem-stepper-unit {
+
+.ds-rem-stepper-unit {
       font-size: 10px !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
       font-weight: 600 !important;
     }
-    .ds-rem-sound-row {
+
+.ds-rem-sound-row {
       display: flex !important;
       align-items: center !important;
       gap: 6px !important;
       width: 100% !important;
     }
-    .ds-rem-btn-test-sound {
+
+.ds-rem-btn-test-sound {
       width: 30px !important;
       height: 30px !important;
       border-radius: var(--ds-radius-control, 5px) !important;
@@ -2503,17 +2512,20 @@ function injectReminderStyles() {
       flex: 0 0 30px !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-btn-test-sound svg {
+
+.ds-rem-btn-test-sound svg {
       stroke: currentColor !important;
       fill: none !important;
       pointer-events: none !important;
     }
-    .ds-rem-btn-test-sound:hover {
+
+.ds-rem-btn-test-sound:hover {
       background: var(--ds-color-accent, #67e8f9) !important;
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-on-accent, #0a0c10) !important;
     }
-    .ds-rem-toggle-row {
+
+.ds-rem-toggle-row {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
@@ -2521,23 +2533,27 @@ function injectReminderStyles() {
       padding: 6px 0 !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-toggle-label {
+
+.ds-rem-toggle-label {
       font-size: 11.5px !important;
       color: var(--ds-color-text, #f8fafc) !important;
       font-weight: 600 !important;
       flex: 1 1 auto !important;
     }
-    .ds-rem-toggle-row .ds-rem-toggle-btn {
+
+.ds-rem-toggle-row .ds-rem-toggle-btn {
       margin-left: auto !important;
     }
-    .ds-rem-editor-footer {
+
+.ds-rem-editor-footer {
       display: flex !important;
       justify-content: flex-end !important;
       gap: 8px !important;
       border-top: 1px solid var(--ds-color-border, #242a36) !important;
       padding-top: 12px !important;
     }
-    .ds-rem-btn-secondary,
+
+.ds-rem-btn-secondary,
     .ds-rem-editor-card .ds-ui-btn-secondary {
       height: 30px !important;
       padding: 0 14px !important;
@@ -2551,13 +2567,15 @@ function injectReminderStyles() {
       transition: all 0.12s ease !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-btn-secondary:hover,
+
+.ds-rem-btn-secondary:hover,
     .ds-rem-editor-card .ds-ui-btn-secondary:hover {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
     }
-    .ds-rem-btn-primary,
+
+.ds-rem-btn-primary,
     .ds-rem-editor-card .ds-ui-btn-primary,
     .ds-reminder-popover .ds-ui-btn-primary {
       height: 30px !important;
@@ -2573,39 +2591,44 @@ function injectReminderStyles() {
       position: relative !important;
       box-sizing: border-box !important;
     }
-    .ds-rem-btn-primary:hover,
+
+.ds-rem-btn-primary:hover,
     .ds-rem-editor-card .ds-ui-btn-primary:hover,
     .ds-reminder-popover .ds-ui-btn-primary:hover {
       filter: brightness(1.1) !important;
       box-shadow: 0 0 10px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 40%, transparent) !important;
     }
-    .ds-reminder-popover .ds-ui-btn-primary.ds-ui-btn-compact {
+
+.ds-reminder-popover .ds-ui-btn-primary.ds-ui-btn-compact {
       height: 24px !important;
       padding: 0 10px !important;
       font-size: 10.5px !important;
     }
 
-    /* Custom Webkit Scrollbars (Zero Native Scrollbars) */
+/* Custom Webkit Scrollbars (Zero Native Scrollbars) */
     .ds-reminder-popover *::-webkit-scrollbar,
     .ds-rem-modal-backdrop *::-webkit-scrollbar {
       width: 5px;
       height: 5px;
     }
-    .ds-reminder-popover *::-webkit-scrollbar-track,
+
+.ds-reminder-popover *::-webkit-scrollbar-track,
     .ds-rem-modal-backdrop *::-webkit-scrollbar-track {
       background: transparent;
     }
-    .ds-reminder-popover *::-webkit-scrollbar-thumb,
+
+.ds-reminder-popover *::-webkit-scrollbar-thumb,
     .ds-rem-modal-backdrop *::-webkit-scrollbar-thumb {
-      background: var(--ds-color-border, rgba(255, 255, 255, 0.18));
+      background: var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent));
       border-radius: 4px;
     }
-    .ds-reminder-popover *::-webkit-scrollbar-thumb:hover,
+
+.ds-reminder-popover *::-webkit-scrollbar-thumb:hover,
     .ds-rem-modal-backdrop *::-webkit-scrollbar-thumb:hover {
       background: var(--ds-color-accent, #67e8f9);
     }
 
-    /* Fullscreen Overlay */
+/* Fullscreen Overlay */
     .ds-reminder-fs-overlay {
       position: fixed !important;
       inset: 0 !important;
@@ -2618,24 +2641,28 @@ function injectReminderStyles() {
       pointer-events: none !important;
       transition: opacity 0.2s ease-out !important;
     }
-    .ds-reminder-fs-overlay.is-visible {
+
+.ds-reminder-fs-overlay.is-visible {
       display: flex !important;
       opacity: 1 !important;
       pointer-events: auto !important;
       animation: dsRemFadeIn 0.2s ease-out !important;
     }
-    @keyframes dsRemFadeIn {
+
+@keyframes dsRemFadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    .ds-reminder-fs-backdrop {
+
+.ds-reminder-fs-backdrop {
       position: absolute !important;
       inset: 0 !important;
       background: rgba(7, 9, 13, 0.85) !important;
       backdrop-filter: blur(16px) !important;
       z-index: 1 !important;
     }
-    .ds-reminder-fs-card {
+
+.ds-reminder-fs-card {
       position: relative !important;
       z-index: 2 !important;
       max-width: 540px !important;
@@ -2651,49 +2678,41 @@ function injectReminderStyles() {
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 32px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 30%, transparent) !important;
       animation: dsRemPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
-    .ds-reminder-fs-close-btn {
-      position: absolute !important;
-      top: 14px !important;
-      right: 14px !important;
-      width: 30px !important;
-      height: 30px !important;
-      border-radius: var(--ds-radius-control, 6px) !important;
-      background: var(--ds-btn-bg, var(--ds-color-panel-2, #181d26)) !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
-      color: var(--ds-btn-text, var(--ds-color-text, #f8fafc)) !important;
-      cursor: pointer !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      line-height: 1 !important;
-      transition: all 0.15s ease !important;
-      z-index: 10 !important;
-      outline: none !important;
-      box-sizing: border-box !important;
-    }
-    .ds-reminder-fs-close-btn:hover {
-      background: var(--ds-btn-hover, #202633) !important;
-      color: var(--ds-color-accent, #67e8f9) !important;
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-      box-shadow: 0 0 8px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 30%, transparent) !important;
-    }
-    .ds-reminder-fs-close-btn svg {
-      display: block !important;
-      margin: auto !important;
-      pointer-events: none !important;
-      stroke: currentColor !important;
-    }
-    .ds-reminder-fs-card.is-shaking {
+
+.ds-ui-btn.ds-reminder-fs-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--ds-radius-control, 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.ds-ui-btn.ds-reminder-fs-close-btn svg {
+  display: block;
+  margin: auto;
+  pointer-events: none;
+  stroke: currentColor;
+}
+
+.ds-reminder-fs-card.is-shaking {
       animation: dsRemShake 0.4s ease !important;
     }
-    @keyframes dsRemShake {
+
+@keyframes dsRemShake {
       0%, 100% { transform: translateX(0); }
       20%, 60% { transform: translateX(-8px); }
       40%, 80% { transform: translateX(8px); }
     }
-    .ds-reminder-fs-pulse-ring {
+
+.ds-reminder-fs-pulse-ring {
       position: absolute !important;
       top: 22px !important;
       width: 72px !important;
@@ -2704,7 +2723,8 @@ function injectReminderStyles() {
       animation: dsRemPulseRing 1.6s cubic-bezier(0.215, 0.61, 0.355, 1) infinite !important;
       z-index: 1 !important;
     }
-    @keyframes dsRemPulseRing {
+
+@keyframes dsRemPulseRing {
       0% {
         transform: scale(0.95);
         opacity: 0.85;
@@ -2718,7 +2738,8 @@ function injectReminderStyles() {
         opacity: 0;
       }
     }
-    .ds-reminder-fs-icon-wrap {
+
+.ds-reminder-fs-icon-wrap {
       width: 72px !important;
       height: 72px !important;
       border-radius: 50% !important;
@@ -2733,7 +2754,8 @@ function injectReminderStyles() {
       box-shadow: 0 0 28px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 35%, transparent) !important;
       z-index: 2 !important;
     }
-    .ds-reminder-fs-bell-box {
+
+.ds-reminder-fs-bell-box {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -2741,7 +2763,8 @@ function injectReminderStyles() {
       animation: dsRemBellRing 1.1s infinite ease-in-out !important;
       will-change: transform;
     }
-    .ds-reminder-fs-bell {
+
+.ds-reminder-fs-bell {
       display: block !important;
       width: 38px !important;
       height: 38px !important;
@@ -2750,7 +2773,8 @@ function injectReminderStyles() {
       stroke: currentColor !important;
       filter: drop-shadow(0 2px 8px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 50%, transparent)) !important;
     }
-    @keyframes dsRemBellRing {
+
+@keyframes dsRemBellRing {
       0%, 100% { transform: rotate(0deg) scale(1); }
       15% { transform: rotate(24deg) scale(1.1); }
       30% { transform: rotate(-22deg) scale(1.1); }
@@ -2759,7 +2783,8 @@ function injectReminderStyles() {
       75% { transform: rotate(6deg); }
       90% { transform: rotate(-2deg); }
     }
-    .ds-reminder-fs-badge {
+
+.ds-reminder-fs-badge {
       font-size: 11px !important;
       font-weight: 800 !important;
       letter-spacing: 1.5px !important;
@@ -2771,7 +2796,8 @@ function injectReminderStyles() {
       margin-bottom: 12px !important;
       border: 1px solid color-mix(in srgb, var(--ds-color-accent, #67e8f9) 35%, transparent) !important;
     }
-    .ds-reminder-fs-titles-wrap {
+
+.ds-reminder-fs-titles-wrap {
       width: 100% !important;
       display: flex !important;
       flex-direction: column !important;
@@ -2780,7 +2806,8 @@ function injectReminderStyles() {
       max-height: 45vh !important;
       overflow-y: auto !important;
     }
-    .ds-reminder-fs-main-title {
+
+.ds-reminder-fs-main-title {
       font-size: 24px !important;
       font-weight: 800 !important;
       color: var(--ds-color-text, #ffffff) !important;
@@ -2790,21 +2817,24 @@ function injectReminderStyles() {
       white-space: pre-wrap !important;
       text-transform: uppercase !important;
     }
-    .ds-reminder-fs-time-badge {
+
+.ds-reminder-fs-time-badge {
       font-size: 12px !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
       font-family: monospace, var(--ds-font, sans-serif) !important;
       margin-top: 4px !important;
       display: inline-block !important;
     }
-    .ds-reminder-fs-actions {
+
+.ds-reminder-fs-actions {
       display: flex !important;
       gap: 12px !important;
       width: 100% !important;
       justify-content: center !important;
       flex-wrap: wrap !important;
     }
-    .ds-reminder-fs-btn-ack {
+
+.ds-reminder-fs-btn-ack {
       height: 38px !important;
       padding: 0 24px !important;
       font-size: 13px !important;
@@ -2817,10 +2847,12 @@ function injectReminderStyles() {
       box-shadow: 0 4px 14px color-mix(in srgb, var(--ds-color-accent, #67e8f9) 40%, transparent) !important;
       transition: transform 0.1s ease !important;
     }
-    .ds-reminder-fs-btn-ack:hover {
+
+.ds-reminder-fs-btn-ack:hover {
       transform: scale(1.03) !important;
     }
-    .ds-reminder-fs-btn-snooze {
+
+.ds-reminder-fs-btn-snooze {
       height: 38px !important;
       padding: 0 18px !important;
       font-size: 13px !important;
@@ -2833,19 +2865,21 @@ function injectReminderStyles() {
       transition: all 0.15s ease !important;
       box-sizing: border-box !important;
     }
-    .ds-reminder-fs-btn-snooze:hover {
+
+.ds-reminder-fs-btn-snooze:hover {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
     }
-    .ds-reminder-fs-hint {
+
+.ds-reminder-fs-hint {
       margin-top: 14px !important;
       font-size: 11px !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
       opacity: 0.7 !important;
     }
 
-    /* Universal fallback: all buttons in reminder containers follow button theme variables */
+/* Universal fallback: all buttons in reminder containers follow button theme variables */
     .ds-reminder-popover button:not(.ds-rem-btn-primary):not(.ds-ui-btn-primary):not([class*="-primary"]):not(.ds-rem-btn-turn-off):not(.ds-rem-btn-turn-off-all):not(.ds-rem-toggle-btn):not(.is-active):not([aria-pressed="true"]),
     .ds-rem-modal-backdrop button:not(.ds-rem-btn-primary):not(.ds-ui-btn-primary):not([class*="-primary"]):not(.ds-rem-toggle-btn):not(.is-active):not([aria-pressed="true"]),
     .ds-reminder-fs-overlay button:not(.ds-reminder-fs-btn-ack):not(.ds-rem-btn-primary):not(.ds-ui-btn-primary):not([class*="-primary"]):not(.is-active):not([aria-pressed="true"]) {
@@ -2853,14 +2887,15 @@ function injectReminderStyles() {
       border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
       color: var(--ds-btn-text, var(--ds-color-text, #f8fafc)) !important;
     }
-    .ds-reminder-popover button:not(.ds-rem-btn-primary):not(.ds-ui-btn-primary):not([class*="-primary"]):not(.ds-rem-btn-turn-off):not(.ds-rem-btn-turn-off-all):not(.ds-rem-toggle-btn):not(.is-active):not([aria-pressed="true"]):hover,
+
+.ds-reminder-popover button:not(.ds-rem-btn-primary):not(.ds-ui-btn-primary):not([class*="-primary"]):not(.ds-rem-btn-turn-off):not(.ds-rem-btn-turn-off-all):not(.ds-rem-toggle-btn):not(.is-active):not([aria-pressed="true"]):hover,
     .ds-rem-modal-backdrop button:not(.ds-rem-btn-primary):not(.ds-ui-btn-primary):not([class*="-primary"]):not(.ds-rem-toggle-btn):not(.is-active):not([aria-pressed="true"]):hover,
     .ds-reminder-fs-overlay button:not(.ds-reminder-fs-btn-ack):not(.ds-rem-btn-primary):not(.ds-ui-btn-primary):not([class*="-primary"]):not(.is-active):not([aria-pressed="true"]):hover {
       background: var(--ds-btn-hover, #202633) !important;
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
     }
-  `;
+`;
 }
 
 // ---------------------------------------------------------------------------

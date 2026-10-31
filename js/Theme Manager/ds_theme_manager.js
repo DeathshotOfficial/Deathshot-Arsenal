@@ -11,20 +11,10 @@ import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import { registerCardNode, LAYOUT } from "../UIElements/card_layout.js";
 import { Button, Dropdown, Slider, Stepper, Toggle, Card, Field, Section, DSIcon } from "../UIElements/index.js";
+import { ensureFxLayer } from "../UIElements/Theme/fx.js";
 
 // Ensure CSS is loaded — version stamp forces browser to fetch fresh CSS on each ComfyUI restart
 const DS_TM_BUILD = "20261012_01";
-
-const DS_UI_CSS_ID = "ds-ui-system-css";
-const _existingUiCss = document.getElementById(DS_UI_CSS_ID);
-if (!_existingUiCss || !_existingUiCss.href.includes(DS_TM_BUILD)) {
-  if (_existingUiCss) _existingUiCss.remove();
-  const link = document.createElement("link");
-  link.id = DS_UI_CSS_ID;
-  link.rel = "stylesheet";
-  link.href = `/extensions/DeathshotArsenal/UIElements/Theme/ds_ui.css?v=${DS_TM_BUILD}`;
-  document.head.appendChild(link);
-}
 
 const CSS_ID = "ds-theme-manager-css";
 const _existingTmCss = document.getElementById(CSS_ID);
@@ -334,6 +324,47 @@ function applyThemeVariables(target, tokens, themeObj = null) {
   }
 }
 
+// Theme-tab color slots and the theme variables they edit. Edits are stored
+// as per-theme overrides in the global config (config.custom[themeId]).
+const TOKEN_VARS = {
+  accent: "--ds-accent",
+  surface: "--ds-panel",
+  surface2: "--ds-panel-2",
+  headerBg: "--ds-bg",
+  border: "--ds-border",
+  borderActive: "--ds-border-active",
+  text: "--ds-text",
+  textMuted: "--ds-text-muted",
+  btnBg: "--ds-btn-bg",
+  btnHover: "--ds-btn-hover",
+  socketFill: "--ds-socket-fill",
+  wireAccent: "--ds-wire-accent",
+};
+
+function tokensFromTheme(theme, fallback) {
+  const v = theme?.vars || {};
+  const tokens = { ...fallback };
+  for (const [key, name] of Object.entries(TOKEN_VARS)) {
+    if (v[name]) tokens[key] = v[name];
+  }
+  tokens.btnBg = v["--ds-btn-bg"] || tokens.surface2;
+  tokens.borderActive = v["--ds-border-active"] || tokens.accent;
+  tokens.socketFill = v["--ds-socket-fill"] || tokens.accent;
+  tokens.wireAccent = v["--ds-wire-accent"] || tokens.accent;
+  return tokens;
+}
+
+function themeOverrides(themeId, tokens) {
+  const base = tokensFromTheme(window.DSGlobalTheme?.getThemes?.()[themeId], tokens);
+  const out = {};
+  for (const [key, name] of Object.entries(TOKEN_VARS)) {
+    if (tokens[key] && String(tokens[key]).toLowerCase() !== String(base[key]).toLowerCase()) {
+      out[name] = tokens[key];
+    }
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Proprietary Zero-Native HSV Color Picker Component
 // ---------------------------------------------------------------------------
@@ -374,28 +405,28 @@ class DSHSVColorPicker {
             <div class="ds-hsv-strip-thumb" data-el="alphaThumb"></div>
           </div>
         </div>
-        ${window.EyeDropper ? `<button type="button" class="ds-hsv-eyedropper-btn" data-el="eyedropperBtn" title="Pick color from screen">${SVG_ICONS.eyedropper}</button>` : ""}
+        ${window.EyeDropper ? `<button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-hsv-eyedropper-btn" data-el="eyedropperBtn" title="Pick color from screen">${SVG_ICONS.eyedropper}</button>` : ""}
       </div>
       <div class="ds-hsv-inputs-row">
         <div class="ds-hsv-input-field" style="flex:2;">
           <span class="ds-hsv-input-label">HEX</span>
-          <input type="text" class="ds-tm-input" data-el="hexInput" spellcheck="false" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="hexInput" spellcheck="false" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">R</span>
-          <input type="number" class="ds-tm-input" data-el="rInput" min="0" max="255" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="rInput" min="0" max="255" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">G</span>
-          <input type="number" class="ds-tm-input" data-el="gInput" min="0" max="255" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="gInput" min="0" max="255" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">B</span>
-          <input type="number" class="ds-tm-input" data-el="bInput" min="0" max="255" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="bInput" min="0" max="255" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">A%</span>
-          <input type="number" class="ds-tm-input" data-el="aInput" min="0" max="100" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="aInput" min="0" max="100" />
         </div>
       </div>
       <div class="ds-hsv-quick-swatches" data-el="quickSwatches"></div>
@@ -630,32 +661,9 @@ class DSThemeManagerDashboard {
       wireAccent: "#67e8f9",
     };
 
-    // Rehydrate the Theme Manager from the same persisted global configuration
-    // used by DSGlobalTheme. This prevents the manager UI from showing defaults
-    // after a browser refresh when DS_THEME_ACTIVE_TOKENS is missing/stale.
+    // Rehydrate from the global theme engine (includes this theme's saved overrides).
     const savedGlobalConfig = safeLoad(STORAGE_GLOBAL_CONFIG, null);
-    const persistedTheme = window.DSGlobalTheme?.getTheme?.(savedGlobalConfig?.theme);
-    const persistedVars = {
-      ...(persistedTheme?.vars || {}),
-      ...(savedGlobalConfig?.custom || {}),
-    };
-    this.dsTokens.accent       = persistedVars["--ds-color-accent"] || persistedVars["--ds-accent"] || this.dsTokens.accent;
-    this.dsTokens.surface      = persistedVars["--ds-color-card"] || persistedVars["--ds-panel"] || this.dsTokens.surface;
-    this.dsTokens.surface2     = persistedVars["--ds-color-panel-2"] || persistedVars["--ds-panel-2"] || this.dsTokens.surface2;
-    this.dsTokens.headerBg     = persistedVars["--ds-color-base"] || persistedVars["--ds-bg"] || this.dsTokens.headerBg;
-    this.dsTokens.btnBg        = persistedVars["--ds-btn-bg"] || this.dsTokens.surface2;
-    this.dsTokens.btnHover     = persistedVars["--ds-btn-hover"] || this.dsTokens.btnHover;
-    this.dsTokens.border       = persistedVars["--ds-color-border"] || persistedVars["--ds-border"] || this.dsTokens.border;
-    this.dsTokens.borderActive = persistedVars["--ds-color-border-hover"] || persistedVars["--ds-border-active"] || this.dsTokens.accent;
-    this.dsTokens.text         = persistedVars["--ds-color-text"] || persistedVars["--ds-text"] || this.dsTokens.text;
-    this.dsTokens.textMuted    = persistedVars["--ds-color-muted-text"] || persistedVars["--ds-text-muted"] || this.dsTokens.textMuted;
-    this.dsTokens.socketFill   = persistedVars["--ds-socket-fill"] || this.dsTokens.socketFill;
-    this.dsTokens.wireAccent   = persistedVars["--ds-wire-accent"] || this.dsTokens.accent;
-
-    const savedActiveTokens = safeLoad("DS_THEME_ACTIVE_TOKENS", null);
-    if (savedActiveTokens) {
-      this.dsTokens = { ...this.dsTokens, ...savedActiveTokens };
-    }
+    this.dsTokens = tokensFromTheme(window.DSGlobalTheme?.getTheme?.(savedGlobalConfig?.theme), this.dsTokens);
 
     const savedTypoConfig = savedGlobalConfig || {};
     this.typoState = {
@@ -695,11 +703,11 @@ class DSThemeManagerDashboard {
             <span class="ds-tm-brand-title">Theme Manager</span>
           </div>
           <div class="ds-tm-tabs-nav">
-            <button type="button" class="ds-tm-tab-btn active" data-tab="themes">DS Themes (50)</button>
-            <button type="button" class="ds-tm-tab-btn" data-tab="typography">Typography</button>
-            <button type="button" class="ds-tm-tab-btn" data-tab="customization">Canvas / Native Nodes</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-tab-btn active" data-tab="themes">DS Themes (50)</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-tab-btn" data-tab="typography">Typography</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-tab-btn" data-tab="customization">Canvas / Native Nodes</button>
           </div>
-          <button type="button" class="ds-tm-close-btn" data-el="closeBtn" title="Close (Esc)">✕</button>
+          <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-tm-close-btn" data-el="closeBtn" title="Close (Esc)">✕</button>
         </div>
 
         <!-- Target / Scope Bar -->
@@ -726,8 +734,8 @@ class DSThemeManagerDashboard {
               <!-- Left Picker & Presets Column -->
               <div class="ds-tm-cust-left">
                 <div class="ds-tm-subtabs">
-                  <button type="button" class="ds-tm-subtab-btn active" data-subtab="title">Title Bar</button>
-                  <button type="button" class="ds-tm-subtab-btn" data-subtab="body">Node Body</button>
+                  <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-subtab-btn active" data-subtab="title">Title Bar</button>
+                  <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-subtab-btn" data-subtab="body">Node Body</button>
                 </div>
                 <div data-el="custColorPickerContainer"></div>
                 <div class="ds-tm-color-pair-inputs" data-el="custPairInputs"></div>
@@ -796,12 +804,17 @@ class DSThemeManagerDashboard {
                     <span style="font-size:9px; color:var(--ds-text-muted);" data-el="themeCountLabel">50 Themes</span>
                   </div>
                   <div class="ds-tm-cat-filter-row">
-                    <button type="button" class="ds-tm-cat-filter-btn active" data-filter="all">All (50)</button>
-                    <button type="button" class="ds-tm-cat-filter-btn" data-filter="animated">✨ Live (10)</button>
-                    <button type="button" class="ds-tm-cat-filter-btn" data-filter="static">🎨 Static (40)</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn active" data-filter="all">All (50)</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-filter="animated">✨ Live (10)</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-filter="static">🎨 Static (40)</button>
                   </div>
                   <div class="ds-tm-search-wrap">
-                    <input type="text" class="ds-tm-search-input" placeholder="Search themes..." data-el="themeSearchInput" />
+                    <input type="text" class="ds-ui-input ds-tm-search-input" placeholder="Search themes..." data-el="themeSearchInput" />
+                  </div>
+                  <div class="ds-tm-cat-filter-row" title="Live theme effects run on the browser compositor. Pausing them during runs keeps the GPU fully free for generation.">
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-motion="on">Motion On</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-motion="pause_on_run">Pause While Running</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-motion="off">Off</button>
                   </div>
                 </div>
                 <div class="ds-tm-theme-chip-list" data-el="dsThemeCatalog"></div>
@@ -844,8 +857,8 @@ class DSThemeManagerDashboard {
                   <div class="ds-tm-section-heading">
                     <span>Custom DS Theme Slots</span>
                     <div class="ds-tm-io-row">
-                      <button type="button" class="ds-tm-pill-btn" data-el="exportThemeBtn" title="Export to JSON">${SVG_ICONS.export} Export</button>
-                      <button type="button" class="ds-tm-pill-btn" data-el="importThemeBtn" title="Import from JSON">${SVG_ICONS.import} Import</button>
+                      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-pill-btn" data-el="exportThemeBtn" title="Export to JSON">${SVG_ICONS.export} Export</button>
+                      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-pill-btn" data-el="importThemeBtn" title="Import from JSON">${SVG_ICONS.import} Import</button>
                       <input type="file" data-el="importFileInput" accept=".json" style="display:none;" />
                     </div>
                   </div>
@@ -916,7 +929,7 @@ class DSThemeManagerDashboard {
                     ${window.queryLocalFonts ? `<button type="button" class="ds-ui-btn ds-ui-btn-compact" data-el="queryLocalFontsBtn">System Fonts</button>` : ""}
                   </div>
                   <div class="ds-tm-download-box">
-                    <input type="text" class="ds-tm-input" data-el="webFontInput" placeholder="Font name (e.g. Outfit) or URL" />
+                    <input type="text" class="ds-ui-input ds-tm-input" data-el="webFontInput" placeholder="Font name (e.g. Outfit) or URL" />
                     <button type="button" class="ds-ui-btn ds-ui-btn-primary" data-el="loadWebFontBtn">Load</button>
                   </div>
                   <div class="ds-tm-tag-list" data-el="installedWebFonts" style="margin-top:4px;"></div>
@@ -1157,22 +1170,22 @@ class DSThemeManagerDashboard {
       container.innerHTML = `
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Title Bar Color</span>
-          <input type="text" class="ds-tm-input" data-el="primaryColorInput" value="${this.titleColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="primaryColorInput" value="${this.titleColor.toUpperCase()}" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Header Text Color</span>
-          <input type="text" class="ds-tm-input" data-el="contrastColorInput" value="${this.titleTextColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="contrastColorInput" value="${this.titleTextColor.toUpperCase()}" />
         </div>
       `;
     } else {
       container.innerHTML = `
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Node Body Fill</span>
-          <input type="text" class="ds-tm-input" data-el="primaryColorInput" value="${this.bodyColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="primaryColorInput" value="${this.bodyColor.toUpperCase()}" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Outline Stroke Color</span>
-          <input type="text" class="ds-tm-input" data-el="contrastColorInput" value="${this.strokeColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="contrastColorInput" value="${this.strokeColor.toUpperCase()}" />
         </div>
       `;
     }
@@ -1379,10 +1392,20 @@ class DSThemeManagerDashboard {
     this.el.importThemeBtn.addEventListener("click", () => this.el.importFileInput.click());
     this.el.importFileInput.addEventListener("change", (e) => this._importDSTheme(e));
 
-    // Category Filter Buttons
-    this.overlay.querySelectorAll(".ds-tm-cat-filter-btn").forEach(btn => {
+    const motionBtns = this.overlay.querySelectorAll(".ds-tm-cat-filter-btn[data-motion]");
+    const syncMotion = (motion) => motionBtns.forEach(b => b.classList.toggle("active", b.dataset.motion === motion));
+    syncMotion(window.DSGlobalTheme?.getConfig?.()?.motion || "on");
+    motionBtns.forEach(btn => {
       btn.addEventListener("click", () => {
-        this.overlay.querySelectorAll(".ds-tm-cat-filter-btn").forEach(b => b.classList.remove("active"));
+        syncMotion(btn.dataset.motion);
+        window.DSGlobalTheme?.apply({ motion: btn.dataset.motion }, { save: true });
+      });
+    });
+
+    // Category Filter Buttons
+    this.overlay.querySelectorAll(".ds-tm-cat-filter-btn[data-filter]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        this.overlay.querySelectorAll(".ds-tm-cat-filter-btn[data-filter]").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         this._activeThemeFilter = btn.dataset.filter || "all";
         this._renderThemesList();
@@ -1446,10 +1469,7 @@ class DSThemeManagerDashboard {
         const row = document.createElement("div");
         row.className = `ds-tm-theme-chip-row ${id === activeThemeId ? "active" : ""}`;
         row.dataset.themeId = id;
-        if (t.animated) {
-          row.dataset.animated = "true";
-          if (t.animationType) row.dataset.dsThemeAnim = t.animationType;
-        }
+        if (t.animated) row.dataset.animated = "true";
         const v = t.vars || {};
         const swatches = [
           v["--ds-color-base"] || v["--ds-bg"] || "#0b0d12",
@@ -1463,7 +1483,7 @@ class DSThemeManagerDashboard {
             <span class="ds-tm-theme-chip-name">${t.name || id}</span>
             ${t.animated ? `<span class="ds-tm-chip-anim-badge">✨ LIVE</span>` : ""}
           </div>
-          <div class="ds-tm-theme-swatches-mini ${t.animated ? "anim-preview" : ""}">
+          <div class="ds-tm-theme-swatches-mini">
             ${swatches.map(c => `<span style="background:${c};"></span>`).join("")}
           </div>
         `;
@@ -1503,87 +1523,30 @@ class DSThemeManagerDashboard {
 
   _applyThemeToPopup(t, id, shouldSyncCanvas = true) {
     if (!t) return;
-    const v = t.vars || {};
+    this.dsTokens = tokensFromTheme(window.DSGlobalTheme?.getTheme?.(id) || t, this.dsTokens);
+    this.activeThemeId = id;
 
-    // 1. Populate micro-tokens
-    this.dsTokens.accent       = v["--ds-color-accent"] || v["--ds-accent"]       || "#67e8f9";
-    this.dsTokens.surface      = v["--ds-color-card"]   || v["--ds-panel"]        || "#12151c";
-    this.dsTokens.surface2     = v["--ds-color-panel-2"]|| v["--ds-panel-2"]      || "#161a23";
-    this.dsTokens.headerBg     = v["--ds-color-base"]   || v["--ds-bg"]           || "#0b0d12";
-    this.dsTokens.btnBg        = v["--ds-btn-bg"]       || v["--ds-color-panel-2"]|| v["--ds-panel-2"] || "#161a23";
-    this.dsTokens.btnHover     = v["--ds-btn-hover"]    || "#1c2130";
-    this.dsTokens.border       = v["--ds-color-border"] || v["--ds-color-card-border"] || v["--ds-border"] || "#242a36";
-    this.dsTokens.borderActive = v["--ds-color-border-hover"] || v["--ds-border-active"] || this.dsTokens.accent;
-    this.dsTokens.text         = v["--ds-color-text"]   || v["--ds-text"]         || "#e5e7eb";
-    this.dsTokens.textMuted    = v["--ds-color-muted-text"] || v["--ds-text-muted"] || "#9ca3af";
-    this.dsTokens.socketFill   = v["--ds-socket-fill"]  || this.dsTokens.accent;
-    this.dsTokens.wireAccent   = v["--ds-wire-accent"]  || this.dsTokens.accent;
-    this.activeThemeId         = id;
-
-    // 2. Apply theme variables directly to window and overlay for instant 0ms popup theming
-    if (this.el.window) {
-      applyThemeVariables(this.el.window, this.dsTokens, t);
-      this.el.window.dataset.dsTheme = id;
-    }
-    if (this.overlay) {
-      applyThemeVariables(this.overlay, this.dsTokens, t);
-      this.overlay.dataset.dsTheme = id;
-    }
-
-    // 3. Set animation attributes on popup and mock card
-    const animType = t.animationType || (t.animated ? "cyber_pulse" : null);
-    if (animType) {
-      if (this.el.window) this.el.window.dataset.dsThemeAnim = animType;
-      if (this.overlay) this.overlay.dataset.dsThemeAnim = animType;
-      if (this.el.dsMockCard) this.el.dsMockCard.dataset.dsThemeAnim = animType;
-      if (this.el.mockNode) this.el.mockNode.dataset.dsThemeAnim = animType;
-    } else {
-      if (this.el.window) delete this.el.window.dataset.dsThemeAnim;
-      if (this.overlay) delete this.overlay.dataset.dsThemeAnim;
-      if (this.el.dsMockCard) delete this.el.dsMockCard.dataset.dsThemeAnim;
-      if (this.el.mockNode) delete this.el.mockNode.dataset.dsThemeAnim;
-    }
-
-    // 4. Update live previews and micro-tokens without DOM destruction
+    if (this.el.dsMockCard) ensureFxLayer(this.el.dsMockCard, t.fx);
     this._syncMockPreviews();
     this._syncMicroElementRows();
 
-    // 5. Apply to documentElement so canvas and background elements inherit instantly
-    applyThemeVariables(document.documentElement, this.dsTokens, t);
-    if (animType) document.documentElement.dataset.dsThemeAnim = animType;
-    else delete document.documentElement.dataset.dsThemeAnim;
-
-    // 6. Fast non-blocking canvas nodes sync in throttled rAF
-    if (shouldSyncCanvas && !this._canvasUpdatePending) {
-      this._canvasUpdatePending = true;
-      requestAnimationFrame(() => {
-        this._canvasUpdatePending = false;
-        if (app.graph?._nodes) {
-          app.graph._nodes.filter(isDSNode).forEach(n => {
-            const domRoot = n._dsSeedRoot || n.domWidget?.element || n.rootEl || (n.widgets && n.widgets.find(w => w?.element)?.element);
-            if (domRoot) {
-              applyThemeVariables(domRoot, this.dsTokens, t);
-              if (animType) domRoot.dataset.dsThemeAnim = animType;
-              else delete domRoot.dataset.dsThemeAnim;
-            }
-            n.bgcolor = this.dsTokens.surface;
-            n.boxcolor = this.dsTokens.border;
-            n.color = this.dsTokens.surface || this.dsTokens.headerBg;
-            n.setDirtyCanvas?.(true, true);
-          });
-          dirtyCanvas();
-        }
-      });
-    }
+    // The engine repaints :root, every DS node face and the canvas node bases.
+    if (shouldSyncCanvas) window.DSGlobalTheme?.preview({ theme: id });
 
     // Cache pending theme ID for persistence on modal close or explicit apply
     this._pendingThemeId = id;
   }
 
+  _previewTokens() {
+    const id = this.activeThemeId;
+    if (!id) return;
+    const custom = window.DSGlobalTheme?.getConfig?.()?.custom || {};
+    window.DSGlobalTheme?.preview({ theme: id, custom: { ...custom, [id]: themeOverrides(id, this.dsTokens) } });
+  }
+
   _persistTheme(themeId) {
     if (!themeId) return;
     safeSave("DS_THEME_ACTIVE_ID", themeId);
-    safeSave("DS_THEME_ACTIVE_TOKENS", this.dsTokens);
     const existingCfg = safeLoad(STORAGE_GLOBAL_CONFIG, {});
     safeSave(STORAGE_GLOBAL_CONFIG, {
       ...existingCfg,
@@ -1722,7 +1685,7 @@ class DSThemeManagerDashboard {
           this._pickerRafPending = true;
           this._pickerRafToken = requestAnimationFrame(() => {
             this._pickerRafPending = false;
-            this._applyDSTokensToSelection(false);
+            this._previewTokens();
           });
         }
       }
@@ -1746,48 +1709,6 @@ class DSThemeManagerDashboard {
     setTimeout(() => {
       document.addEventListener("pointerdown", closeHandler, true);
     }, 10);
-  }
-
-  _applyDSTokensToSelection(isFullThemeApply = false) {
-    const selected = getSelectedNodes();
-    const targets = selected.length > 0
-      ? selected
-      : (isFullThemeApply && app.graph?._nodes ? app.graph._nodes.filter(isDSNode) : []);
-
-    targets.forEach(node => {
-      if (isDSNode(node)) {
-        node.properties = node.properties || {};
-        node.properties.ds_cp_accent = this.dsTokens.accent;
-        node.properties.ds_bg_color = this.dsTokens.headerBg;
-        node.properties.ds_title_color = this.dsTokens.surface || this.dsTokens.headerBg;
-        delete node.properties.node_color;
-
-        // Apply LiteGraph canvas base colors
-        node.color = this.dsTokens.surface || this.dsTokens.headerBg;
-        node.bgcolor = this.dsTokens.headerBg;
-        node.boxcolor = this.dsTokens.border;
-        delete node.title_color;
-        if (node.constructor) {
-          delete node.constructor.title_color;
-          delete node.constructor.title_text_color;
-        }
-        const lum = getLuminance(node.color);
-        node.title_text_color = lum > 0.45 ? "#0f172a" : "#ffffff";
-
-        // Apply CSS custom properties directly to DOM widget root
-        const domRoot = node._dsSeedRoot || node.domWidget?.element || node.rootEl || (node.widgets && node.widgets.find(w => w?.element)?.element);
-        if (domRoot) {
-          applyThemeVariables(domRoot, this.dsTokens);
-        }
-
-        node.setDirtyCanvas?.(true, true);
-      }
-    });
-
-    // Update global document :root CSS variables so all DS nodes across canvas update in real time
-    applyThemeVariables(document.documentElement, this.dsTokens);
-
-    dirtyCanvas();
   }
 
   _renderDSSlots() {
@@ -1828,7 +1749,7 @@ class DSThemeManagerDashboard {
           this.dsTokens = { ...this.dsSlots[idx].tokens };
           this._renderMicroElementRows();
           this._syncMockPreviews();
-          this._applyDSTokensToSelection();
+          this._previewTokens();
           this.showToast(`Loaded DS Slot #${idx + 1}`, "success");
         }
       });
@@ -1877,7 +1798,7 @@ class DSThemeManagerDashboard {
           this.dsTokens = { ...this.dsTokens, ...json.tokens };
           this._renderMicroElementRows();
           this._syncMockPreviews();
-          this._applyDSTokensToSelection();
+          this._previewTokens();
           this.showToast("Imported DS theme package", "success");
         }
       } catch (err) {
@@ -2193,20 +2114,7 @@ class DSThemeManagerDashboard {
     const selected = getSelectedNodes();
 
     if (this.activeTab === "themes") {
-      const isGlobal = selected.length === 0;
-      requestAnimationFrame(() => {
-        this._applyDSTokensToSelection(true);
-      });
       this.applyToGlobalDefault();
-      const count = isGlobal
-        ? (app.graph?._nodes?.filter(isDSNode).length ?? 0)
-        : selected.length;
-      this.showToast(
-        isGlobal
-          ? `Applied DS theme to all ${count} DS node(s) on canvas & saved globally`
-          : `Applied DS theme to ${count} selected DS node(s) & saved globally`,
-        "success"
-      );
       return;
     }
 
@@ -2241,52 +2149,20 @@ class DSThemeManagerDashboard {
   }
 
   async applyToGlobalDefault() {
-    const smart = getSmartContrastVars(this.dsTokens.accent, this.dsTokens.surface, this.dsTokens.headerBg);
-    const customVars = {
-      "--ds-accent": this.dsTokens.accent,
-      "--ds-panel": this.dsTokens.surface,
-      "--ds-panel-2": this.dsTokens.surface2,
-      "--ds-bg": this.dsTokens.headerBg,
-      "--ds-border": this.dsTokens.border,
-      "--ds-border-active": this.dsTokens.borderActive,
-      "--ds-btn-bg": this.dsTokens.btnBg,
-      "--ds-btn-hover": this.dsTokens.btnHover,
-      "--ds-text": this.dsTokens.text || smart.textColor,
-      "--ds-text-muted": this.dsTokens.textMuted || smart.textMuted,
-      "--ds-color-accent": this.dsTokens.accent,
-      "--ds-color-card": this.dsTokens.surface,
-      "--ds-color-card-border": this.dsTokens.border,
-      "--ds-color-panel-2": this.dsTokens.surface2,
-      "--ds-color-base": this.dsTokens.headerBg,
-      "--ds-color-border": this.dsTokens.border,
-      "--ds-color-border-hover": this.dsTokens.borderActive,
-      "--ds-color-text": this.dsTokens.text || smart.textColor,
-      "--ds-color-muted-text": this.dsTokens.textMuted || smart.textMuted,
-      "--ds-color-on-accent": smart.onAccent,
-      "--ds-color-on-accent-shadow": smart.onAccentShadow,
-    };
-
     const currentConfig = window.DSGlobalTheme?.getConfig?.() || safeLoad(STORAGE_GLOBAL_CONFIG, {});
-    const existingCustom = currentConfig?.custom || {};
-    const fullConfig = {
-      ...currentConfig,
-      theme: this.activeThemeId || currentConfig.theme || "deathshot_dark",
-      font: this.typoState.font,
-      fontSize: this.typoState.fontSize,
-      fontWeight: this.typoState.fontWeight,
-      tracking: this.typoState.tracking,
-      custom: this.activeTab === "themes"
-        ? { ...existingCustom, ...customVars }
-        : existingCustom,
-    };
-
-    safeSave(STORAGE_GLOBAL_CONFIG, fullConfig);
-    safeSave("DS_THEME_ACTIVE_TOKENS", this.dsTokens);
-
-    applyThemeVariables(document.documentElement, this.dsTokens);
+    const themeId = this.activeThemeId || currentConfig.theme || "deathshot_dark";
+    const custom = { ...(currentConfig.custom || {}) };
+    if (this.activeTab === "themes") custom[themeId] = themeOverrides(themeId, this.dsTokens);
 
     if (window.DSGlobalTheme) {
-      const result = await window.DSGlobalTheme.apply(fullConfig, { save: true });
+      const result = await window.DSGlobalTheme.apply({
+        theme: themeId,
+        font: this.typoState.font,
+        fontSize: this.typoState.fontSize,
+        fontWeight: this.typoState.fontWeight,
+        tracking: this.typoState.tracking,
+        custom,
+      }, { save: true });
       if (result?.config) safeSave(STORAGE_GLOBAL_CONFIG, result.config);
     }
 
@@ -2305,14 +2181,11 @@ class DSThemeManagerDashboard {
       this._syncMockPreviews();
       this.showToast("Reset Customization tab to defaults");
     } else if (this.activeTab === "themes") {
-      this.dsTokens.accent = "#67e8f9";
-      this.dsTokens.surface = "#12151c";
-      this.dsTokens.surface2 = "#161a23";
-      this.dsTokens.headerBg = "#0b0d12";
-      this.dsTokens.border = "#242a36";
+      this.dsTokens = tokensFromTheme(window.DSGlobalTheme?.getThemes?.()[this.activeThemeId], this.dsTokens);
       this._renderMicroElementRows();
       this._syncMockPreviews();
-      this.showToast("Reset DS Themes tab to defaults");
+      this._previewTokens();
+      this.showToast("Reset theme colors to defaults");
     } else if (this.activeTab === "typography") {
       this.typoState.font = "Inter";
       this.typoState.fontSize = 14;

@@ -9,6 +9,7 @@ import {
   Toggle,
   Stepper,
   Spinbox,
+  Modal,
   Dropdown,
   DSIcon,
   DSIconMarkup,
@@ -16,6 +17,7 @@ import {
   protectDSResizeCorners,
   openCivitaiRetrieverModal,
 } from "../UIElements/index.js";
+import { openAISettingsPopover, fetchLMStudioModels } from "../Shared/ds_ai_settings_popover.js";
 
 const NODE_TYPE = "DS_AIPromptSensei";
 const CARD_MARGIN = 5;
@@ -381,62 +383,6 @@ async function getHW() {
 // ---------------------------------------------------------------------------
 // Dropdown popover
 // ---------------------------------------------------------------------------
-function openMenu(anchor, items, cur, onPick, onClose) {
-  document.querySelectorAll(".ds-sensei-menu-popover").forEach((e) => e.remove());
-  const pop = document.createElement("div"); pop.className = "ds-sensei-menu-popover";
-  pop.style.zIndex = "100020";
-  const sb = document.createElement("div"); sb.className = "ds-sensei-menu-search";
-  const si = document.createElement("input"); si.placeholder = "Filter..."; sb.appendChild(si); pop.appendChild(sb);
-  const list = document.createElement("div"); list.className = "ds-sensei-menu-list"; pop.appendChild(list);
-
-  let cleaned = false;
-  const cleanup = () => {
-    if (cleaned) return;
-    cleaned = true;
-    pop.remove();
-    window.removeEventListener("pointerdown", close, true);
-    window.removeEventListener("keydown", onKeyDown, true);
-    onClose?.();
-  };
-
-  const render = (f = "") => {
-    list.innerHTML = "";
-    const filtered = items.filter((x) => !f || (typeof x === "string" ? x : x.label || "").toLowerCase().includes(f.toLowerCase()));
-    if (!filtered.length) { const e = document.createElement("div"); e.style.cssText = "padding:8px;color:var(--ds-text-muted);font-size:11px;"; e.textContent = "No matches"; list.appendChild(e); return; }
-    filtered.forEach((x) => {
-      const v = typeof x === "string" ? x : x.key || x.label || x;
-      const l = typeof x === "string" ? x : x.label || x.key || x;
-      const el = document.createElement("div"); el.className = "ds-sensei-menu-item";
-      if (v === cur) el.classList.add("active");
-      el.textContent = l;
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onPick(v);
-        cleanup();
-      });
-      list.appendChild(el);
-    });
-  };
-  si.addEventListener("input", () => render(si.value)); render();
-  const rect = anchor.getBoundingClientRect();
-  pop.style.cssText = `z-index:100020;top:${rect.bottom + 4}px;left:${Math.max(10, Math.min(window.innerWidth - 240, rect.left))}px;width:${Math.max(220, rect.width)}px;`;
-  document.body.appendChild(pop); si.focus();
-
-  const close = (e) => {
-    if (!pop.contains(e.target) && e.target !== anchor && !anchor.contains(e.target)) {
-      cleanup();
-    }
-  };
-  const onKeyDown = (e) => {
-    if (e.key === "Escape") {
-      cleanup();
-    }
-  };
-  setTimeout(() => {
-    window.addEventListener("pointerdown", close, true);
-    window.addEventListener("keydown", onKeyDown, true);
-  }, 20);
-}
 
 function createCustomDropdown({ value, options, placeholder = "Select...", onSelect, isCategorized = false }) {
   let flattened = [];
@@ -498,11 +444,6 @@ function createCustomDropdown({ value, options, placeholder = "Select...", onSel
   };
 }
 
-function selDiv(text, onClick) {
-  const d = document.createElement("div"); d.className = "ds-sensei-select";
-  d.innerHTML = `<span class="ds-sensei-select-text">${text}</span><span class="ds-sensei-select-arrow">▼</span>`;
-  d.onclick = onClick; return d;
-}
 function mkBtn(text, cls, onClick) {
   const isDanger = typeof cls === "string" && cls.includes("danger");
   const isPrimary = typeof cls === "string" && (cls.includes("primary") || cls.includes("continue"));
@@ -524,36 +465,24 @@ function mkStepper(options = {}) {
 
 
 function openSysPromptModal(cur, onSave, mode = "i2v") {
-  document.querySelectorAll(".ds-sensei-modal-backdrop").forEach((e) => e.remove());
-  const bd = document.createElement("div"); bd.className = "ds-sensei-modal-backdrop";
-  const dlg = document.createElement("div"); dlg.className = "ds-sensei-modal-dialog";
-  const title = document.createElement("div"); title.className = "ds-sensei-modal-title";
-  const modeTag = mode ? ` (${mode.toUpperCase()})` : "";
-  title.textContent = `System Prompt Editor${modeTag}`;
   const def = (mode && DEFAULT_SYSTEM_PROMPTS[mode]) || DEFAULT_SYSTEM_PROMPTS.i2v || DEFAULT_SYSTEM_PROMPT;
-  const ta = document.createElement("textarea"); ta.className = "ds-sensei-textarea"; ta.style.minHeight = "240px";
+  const modal = Modal({
+    title: `System Prompt Editor${mode ? ` (${mode.toUpperCase()})` : ""}`,
+    icon: "file-text",
+    width: 620,
+  });
+  const ta = document.createElement("textarea");
+  ta.className = "ds-ui-text-editor ds-sensei-textarea";
+  ta.style.minHeight = "240px";
   ta.value = cur || def;
-  const footer = document.createElement("div"); footer.className = "ds-sensei-modal-footer";
-
-  const closeModal = () => {
-    window.removeEventListener("keydown", onKeyDown, true);
-    bd.remove();
-  };
-  const onKeyDown = (e) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeModal();
-    }
-  };
-  window.addEventListener("keydown", onKeyDown, true);
-  bd.onclick = (e) => { if (e.target === bd) closeModal(); };
-
-  footer.append(
+  modal.body.appendChild(ta);
+  modal.footer.append(
     mkBtn("Reset Default", "", () => { ta.value = def; }),
-    mkBtn("Cancel", "", closeModal),
-    mkBtn("Save", "ds-sensei-btn-primary", () => { onSave(ta.value.trim()); closeModal(); })
+    mkBtn("Cancel", "", () => modal.close()),
+    mkBtn("Save", "ds-sensei-btn-primary", () => { onSave(ta.value.trim()); modal.close(); }),
   );
-  dlg.append(title, ta, footer); bd.appendChild(dlg); document.body.appendChild(bd); ta.focus();
+  modal.open();
+  ta.focus();
 }
 
 function getCivitaiApiKey() {
@@ -598,1192 +527,164 @@ async function openCivitAIModal(node, loraRow, anchorEl) {
 // LM Studio Toolbar Gear Popover & Queue Hooking
 // ---------------------------------------------------------------------------
 
-let _activeSenseiGearPopup = null;
-let _activeSenseiNode = null;
+const SECTION_LABELS = {
+  image: "Image",
+  models: "Models",
+  lora: "LoRA Loader",
+  video: "Settings",
+  notes: "Scene Notes",
+  prompt: "Generated Prompt",
+};
+const SECTION_ICONS = {
+  image: "image",
+  models: "cpu",
+  lora: "layers",
+  video: "sliders",
+  notes: "file-text",
+  prompt: "sparkles",
+};
 
-function closeSenseiGearConfig() {
-  if (_activeSenseiGearPopup) {
-    _activeSenseiGearPopup.remove();
-    _activeSenseiGearPopup = null;
-  }
-  if (_activeSenseiNode) {
-    _activeSenseiNode._renderUI?.();
-    fitNode(_activeSenseiNode);
-    scheduleAlign(_activeSenseiNode);
-    _activeSenseiNode = null;
-  }
-}
+// Sensei's tab in the shared AI settings popover: section order and per-provider options.
+function renderSenseiSettingsTab(scroll, node, sync) {
+  const s = node._sstate;
+  const bi = s.built_in;
+  const lm = s.lm_studio;
 
-async function fetchLMStudioModels(ip = "127.0.0.1", port = 1234) {
-  try {
-    const r = await fetch(`/ds/prompt_sensei/lm_studio/models?ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}`);
-    if (r.ok) {
-      return await r.json();
-    }
-  } catch (e) {
-    console.error("[Sensei] Error fetching LM Studio models:", e);
-  }
-  return { ok: false, error: "LM Studio unavailable", address: `${ip}:${port}`, models: [] };
-}
+  const section = (text) => {
+    const el = document.createElement("div");
+    el.className = "ds-sensei-gear-section-label";
+    el.textContent = text;
+    return el;
+  };
+  const box = (...toggles) => {
+    const el = document.createElement("div");
+    el.className = "ds-sensei-gear-behavior-box";
+    el.append(...toggles.map((t) => t.root));
+    return el;
+  };
+  const toggle = (target, key, label, defaultOn = true, extra = null) => Toggle({
+    label,
+    checked: defaultOn ? target[key] !== false : Boolean(target[key]),
+    onChange: (checked) => {
+      target[key] = checked;
+      extra?.(checked);
+      sync();
+    },
+  });
 
-async function fetchBuiltinModels() {
-  try {
-    const r = await fetch("/ds/prompt_sensei/builtin/models");
-    if (r.ok) {
-      return await r.json();
-    }
-  } catch (e) {
-    console.error("[Sensei] Error fetching Built-In models:", e);
+  if (!Array.isArray(s.section_order) || s.section_order.length !== 6) {
+    s.section_order = ["image", "models", "lora", "video", "notes", "prompt"];
   }
-  return { ok: false, error: "Failed to scan built-in models", models: [] };
-}
 
-async function fetchBuiltinStatus() {
-  try {
-    const r = await fetch("/ds/prompt_sensei/builtin/status");
-    if (r.ok) {
-      return await r.json();
-    }
-  } catch (e) {
-    console.error("[Sensei] Error fetching Built-In status:", e);
-  }
-  return { ok: false, loaded: false };
-}
+  const orderList = document.createElement("div");
+  orderList.className = "ds-sensei-order-list";
+  let draggedIdx = null;
 
-async function unloadBuiltinModel() {
-  try {
-    const r = await fetch("/ds/prompt_sensei/builtin/unload", { method: "POST" });
-    if (r.ok) {
-      return await r.json();
-    }
-  } catch (e) {
-    console.error("[Sensei] Error unloading Built-In model:", e);
-  }
-  return { ok: false };
-}
+  const renderOrderCards = () => {
+    orderList.textContent = "";
+    s.section_order.forEach((key, idx) => {
+      const card = document.createElement("div");
+      card.className = "ds-sensei-order-card";
+      card.draggable = true;
+      card.innerHTML = `<span class="ds-sensei-drag-handle">${DSIconMarkup("grip-vertical", { size: 14 })}</span><span class="ds-sensei-order-label">${DSIconMarkup(SECTION_ICONS[key] || "circle", { size: 13 })}<span>${SECTION_LABELS[key] || key}</span></span>`;
+      card.ondragstart = (e) => {
+        draggedIdx = idx;
+        e.dataTransfer?.setData("text/plain", String(idx));
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+        card.classList.add("is-dragging");
+      };
+      card.ondragover = (e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        card.classList.add("is-dragover");
+      };
+      card.ondragleave = (e) => {
+        if (!card.contains(e.relatedTarget)) card.classList.remove("is-dragover");
+      };
+      card.ondrop = (e) => {
+        e.preventDefault();
+        card.classList.remove("is-dragover");
+        let fromIdx = draggedIdx;
+        if (fromIdx == null && e.dataTransfer) {
+          const parsed = parseInt(e.dataTransfer.getData("text/plain"), 10);
+          if (Number.isInteger(parsed)) fromIdx = parsed;
+        }
+        if (Number.isInteger(fromIdx) && fromIdx !== idx) {
+          const [moved] = s.section_order.splice(fromIdx, 1);
+          s.section_order.splice(idx, 0, moved);
+          sync();
+          renderOrderCards();
+          fitNode(node);
+          scheduleAlign(node);
+        }
+        draggedIdx = null;
+      };
+      card.ondragend = () => {
+        draggedIdx = null;
+        card.classList.remove("is-dragging");
+        orderList.querySelectorAll(".ds-sensei-order-card").forEach((c) => c.classList.remove("is-dragover"));
+      };
+      orderList.appendChild(card);
+    });
+  };
+  renderOrderCards();
 
-let _senseiCachedHW = null;
-let _senseiHWFetchPromise = null;
-async function fetchSenseiHardware() {
-  if (_senseiCachedHW) return _senseiCachedHW;
-  if (!_senseiHWFetchPromise) {
-    _senseiHWFetchPromise = fetch("/ds/prompt_sensei/hardware")
-      .then((r) => r.json())
-      .then((hw) => {
-        _senseiCachedHW = hw;
-        return hw;
-      })
-      .catch((e) => {
-        _senseiHWFetchPromise = null;
-        console.error("[Sensei] Error detecting hardware:", e);
-        return null;
-      });
-  }
-  return _senseiHWFetchPromise;
+  scroll.append(
+    section("SECTION ORDER (Drag to reorder)"),
+    orderList,
+    section("Built-In LLM Options"),
+    box(
+      toggle(bi, "auto_unload", "Auto-unload after prompt creation", true, (checked) => { s.auto_unload = checked; }),
+      toggle(bi, "free_comfy_memory", "Free ComfyUI models before loading"),
+      toggle(bi, "cpu_only", "CPU Only mode (Force 0 GPU layers)", false),
+      toggle(bi, "enable_vision", "On-demand vision (Skip projector in T2I/T2V to save ~1GB VRAM)"),
+      toggle(bi, "randomize_seed", "Randomize seed each generation"),
+    ),
+    section("LM Studio Options"),
+    box(
+      toggle(lm, "randomize_seed", "Randomize seed each generation"),
+      toggle(lm, "unload_after_run", "Unload LLM after run", false),
+    ),
+  );
 }
 
 function openSenseiGearConfig(node, anchorEl) {
-  closeSenseiGearConfig();
   if (!node) return;
-  _activeSenseiNode = node;
-
   const s = node._sstate;
-  if (!s.lm_studio) {
-    s.lm_studio = { ...defaultState().lm_studio };
-  }
-  if (!s.built_in) {
-    s.built_in = { ...defaultState().built_in };
-  }
-  const lm = s.lm_studio;
-  const bi = s.built_in;
-
-  let activeTab = s.gear_tab || (s.provider === "built_in" ? "built_in" : (bi.model && !lm.model ? "built_in" : "lm_studio"));
-
-  const popup = document.createElement("div");
-  popup.className = "ds-sensei-gear-popover";
-  popup.dataset.dsThemed = "true";
-  try { window.DSGlobalTheme?.applyToElement?.(popup); } catch (_) { }
-
-  popup.addEventListener("pointerdown", (e) => e.stopPropagation());
-  popup.addEventListener("mousedown", (e) => e.stopPropagation());
-  popup.addEventListener("click", (e) => e.stopPropagation());
+  s.lm_studio ||= { ...defaultState().lm_studio };
+  s.built_in ||= { ...defaultState().built_in };
 
   const sync = () => {
     node._syncState?.();
     node._renderUI?.();
   };
 
-  // Position popup next to node on its side with safe screen clamping
-  const adjustPopoverPos = () => {
-    const pw = popup.offsetWidth || 380;
-    const ph = popup.offsetHeight || 500;
-    let placed = false;
-
-    if (node && node.pos && app.canvas?.ds) {
-      try {
-        const ds = app.canvas.ds;
-        const canvasEl = app.canvas.canvas;
-        const cRect = canvasEl ? canvasEl.getBoundingClientRect() : { left: 0, top: 0 };
-
-        const screenX = cRect.left + (node.pos[0] + ds.offset[0]) * ds.scale;
-        const screenY = cRect.top + (node.pos[1] + ds.offset[1]) * ds.scale;
-        const nodeW = (node.size ? node.size[0] : 420) * ds.scale;
-
-        let left = screenX + nodeW + 16;
-        let top = Math.max(15, Math.min(screenY, window.innerHeight - ph - 25));
-
-        if (left + pw > window.innerWidth - 15) {
-          if (screenX - pw - 16 >= 15) {
-            left = screenX - pw - 16;
-          } else {
-            left = Math.max(15, window.innerWidth - pw - 15);
-          }
-        }
-
-        popup.style.left = `${Math.round(left)}px`;
-        popup.style.top = `${Math.round(top)}px`;
-        placed = true;
-      } catch (_) { }
-    }
-
-    if (!placed) {
-      if (anchorEl && typeof anchorEl.getBoundingClientRect === "function") {
-        const rect = anchorEl.getBoundingClientRect();
-        let left = rect.right + 12;
-        if (left + pw > window.innerWidth - 15) left = Math.max(15, rect.left - pw - 12);
-        let top = Math.max(15, Math.min(rect.top, window.innerHeight - ph - 25));
-        popup.style.left = `${Math.round(left)}px`;
-        popup.style.top = `${Math.round(top)}px`;
-      } else {
-        popup.style.left = `${Math.max(15, window.innerWidth - pw - 25)}px`;
-        popup.style.top = `60px`;
-      }
-    }
-  };
-
-  const renderContent = () => {
-    popup.innerHTML = "";
-
-    // ── Header
-    const head = document.createElement("div");
-    head.className = "ds-sensei-gear-header";
-
-    const subTitle = activeTab === "built_in"
-      ? "Built-In LLM Configuration"
-      : (activeTab === "lm_studio" ? "LM Studio Configuration" : "Node & Behavior Settings");
-
-    const titleWrap = document.createElement("div");
-    titleWrap.className = "ds-sensei-gear-title-wrap";
-    titleWrap.innerHTML = `
-      <span class="ds-sensei-gear-badge">DS</span>
-      <div>
-        <strong class="ds-sensei-gear-title">DS AI Prompt Sensei</strong>
-        <small class="ds-sensei-gear-sub">${subTitle}</small>
-      </div>
-    `;
-
-    const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
-    closeBtn.title = "Close";
-    closeBtn.appendChild(DSIcon("x", { size: 14 }));
-    closeBtn.onclick = closeSenseiGearConfig;
-
-    head.append(titleWrap, closeBtn);
-    popup.appendChild(head);
-
-    // ── Tab Strip: [ ⚡ LM Studio | 🧠 Built In | ⚙ Settings ]
-    const tabStrip = document.createElement("div");
-    tabStrip.className = "ds-sensei-gear-tabs";
-
-    const tabLm = document.createElement("button");
-    tabLm.type = "button";
-    tabLm.className = `ds-sensei-gear-tab-btn ${activeTab === "lm_studio" ? "is-active" : ""}`;
-    tabLm.innerHTML = `${DSIconMarkup("server", { size: 12 })}<span>LM Studio</span>`;
-    tabLm.onclick = () => {
-      activeTab = "lm_studio";
-      s.gear_tab = "lm_studio";
-      s.provider = "lm_studio";
+  openAISettingsPopover({
+    node,
+    anchorEl,
+    title: "DS AI Prompt Sensei",
+    badge: "DS",
+    builtIn: s.built_in,
+    lmStudio: s.lm_studio,
+    vision: () => s.mode === "i2v" && s.built_in.enable_vision !== false,
+    tab: s.gear_tab || (s.provider === "built_in" ? "built_in" : "lm_studio"),
+    onTabChange: (tab) => {
+      s.gear_tab = tab;
+      if (tab !== "settings") s.provider = tab;
+      s.error_msg = null;
       sync();
-      renderContent();
-    };
-
-    const tabBi = document.createElement("button");
-    tabBi.type = "button";
-    tabBi.className = `ds-sensei-gear-tab-btn ${activeTab === "built_in" ? "is-active" : ""}`;
-    tabBi.innerHTML = `<span>🧠</span><span>Built In</span>`;
-    tabBi.onclick = () => {
-      activeTab = "built_in";
-      s.gear_tab = "built_in";
-      s.provider = "built_in";
+    },
+    onChange: () => {
+      s.error_msg = null;
       sync();
-      renderContent();
-    };
-
-    const tabSet = document.createElement("button");
-    tabSet.type = "button";
-    tabSet.className = `ds-sensei-gear-tab-btn ${activeTab === "settings" ? "is-active" : ""}`;
-    tabSet.innerHTML = `${DSIconMarkup("settings", { size: 12 })}<span>Settings</span>`;
-    tabSet.onclick = () => {
-      activeTab = "settings";
-      s.gear_tab = "settings";
-      sync();
-      renderContent();
-    };
-
-    tabStrip.append(tabLm, tabBi, tabSet);
-    popup.appendChild(tabStrip);
-
-    if (activeTab === "lm_studio") {
-      // ── Model (Full Width)
-      const modelSec = document.createElement("div");
-      modelSec.className = "ds-sensei-gear-field";
-      const modelLbl = document.createElement("label");
-      modelLbl.className = "ds-sensei-gear-label";
-      modelLbl.textContent = "Model";
-
-      const modelDd = createCustomDropdown({
-        value: lm.model || "",
-        options: lm.model ? [lm.model] : [],
-        placeholder: "Select LM Studio Model...",
-        onSelect: (selected) => {
-          lm.model = selected;
-          s.error_msg = null;
-          sync();
-        },
-      });
-      modelDd.el.style.width = "100%";
-      modelSec.append(modelLbl, modelDd.el);
-      popup.appendChild(modelSec);
-
-      const statusBox = document.createElement("div");
-      statusBox.style.cssText = "margin-top:6px;display:none;";
-      modelSec.appendChild(statusBox);
-
-      fetchLMStudioModels(lm.ip, lm.port).then((res) => {
-        if (res.ok && res.models?.length > 0) {
-          const llmModels = res.models.filter((m) => !/(embed|nomic-embed|bge-)/i.test(m));
-          const displayModels = llmModels.length > 0 ? llmModels : res.models;
-          modelDd.setOptions(displayModels);
-          if (!lm.model && displayModels.length > 0) {
-            lm.model = displayModels[0];
-            modelDd.setValue(displayModels[0]);
-            sync();
-          }
-          statusBox.style.display = "none";
-        } else {
-          statusBox.style.display = "block";
-          statusBox.innerHTML = `
-            <div style="padding:6px 8px;border-radius:4px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);font-size:11px;color:var(--ds-color-text,#e5e7eb);line-height:1.4;">
-              <div style="color:#f87171;font-weight:700;margin-bottom:2px;">⚠️ LM Studio Server Offline</div>
-              <div>No response on <code>${lm.ip}:${lm.port}</code>. If you have local GGUF models, use the <strong>Built In</strong> tab.</div>
-              <button type="button" class="ds-ui-btn ds-ui-btn-primary ds-ui-btn-compact" style="margin-top:6px;width:100%;font-size:10px;justify-content:center;">Switch to Built In</button>
-            </div>
-          `;
-          const swBtn = statusBox.querySelector("button");
-          if (swBtn) {
-            swBtn.onclick = () => tabBi.click();
-          }
-        }
-      });
-
-      const scrollBody = document.createElement("div");
-      scrollBody.className = "ds-sensei-gear-scroll-body";
-      popup.appendChild(scrollBody);
-
-      // ── IP Address & Port (2 Columns)
-      const connRow = document.createElement("div");
-      connRow.className = "ds-sensei-gear-row-2col";
-
-      const ipField = document.createElement("div");
-      ipField.className = "ds-sensei-gear-field";
-      ipField.innerHTML = `<label class="ds-sensei-gear-label">IP Address</label>`;
-      const ipInp = document.createElement("input");
-      ipInp.type = "text";
-      ipInp.className = "ds-sensei-input";
-      ipInp.value = lm.ip || "127.0.0.1";
-      ipInp.onchange = () => {
-        lm.ip = ipInp.value.trim() || "127.0.0.1";
-        sync();
-      };
-      ipField.appendChild(ipInp);
-
-      const portField = document.createElement("div");
-      portField.className = "ds-sensei-gear-field";
-      portField.innerHTML = `<label class="ds-sensei-gear-label">Port</label>`;
-      const portInp = document.createElement("input");
-      portInp.type = "number";
-      portInp.className = "ds-sensei-input";
-      portInp.value = lm.port || 1234;
-      portInp.onchange = () => {
-        lm.port = parseInt(portInp.value) || 1234;
-        sync();
-      };
-      portField.appendChild(portInp);
-
-      connRow.append(ipField, portField);
-      scrollBody.appendChild(connRow);
-
-      // ── Sampling (Max Tokens & Temperature)
-      const samplingLbl = document.createElement("div");
-      samplingLbl.className = "ds-sensei-gear-section-label";
-      samplingLbl.textContent = "Sampling";
-      scrollBody.appendChild(samplingLbl);
-
-      const samplingRow = document.createElement("div");
-      samplingRow.className = "ds-sensei-gear-row-2col";
-
-      const maxTokensField = document.createElement("div");
-      maxTokensField.className = "ds-sensei-gear-field";
-      maxTokensField.innerHTML = `<label class="ds-sensei-gear-label">Max Tokens</label>`;
-      const mtSt = mkStepper({
-        value: lm.max_tokens ?? 2048,
-        min: 1,
-        max: 131072,
-        step: 128,
-        decimals: 0,
-        width: "100%",
-        onChange: (v) => {
-          lm.max_tokens = parseInt(v) || 2048;
-          sync();
-        },
-      });
-      maxTokensField.appendChild(mtSt.wrap);
-
-      const tempField = document.createElement("div");
-      tempField.className = "ds-sensei-gear-field";
-      tempField.innerHTML = `<label class="ds-sensei-gear-label">Temperature</label>`;
-      const tempSt = mkStepper({
-        value: lm.temperature ?? 0.7,
-        min: 0.0,
-        max: 2.0,
-        step: 0.05,
-        decimals: 2,
-        width: "100%",
-        onChange: (v) => {
-          lm.temperature = parseFloat(v) ?? 0.7;
-          sync();
-        },
-      });
-      tempField.appendChild(tempSt.wrap);
-
-      samplingRow.append(maxTokensField, tempField);
-      scrollBody.appendChild(samplingRow);
-
-      // ── Seed & Timeout
-      const seedTimeoutRow = document.createElement("div");
-      seedTimeoutRow.className = "ds-sensei-gear-row-2col";
-
-      const seedField = document.createElement("div");
-      seedField.className = "ds-sensei-gear-field";
-
-      const seedHdr = document.createElement("div");
-      seedHdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;width:100%;";
-      const seedLbl = document.createElement("label");
-      seedLbl.className = "ds-sensei-gear-label";
-      seedLbl.textContent = "Seed";
-      const diceBtn = document.createElement("button");
-      diceBtn.type = "button";
-      diceBtn.className = "ds-sensei-btn-compact";
-      diceBtn.style.cssText = "height:16px;line-height:16px;padding:0 5px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;";
-      diceBtn.title = "Roll new random seed";
-      diceBtn.textContent = "🎲 Roll";
-      seedHdr.append(seedLbl, diceBtn);
-      seedField.appendChild(seedHdr);
-
-      const seedInp = document.createElement("input");
-      seedInp.type = "number";
-      seedInp.className = "ds-sensei-input";
-      seedInp.style.cssText = "width:100%;box-sizing:border-box;min-width:0;";
-      seedInp.value = lm.seed ?? 123456;
-      seedInp.onchange = () => {
-        lm.seed = parseInt(seedInp.value) || 0;
-        sync();
-      };
-      diceBtn.onclick = () => {
-        const r = Math.floor(Math.random() * 2147483647);
-        lm.seed = r;
-        seedInp.value = r;
-        sync();
-      };
-      seedField.appendChild(seedInp);
-
-      const timeoutField = document.createElement("div");
-      timeoutField.className = "ds-sensei-gear-field";
-      const timeoutHdr = document.createElement("div");
-      timeoutHdr.style.cssText = "display:flex;align-items:center;height:16px;";
-      const timeoutLbl = document.createElement("label");
-      timeoutLbl.className = "ds-sensei-gear-label";
-      timeoutLbl.textContent = "Timeout (s)";
-      timeoutHdr.appendChild(timeoutLbl);
-      timeoutField.appendChild(timeoutHdr);
-
-      const timeoutInp = document.createElement("input");
-      timeoutInp.type = "number";
-      timeoutInp.className = "ds-sensei-input";
-      timeoutInp.style.cssText = "width:100%;box-sizing:border-box;min-width:0;";
-      timeoutInp.value = lm.timeout ?? 300;
-      timeoutInp.onchange = () => {
-        lm.timeout = Math.max(5, parseInt(timeoutInp.value) || 300);
-        sync();
-      };
-      timeoutField.appendChild(timeoutInp);
-
-      seedTimeoutRow.append(seedField, timeoutField);
-      scrollBody.appendChild(seedTimeoutRow);
-    } else if (activeTab === "built_in") {
-      // ── Built-In LLM Settings Tab
-      // 1. Status Banner
-      const statusBanner = document.createElement("div");
-      statusBanner.className = "ds-sensei-gear-status-card";
-      statusBanner.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-          <span class="ds-sensei-gear-status-dot is-idle"></span>
-          <span class="ds-sensei-gear-status-text" style="font-size:11px;color:var(--ds-color-muted-text,#94a3b8);">Checking status...</span>
-        </div>
-      `;
-      popup.appendChild(statusBanner);
-
-      const refreshStatus = () => {
-        fetchBuiltinStatus().then((st) => {
-          if (!popup.contains(statusBanner)) return;
-          const dot = statusBanner.querySelector(".ds-sensei-gear-status-dot");
-          const txt = statusBanner.querySelector(".ds-sensei-gear-status-text");
-          if (!dot || !txt) return;
-          if (st.loaded) {
-            dot.className = "ds-sensei-gear-status-dot is-loaded";
-            const visBadge = st.has_vision ? " [Vision]" : "";
-            txt.innerHTML = `<strong style="color:var(--ds-color-accent,#67e8f9)">Loaded:</strong> ${st.model_name || "Active"}${visBadge} · ${st.vram_free_mb || 0} MB free`;
-          } else {
-            dot.className = "ds-sensei-gear-status-dot is-idle";
-            txt.textContent = "○ No model loaded in VRAM";
-          }
-        });
-      };
-      refreshStatus();
-
-      // 2. Model Selection + Rescan Button
-      const modelSec = document.createElement("div");
-      modelSec.className = "ds-sensei-gear-field";
-
-      const modelHdr = document.createElement("div");
-      modelHdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;width:100%;";
-      const modelLbl = document.createElement("label");
-      modelLbl.className = "ds-sensei-gear-label";
-      modelLbl.textContent = "GGUF Model";
-
-      const rescanBtn = document.createElement("button");
-      rescanBtn.type = "button";
-      rescanBtn.className = "ds-sensei-btn-compact ds-sensei-gear-rescan-btn";
-      rescanBtn.style.cssText = "height:18px;line-height:18px;padding:0 6px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;";
-      rescanBtn.innerHTML = `${DSIconMarkup("refresh-cw", { size: 11 })}<span>Rescan</span>`;
-      modelHdr.append(modelLbl, rescanBtn);
-      modelSec.appendChild(modelHdr);
-
-      let cachedBuiltinModelsList = [];
-
-      const getSelectedModelMeta = () => {
-        const cur = String(bi.model || "").replace(/\\/g, "/").toLowerCase();
-        const curBase = cur.split("/").pop();
-        let match = cachedBuiltinModelsList.find((m) => String(m.id).replace(/\\/g, "/").toLowerCase() === cur);
-        if (!match && curBase) {
-          match = cachedBuiltinModelsList.find((m) => {
-            const mNorm = String(m.id).replace(/\\/g, "/").toLowerCase();
-            return mNorm.endsWith("/" + curBase) || m.name?.toLowerCase() === curBase.replace(/\.gguf$/i, "");
-          });
-        }
-        return match || null;
-      };
-
-      const calcModelPlan = (hw, modelMeta, ctxLen = (bi.context_length || 4096)) => {
-        if (!hw || !hw.has_gpu || !hw.total_vram_mb) {
-          return { recommended: 0, totalLayers: 32, fits100Percent: false, totalRequiredGB: 0, usableVramGB: 0, totalVramGB: 0, safeLayers: 0, hasGpu: false };
-        }
-
-        const totalVramGB = (hw.total_vram_mb || 0) / 1024;
-        const osReserveGB = 0.6;
-        const usableVramGB = Math.max(0.5, totalVramGB - osReserveGB);
-
-        const modelSizeGB = Number(modelMeta?.size_gb) || 4.5;
-        const totalLayers = Number(modelMeta?.total_layers) || 32;
-        
-        // Vision projector is only loaded for I2V or image-guided inputs (skipped in T2I/T2V to save VRAM)
-        const isVisionActive = s.mode === "i2v" && (bi.enable_vision !== false);
-        const mmprojSizeGB = isVisionActive ? (Number(modelMeta?.mmproj_size_gb) || (modelMeta?.has_vision ? 0.4 : 0)) : 0;
-        
-        // KV cache calculation (~0.35 GB per 4K context on standard LLMs)
-        const kvCacheGB = (ctxLen / 4096) * 0.35;
-        const computeOverheadGB = 0.25;
-        const baseVramGB = (isVisionActive && mmprojSizeGB > 0 ? mmprojSizeGB + 0.15 : 0) + kvCacheGB + computeOverheadGB;
-        
-        const totalRequiredGB = modelSizeGB + baseVramGB;
-
-        // If the entire model + vision projector + KV cache fits in usable VRAM:
-        if (totalRequiredGB <= usableVramGB) {
-          return {
-            recommended: -1, // ALL layers
-            totalLayers,
-            fits100Percent: true,
-            totalRequiredGB: Math.round(totalRequiredGB * 10) / 10,
-            usableVramGB: Math.round(usableVramGB * 10) / 10,
-            totalVramGB: Math.round(totalVramGB * 10) / 10,
-            safeLayers: totalLayers,
-            hasGpu: true,
-          };
-        }
-
-        // Partial offload calculation
-        const weightBudgetGB = Math.max(0.2, usableVramGB - baseVramGB);
-        const weightPerLayerGB = Math.max(0.01, (modelSizeGB * 0.94) / totalLayers);
-        const safeLayers = Math.max(0, Math.min(totalLayers, Math.floor(weightBudgetGB / weightPerLayerGB)));
-
-        return {
-          recommended: safeLayers > 0 ? safeLayers : 0,
-          totalLayers,
-          fits100Percent: false,
-          totalRequiredGB: Math.round(totalRequiredGB * 10) / 10,
-          usableVramGB: Math.round(usableVramGB * 10) / 10,
-          totalVramGB: Math.round(totalVramGB * 10) / 10,
-          safeLayers,
-          hasGpu: true,
-        };
-      };
-
-      const modelDd = createCustomDropdown({
-        value: bi.model || "",
-        options: bi.model ? [{ id: bi.model, label: String(bi.model).split(/[/\\]/).pop().replace(/\.gguf$/i, "") }] : [],
-        placeholder: "Scanning models in ComfyUI/models/LLM & LM Studio...",
-        onSelect: (selected, item) => {
-          bi.model = selected;
-          s.error_msg = null;
-          sync();
-          updateHWWarn();
-        },
-      });
-      modelDd.el.style.width = "100%";
-      modelSec.appendChild(modelDd.el);
-      popup.appendChild(modelSec);
-
-      const loadModelsIntoDd = () => {
-        fetchBuiltinModels().then((res) => {
-          if (res.ok && Array.isArray(res.models) && res.models.length > 0) {
-            cachedBuiltinModelsList = res.models;
-            const modelOptions = res.models.map((m) => {
-              const rootPrefix = m.root && m.root !== "ComfyUI" ? `[${m.root}] ` : "";
-              const visTag = m.has_vision ? " 👁️ Vision" : "";
-              return {
-                id: m.id,
-                label: `${rootPrefix}${m.name} (${m.size_gb} GB)${visTag}`,
-                name: m.name,
-                root: m.root,
-                has_vision: m.has_vision,
-                size_gb: m.size_gb,
-                total_layers: m.total_layers,
-                mmproj_size_gb: m.mmproj_size_gb,
-              };
-            });
-            modelDd.setOptions(modelOptions);
-
-            const cur = String(bi.model || "").replace(/\\/g, "/").toLowerCase();
-            const curBase = cur.split("/").pop();
-            let match = modelOptions.find((opt) => String(opt.id).replace(/\\/g, "/").toLowerCase() === cur);
-            if (!match && curBase) {
-              match = modelOptions.find((opt) => {
-                const optNorm = String(opt.id).replace(/\\/g, "/").toLowerCase();
-                return optNorm.endsWith("/" + curBase) || opt.name?.toLowerCase() === curBase.replace(/\.gguf$/i, "");
-              });
-            }
-
-            if (match) {
-              bi.model = match.id;
-              modelDd.setValue(match.id);
-            } else if (modelOptions.length > 0) {
-              bi.model = modelOptions[0].id;
-              modelDd.setValue(modelOptions[0].id);
-              sync();
-            }
-          } else {
-            cachedBuiltinModelsList = [];
-            modelDd.setOptions([]);
-            modelDd.setValue("");
-          }
-          updateHWWarn();
-        });
-      };
-      loadModelsIntoDd();
-      rescanBtn.onclick = () => {
-        loadModelsIntoDd();
-        refreshStatus();
-      };
-
-      // Scrollable container for controls below model dropdown
-      const scrollBody = document.createElement("div");
-      scrollBody.className = "ds-sensei-gear-scroll-body";
-      popup.appendChild(scrollBody);
-
-      // Hardware Detection & VRAM Advisory Card
-      const hwBox = document.createElement("div");
-      hwBox.className = "ds-sensei-gear-field";
-      hwBox.style.cssText = "display:flex;flex-direction:column;gap:5px;width:100%;margin-top:2px;";
-
-      let gpuSt = null;
-
-      const formatHWName = (hw) => {
-        if (!hw) return "Detecting hardware...";
-        const vramMB = hw.total_vram_mb || 0;
-        if (!hw.has_gpu || vramMB === 0) {
-          return `CPU Only (${Math.round((hw.system_ram_mb || 0) / 1024)}GB RAM)`;
-        }
-        const vramGB = (vramMB / 1024).toFixed(1).replace(/\.0$/, "");
-        return `${hw.gpu_name} (${vramGB}GB VRAM)`;
-      };
-
-      let detectedHW = _senseiCachedHW;
-
-      const hwCard = document.createElement("div");
-      hwCard.className = "ds-sensei-gear-hw-card";
-      hwCard.innerHTML = `
-        <div class="ds-sensei-gear-hw-top">
-          <div class="ds-sensei-gear-hw-left">
-            ${DSIconMarkup("cpu", { size: 13, color: "var(--ds-color-accent, #67e8f9)" })}
-            <span class="ds-sensei-hw-name">${formatHWName(detectedHW)}</span>
-          </div>
-          <button type="button" class="ds-sensei-btn-compact ds-sensei-autotune-btn" style="${detectedHW ? 'display:inline-flex;' : 'display:none;'}">
-            💡 Auto-Tune
-          </button>
-        </div>
-      `;
-      hwBox.appendChild(hwCard);
-
-      const hwWarn = document.createElement("div");
-      hwWarn.className = "ds-sensei-gear-hw-warn";
-      hwWarn.style.display = "none";
-      hwBox.appendChild(hwWarn);
-      scrollBody.appendChild(hwBox);
-
-      const updateHWWarn = () => {
-        const curLayers = bi.n_gpu_layers ?? -1;
-        const modelMeta = getSelectedModelMeta();
-        const plan = calcModelPlan(detectedHW, modelMeta, bi.context_length || 4096);
-
-        // Update Auto-Tune button text
-        const tuneBtn = hwCard.querySelector(".ds-sensei-autotune-btn");
-        if (tuneBtn) {
-          const recLabel = plan.recommended === -1 ? "ALL" : plan.recommended;
-          tuneBtn.innerHTML = `💡 Auto-Tune (${recLabel})`;
-          tuneBtn.title = plan.fits100Percent
-            ? `Full GPU offload: Entire model (~${plan.totalRequiredGB}GB) fits in ${plan.totalVramGB}GB VRAM.`
-            : `Safe GPU offload: Offload ${plan.safeLayers} of ${plan.totalLayers} layers to stay within ${plan.totalVramGB}GB VRAM.`;
-        }
-
-        if (!detectedHW || !plan.hasGpu) {
-          if (curLayers !== 0) {
-            hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span>No dedicated GPU detected. Set GPU Layers to 0 (CPU Only).</span>`;
-            hwWarn.classList.add("is-visible");
-            hwWarn.style.display = "flex";
-          } else {
-            hwWarn.classList.remove("is-visible");
-            hwWarn.style.display = "none";
-            hwWarn.innerHTML = "";
-          }
-          return;
-        }
-
-        if (plan.fits100Percent) {
-          // Model fits 100% in VRAM - NO warning when choosing ALL (-1) or any layers <= totalLayers
-          if (curLayers > plan.totalLayers) {
-            hwWarn.innerHTML = `${DSIconMarkup("info", { size: 13, color: "var(--ds-color-accent, #67e8f9)" })}<span>Model has ${plan.totalLayers} layers. Setting layers above ${plan.totalLayers} has no additional effect (use -1 for ALL).</span>`;
-            hwWarn.classList.add("is-visible");
-            hwWarn.style.display = "flex";
-          } else {
-            hwWarn.classList.remove("is-visible");
-            hwWarn.style.display = "none";
-            hwWarn.innerHTML = "";
-          }
-        } else {
-          // Model requires more VRAM than available for 100% offload
-          if (curLayers === -1 || curLayers > plan.safeLayers + 2) {
-            const modelName = modelMeta?.name || "Selected model";
-            hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 13, color: "#f59e0b" })}<span><strong>${modelName}</strong> requires ~${plan.totalRequiredGB}GB VRAM for 100% offload, exceeding your ${plan.totalVramGB}GB VRAM. Setting ${curLayers === -1 ? 'ALL' : curLayers} layers will spill into system RAM and slow down. Recommended: <strong>${plan.recommended} layers</strong>.</span>`;
-            hwWarn.classList.add("is-visible");
-            hwWarn.style.display = "flex";
-          } else {
-            hwWarn.classList.remove("is-visible");
-            hwWarn.style.display = "none";
-            hwWarn.innerHTML = "";
-          }
-        }
-      };
-
-      const onTuneClick = () => {
-        const modelMeta = getSelectedModelMeta();
-        const plan = calcModelPlan(detectedHW, modelMeta, bi.context_length || 4096);
-        bi.n_gpu_layers = plan.recommended;
-        if (gpuSt) gpuSt.setValue(plan.recommended);
-        sync();
-        updateHWWarn();
-      };
-
-      const tuneBtn = hwCard.querySelector(".ds-sensei-autotune-btn");
-      if (tuneBtn) {
-        tuneBtn.onclick = onTuneClick;
-      }
-
-      if (!detectedHW) {
-        fetchSenseiHardware().then((hw) => {
-          if (!popup.contains(hwBox) || !hw) return;
-          detectedHW = hw;
-          const nameSpan = hwCard.querySelector(".ds-sensei-hw-name");
-          const btn = hwCard.querySelector(".ds-sensei-autotune-btn");
-          if (nameSpan) nameSpan.textContent = formatHWName(hw);
-          if (btn) {
-            btn.style.display = "inline-flex";
-            btn.onclick = onTuneClick;
-          }
-          updateHWWarn();
-        });
-      }
-
-      // Sampling: Temperature & Max Tokens (2 columns)
-      const sampHdr = document.createElement("div");
-      sampHdr.className = "ds-sensei-gear-section-label";
-      sampHdr.textContent = "Sampling";
-      scrollBody.appendChild(sampHdr);
-
-      const sampRow = document.createElement("div");
-      sampRow.className = "ds-sensei-gear-row-2col";
-
-      const tempField = document.createElement("div");
-      tempField.className = "ds-sensei-gear-field";
-      tempField.innerHTML = `<label class="ds-sensei-gear-label">Temperature</label>`;
-      const tempSt = mkStepper({
-        value: bi.temperature ?? 0.7,
-        min: 0.0,
-        max: 2.0,
-        step: 0.05,
-        decimals: 2,
-        width: "100%",
-        onChange: (v) => {
-          bi.temperature = parseFloat(v) ?? 0.7;
-          sync();
-        },
-      });
-      tempField.appendChild(tempSt.wrap);
-
-      const maxTokField = document.createElement("div");
-      maxTokField.className = "ds-sensei-gear-field";
-      maxTokField.innerHTML = `<label class="ds-sensei-gear-label">Max Tokens</label>`;
-      const maxTokSt = mkStepper({
-        value: bi.max_tokens ?? 2048,
-        min: 64,
-        max: 8192,
-        step: 128,
-        decimals: 0,
-        width: "100%",
-        onChange: (v) => {
-          bi.max_tokens = parseInt(v) || 2048;
-          sync();
-        },
-      });
-      maxTokField.appendChild(maxTokSt.wrap);
-
-      sampRow.append(tempField, maxTokField);
-      scrollBody.appendChild(sampRow);
-
-      // Context & GPU Offload (2 columns)
-      const ctxGpuRow = document.createElement("div");
-      ctxGpuRow.className = "ds-sensei-gear-row-2col";
-
-      const ctxField = document.createElement("div");
-      ctxField.className = "ds-sensei-gear-field";
-      ctxField.innerHTML = `<label class="ds-sensei-gear-label">Context Length</label>`;
-      const ctxSt = mkStepper({
-        value: bi.context_length ?? 8192,
-        min: 1024,
-        max: 32768,
-        step: 1024,
-        decimals: 0,
-        width: "100%",
-        onChange: (v) => {
-          bi.context_length = parseInt(v) || 8192;
-          sync();
-          updateHWWarn();
-        },
-      });
-      ctxField.appendChild(ctxSt.wrap);
-
-      const gpuField = document.createElement("div");
-      gpuField.className = "ds-sensei-gear-field";
-      gpuField.innerHTML = `<label class="ds-sensei-gear-label">GPU Layers (-1=All)</label>`;
-      gpuSt = mkStepper({
-        value: bi.n_gpu_layers ?? -1,
-        min: -1,
-        max: 128,
-        step: 1,
-        decimals: 0,
-        width: "100%",
-        onChange: (v) => {
-          bi.n_gpu_layers = isNaN(parseInt(v)) ? -1 : parseInt(v);
-          sync();
-          updateHWWarn();
-        },
-      });
-      gpuField.appendChild(gpuSt.wrap);
-
-      ctxGpuRow.append(ctxField, gpuField);
-      scrollBody.appendChild(ctxGpuRow);
-      updateHWWarn();
-
-      // Advanced Sampling (Top-P, Top-K, Rep. Penalty)
-      const advHdr = document.createElement("div");
-      advHdr.className = "ds-sensei-gear-section-label";
-      advHdr.textContent = "Advanced Sampling";
-      scrollBody.appendChild(advHdr);
-
-      const advRow = document.createElement("div");
-      advRow.style.cssText = "display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;box-sizing:border-box;";
-
-      const topPField = document.createElement("div");
-      topPField.className = "ds-sensei-gear-field";
-      topPField.innerHTML = `<label class="ds-sensei-gear-label">Top P</label>`;
-      const topPSt = mkStepper({
-        value: bi.top_p ?? 0.95,
-        min: 0.0,
-        max: 1.0,
-        step: 0.05,
-        decimals: 2,
-        width: "100%",
-        onChange: (v) => {
-          bi.top_p = parseFloat(v) ?? 0.95;
-          sync();
-        },
-      });
-      topPField.appendChild(topPSt.wrap);
-
-      const topKField = document.createElement("div");
-      topKField.className = "ds-sensei-gear-field";
-      topKField.innerHTML = `<label class="ds-sensei-gear-label">Top K</label>`;
-      const topKSt = mkStepper({
-        value: bi.top_k ?? 40,
-        min: 0,
-        max: 200,
-        step: 5,
-        decimals: 0,
-        width: "100%",
-        onChange: (v) => {
-          bi.top_k = parseInt(v) ?? 40;
-          sync();
-        },
-      });
-      topKField.appendChild(topKSt.wrap);
-
-      const repField = document.createElement("div");
-      repField.className = "ds-sensei-gear-field";
-      repField.innerHTML = `<label class="ds-sensei-gear-label">Rep. Penalty</label>`;
-      const repSt = mkStepper({
-        value: bi.repetition_penalty ?? 1.1,
-        min: 1.0,
-        max: 2.0,
-        step: 0.05,
-        decimals: 2,
-        width: "100%",
-        onChange: (v) => {
-          bi.repetition_penalty = parseFloat(v) ?? 1.1;
-          sync();
-        },
-      });
-      repField.appendChild(repSt.wrap);
-
-      advRow.append(topPField, topKField, repField);
-      scrollBody.appendChild(advRow);
-
-      // Seed
-      const seedField = document.createElement("div");
-      seedField.className = "ds-sensei-gear-field";
-      const sHdr = document.createElement("div");
-      sHdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;width:100%;";
-      const sLbl = document.createElement("label");
-      sLbl.className = "ds-sensei-gear-label";
-      sLbl.textContent = "Seed";
-      const biDiceBtn = document.createElement("button");
-      biDiceBtn.type = "button";
-      biDiceBtn.className = "ds-sensei-btn-compact";
-      biDiceBtn.style.cssText = "height:16px;line-height:16px;padding:0 5px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;";
-      biDiceBtn.title = "Roll new random seed";
-      biDiceBtn.textContent = "🎲 Roll";
-      sHdr.append(sLbl, biDiceBtn);
-      seedField.appendChild(sHdr);
-
-      const biSeedInp = document.createElement("input");
-      biSeedInp.type = "number";
-      biSeedInp.className = "ds-sensei-input";
-      biSeedInp.style.cssText = "width:100%;box-sizing:border-box;min-width:0;";
-      biSeedInp.value = bi.seed ?? 123456;
-      biSeedInp.onchange = () => {
-        bi.seed = parseInt(biSeedInp.value) || 0;
-        sync();
-      };
-      biDiceBtn.onclick = () => {
-        const r = Math.floor(Math.random() * 2147483647);
-        bi.seed = r;
-        biSeedInp.value = r;
-        sync();
-      };
-      seedField.appendChild(biSeedInp);
-      scrollBody.appendChild(seedField);
-
-      // Unload Model Now Button
-      const unloadBtn = document.createElement("button");
-      unloadBtn.type = "button";
-      unloadBtn.className = "ds-ui-btn ds-ui-btn-secondary ds-sensei-gear-unload-btn";
-      unloadBtn.style.marginTop = "6px";
-      unloadBtn.innerHTML = `${DSIconMarkup("trash-2", { size: 13, color: "var(--ds-color-danger, #f87171)" })}<span>Unload Model Now</span>`;
-      unloadBtn.onclick = async () => {
-        unloadBtn.disabled = true;
-        await unloadBuiltinModel();
-        unloadBtn.disabled = false;
-        refreshStatus();
-      };
-      scrollBody.appendChild(unloadBtn);
-    } else {
-      // ── Tab 3: Settings (Section Order & Behavior Controls)
-      const scrollBody = document.createElement("div");
-      scrollBody.className = "ds-sensei-gear-scroll-body";
-      popup.appendChild(scrollBody);
-
-      // ── Section Order (Drag to reorder)
-      const orderTitle = document.createElement("div");
-      orderTitle.className = "ds-sensei-gear-section-label";
-      orderTitle.textContent = "SECTION ORDER (Drag to reorder)";
-      scrollBody.appendChild(orderTitle);
-
-      const orderList = document.createElement("div");
-      orderList.className = "ds-sensei-order-list";
-
-      const sectionLabels = {
-        image: "Image",
-        models: "Models",
-        lora: "LoRA Loader",
-        video: "Settings",
-        notes: "Scene Notes",
-        prompt: "Generated Prompt",
-      };
-      const sectionIcons = {
-        image: "image",
-        models: "cpu",
-        lora: "layers",
-        video: "sliders",
-        notes: "file-text",
-        prompt: "sparkles",
-      };
-
-      if (!Array.isArray(s.section_order) || s.section_order.length !== 6) {
-        s.section_order = ["image", "models", "lora", "video", "notes", "prompt"];
-      }
-
-      let draggedSectionIdx = null;
-
-      const renderOrderCards = () => {
-        orderList.textContent = "";
-        s.section_order.forEach((key, idx) => {
-          const card = document.createElement("div");
-          card.className = "ds-sensei-order-card";
-          card.draggable = true;
-          card.dataset.orderIdx = String(idx);
-          card.innerHTML = `<span class="ds-sensei-drag-handle">${DSIconMarkup("grip-vertical", { size: 14 })}</span><span style="display:inline-flex;align-items:center;gap:6px;">${DSIconMarkup(sectionIcons[key] || "circle", { size: 13, color: "var(--ds-color-accent, #67e8f9)" })}<span>${sectionLabels[key] || key}</span></span>`;
-
-          card.ondragstart = (e) => {
-            draggedSectionIdx = idx;
-            if (e.dataTransfer) {
-              e.dataTransfer.setData("text/plain", String(idx));
-              e.dataTransfer.effectAllowed = "move";
-            }
-            card.classList.add("is-dragging");
-          };
-
-          card.ondragover = (e) => {
-            e.preventDefault();
-            if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-            card.classList.add("is-dragover");
-          };
-
-          card.ondragleave = (e) => {
-            if (!card.contains(e.relatedTarget)) card.classList.remove("is-dragover");
-          };
-
-          card.ondrop = (e) => {
-            e.preventDefault();
-            card.classList.remove("is-dragover");
-            let fromIdx = draggedSectionIdx;
-            if (fromIdx == null && e.dataTransfer) {
-              const parsed = parseInt(e.dataTransfer.getData("text/plain"), 10);
-              if (Number.isInteger(parsed)) fromIdx = parsed;
-            }
-            if (Number.isInteger(fromIdx) && fromIdx !== idx) {
-              const [moved] = s.section_order.splice(fromIdx, 1);
-              s.section_order.splice(idx, 0, moved);
-              sync();
-              renderOrderCards();
-              node._renderUI?.();
-              fitNode(node);
-              scheduleAlign(node);
-            }
-            draggedSectionIdx = null;
-          };
-
-          card.ondragend = () => {
-            draggedSectionIdx = null;
-            card.classList.remove("is-dragging");
-            orderList.querySelectorAll(".ds-sensei-order-card").forEach((c) => c.classList.remove("is-dragover"));
-          };
-
-          orderList.appendChild(card);
-        });
-      };
-      renderOrderCards();
-      scrollBody.appendChild(orderList);
-
-      // ── Built-In Behavior Settings
-      const behBiLbl = document.createElement("div");
-      behBiLbl.className = "ds-sensei-gear-section-label";
-      behBiLbl.style.marginTop = "6px";
-      behBiLbl.textContent = "Built-In LLM Options";
-      scrollBody.appendChild(behBiLbl);
-
-      const behBiBox = document.createElement("div");
-      behBiBox.className = "ds-sensei-gear-behavior-box";
-
-      const autoUnloadToggle = Toggle({
-        label: "Auto-unload after prompt creation",
-        checked: bi.auto_unload !== false,
-        onChange: (checked) => {
-          bi.auto_unload = checked;
-          s.auto_unload = checked;
-          sync();
-        },
-      });
-      behBiBox.appendChild(autoUnloadToggle.root);
-
-      const freeComfyToggle = Toggle({
-        label: "Free ComfyUI models before loading",
-        checked: bi.free_comfy_memory !== false,
-        onChange: (checked) => {
-          bi.free_comfy_memory = checked;
-          sync();
-        },
-      });
-      behBiBox.appendChild(freeComfyToggle.root);
-
-      const cpuOnlyToggle = Toggle({
-        label: "CPU Only mode (Force 0 GPU layers)",
-        checked: Boolean(bi.cpu_only),
-        onChange: (checked) => {
-          bi.cpu_only = checked;
-          sync();
-        },
-      });
-      behBiBox.appendChild(cpuOnlyToggle.root);
-
-      const onDemandVisionToggle = Toggle({
-        label: "On-demand vision (Skip projector in T2I/T2V to save ~1GB VRAM)",
-        checked: bi.enable_vision !== false,
-        onChange: (checked) => {
-          bi.enable_vision = checked;
-          sync();
-        },
-      });
-      behBiBox.appendChild(onDemandVisionToggle.root);
-
-      const randSeedBiToggle = Toggle({
-        label: "Randomize seed each generation",
-        checked: bi.randomize_seed !== false,
-        onChange: (checked) => {
-          bi.randomize_seed = checked;
-          sync();
-        },
-      });
-      behBiBox.appendChild(randSeedBiToggle.root);
-
-      scrollBody.appendChild(behBiBox);
-
-      // ── LM Studio Behavior Settings
-      const behLmLbl = document.createElement("div");
-      behLmLbl.className = "ds-sensei-gear-section-label";
-      behLmLbl.style.marginTop = "6px";
-      behLmLbl.textContent = "LM Studio Options";
-      scrollBody.appendChild(behLmLbl);
-
-      const behLmBox = document.createElement("div");
-      behLmBox.className = "ds-sensei-gear-behavior-box";
-
-      const randSeedLmToggle = Toggle({
-        label: "Randomize seed each generation",
-        checked: lm.randomize_seed !== false,
-        onChange: (checked) => {
-          lm.randomize_seed = checked;
-          sync();
-        },
-      });
-      behLmBox.appendChild(randSeedLmToggle.root);
-
-      const unloadLmToggle = Toggle({
-        label: "Unload LLM after run",
-        checked: Boolean(lm.unload_after_run),
-        onChange: (checked) => {
-          lm.unload_after_run = checked;
-          sync();
-        },
-      });
-      behLmBox.appendChild(unloadLmToggle.root);
-
-      scrollBody.appendChild(behLmBox);
-    }
-    requestAnimationFrame(adjustPopoverPos);
-  };
-
-  document.body.appendChild(popup);
-  _activeSenseiGearPopup = popup;
-  renderContent();
-  adjustPopoverPos();
-  requestAnimationFrame(adjustPopoverPos);
-
-  // Auto-detect and populate loaded model if not set
-  if (activeTab === "lm_studio" && !lm.model) {
-    fetchLMStudioModels(lm.ip, lm.port).then((res) => {
-      if (res.ok && res.models?.length > 0) {
-        const llmModels = res.models.filter((m) => !/(embed|nomic-embed|bge-)/i.test(m));
-        const activeModel = llmModels[0] || res.models[0];
-        if (!lm.model && activeModel) {
-          lm.model = activeModel;
-          s.error_msg = null;
-          sync();
-          renderContent();
-        }
-      }
-    });
-  } else if (activeTab === "built_in" && !bi.model) {
-    fetchBuiltinModels().then((res) => {
-      if (res.ok && res.models?.length > 0) {
-        bi.model = res.models[0].id;
-        s.error_msg = null;
-        sync();
-        renderContent();
-      }
-    });
-  }
-
-
-
-  const onOutside = (e) => {
-    if (e.target.closest?.(".ds-sensei-menu-popover")) return;
-    if (!popup.contains(e.target) && (!anchorEl || !anchorEl.contains(e.target))) {
-      closeSenseiGearConfig();
-      document.removeEventListener("pointerdown", onOutside);
-    }
-  };
-  setTimeout(() => {
-    document.addEventListener("pointerdown", onOutside);
-  }, 10);
+    },
+    renderSettings: (scroll) => renderSenseiSettingsTab(scroll, node, sync),
+    onClose: () => {
+      node._renderUI?.();
+      fitNode(node);
+      scheduleAlign(node);
+    },
+  });
 }
 
 function registerGearMenu() {
@@ -2948,10 +1849,10 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
     const memActions = document.createElement("div");
     memActions.className = "ds-sensei-mem-actions-row";
     memActions.innerHTML = `
-      <button type="button" class="ds-sensei-mem-btn" id="btn-free-vram" title="Empty PyTorch CUDA cache">
+      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-sensei-mem-btn" id="btn-free-vram" title="Empty PyTorch CUDA cache">
         ${DSIconMarkup("trash-2", { size: 10 })}<span>Free VRAM</span>
       </button>
-      <button type="button" class="ds-sensei-mem-btn" id="btn-unload-models" title="Unload models from VRAM and kill active LLM">
+      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-sensei-mem-btn" id="btn-unload-models" title="Unload models from VRAM and kill active LLM">
         ${DSIconMarkup("power", { size: 10 })}<span>Unload All</span>
       </button>
     `;

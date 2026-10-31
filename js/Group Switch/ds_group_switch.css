@@ -1,8 +1,4 @@
-/* ========================================================================= */
-/* Deathshot Arsenal — DS Group Switch Stylesheet                            */
-/* ========================================================================= */
-
-/* Container wrappers & DOM Widget styling */
+/* ========================================================================= *//* Deathshot Arsenal — DS Group Switch Stylesheet                            *//* ========================================================================= *//* Container wrappers & DOM Widget styling */
 .dom-widget:has(> .ds-gs-card),
 .dom-widget:has(> [data-ds-ui-shell] > .ds-gs-card),
 .dom-widget:has(.ds-gs-card) {
@@ -77,12 +73,7 @@
 .ds-gs-group-row,
 .ds-gs-group-row *,
 .ds-gs-popup,
-.ds-gs-popup *,
-button,
-input,
-select,
-textarea,
-[role="switch"] {
+.ds-gs-popup * {
   pointer-events: auto !important;
   cursor: pointer;
 }
@@ -107,7 +98,6 @@ textarea,
 }
 
 /* ---------------- Segmented Tabs & Active Tab Indicator ---------------- */
-
 .ds-gs-segment {
   display: grid;
   gap: 2px;
@@ -118,54 +108,17 @@ textarea,
   box-sizing: border-box;
 }
 
-.ds-gs-tab {
+.ds-ui-btn.ds-gs-tab {
   height: 24px;
   padding: 0 8px;
-  border: 1px solid transparent;
   border-radius: calc(var(--ds-radius-control, 5px) - 2px);
-  background: transparent;
-  color: var(--ds-color-muted-text, #9ca3af);
-  font-family: var(--ds-font, Inter, sans-serif);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  transition: background var(--ds-transition, 120ms ease), color var(--ds-transition, 120ms ease), border-color var(--ds-transition, 120ms ease);
-}
-
-.ds-gs-tab:hover {
-  color: var(--ds-color-text, #e5e7eb);
-  background: var(--ds-color-panel-2, #161a23);
-}
-
-.ds-gs-tab.is-active,
-.ds-gs-tab.active {
-  color: var(--ds-color-on-accent, #0a0c10) !important;
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  font-weight: 800 !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4) !important;
-  text-shadow: var(--ds-color-on-accent-shadow, 0 1px 0 rgba(255, 255, 255, 0.35));
-}
-
-.ds-gs-tab.is-active::after,
-.ds-gs-tab.active::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 14%;
-  right: 14%;
-  height: 2px;
-  background: var(--ds-color-on-accent, #0a0c10);
-  border-radius: 2px;
 }
 
 /* ---------------- Node Body Controls Row ---------------- */
-
 .ds-gs-node-controls {
   display: flex !important;
   flex-direction: row !important;
@@ -262,7 +215,6 @@ textarea,
 }
 
 /* ---------------- Group List with Strictly One Row Per Group ---------------- */
-
 .ds-gs-node-list {
   display: flex !important;
   flex-direction: column !important;
@@ -369,7 +321,6 @@ textarea,
 }
 
 /* ---------------- Empty State & Footer ---------------- */
-
 .ds-gs-node-empty {
   height: 40px !important;
   display: flex !important;
@@ -396,7 +347,6 @@ textarea,
 }
 
 /* ---------------- Settings Popup ---------------- */
-
 .ds-gs-popup {
   position: fixed;
   z-index: 2147483647;
@@ -459,28 +409,17 @@ textarea,
   font-size: 9.5px;
 }
 
-.ds-gs-popup-close {
+.ds-ui-btn.ds-gs-popup-close {
   width: 26px;
   height: 26px;
   margin-left: auto;
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid transparent;
   border-radius: var(--ds-radius-control, 5px);
-  background: transparent;
-  color: var(--ds-color-muted-text, #9ca3af);
-  cursor: pointer;
-  transition: color var(--ds-transition, 120ms ease), background var(--ds-transition, 120ms ease), border-color var(--ds-transition, 120ms ease);
 }
 
-.ds-gs-popup-close:hover {
-  color: var(--ds-color-text, #fff);
-  border-color: var(--ds-color-border, #242a36);
-  background: var(--ds-color-card, #12151c);
-}
-
-.ds-gs-popup-close svg {
+.ds-ui-btn.ds-gs-popup-close svg {
   width: 14px;
   height: 14px;
   fill: none;
@@ -525,9 +464,8 @@ textarea,
   grid-template-columns: 1fr 1fr;
 }
 
-.ds-gs-popup-segment .ds-gs-tab {
+.ds-gs-popup-segment .ds-ui-btn.ds-gs-tab {
   height: 28px;
-  font-size: 10.5px;
 }
 
 /* Toolbar & Search row */
@@ -539,20 +477,18 @@ textarea,
   box-sizing: border-box;
 }
 
-.ds-gs-popup-search {
+.ds-ui-input-row.ds-gs-popup-search {
   flex: 1 1 auto;
   min-width: 0;
   height: 28px;
   display: flex;
   align-items: center;
-  border: 1px solid var(--ds-color-border, #242a36);
   border-radius: var(--ds-radius-control, 5px);
-  background: var(--ds-color-panel-2, #161a23);
   box-sizing: border-box;
   overflow: hidden;
 }
 
-.ds-gs-popup-search svg {
+.ds-ui-input-row.ds-gs-popup-search svg {
   width: 13px;
   height: 13px;
   margin-left: 8px;
@@ -563,22 +499,6 @@ textarea,
   pointer-events: none;
 }
 
-.ds-gs-popup-search input {
-  flex: 1 1 auto;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  border: 0 !important;
-  outline: none !important;
-  background: transparent !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  padding: 0 8px !important;
-  font: 11px var(--ds-font, Inter, sans-serif) !important;
-  box-sizing: border-box !important;
-  -webkit-appearance: none !important;
-  appearance: none !important;
-}
-
 /* Dropdown integration inside toolbar & Z-Index Layering */
 .ds-gs-popup-toolbar .ds-ui-dropdown {
   flex: 0 0 auto;
@@ -587,13 +507,6 @@ textarea,
 .ds-gs-popup-toolbar .ds-ui-dropdown-trigger {
   height: 28px !important;
   box-sizing: border-box !important;
-}
-
-/* Ensure Dropdown Popup always displays in front of settings popup */
-.ds-ui-popup,
-.ds-ui-dropdown .ds-ui-popup,
-body > .ds-ui-popup {
-  z-index: 2147483648 !important;
 }
 
 /* Settings Group List using DS Toggle: Strictly One Item Per Line */
@@ -720,9 +633,8 @@ body > .ds-ui-popup {
 }
 
 /* Switching Rule Tabs & Description */
-.ds-gs-rule-tabs .ds-gs-tab {
+.ds-gs-rule-tabs .ds-ui-btn.ds-gs-tab {
   height: 28px;
-  font-size: 10px;
 }
 
 .ds-gs-rule-desc {

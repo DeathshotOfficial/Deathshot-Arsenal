@@ -8,7 +8,7 @@ import { app } from "/scripts/app.js";
 import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import { api } from "/scripts/api.js";
 import { createCard } from "../UIElements/card_layout.js";
-import { StatusBar, Toggle } from "../UIElements/index.js";
+import { StatusBar, Toggle, Button } from "../UIElements/index.js";
 
 const TYPE = "DS_ThePurger";
 const DISPLAY_NAME = "DS The Purger";
@@ -325,18 +325,14 @@ function buildPurgerCard(node) {
     const currentAction = node.properties.selected_action || "ALL";
 
     for (const act of visible) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ds-ui-btn ds-ui-btn-compact ds-purger-btn";
-      btn.textContent = act;
+      const btn = Button({
+        label: act,
+        compact: true,
+        className: "ds-purger-btn",
+        tooltip: ACTION_DESCRIPTIONS[act] || `Eject ${act}`,
+        active: act === currentAction,
+      }).root;
       btn.dataset.action = act;
-      btn.title = ACTION_DESCRIPTIONS[act] || `Eject ${act}`;
-
-      const isActive = (act === currentAction);
-      if (isActive) {
-        btn.classList.add("is-active");
-        btn.setAttribute("aria-pressed", "true");
-      }
 
       btn.addEventListener("pointerdown", (e) => e.stopPropagation());
       btn.addEventListener("mousedown", (e) => e.stopPropagation());
@@ -451,12 +447,7 @@ function openPurgerGearPopover(targetNode, anchorEl) {
       const orderControls = document.createElement("div");
       orderControls.className = "ds-purger-order-controls";
 
-      const upBtn = document.createElement("button");
-      upBtn.type = "button";
-      upBtn.className = "ds-purger-order-btn";
-      upBtn.title = "Move Up";
-      upBtn.disabled = idx === 0;
-      upBtn.innerHTML = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>`;
+      const upBtn = Button({ icon: "chevron-up", compact: true, variant: "ghost", tooltip: "Move Up", disabled: idx === 0 }).root;
       upBtn.addEventListener("click", () => {
         if (idx > 0) {
           const temp = buttons[idx];
@@ -468,12 +459,7 @@ function openPurgerGearPopover(targetNode, anchorEl) {
         }
       });
 
-      const downBtn = document.createElement("button");
-      downBtn.type = "button";
-      downBtn.className = "ds-purger-order-btn";
-      downBtn.title = "Move Down";
-      downBtn.disabled = idx === buttons.length - 1;
-      downBtn.innerHTML = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>`;
+      const downBtn = Button({ icon: "chevron-down", compact: true, variant: "ghost", tooltip: "Move Down", disabled: idx === buttons.length - 1 }).root;
       downBtn.addEventListener("click", () => {
         if (idx < buttons.length - 1) {
           const temp = buttons[idx];
@@ -506,10 +492,7 @@ function openPurgerGearPopover(targetNode, anchorEl) {
     const foot = document.createElement("div");
     foot.className = "ds-purger-popover-footer";
 
-    const enableAllBtn = document.createElement("button");
-    enableAllBtn.type = "button";
-    enableAllBtn.className = "ds-purger-footer-btn";
-    enableAllBtn.textContent = "Enable All";
+    const enableAllBtn = Button({ label: "Enable All", compact: true, className: "ds-purger-footer-btn" }).root;
     enableAllBtn.addEventListener("click", () => {
       for (const k of ["ALL", "VRAM", "RAM", "MODELS", "CACHE"]) {
         globalConfig.enabled[k] = true;
@@ -518,10 +501,7 @@ function openPurgerGearPopover(targetNode, anchorEl) {
       renderPopoverContent();
     });
 
-    const resetBtn = document.createElement("button");
-    resetBtn.type = "button";
-    resetBtn.className = "ds-purger-footer-btn";
-    resetBtn.textContent = "Reset Defaults";
+    const resetBtn = Button({ label: "Reset Defaults", compact: true, className: "ds-purger-footer-btn" }).root;
     resetBtn.addEventListener("click", () => {
       globalConfig.buttons = ["ALL", "VRAM", "RAM", "MODELS", "CACHE"];
       for (const k of globalConfig.buttons) {

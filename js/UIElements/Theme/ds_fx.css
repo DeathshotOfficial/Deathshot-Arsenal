@@ -1,0 +1,291 @@
+/**
+ * DS Live Theme Effects
+ *
+ * One .ds-fx overlay sits on top of every DS node face (and the Theme Manager
+ * preview). Its data-fx attribute lists the layers the active theme uses.
+ * Only transform and opacity are animated, and every moving layer is small or
+ * mostly transparent, so the browser compositor does the per-frame work and
+ * nothing is repainted or laid out while effects run.
+ *
+ * Colors come from --ds-fx-a / --ds-fx-b, set by the theme engine.
+ */
+
+.ds-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  overflow: hidden;
+  border-radius: var(--ds-radius-card, 8px);
+  pointer-events: none;
+  contain: strict;
+}
+.ds-fx[data-fx] { display: block; }
+.ds-fx > i {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+}
+
+/* ring: static accent edge. pulse: the same edge breathing. */
+.ds-fx[data-fx~="ring"] > .ds-fx-ring,
+.ds-fx[data-fx~="pulse"] > .ds-fx-ring {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--ds-fx-a);
+  opacity: 0.55;
+}
+.ds-fx[data-fx~="pulse"] > .ds-fx-ring {
+  --ds-fx-dur: 3.6s;
+  animation: ds-fx-fade 3.6s ease-in-out infinite;
+  will-change: opacity;
+}
+
+/* breathe: inner edge glow cross-fading between the two theme colors. */
+.ds-fx[data-fx~="breathe"] > .ds-fx-glow {
+  display: block;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 20px -6px var(--ds-fx-a);
+  --ds-fx-dur: 6s;
+  animation: ds-fx-fade 6s ease-in-out infinite;
+  will-change: opacity;
+}
+.ds-fx[data-fx~="breathe"] > .ds-fx-glow-b {
+  box-shadow: inset 0 0 20px -6px var(--ds-fx-b);
+  animation-delay: -3s;
+}
+
+/* orbit: two comets chasing each other around the border. Each edge strip
+   carries one comet per color and is active for a quarter of the cycle. */
+.ds-fx[data-fx~="orbit"] > .ds-fx-edge {
+  display: block;
+  overflow: hidden;
+}
+.ds-fx-edge.t { top: 0; left: 0; right: 0; height: 12px; }
+.ds-fx-edge.b { bottom: 0; left: 0; right: 0; height: 12px; }
+.ds-fx-edge.l { top: 0; bottom: 0; left: 0; width: 12px; }
+.ds-fx-edge.r { top: 0; bottom: 0; right: 0; width: 12px; }
+.ds-fx-edge::before,
+.ds-fx-edge::after {
+  content: "";
+  position: absolute;
+  --c: var(--ds-fx-a);
+  --ds-fx-dur: var(--ds-fx-orbit, 8s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.ds-fx-edge::after { --c: var(--ds-fx-b); }
+.ds-fx-edge.t::before, .ds-fx-edge.t::after,
+.ds-fx-edge.b::before, .ds-fx-edge.b::after {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  transform: translateX(-100%);
+  animation-name: ds-fx-run-x;
+}
+.ds-fx-edge.l::before, .ds-fx-edge.l::after,
+.ds-fx-edge.r::before, .ds-fx-edge.r::after {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 38%;
+  transform: translateY(-100%);
+  animation-name: ds-fx-run-y;
+}
+.ds-fx-edge.t::before, .ds-fx-edge.t::after {
+  background:
+    linear-gradient(90deg, transparent, var(--c), transparent) top / 100% 1.5px no-repeat,
+    radial-gradient(50% 100% at 50% 0%, color-mix(in srgb, var(--c) 40%, transparent), transparent);
+}
+.ds-fx-edge.b::before, .ds-fx-edge.b::after {
+  background:
+    linear-gradient(90deg, transparent, var(--c), transparent) bottom / 100% 1.5px no-repeat,
+    radial-gradient(50% 100% at 50% 100%, color-mix(in srgb, var(--c) 40%, transparent), transparent);
+  animation-direction: reverse;
+}
+.ds-fx-edge.r::before, .ds-fx-edge.r::after {
+  background:
+    linear-gradient(180deg, transparent, var(--c), transparent) right / 1.5px 100% no-repeat,
+    radial-gradient(100% 50% at 100% 50%, color-mix(in srgb, var(--c) 40%, transparent), transparent);
+}
+.ds-fx-edge.l::before, .ds-fx-edge.l::after {
+  background:
+    linear-gradient(180deg, transparent, var(--c), transparent) left / 1.5px 100% no-repeat,
+    radial-gradient(100% 50% at 0% 50%, color-mix(in srgb, var(--c) 40%, transparent), transparent);
+  animation-direction: reverse;
+}
+/* Phase offsets: top, right, bottom, left each take one quarter; comet b runs half a lap behind. */
+.ds-fx-edge.t::after, .ds-fx-edge.l::after { animation-delay: calc(var(--ds-fx-orbit, 8s) * -0.5); }
+.ds-fx-edge.r::before { animation-delay: calc(var(--ds-fx-orbit, 8s) * -0.75); }
+.ds-fx-edge.r::after { animation-delay: calc(var(--ds-fx-orbit, 8s) * -0.25); }
+.ds-fx-edge.b::before { animation-delay: calc(var(--ds-fx-orbit, 8s) * -0.25); }
+.ds-fx-edge.b::after { animation-delay: calc(var(--ds-fx-orbit, 8s) * -0.75); }
+
+/* aurora: two slow color curtains drifting across the top of the face. */
+.ds-fx[data-fx~="aurora"] > .ds-fx-band {
+  display: block;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 76px;
+  overflow: hidden;
+  opacity: 0.32;
+  -webkit-mask-image: linear-gradient(#000, transparent);
+  mask-image: linear-gradient(#000, transparent);
+}
+.ds-fx-band::before,
+.ds-fx-band::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 300%;
+  background: linear-gradient(90deg,
+    transparent 0%, var(--ds-fx-a) 16%, transparent 32%,
+    var(--ds-fx-b) 50%, transparent 66%, var(--ds-fx-a) 84%, transparent 100%);
+  --ds-fx-dur: 24s;
+  animation: ds-fx-drift 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.ds-fx-band::after {
+  opacity: 0.6;
+  --ds-fx-dur: 33s;
+  animation-direction: alternate-reverse;
+}
+
+/* scan: a soft scanline sweeping down the face, then resting. */
+.ds-fx[data-fx~="scan"] > .ds-fx-scan {
+  display: block;
+  inset: 0;
+  overflow: hidden;
+}
+.ds-fx-scan::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28%;
+  background: linear-gradient(180deg,
+    transparent,
+    color-mix(in srgb, var(--ds-fx-a) 9%, transparent) 80%,
+    color-mix(in srgb, var(--ds-fx-a) 50%, transparent) 99%,
+    transparent);
+  transform: translateY(-100%);
+  --ds-fx-dur: 7s;
+  animation: ds-fx-scan 7s linear infinite;
+  will-change: transform;
+}
+
+/* sheen: a specular highlight that glides across the face now and then. */
+.ds-fx[data-fx~="sheen"] > .ds-fx-sheen {
+  display: block;
+  inset: 0;
+  overflow: hidden;
+}
+.ds-fx-sheen::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(105deg,
+    transparent 20%,
+    color-mix(in srgb, var(--ds-fx-b) 20%, transparent) 50%,
+    transparent 80%);
+  transform: translateX(-100%);
+  --ds-fx-dur: 9s;
+  animation: ds-fx-sheen 9s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* motes: sparse particles rising from the bottom (embers, plankton, dust).
+   Two identical tiles stacked vertically loop seamlessly. */
+.ds-fx[data-fx~="motes"] > .ds-fx-motes {
+  display: block;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 55%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to top, #000, transparent);
+  mask-image: linear-gradient(to top, #000, transparent);
+}
+.ds-fx-motes::before,
+.ds-fx-motes::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 100%;
+  opacity: 0.75;
+  background-image:
+    radial-gradient(circle, var(--ds-fx-a) 0 1.2px, transparent 2px),
+    radial-gradient(circle, var(--ds-fx-b) 0 1px, transparent 1.8px),
+    radial-gradient(circle, var(--ds-fx-a) 0 0.8px, transparent 1.5px);
+  background-size: 97px 113px, 61px 89px, 43px 71px;
+  background-position: 13px 27px, 41px 5px, 7px 49px;
+  --ds-fx-dur: 16s;
+  animation: ds-fx-rise 16s linear infinite;
+  will-change: transform;
+}
+.ds-fx-motes::after { top: 100%; }
+
+@keyframes ds-fx-fade {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.9; }
+}
+@keyframes ds-fx-run-x {
+  0% { transform: translateX(-100%); }
+  25%, 100% { transform: translateX(263%); }
+}
+@keyframes ds-fx-run-y {
+  0% { transform: translateY(-100%); }
+  25%, 100% { transform: translateY(263%); }
+}
+@keyframes ds-fx-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-66.667%); }
+}
+@keyframes ds-fx-scan {
+  0% { transform: translateY(-100%); }
+  70%, 100% { transform: translateY(357%); }
+}
+@keyframes ds-fx-sheen {
+  0%, 55% { transform: translateX(-100%); }
+  85%, 100% { transform: translateX(290%); }
+}
+@keyframes ds-fx-rise {
+  to { transform: translateY(-100%); }
+}
+
+/* The DS Motion setting (Theme Manager) is the switch for these effects;
+   ComfyUI's "disable animations" setting would otherwise freeze every layer
+   on its first frame. */
+.ds-fx > i,
+.ds-fx > i::before,
+.ds-fx > i::after {
+  animation-duration: var(--ds-fx-dur, 0s) !important;
+}
+
+/* Motion setting (Theme Manager) and OS reduced-motion preference. */
+html[data-ds-motion="paused"] .ds-fx > i,
+html[data-ds-motion="paused"] .ds-fx > i::before,
+html[data-ds-motion="paused"] .ds-fx > i::after {
+  animation-play-state: paused !important;
+}
+html[data-ds-motion="off"] .ds-fx { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .ds-fx > i,
+  .ds-fx > i::before,
+  .ds-fx > i::after {
+    animation-play-state: paused !important;
+  }
+}

@@ -1,867 +1,15 @@
 import { app } from "/scripts/app.js";
 import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
-import { Slider, Toggle, Dropdown, protectDSResizeCorners } from "../UIElements/index.js";
+import { Slider, Toggle, Dropdown, Button, Input, InputRow, protectDSResizeCorners } from "../UIElements/index.js";
 import { Popup } from "../UIElements/Core/Popup.js";
 
 const EXTENSION_NAME = "DeathshotArsenal.DSController";
 const NODE_NAME = "DS_Controller";
-const CSS_ID = "ds-controller-style";
 const CARD_MARGIN = 5;
 const CARD_PAD = 10;
 const ROW_GAP = 6;
 const ADD_BTN_H = 28;
 const MIN_WIDTH = 280;
-
-const CSS_CONTENT = `
-*::-webkit-scrollbar-button,
-*::-webkit-scrollbar-button:single-button,
-*::-webkit-scrollbar-button:double-button,
-*::-webkit-scrollbar-button:start,
-*::-webkit-scrollbar-button:end,
-*::-webkit-scrollbar-button:decrement,
-*::-webkit-scrollbar-button:increment,
-*::-webkit-scrollbar-button:vertical:decrement,
-*::-webkit-scrollbar-button:vertical:increment,
-*::-webkit-scrollbar-button:horizontal:decrement,
-*::-webkit-scrollbar-button:horizontal:increment,
-::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  max-width: 0 !important;
-  max-height: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  content: none !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-}
-
-.dom-widget:has(> .ds-controller-card),
-.dom-widget:has(> .ds-ui-card.ds-controller-card) {
-  pointer-events: none !important;
-}
-
-.ds-controller-card.ds-ui-card,
-.ds-controller-card {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: auto !important;
-  padding: var(--ds-card-padding, 10px) !important;
-  margin: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: var(--ds-gap-sm, 6px) !important;
-  background: var(--ds-color-card, #12151c) !important;
-  background-color: var(--ds-color-card, #12151c) !important;
-  border-radius: var(--ds-radius-card, 8px) !important;
-  box-shadow: inset 0 0 0 1px var(--ds-color-card-border, #242a36) !important;
-  border: none !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  user-select: none;
-}
-
-.ds-controller-card > * {
-  box-sizing: border-box !important;
-  margin: 0 !important;
-  flex-shrink: 0 !important;
-  min-width: 0 !important;
-  pointer-events: auto !important;
-}
-
-.ds-controller-card .ds-ui-slider {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: var(--ds-gap-sm, 6px) !important;
-  min-width: 0 !important;
-}
-
-.ds-controller-card .ds-ui-solid-bar {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  position: relative !important;
-  height: var(--ds-control-h, 28px) !important;
-  cursor: pointer !important;
-  touch-action: none !important;
-  user-select: none !important;
-  outline: none !important;
-  box-sizing: border-box !important;
-}
-
-.ds-controller-card .ds-ui-solid-track {
-  position: absolute !important;
-  inset: 0 !important;
-  height: 100% !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  overflow: hidden !important;
-  box-sizing: border-box !important;
-  transition: border-color var(--ds-transition, 120ms ease), box-shadow var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-card .ds-ui-solid-bar:hover .ds-ui-solid-track {
-  border-color: var(--ds-color-border-hover, #374151) !important;
-}
-
-.ds-controller-card .ds-ui-solid-bar:focus-visible .ds-ui-solid-track {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring, rgba(103, 232, 249, 0.4)) !important;
-}
-
-.ds-controller-card .ds-ui-solid-fill {
-  position: absolute !important;
-  left: 0 !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  height: 100% !important;
-  width: var(--p, 0%) !important;
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  border-top-right-radius: 1.5px !important;
-  border-bottom-right-radius: 1.5px !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
-  box-sizing: border-box !important;
-  transition: background-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-card .ds-ui-solid-fill[data-full="true"],
-.ds-controller-card .ds-ui-solid-bar[data-full="true"] .ds-ui-solid-fill {
-  border-top-right-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
-.ds-controller-card .ds-ui-slider-label {
-  position: absolute !important;
-  left: var(--ds-control-pad-x, 8px) !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  height: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
-  user-select: none !important;
-  white-space: nowrap !important;
-  pointer-events: none !important;
-  line-height: 1 !important;
-  box-sizing: border-box !important;
-}
-
-.ds-controller-card .ds-ui-slider-label-base {
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  z-index: 0 !important;
-}
-
-.ds-controller-card .ds-ui-slider-label-fill {
-  color: var(--ds-color-on-accent, #0a0c10) !important;
-  z-index: 1 !important;
-}
-
-.ds-controller-card .ds-ui-slider-number {
-  flex: 0 0 54px !important;
-  box-sizing: border-box !important;
-  width: 54px !important;
-  height: var(--ds-control-h, 28px) !important;
-  line-height: 26px !important;
-  text-align: center !important;
-  padding: 0 4px !important;
-  font-family: var(--ds-font, monospace) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  font-variant-numeric: tabular-nums !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  outline: none !important;
-  margin: 0 !important;
-  transition: border-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-card .ds-ui-slider-number:focus {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-row-label {
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  user-select: none !important;
-  white-space: nowrap !important;
-  flex: 0 0 auto !important;
-}
-
-.ds-controller-seed-row {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  display: flex !important;
-  align-items: center !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  --ds-action-inset: calc((var(--ds-control-h, 28px) - 2px - var(--ds-control-h-compact, 22px)) / 2);
-  padding: 0 var(--ds-action-inset) 0 var(--ds-control-pad-x, 8px) !important;
-  gap: var(--ds-gap-sm, 6px) !important;
-  min-width: 0 !important;
-  transition: border-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-seed-row:focus-within {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-seed-input {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, monospace) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.ds-controller-seed-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: var(--ds-gap-xs, 4px) !important;
-  flex: 0 0 auto !important;
-}
-
-.ds-controller-action-btn {
-  box-sizing: border-box !important;
-  width: var(--ds-control-h-compact, 22px) !important;
-  height: var(--ds-control-h-compact, 22px) !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: transparent !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  cursor: pointer !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-  transition: border-color var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease), color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-action-btn svg {
-  display: block !important;
-  flex-shrink: 0 !important;
-  pointer-events: none !important;
-}
-
-.ds-controller-action-btn:hover {
-  background: var(--ds-color-border, #242a36) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-}
-
-.ds-controller-action-btn.is-active {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-on-accent, #0a0c10) !important;
-}
-
-.ds-controller-combo-row {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: var(--ds-gap-sm, 6px) !important;
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  cursor: default !important;
-  user-select: none !important;
-  min-width: 0 !important;
-}
-
-.ds-controller-combo-row .ds-controller-row-label {
-  flex: 0 0 auto !important;
-  max-width: 100px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.03em !important;
-}
-
-.ds-controller-card-dropdown {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  min-width: 0 !important;
-}
-
-.ds-controller-card-dropdown .ds-ui-dropdown-trigger {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  padding: 0 var(--ds-control-pad-x, 8px) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-}
-
-.ds-controller-card-dropdown .ds-ui-dropdown-trigger:hover,
-.ds-controller-card-dropdown .ds-ui-dropdown-trigger.is-open {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-toggle-row {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  padding: 0 var(--ds-control-pad-x, 8px) !important;
-  cursor: pointer !important;
-  user-select: none !important;
-  min-width: 0 !important;
-  transition: border-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-toggle-row:hover {
-  border-color: var(--ds-color-border-hover, #374151) !important;
-}
-
-.ds-controller-text-row {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  display: flex !important;
-  align-items: center !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  --ds-action-inset: calc((var(--ds-control-h, 28px) - 2px - var(--ds-control-h-compact, 22px)) / 2);
-  padding: 0 var(--ds-action-inset) 0 var(--ds-control-pad-x, 8px) !important;
-  gap: var(--ds-gap-sm, 6px) !important;
-  min-width: 0 !important;
-  transition: border-color var(--ds-transition, 120ms ease) !important;
-}
-
-/* Buttons sit the same distance from the top, bottom and right edge of their row,
-   with a corner radius concentric to the row's (outer radius - border - inset). */
-.ds-controller-seed-row .ds-controller-action-btn,
-.ds-controller-text-row:not(.is-expanded) > .ds-controller-action-btn {
-  border-radius: max(2px, calc(var(--ds-radius-control, 5px) - 1px - var(--ds-action-inset))) !important;
-}
-
-.ds-controller-text-row:focus-within {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-text-row.is-expanded {
-  height: auto !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  padding: 6px 6px 6px var(--ds-control-pad-x, 8px) !important;
-  gap: var(--ds-gap-xs, 4px) !important;
-}
-
-.ds-controller-text-input {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  height: 100% !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 11px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.ds-controller-text-head {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  height: 22px !important;
-}
-
-.ds-controller-textarea {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, monospace) !important;
-  font-size: 11px !important;
-  resize: vertical !important;
-  min-height: 48px !important;
-  padding: 2px !important;
-  margin: 0 !important;
-}
-
-.ds-controller-add-btn {
-  box-sizing: border-box !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  flex: 0 0 var(--ds-control-h, 28px) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  background-color: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px dashed var(--ds-color-border, #242a36) !important;
-  cursor: pointer !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  transition: border-color var(--ds-transition, 120ms ease), color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-add-btn:hover {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-/* Settings Popup (Side of Node) */
-.ds-controller-settings-popup {
-  box-sizing: border-box !important;
-  width: 640px !important;
-  max-width: 90vw !important;
-  max-height: 520px !important;
-  background: var(--ds-color-card, #12151c) !important;
-  background-color: var(--ds-color-card, #12151c) !important;
-  border: 1px solid var(--ds-color-card-border, #242a36) !important;
-  border-radius: var(--ds-radius-card, 8px) !important;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  z-index: 10001 !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  overflow: hidden !important;
-  pointer-events: auto !important;
-  padding: 0 !important;
-  gap: 0 !important;
-}
-
-.ds-controller-settings-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 8px 12px !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border-bottom: 1px solid var(--ds-color-border, #242a36) !important;
-  box-sizing: border-box !important;
-  flex-shrink: 0 !important;
-}
-
-.ds-controller-settings-title-group {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-.ds-controller-settings-title {
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
-  text-transform: uppercase !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-}
-
-.ds-controller-settings-count-badge {
-  font-size: 9px !important;
-  font-weight: 700 !important;
-  padding: 2px 6px !important;
-  border-radius: var(--ds-radius-badge, 4px) !important;
-  background: var(--ds-color-border, #242a36) !important;
-  color: var(--ds-color-accent, #67e8f9) !important;
-  letter-spacing: 0.04em !important;
-}
-
-.ds-controller-settings-close {
-  background: transparent !important;
-  border: none !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  cursor: pointer !important;
-  font-size: 14px !important;
-  padding: 2px 6px !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  line-height: 1 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: color var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-settings-close:hover {
-  background: var(--ds-color-border, #242a36) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-}
-
-.ds-controller-settings-list {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
-  padding: 8px 10px !important;
-  overflow-y: auto !important;
-  flex: 1 1 auto !important;
-  box-sizing: border-box !important;
-  min-height: 40px !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: var(--ds-color-border, #374151) transparent !important;
-}
-
-.ds-controller-settings-list::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
-
-.ds-controller-settings-list::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-
-.ds-controller-settings-list::-webkit-scrollbar-thumb {
-  background: var(--ds-color-border, #374151) !important;
-  border-radius: 4px !important;
-}
-
-.ds-controller-settings-list::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-settings-list::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
-
-.ds-controller-settings-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  padding: 0 8px !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  box-sizing: border-box !important;
-  height: 36px !important;
-  min-height: 36px !important;
-  flex-shrink: 0 !important;
-  transition: border-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-settings-item:hover {
-  border-color: var(--ds-color-border-hover, #374151) !important;
-}
-
-.ds-controller-settings-drag-handle {
-  cursor: grab !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  font-size: 13px !important;
-  user-select: none !important;
-  flex: 0 0 auto !important;
-  padding: 0 2px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.ds-controller-settings-drag-handle:active {
-  cursor: grabbing !important;
-}
-
-.ds-controller-settings-name {
-  flex: 0 0 110px !important;
-  width: 110px !important;
-  height: 24px !important;
-  background: var(--ds-color-card, #12151c) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  padding: 0 6px !important;
-  box-sizing: border-box !important;
-  outline: none !important;
-}
-
-.ds-controller-settings-name:focus {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-settings-type-badge {
-  flex: 0 0 64px !important;
-  width: 64px !important;
-  height: 24px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 3px !important;
-  font-size: 9px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.04em !important;
-  border-radius: var(--ds-radius-badge, 4px) !important;
-  background: var(--ds-color-card, #12151c) !important;
-  color: var(--ds-color-accent, #67e8f9) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  box-sizing: border-box !important;
-  user-select: none !important;
-  white-space: nowrap !important;
-}
-
-.ds-controller-settings-type-badge.is-locked {
-  color: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-settings-param-group {
-  display: flex !important;
-  align-items: center !important;
-  gap: 5px !important;
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-}
-
-.ds-controller-settings-param {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 3px !important;
-  background: var(--ds-color-card, #12151c) !important;
-  padding: 0 6px !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  height: 24px !important;
-  box-sizing: border-box !important;
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  cursor: default !important;
-  user-select: none !important;
-  transition: border-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-settings-param:focus-within {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-settings-param span {
-  font-size: 9px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.02em !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  pointer-events: none !important;
-}
-
-.ds-controller-settings-num {
-  width: 48px !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, monospace) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  text-align: center !important;
-  padding: 0 2px !important;
-  margin: 0 !important;
-  cursor: text !important;
-  user-select: text !important;
-}
-
-.ds-controller-settings-param.ds-controller-settings-seed-param {
-  flex: 1 1 auto !important;
-  max-width: 320px !important;
-  min-width: 170px !important;
-  justify-content: flex-start !important;
-  padding: 0 8px !important;
-  gap: 6px !important;
-}
-
-.ds-controller-settings-num.ds-controller-settings-seed-num {
-  width: 100% !important;
-  flex: 1 1 auto !important;
-  min-width: 120px !important;
-  text-align: left !important;
-  font-family: var(--ds-font, monospace) !important;
-}
-
-.ds-controller-settings-text-val {
-  flex: 1 1 auto !important;
-  height: 24px !important;
-  background: var(--ds-color-card, #12151c) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 11px !important;
-  padding: 0 8px !important;
-  box-sizing: border-box !important;
-  outline: none !important;
-  min-width: 0 !important;
-}
-
-.ds-controller-settings-text-val:focus {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-settings-toggle-btn {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  height: 24px !important;
-  padding: 0 12px !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  background: var(--ds-color-card, #12151c) !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.04em !important;
-  cursor: pointer !important;
-  user-select: none !important;
-  box-sizing: border-box !important;
-  transition: all var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-settings-toggle-btn.is-active {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-on-accent, #0a0c10) !important;
-}
-
-.ds-controller-settings-dropdown-control {
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.ds-controller-settings-dropdown-control .ds-ui-dropdown-trigger {
-  height: 24px !important;
-  background: var(--ds-color-card, #12151c) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  padding: 0 8px !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-}
-
-.ds-controller-settings-dropdown-control .ds-ui-dropdown-trigger:hover,
-.ds-controller-settings-dropdown-control .ds-ui-dropdown-trigger.is-open {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-controller-settings-del-btn {
-  background: transparent !important;
-  border: none !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  cursor: pointer !important;
-  font-size: 13px !important;
-  width: 22px !important;
-  height: 22px !important;
-  padding: 0 !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  line-height: 1 !important;
-  flex: 0 0 22px !important;
-  transition: color var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-settings-del-btn:hover:not(:disabled) {
-  color: var(--ds-color-danger, #f87171) !important;
-  background: rgba(248, 113, 113, 0.15) !important;
-}
-
-.ds-controller-settings-del-btn:disabled {
-  opacity: 0.3 !important;
-  cursor: not-allowed !important;
-}
-
-.ds-controller-settings-footer {
-  padding: 8px 10px !important;
-  border-top: 1px solid var(--ds-color-border, #242a36) !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  box-sizing: border-box !important;
-  flex-shrink: 0 !important;
-}
-
-.ds-controller-settings-add-btn {
-  box-sizing: border-box !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  height: 26px !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  background: var(--ds-color-card, #12151c) !important;
-  border: 1px dashed var(--ds-color-border, #242a36) !important;
-  cursor: pointer !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  transition: border-color var(--ds-transition, 120ms ease), color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-controller-settings-add-btn:hover {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-accent, #67e8f9) !important;
-}
-`;
 
 function injectCSS() {
   if (typeof document === "undefined") return;
@@ -873,13 +21,39 @@ function injectCSS() {
     link.href = "/extensions/DeathshotArsenal/Controller/ds_controller.css";
     document.head.appendChild(link);
   }
-  let style = document.getElementById(CSS_ID);
-  if (!style) {
-    style = document.createElement("style");
-    style.id = CSS_ID;
-    document.head.appendChild(style);
-  }
-  style.textContent = CSS_CONTENT;
+}
+
+function randomSeed() {
+  return String(Math.floor(Math.random() * 1125899906842624));
+}
+
+// Randomize + fixed/random mode buttons for a seed row.
+function seedActions(row, onSeed, onMode) {
+  const dice = Button({
+    icon: "dice",
+    compact: true,
+    tooltip: "Randomize Seed",
+    onClick: (e) => {
+      e.stopPropagation();
+      onSeed(randomSeed());
+    },
+  });
+  const mode = Button({
+    label: row.seedMode === "random" ? "R" : "F",
+    compact: true,
+    active: row.seedMode === "random",
+    tooltip: row.seedMode === "random" ? "Randomize Each Gen" : "Fixed Seed",
+    onClick: (e) => {
+      e.stopPropagation();
+      row.seedMode = row.seedMode === "random" ? "fixed" : "random";
+      mode.setLabel(row.seedMode === "random" ? "R" : "F");
+      mode.setActive(row.seedMode === "random");
+      mode.root.title = row.seedMode === "random" ? "Randomize Each Gen" : "Fixed Seed";
+      onMode();
+    },
+  });
+  mode.root.classList.add("ds-ui-btn-icon-only");
+  return [dice, mode];
 }
 
 function normalizeRowType(type) {
@@ -1125,49 +299,6 @@ function detectInputType(targetNode, targetSlotIndex) {
     targetWidget,
   };
 }
-
-function makeDiceIcon() {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "13");
-  svg.setAttribute("height", "13");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
-  svg.innerHTML = '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="16" cy="8" r="1.5" fill="currentColor"/><circle cx="8" cy="16" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>';
-  return svg;
-}
-
-function makeExpandIcon() {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "12");
-  svg.setAttribute("height", "12");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2.2");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
-  svg.innerHTML = '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>';
-  return svg;
-}
-
-function makeCollapseIcon() {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "12");
-  svg.setAttribute("height", "12");
-  svg.setAttribute("fill", "none");
-  svg.setAttribute("stroke", "currentColor");
-  svg.setAttribute("stroke-width", "2.2");
-  svg.setAttribute("stroke-linecap", "round");
-  svg.setAttribute("stroke-linejoin", "round");
-  svg.innerHTML = '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/>';
-  return svg;
-}
-
 
 function installPromptHook() {
   if (app._dsControllerGraphToPromptHook) return;
@@ -1674,27 +805,14 @@ app.registerExtension({
             this._rowElements[idx] = slider.root;
             card.appendChild(slider.root);
           } else if (normType === "toggle" || normType === "boolean") {
-            const toggleRow = document.createElement("div");
-            toggleRow.className = "ds-controller-toggle-row";
-
-            const lbl = document.createElement("span");
-            lbl.className = "ds-controller-row-label";
-            lbl.textContent = row.label;
-
             const tgl = Toggle({
+              label: row.label,
               checked: Boolean(row.value),
-              value: Boolean(row.value),
+              className: "ds-ui-input-row",
               onChange: (val) => syncTarget(val),
             });
-
-            toggleRow.append(lbl, tgl.root);
-            toggleRow.addEventListener("click", (e) => {
-              if (e.target !== tgl.root && !tgl.root.contains(e.target)) {
-                tgl.toggle();
-              }
-            });
-            this._rowElements[idx] = toggleRow;
-            card.appendChild(toggleRow);
+            this._rowElements[idx] = tgl.root;
+            card.appendChild(tgl.root);
           } else if (normType === "list" || normType === "combo") {
             let opts = Array.isArray(row.options) && row.options.length > 0 ? row.options : [];
             if (opts.length <= 1) {
@@ -1742,83 +860,40 @@ app.registerExtension({
             this._rowElements[idx] = dd.root;
             card.appendChild(dd.root);
           } else if (normType === "seed") {
-            const seedRow = document.createElement("div");
-            seedRow.className = "ds-controller-seed-row";
-
-            const lbl = document.createElement("span");
-            lbl.className = "ds-controller-row-label";
-            lbl.textContent = row.label;
-
-            const seedInp = document.createElement("input");
-            seedInp.type = "text";
-            seedInp.className = "ds-controller-seed-input";
-            seedInp.value = String(row.value ?? "0");
-            seedInp.addEventListener("change", (e) => syncTarget(e.target.value));
-
-            const actions = document.createElement("div");
-            actions.className = "ds-controller-seed-actions";
-
-            const diceBtn = document.createElement("button");
-            diceBtn.type = "button";
-            diceBtn.className = "ds-controller-action-btn";
-            diceBtn.title = "Randomize Seed";
-            diceBtn.appendChild(makeDiceIcon());
-            diceBtn.addEventListener("click", (e) => {
-              e.stopPropagation();
-              const randVal = String(Math.floor(Math.random() * 1125899906842624));
-              seedInp.value = randVal;
-              syncTarget(randVal);
+            const seedRow = InputRow({
+              label: row.label,
+              value: row.value ?? "0",
+              mono: true,
+              onChange: (val) => syncTarget(val),
+              actions: seedActions(
+                row,
+                (val) => { seedRow.setValue(val); syncTarget(val); },
+                () => { syncControllerData(); this.setDirtyCanvas?.(true, true); },
+              ),
             });
-
-            const modeBtn = document.createElement("button");
-            modeBtn.type = "button";
-            modeBtn.className = "ds-controller-action-btn" + (row.seedMode === "random" ? " is-active" : "");
-            modeBtn.title = row.seedMode === "random" ? "Randomize Each Gen" : "Fixed Seed";
-            modeBtn.textContent = row.seedMode === "random" ? "R" : "F";
-            modeBtn.addEventListener("click", (e) => {
-              e.stopPropagation();
-              row.seedMode = row.seedMode === "random" ? "fixed" : "random";
-              modeBtn.textContent = row.seedMode === "random" ? "R" : "F";
-              modeBtn.title = row.seedMode === "random" ? "Randomize Each Gen" : "Fixed Seed";
-              modeBtn.className = "ds-controller-action-btn" + (row.seedMode === "random" ? " is-active" : "");
-              syncControllerData();
-              this.setDirtyCanvas?.(true, true);
-            });
-
-            actions.append(diceBtn, modeBtn);
-            seedRow.append(lbl, seedInp, actions);
-            this._rowElements[idx] = seedRow;
-            card.appendChild(seedRow);
+            this._rowElements[idx] = seedRow.root;
+            card.appendChild(seedRow.root);
           } else if (normType === "text" || normType === "string") {
-            const textRow = document.createElement("div");
-            textRow.className = "ds-controller-text-row" + (row.expanded ? " is-expanded" : "");
-
+            let textRow;
             if (!row.expanded) {
-              textRow.style.height = "var(--ds-control-h, 28px)";
-
-              const lbl = document.createElement("span");
-              lbl.className = "ds-controller-row-label";
-              lbl.textContent = row.label;
-
-              const textInp = document.createElement("input");
-              textInp.type = "text";
-              textInp.className = "ds-controller-text-input";
-              textInp.value = String(row.value ?? "");
-              textInp.addEventListener("input", (e) => syncTarget(e.target.value));
-
-              const expBtn = document.createElement("button");
-              expBtn.type = "button";
-              expBtn.className = "ds-controller-action-btn";
-              expBtn.title = "Expand Text Area";
-              expBtn.appendChild(makeExpandIcon());
-              expBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                row.expanded = true;
-                renderRows();
-              });
-
-              textRow.append(lbl, textInp, expBtn);
+              textRow = InputRow({
+                label: row.label,
+                value: row.value ?? "",
+                onInput: (val) => syncTarget(val),
+                actions: [Button({
+                  icon: "maximize-2",
+                  compact: true,
+                  tooltip: "Expand Text Area",
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    row.expanded = true;
+                    renderRows();
+                  },
+                })],
+              }).root;
             } else {
+              textRow = document.createElement("div");
+              textRow.className = "ds-controller-text-row is-expanded";
               textRow.style.height = `${row.customHeight || 84}px`;
 
               const head = document.createElement("div");
@@ -1828,18 +903,18 @@ app.registerExtension({
               lbl.className = "ds-controller-row-label";
               lbl.textContent = row.label;
 
-              const colBtn = document.createElement("button");
-              colBtn.type = "button";
-              colBtn.className = "ds-controller-action-btn";
-              colBtn.title = "Collapse";
-              colBtn.appendChild(makeCollapseIcon());
-              colBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                row.expanded = false;
-                renderRows();
+              const colBtn = Button({
+                icon: "minimize-2",
+                compact: true,
+                tooltip: "Collapse",
+                onClick: (e) => {
+                  e.stopPropagation();
+                  row.expanded = false;
+                  renderRows();
+                },
               });
 
-              head.append(lbl, colBtn);
+              head.append(lbl, colBtn.root);
 
               const ta = document.createElement("textarea");
               ta.className = "ds-controller-textarea";
@@ -1865,15 +940,13 @@ app.registerExtension({
           }
         });
 
-        const addBtn = document.createElement("button");
-        addBtn.type = "button";
-        addBtn.className = "ds-controller-add-btn";
-        addBtn.textContent = "+ Add Control";
-        addBtn.addEventListener("click", () => {
-          this.addControlRow();
+        const addBtn = Button({
+          icon: "plus",
+          label: "Add Control",
+          className: "ds-controller-add-btn",
+          onClick: () => this.addControlRow(),
         });
-
-        card.appendChild(addBtn);
+        card.appendChild(addBtn.root);
 
         // Refit whenever a row's real size changes (theme CSS loading late, text area resize, ...).
         this._layoutObserver?.disconnect();
@@ -2242,13 +1315,8 @@ app.registerExtension({
 
         titleGroup.append(title, countBadge);
 
-        const closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.className = "ds-controller-settings-close";
-        closeBtn.textContent = "✕";
-        closeBtn.addEventListener("click", () => popup.hide());
-
-        header.append(titleGroup, closeBtn);
+        const closeBtn = Button({ icon: "x", compact: true, tooltip: "Close", onClick: () => popup.hide() });
+        header.append(titleGroup, closeBtn.root);
 
         const listContainer = document.createElement("div");
         listContainer.className = "ds-controller-settings-list";
@@ -2256,14 +1324,13 @@ app.registerExtension({
         const footer = document.createElement("div");
         footer.className = "ds-controller-settings-footer";
 
-        const addBtn = document.createElement("button");
-        addBtn.type = "button";
-        addBtn.className = "ds-controller-settings-add-btn";
-        addBtn.textContent = "+ Add Control";
-        addBtn.addEventListener("click", () => {
-          this.addControlRow();
+        const addBtn = Button({
+          icon: "plus",
+          label: "Add Control",
+          className: "ds-controller-add-btn",
+          onClick: () => this.addControlRow(),
         });
-        footer.appendChild(addBtn);
+        footer.appendChild(addBtn.root);
 
         let draggedIndex = null;
 
@@ -2296,15 +1363,15 @@ app.registerExtension({
               }
             });
 
-            const nameInp = document.createElement("input");
-            nameInp.type = "text";
-            nameInp.className = "ds-controller-settings-name";
-            nameInp.value = row.label || "";
-            nameInp.placeholder = "Control name";
-            nameInp.addEventListener("input", (e) => {
-              row.label = e.target.value;
-              syncControllerData();
-              renderRows();
+            const nameInp = Input({
+              value: row.label || "",
+              placeholder: "Control name",
+              className: "ds-controller-settings-name",
+              onInput: (val) => {
+                row.label = val;
+                syncControllerData();
+                renderRows();
+              },
             });
 
             const normType = normalizeRowType(row.detectedType);
@@ -2348,41 +1415,20 @@ app.registerExtension({
             };
 
             const makeField = (label, val, onCommit, isInt = false) => {
-              const param = document.createElement("div");
-              param.className = "ds-controller-settings-param";
-              param.title = `${label} Value (Editable input)`;
-
-              const lbl = document.createElement("span");
-              lbl.textContent = label;
-
-              const inp = document.createElement("input");
-              inp.type = "text";
-              inp.className = "ds-controller-settings-num";
-              inp.value = String(val ?? (isInt ? 0 : 0.0));
-
-              const apply = () => {
-                let raw = inp.value.trim();
-                let num = Number(raw);
-                if (isNaN(num)) num = isInt ? 0 : 0.0;
-                if (isInt) num = Math.round(num);
-                inp.value = String(num);
-                const committed = onCommit(num);
-                if (committed !== undefined) {
-                  inp.value = String(committed);
-                }
-              };
-
-              inp.addEventListener("keydown", (e) => {
-                if (e.key === "Enter") {
-                  inp.blur();
-                }
+              const field = InputRow({
+                label,
+                value: val ?? 0,
+                mono: true,
+                className: "ds-controller-settings-param",
+                onChange: (raw) => {
+                  let num = Number(String(raw).trim());
+                  if (isNaN(num)) num = 0;
+                  if (isInt) num = Math.round(num);
+                  const committed = onCommit(num);
+                  field.setValue(committed !== undefined ? committed : num);
+                },
               });
-
-              inp.addEventListener("change", apply);
-              inp.addEventListener("blur", apply);
-
-              param.append(lbl, inp);
-              return param;
+              return field.root;
             };
 
             if (normType === "int") {
@@ -2408,20 +1454,13 @@ app.registerExtension({
               }, false);
               paramGroup.append(minP, maxP, defP, stepP);
             } else if (normType === "toggle") {
-              const toggleBtn = document.createElement("button");
-              toggleBtn.type = "button";
-              const isTrue = Boolean(row.value);
-              toggleBtn.className = "ds-controller-settings-toggle-btn" + (isTrue ? " is-active" : "");
-              toggleBtn.textContent = isTrue ? "STATE: ON" : "STATE: OFF";
-              toggleBtn.title = "Click to toggle State";
-              toggleBtn.addEventListener("click", () => {
-                const nextVal = !Boolean(row.value);
-                row.value = nextVal;
-                toggleBtn.className = "ds-controller-settings-toggle-btn" + (nextVal ? " is-active" : "");
-                toggleBtn.textContent = nextVal ? "STATE: ON" : "STATE: OFF";
-                syncVal(nextVal);
+              const state = Toggle({
+                label: "State",
+                checked: Boolean(row.value),
+                className: "ds-ui-input-row ds-controller-settings-param",
+                onChange: (val) => syncVal(val),
               });
-              paramGroup.appendChild(toggleBtn);
+              paramGroup.appendChild(state.root);
             } else if (normType === "list") {
               let opts = Array.isArray(row.options) && row.options.length > 0 ? row.options : [];
               if (opts.length <= 1) {
@@ -2467,73 +1506,37 @@ app.registerExtension({
 
               paramGroup.appendChild(dd.root);
             } else if (normType === "text") {
-              const textInp = document.createElement("input");
-              textInp.type = "text";
-              textInp.className = "ds-controller-settings-text-val";
-              textInp.value = String(row.value ?? "");
-              textInp.placeholder = "Text value...";
-              textInp.addEventListener("input", (e) => {
-                syncVal(e.target.value);
+              const textInp = Input({
+                value: row.value ?? "",
+                placeholder: "Text value...",
+                onInput: (val) => syncVal(val),
               });
-              paramGroup.appendChild(textInp);
+              paramGroup.appendChild(textInp.root);
             } else if (normType === "seed") {
-              const seedParam = document.createElement("div");
-              seedParam.className = "ds-controller-settings-param ds-controller-settings-seed-param";
-              seedParam.style.cursor = "default";
-              seedParam.title = "Seed Value";
-              const seedLbl = document.createElement("span");
-              seedLbl.textContent = "Seed";
-              const seedInp = document.createElement("input");
-              seedInp.type = "text";
-              seedInp.className = "ds-controller-settings-num ds-controller-settings-seed-num";
-              seedInp.style.cursor = "text";
-              seedInp.value = String(row.value ?? "0");
-              seedInp.addEventListener("change", (e) => syncVal(e.target.value));
-              seedParam.append(seedLbl, seedInp);
-
-              const diceBtn = document.createElement("button");
-              diceBtn.type = "button";
-              diceBtn.className = "ds-controller-action-btn";
-              diceBtn.title = "Randomize Seed";
-              diceBtn.appendChild(makeDiceIcon());
-              diceBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                const randVal = String(Math.floor(Math.random() * 1125899906842624));
-                seedInp.value = randVal;
-                syncVal(randVal);
+              const seedParam = InputRow({
+                label: "Seed",
+                value: row.value ?? "0",
+                mono: true,
+                className: "ds-controller-settings-param",
+                onChange: (val) => syncVal(val),
+                actions: seedActions(
+                  row,
+                  (val) => { seedParam.setValue(val); syncVal(val); },
+                  () => { syncControllerData(); renderRows(); },
+                ),
               });
-
-              const modeBtn = document.createElement("button");
-              modeBtn.type = "button";
-              modeBtn.className = "ds-controller-action-btn" + (row.seedMode === "random" ? " is-active" : "");
-              modeBtn.title = row.seedMode === "random" ? "Randomize Each Gen" : "Fixed Seed";
-              modeBtn.textContent = row.seedMode === "random" ? "R" : "F";
-              modeBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                row.seedMode = row.seedMode === "random" ? "fixed" : "random";
-                modeBtn.textContent = row.seedMode === "random" ? "R" : "F";
-                modeBtn.className = "ds-controller-action-btn" + (row.seedMode === "random" ? " is-active" : "");
-                syncControllerData();
-                renderRows();
-              });
-
-              paramGroup.append(seedParam, diceBtn, modeBtn);
+              paramGroup.appendChild(seedParam.root);
             }
 
-            const delBtn = document.createElement("button");
-            delBtn.type = "button";
-            delBtn.className = "ds-controller-settings-del-btn";
-            delBtn.title = this.rows.length <= 1 ? "At least one control required" : "Remove Control";
-            delBtn.textContent = "✕";
-            if (this.rows.length <= 1) {
-              delBtn.disabled = true;
-            }
-            delBtn.addEventListener("click", () => {
-              if (this.rows.length <= 1) return;
-              this.removeRow(i);
+            const delBtn = Button({
+              icon: "trash-2",
+              compact: true,
+              tooltip: this.rows.length <= 1 ? "At least one control required" : "Remove Control",
+              disabled: this.rows.length <= 1,
+              onClick: () => this.removeRow(i),
             });
 
-            item.append(handle, nameInp, typeBadge, paramGroup, delBtn);
+            item.append(handle, nameInp.root, typeBadge, paramGroup, delBtn.root);
             listContainer.appendChild(item);
           });
         };
