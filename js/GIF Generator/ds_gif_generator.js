@@ -98,20 +98,16 @@ function injectNodeStyles() {
   flex-shrink: 0;
 }
 .dsui-card .ds-ui-card-body > .dsgif-settings.dsui-grow {
-  flex: 0 1 auto;
-  max-height: 420px;
-  overflow-y: auto;
-}
-.dsui-card .ds-ui-card-body > .dsgif-settings.is-collapsed {
-  display: none !important;
+  flex: 0 0 auto;
+  overflow: hidden;
 }
 .dsgif-field-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: var(--ds-gap-sm, 6px);
   width: 100%;
 }
 .dsgif-field-row > * {
-  flex: 1 1 0;
   min-width: 0;
 }
 .dsgif-fps-row {
@@ -399,8 +395,7 @@ function buildGifGenerator(node, card) {
 
   function setMenuOpen(open) {
     isMenuOpen = Boolean(open);
-    settingsPanel.root.classList.toggle("is-collapsed", !isMenuOpen);
-    settingsPanel.setVisible(isMenuOpen);
+    settingsItem?.show(isMenuOpen);
     menuToggle.setActive(isMenuOpen);
     menuToggle.setIcon(isMenuOpen ? "chevron-up" : "chevron-down");
     card.commit(() => {
@@ -1325,8 +1320,18 @@ function buildGifGenerator(node, card) {
   resetBtn.root.style.fontWeight = "600";
   settingsPanel.append(resetBtn);
 
-  // Append settings panel directly below menu toggle
-  card.grow(settingsPanel.root, { minHeight: 80 });
+  // Settings take their full content height (the node grows to fit); the preview below takes any extra space.
+  const settingsItem = card.grow(settingsPanel.root, { minHeight: 80 });
+  new ResizeObserver(() => {
+    if (!isMenuOpen) return;
+    settingsPanel.root.style.minHeight = "0px";
+    const natural = settingsPanel.root.scrollHeight;
+    settingsPanel.root.style.minHeight = `${natural}px`;
+    if (natural !== settingsItem.minHeight) {
+      settingsItem.minHeight = natural;
+      card.relayout();
+    }
+  }).observe(settingsPanel.root);
 
   // Initial display setup for settings panel
   setMenuOpen(isMenuOpen);
