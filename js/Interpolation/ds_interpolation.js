@@ -834,7 +834,7 @@ app.registerExtension({
         if (n?.type === TYPE && String(n.id) === String(d.node)) {
           if (d.max > 0) {
             const pct = (d.value / d.max) * 100;
-            n._controller?.statusBar?.setProgress(pct, `Interpolating (${Math.round(pct)}%)...`);
+            n._controller?.statusBar?.setProgress(pct, `Interpolating ${d.value}/${d.max}`);
           }
         }
       }

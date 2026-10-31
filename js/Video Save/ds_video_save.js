@@ -1294,7 +1294,7 @@ app.registerExtension({
         if (n?.type === TYPE && String(n.id) === String(d.node)) {
           if (d.max > 0) {
             const pct = (d.value / d.max) * 100;
-            n._statusBar?.setProgress(pct, `Encoding (${Math.round(pct)}%)...`);
+            n._statusBar?.setProgress(pct, `Encoding frame ${d.value}/${d.max}`);
           }
         }
       }

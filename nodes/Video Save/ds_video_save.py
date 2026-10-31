@@ -19,6 +19,7 @@ import numpy as np
 import torch
 from PIL import Image, ImageOps, PngImagePlugin
 
+import comfy.utils
 import folder_paths
 import server
 import threading
@@ -814,6 +815,7 @@ class DS_VideoSave:
                 stderr_th = threading.Thread(target=_drain_png_stderr, daemon=True)
                 stderr_th.start()
 
+                pbar = comfy.utils.ProgressBar(num_frames)
                 for idx in range(num_frames):
                     arr_16 = (Images[idx].detach().cpu().clamp(0.0, 1.0).numpy() * 65535.0).astype(np.uint16)
                     output_paths.append(os.path.join(target_dir, f"{prefix}_{batch_counter:05d}_{idx:05d}.png"))
@@ -821,6 +823,7 @@ class DS_VideoSave:
                         proc.stdin.write(arr_16.tobytes())
                     except (BrokenPipeError, OSError):
                         break
+                    pbar.update(1)
 
                 try:
                     proc.stdin.flush()
@@ -836,6 +839,7 @@ class DS_VideoSave:
                     err_msg = b"".join(stderr_chunks).decode("utf-8", errors="replace")
                     raise RuntimeError(f"FFmpeg 16-bit PNG sequence failed: {err_msg}")
             else:
+                pbar = comfy.utils.ProgressBar(num_frames)
                 for idx in range(num_frames):
                     frame_name = f"{prefix}_{batch_counter:05d}_{idx:05d}.png"
                     frame_path = os.path.join(target_dir, frame_name)
@@ -854,6 +858,7 @@ class DS_VideoSave:
 
                     pil_img.save(frame_path, "PNG", pnginfo=pnginfo, compress_level=4)
                     output_paths.append(frame_path)
+                    pbar.update(1)
 
             return output_paths, None, False
 
@@ -1082,6 +1087,7 @@ class DS_VideoSave:
             stderr_thread.start()
 
             broken_pipe = False
+            pbar = comfy.utils.ProgressBar(num_frames)
             for i in range(num_frames):
                 # Clamp and convert single frame directly to uint8
                 frame_arr = (Images[i].detach().cpu().clamp(0.0, 1.0).numpy() * 255.0).astype(np.uint8)
@@ -1090,6 +1096,7 @@ class DS_VideoSave:
                 except (BrokenPipeError, OSError):
                     broken_pipe = True
                     break
+                pbar.update(1)
 
             try:
                 proc.stdin.flush()
