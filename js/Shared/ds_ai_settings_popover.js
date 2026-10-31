@@ -1,6 +1,6 @@
 /**
  * Deathshot Arsenal — Centralized AI Settings Popover
- * Full 2-Tab Popover: [ 🧠 Built In | ⚙ Settings ]
+ * Tabs: [ LM Studio (opt-in) | Built In | Settings (supplied by the node) ]
  * Strictly adheres to DeathshotArsenal UIElements (Toggle, Spinbox, Dropdown, Button)
  * and DS CSS design tokens.
  */
@@ -8,37 +8,15 @@
 import {
   Button,
   Dropdown,
+  Input,
+  InputRow,
   Spinbox,
-  Toggle,
-  DSIcon,
   DSIconMarkup,
-  attachTextHistory,
 } from "../UIElements/index.js";
 
 let _activeAIPopover = null;
 let _cachedHW = null;
 let _popoverRO = null;
-
-const DEFAULT_SYSTEM_PROMPT = `You are an elite prompt refinement and variation engine for advanced image/video generation models.
-Your task is to rewrite a given prompt by randomizing ONLY the specifically requested semantic categories, while preserving all other elements of the prompt intact.
-
-CRITICAL RULES:
-0. ABSOLUTE MANDATORY DIRECTIVE — NO THINKING / NO CHAIN-OF-THOUGHT:
-   - Thinking mode is STRICTLY DISABLED for all models.
-   - DO NOT output "Thinking Process:", do NOT output <think> tags, and do NOT output analysis, planning, breakdowns, or internal reasoning steps.
-   - Output ONLY the final edited prompt text directly. The very first character of your response MUST be the first character of the prompt.
-1. SEMANTIC PHRASE RECOGNITION:
-   - Understand complete descriptive phrases as single attributes. For example, if "hair" or "hair_color" is selected, the phrase "long wavy natural red hair" must be recognized in its entirety and replaced with a cohesive new hair description (e.g., "short messy lavender-tinted curls", "sleek raven-black straight bob", "waist-length braided neon turquoise hair").
-2. TARGETED RANDOMIZATION ONLY:
-   - Only modify, replace, or enhance parts of the prompt that directly belong to the SELECTED TARGET CATEGORIES.
-   - Do NOT alter unselected elements (e.g., if "clothing" is NOT selected, keep "blue summer dress" exactly as-is; if "camera" is NOT selected, keep "cinematic 35mm photograph" exactly as-is).
-3. CONTEXTUAL WEAVING OF MISSING ATTRIBUTES:
-   - If a selected category is NOT present in the source prompt, naturally and seamlessly weave a vivid, fitting detail for that category into the prompt without disrupting the grammar or flow.
-4. MAXIMUM CREATIVE DIVERSITY:
-   - Use your extensive knowledge to introduce diverse, vivid, high-fidelity styles, materials, palettes, lighting scenarios, and environments beyond standard basic dictionaries.
-5. CLEAN, RAW OUTPUT:
-   - Return ONLY the final modified prompt text.
-   - Absolutely NO conversational filler, NO intros ("Here is your prompt:"), NO explanations, NO quotes, and NO markdown code fences.`;
 
 function ensureStyles() {
   if (document.getElementById("ds-ai-settings-popover-styles")) return;
@@ -51,15 +29,15 @@ function ensureStyles() {
       max-width: calc(100vw - 30px);
       max-height: calc(100vh - 30px);
       box-sizing: border-box;
-      background: var(--ds-bg-surface-elevated, var(--ds-panel-2, #181c24));
-      border: 1px solid var(--ds-border-color, var(--ds-border, rgba(255, 255, 255, 0.14)));
+      background: var(--ds-color-panel-2, var(--ds-panel-2, #181c24));
+      border: 1px solid var(--ds-color-border, var(--ds-border, color-mix(in srgb, var(--ds-color-text) 14%, transparent)));
       border-radius: var(--ds-radius-card, 8px);
-      box-shadow: var(--ds-shadow-modal, 0 16px 40px rgba(0, 0, 0, 0.65));
+      box-shadow: var(--ds-shadow, 0 16px 40px rgba(0, 0, 0, 0.65));
       z-index: 100020;
       display: flex;
       flex-direction: column;
       font-family: var(--ds-font-family, Inter, "Segoe UI", system-ui, -apple-system, sans-serif);
-      color: var(--ds-text-primary, #e2e8f0);
+      color: var(--ds-color-text, #e2e8f0);
       overflow: hidden;
       animation: ds-ai-pop-in 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -72,8 +50,8 @@ function ensureStyles() {
       align-items: center;
       justify-content: space-between;
       padding: 10px 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid color-mix(in srgb, var(--ds-color-text) 8%, transparent);
+      background: color-mix(in srgb, var(--ds-color-text) 2%, transparent);
       flex-shrink: 0;
     }
     .ds-ai-gear-popover .ds-sensei-gear-title-wrap {
@@ -93,13 +71,13 @@ function ensureStyles() {
     .ds-ai-gear-popover .ds-sensei-gear-title {
       font-size: 12.5px;
       font-weight: 700;
-      color: #fff;
+      color: var(--ds-color-text);
       display: block;
       line-height: 1.2;
     }
     .ds-ai-gear-popover .ds-sensei-gear-sub {
       font-size: 10px;
-      color: rgba(255, 255, 255, 0.5);
+      color: color-mix(in srgb, var(--ds-color-text) 50%, transparent);
       display: block;
       line-height: 1.2;
       margin-top: 1px;
@@ -107,10 +85,10 @@ function ensureStyles() {
     .ds-ai-gear-popover .ds-sensei-gear-tabs {
       display: flex;
       gap: 4px;
-      background: var(--ds-color-panel-2, rgba(0, 0, 0, 0.35));
+      background: var(--ds-color-panel-2, color-mix(in srgb, var(--ds-color-base) 35%, transparent));
       padding: 3px;
       border-radius: var(--ds-radius-control, 6px);
-      border: 1px solid var(--ds-color-border, rgba(255, 255, 255, 0.08));
+      border: 1px solid var(--ds-color-border, color-mix(in srgb, var(--ds-color-text) 8%, transparent));
       margin: 0 14px 10px 14px;
       flex-shrink: 0;
     }
@@ -126,17 +104,17 @@ function ensureStyles() {
       color: var(--ds-color-muted-text, rgba(248, 250, 252, 0.65));
       background: transparent;
       border: 1px solid transparent;
-      border-radius: var(--ds-radius-tab, 4px);
+      border-radius: var(--ds-radius-control, 4px);
       cursor: pointer;
       transition: all var(--ds-transition, 120ms ease);
     }
     .ds-ai-gear-popover .ds-sensei-gear-tab-btn:hover {
       color: var(--ds-color-text, #f8fafc);
-      background: var(--ds-color-surface-hover, rgba(255, 255, 255, 0.06));
+      background: var(--ds-btn-hover, color-mix(in srgb, var(--ds-color-text) 6%, transparent));
     }
     .ds-ai-gear-popover .ds-sensei-gear-tab-btn.is-active {
       color: var(--ds-color-accent, #67e8f9);
-      background: var(--ds-color-surface, rgba(255, 255, 255, 0.1));
+      background: var(--ds-color-panel-2, color-mix(in srgb, var(--ds-color-text) 10%, transparent));
       border-color: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 40%, transparent);
     }
     .ds-ai-gear-popover .ds-sensei-gear-scroll-body {
@@ -159,11 +137,11 @@ function ensureStyles() {
       background: transparent;
     }
     .ds-ai-gear-popover .ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
+      background: color-mix(in srgb, var(--ds-color-text) 20%, transparent);
       border-radius: 4px;
     }
     .ds-ai-gear-popover .ds-sensei-gear-scroll-body::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.35);
+      background: color-mix(in srgb, var(--ds-color-text) 35%, transparent);
     }
     .ds-ai-gear-popover .ds-sensei-gear-scroll-body > * {
       flex-shrink: 0;
@@ -173,8 +151,8 @@ function ensureStyles() {
       align-items: center;
       gap: 8px;
       padding: 8px 10px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: color-mix(in srgb, var(--ds-color-text) 3%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ds-color-text) 8%, transparent);
       border-radius: 6px;
       font-size: 11px;
     }
@@ -182,15 +160,15 @@ function ensureStyles() {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #64748b;
+      background: var(--ds-color-muted-text);
       flex-shrink: 0;
     }
     .ds-ai-gear-popover .ds-sensei-gear-status-dot.is-loaded {
-      background: #10b981;
-      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+      background: var(--ds-color-success);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--ds-color-success) 60%, transparent);
     }
     .ds-ai-gear-popover .ds-sensei-gear-status-dot.is-idle {
-      background: #64748b;
+      background: var(--ds-color-muted-text);
     }
     .ds-ai-gear-popover .ds-sensei-gear-status-text {
       white-space: nowrap;
@@ -207,7 +185,7 @@ function ensureStyles() {
     .ds-ai-gear-popover .ds-sensei-gear-label {
       font-size: 10.5px;
       font-weight: 700;
-      color: rgba(255, 255, 255, 0.65);
+      color: color-mix(in srgb, var(--ds-color-text) 65%, transparent);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -218,7 +196,7 @@ function ensureStyles() {
       text-transform: uppercase;
       letter-spacing: 0.6px;
       margin-top: 4px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid color-mix(in srgb, var(--ds-color-text) 8%, transparent);
       padding-bottom: 3px;
     }
     .ds-ai-gear-popover .ds-sensei-gear-row-2col {
@@ -231,8 +209,8 @@ function ensureStyles() {
       justify-content: space-between;
       align-items: center;
       padding: 8px 10px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: color-mix(in srgb, var(--ds-color-text) 3%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ds-color-text) 7%, transparent);
       border-radius: 6px;
       font-size: 11px;
     }
@@ -246,7 +224,7 @@ function ensureStyles() {
       display: flex;
       align-items: center;
       gap: 6px;
-      color: #cbd5e1;
+      color: var(--ds-color-muted-text);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -256,12 +234,12 @@ function ensureStyles() {
       align-items: flex-start;
       gap: 6px;
       padding: 8px 10px;
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid rgba(245, 158, 11, 0.3);
+      background: color-mix(in srgb, var(--ds-color-warning, #facc15) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ds-color-warning, #facc15) 30%, transparent);
       border-radius: 6px;
       font-size: 10.5px;
       line-height: 1.35;
-      color: #fbbf24;
+      color: var(--ds-color-warning, #facc15);
     }
     .ds-ai-gear-popover .ds-sensei-gear-hw-warn.is-visible {
       display: flex;
@@ -272,8 +250,8 @@ function ensureStyles() {
       font-size: 10px;
       font-weight: 700;
       color: var(--ds-accent, #67e8f9);
-      background: rgba(103, 232, 249, 0.12);
-      border: 1px solid rgba(103, 232, 249, 0.25);
+      background: color-mix(in srgb, var(--ds-color-accent) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ds-color-accent) 25%, transparent);
       border-radius: 4px;
       cursor: pointer;
       flex-shrink: 0;
@@ -282,15 +260,15 @@ function ensureStyles() {
       gap: 4px;
     }
     .ds-ai-gear-popover .ds-sensei-autotune-btn:hover {
-      background: rgba(103, 232, 249, 0.24);
+      background: color-mix(in srgb, var(--ds-color-accent) 24%, transparent);
     }
     .ds-ai-gear-popover .ds-sensei-gear-behavior-box {
       display: flex;
       flex-direction: column;
       gap: 8px;
       padding: 10px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: color-mix(in srgb, var(--ds-color-text) 2%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ds-color-text) 7%, transparent);
       border-radius: 6px;
     }
     .ds-ai-gear-popover .ds-sensei-gear-unload-btn {
@@ -301,10 +279,10 @@ function ensureStyles() {
       width: 100%;
       min-height: 140px;
       box-sizing: border-box;
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: color-mix(in srgb, var(--ds-color-base) 35%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ds-color-text) 12%, transparent);
       border-radius: 6px;
-      color: #e2e8f0;
+      color: var(--ds-color-text);
       font-family: inherit;
       font-size: 11px;
       line-height: 1.4;
@@ -331,9 +309,54 @@ function ensureStyles() {
       margin: 0 !important;
       display: none !important;
     }
+    .ds-ai-gear-popover .ds-ai-field-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .ds-ai-gear-popover .ds-ai-row-3col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      width: 100%;
+    }
+    .ds-ai-gear-popover .ds-ai-mode-notice {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      color: var(--ds-color-muted-text);
+      border: 1px solid var(--ds-color-border);
+      border-radius: var(--ds-radius-control, 5px);
+    }
+    .ds-ai-gear-popover .ds-ai-mode-notice svg {
+      color: var(--ds-color-accent);
+      flex-shrink: 0;
+    }
+    .ds-ai-gear-popover .ds-ai-lm-offline {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 6px;
+      padding: 6px 8px;
+      font-size: 11px;
+      line-height: 1.4;
+      border: 1px solid color-mix(in srgb, var(--ds-color-danger) 40%, transparent);
+      border-radius: var(--ds-radius-control, 5px);
+      background: color-mix(in srgb, var(--ds-color-danger) 12%, transparent);
+    }
+    .ds-ai-gear-popover .ds-ai-lm-offline-title {
+      color: var(--ds-color-danger);
+      font-weight: 700;
+    }
   `;
   document.head.appendChild(style);
 }
+
+let _onClose = null;
 
 export function closeAIPopover() {
   if (_popoverRO) {
@@ -345,786 +368,472 @@ export function closeAIPopover() {
     _activeAIPopover = null;
   }
   window._dsUpdateActiveAIPopover = null;
+  const onClose = _onClose;
+  _onClose = null;
+  onClose?.();
 }
 
-export async function openAISettingsPopover({
+export async function fetchLMStudioModels(ip = "127.0.0.1", port = 1234) {
+  try {
+    const r = await fetch(`/ds/prompt_sensei/lm_studio/models?ip=${encodeURIComponent(ip)}&port=${encodeURIComponent(port)}`);
+    if (r.ok) return await r.json();
+  } catch (e) {
+    console.error("[DS AI] Error fetching LM Studio models:", e);
+  }
+  return { ok: false, error: "LM Studio unavailable", address: `${ip}:${port}`, models: [] };
+}
+
+function field(label) {
+  const el = document.createElement("div");
+  el.className = "ds-sensei-gear-field";
+  if (label) el.innerHTML = `<label class="ds-sensei-gear-label">${label}</label>`;
+  return el;
+}
+
+function sectionLabel(text) {
+  const el = document.createElement("div");
+  el.className = "ds-sensei-gear-section-label";
+  el.textContent = text;
+  return el;
+}
+
+function spinField(label, options) {
+  const f = field(label);
+  f.appendChild(Spinbox({ width: "100%", ...options }).wrap);
+  return f;
+}
+
+function row(className, ...children) {
+  const el = document.createElement("div");
+  el.className = className;
+  el.append(...children);
+  return el;
+}
+
+// Seed input with a Roll button; returns { root, input }.
+function seedField(target, onChange) {
+  const f = field();
+  const input = InputRow({
+    value: target.seed ?? 123456,
+    mono: true,
+    className: "ds-ai-seed-row",
+    onChange: (val) => {
+      target.seed = parseInt(val) || 0;
+      onChange();
+    },
+    actions: [Button({
+      icon: "dice",
+      label: "Roll",
+      compact: true,
+      onClick: () => {
+        target.seed = Math.floor(Math.random() * 2147483647);
+        input.setValue(target.seed);
+        onChange();
+      },
+    })],
+  });
+  f.innerHTML = `<label class="ds-sensei-gear-label">Seed</label>`;
+  f.appendChild(input.root);
+  return { root: f, input };
+}
+
+// VRAM plan for llama.cpp GPU offload; the vision projector is counted only when it loads.
+function calcPlan(hw, modelMeta, ctxLen, withVision) {
+  if (!hw || !hw.has_gpu || !hw.total_vram_mb) {
+    return { recommended: 0, totalLayers: 32, fits100Percent: false, totalRequiredGB: 0, totalVramGB: 0, safeLayers: 0, hasGpu: false };
+  }
+  const totalVramGB = hw.total_vram_mb / 1024;
+  const usableVramGB = Math.max(0.5, totalVramGB - 0.6);
+  const modelSizeGB = Number(modelMeta?.size_gb) || 4.5;
+  const totalLayers = Number(modelMeta?.total_layers) || 32;
+  const mmprojGB = withVision ? (Number(modelMeta?.mmproj_size_gb) || (modelMeta?.has_vision ? 0.4 : 0)) : 0;
+  const baseVramGB = (mmprojGB > 0 ? mmprojGB + 0.15 : 0) + (ctxLen / 4096) * 0.35 + 0.25;
+  const totalRequiredGB = modelSizeGB + baseVramGB;
+  const round = (v) => Math.round(v * 10) / 10;
+
+  if (totalRequiredGB <= usableVramGB) {
+    return { recommended: -1, totalLayers, fits100Percent: true, totalRequiredGB: round(totalRequiredGB), totalVramGB: round(totalVramGB), safeLayers: totalLayers, hasGpu: true };
+  }
+  const weightPerLayerGB = Math.max(0.01, (modelSizeGB * 0.94) / totalLayers);
+  const safeLayers = Math.max(0, Math.min(totalLayers, Math.floor(Math.max(0.2, usableVramGB - baseVramGB) / weightPerLayerGB)));
+  return { recommended: safeLayers, totalLayers, fits100Percent: false, totalRequiredGB: round(totalRequiredGB), totalVramGB: round(totalVramGB), safeLayers, hasGpu: true };
+}
+
+function findModel(models, id) {
+  const cur = String(id || "").replace(/\\/g, "/").toLowerCase();
+  if (!cur) return null;
+  const base = cur.split("/").pop();
+  return models.find((m) => String(m.id).replace(/\\/g, "/").toLowerCase() === cur)
+    || models.find((m) => {
+      const mid = String(m.id).replace(/\\/g, "/").toLowerCase();
+      return mid.endsWith("/" + base) || m.name?.toLowerCase() === base.replace(/\.gguf$/i, "");
+    })
+    || null;
+}
+
+function renderBuiltInPanel(scroll, bi, { onChange, vision }) {
+  // 1. Status banner
+  const statusCard = document.createElement("div");
+  statusCard.className = "ds-sensei-gear-status-card";
+  statusCard.innerHTML = `
+    <span class="ds-sensei-gear-status-dot is-idle"></span>
+    <span class="ds-sensei-gear-status-text">○ Checking model status...</span>
+  `;
+  scroll.appendChild(statusCard);
+
+  const refreshStatus = async () => {
+    try {
+      const st = await (await fetch("/ds/ai/status")).json();
+      const dot = statusCard.querySelector(".ds-sensei-gear-status-dot");
+      const txt = statusCard.querySelector(".ds-sensei-gear-status-text");
+      if (st.loaded) {
+        dot.className = "ds-sensei-gear-status-dot is-loaded";
+        txt.innerHTML = `<strong style="color:var(--ds-color-accent)">Loaded:</strong> ${st.model_name || "Active"} · ${st.vram_free_mb || 0} MB free (${st.has_vision ? "Vision" : "Text Only"})`;
+      } else {
+        dot.className = "ds-sensei-gear-status-dot is-idle";
+        txt.textContent = "○ No model loaded in VRAM";
+      }
+    } catch (_) {}
+  };
+  refreshStatus();
+
+  // 2. Model
+  const modelField = field();
+  const modelHdr = row("ds-ai-field-head");
+  modelHdr.innerHTML = `<label class="ds-sensei-gear-label">GGUF Model</label>`;
+  const rescanBtn = Button({ icon: "refresh-cw", label: "Rescan", compact: true });
+  modelHdr.appendChild(rescanBtn.root);
+  modelField.appendChild(modelHdr);
+
+  let models = [];
+  const modelDd = Dropdown({
+    value: bi.model || "",
+    options: bi.model ? [{ id: bi.model, label: String(bi.model).split(/[/\\]/).pop().replace(/\.gguf$/i, "") }] : [],
+    placeholder: "Scanning models in ComfyUI/models/LLM & LM Studio...",
+    onChange: (val) => {
+      bi.model = val;
+      onChange();
+      updateHWWarn();
+    },
+  });
+  modelDd.root.style.width = "100%";
+  modelField.appendChild(modelDd.root);
+
+  const withVision = vision?.() ?? false;
+  const modeNotice = document.createElement("div");
+  modeNotice.className = "ds-ai-mode-notice";
+  modeNotice.innerHTML = withVision
+    ? `${DSIconMarkup("eye", { size: 11 })}<span><strong>Vision:</strong> the projector loads with the model for image input.</span>`
+    : `${DSIconMarkup("check", { size: 11 })}<span><strong>Text-only:</strong> never loads the vision projector. A model another DS node already loaded is reused without reloading.</span>`;
+  modelField.appendChild(modeNotice);
+  scroll.appendChild(modelField);
+
+  // 3. Hardware & auto-tune
+  const hwCard = document.createElement("div");
+  hwCard.className = "ds-sensei-gear-hw-card";
+  hwCard.innerHTML = `
+    <div class="ds-sensei-gear-hw-top">
+      <div class="ds-sensei-gear-hw-left">
+        ${DSIconMarkup("cpu", { size: 13 })}
+        <span class="ds-sensei-hw-name">Detecting GPU...</span>
+      </div>
+    </div>
+  `;
+  const tuneBtn = Button({ label: "Auto-Tune", compact: true, className: "ds-sensei-autotune-btn" });
+  tuneBtn.root.style.display = "none";
+  hwCard.querySelector(".ds-sensei-gear-hw-top").appendChild(tuneBtn.root);
+  scroll.appendChild(hwCard);
+
+  const hwWarn = document.createElement("div");
+  hwWarn.className = "ds-sensei-gear-hw-warn";
+  scroll.appendChild(hwWarn);
+
+  let gpuStepper = null;
+  const plan = () => calcPlan(_cachedHW, findModel(models, bi.model), bi.context_length || 4096, withVision);
+
+  const updateHWWarn = () => {
+    const p = plan();
+    tuneBtn.setLabel(`Auto-Tune (${p.recommended === -1 ? "ALL" : p.recommended})`);
+    const curLayers = bi.n_gpu_layers ?? -1;
+    if (!_cachedHW || !p.hasGpu) {
+      hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 12 })}<span>No dedicated GPU detected. Set GPU Layers to 0 (CPU Only).</span>`;
+      hwWarn.classList.toggle("is-visible", Boolean(_cachedHW) && curLayers !== 0);
+      return;
+    }
+    if (!p.fits100Percent && (curLayers === -1 || curLayers > p.safeLayers + 2)) {
+      const name = findModel(models, bi.model)?.name || "Selected model";
+      hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 12 })}<span><strong>${name}</strong> requires ~${p.totalRequiredGB}GB VRAM for 100% offload, exceeding your ${p.totalVramGB}GB VRAM. Recommended: <strong>${p.recommended} layers</strong>.</span>`;
+      hwWarn.classList.add("is-visible");
+    } else {
+      hwWarn.classList.remove("is-visible");
+    }
+  };
+
+  tuneBtn.root.addEventListener("click", () => {
+    bi.n_gpu_layers = plan().recommended;
+    gpuStepper?.setValue(bi.n_gpu_layers);
+    onChange();
+    updateHWWarn();
+  });
+
+  const loadModels = async () => {
+    try {
+      const data = await (await fetch("/ds/ai/models")).json();
+      if (data.ok && Array.isArray(data.models) && data.models.length > 0) {
+        models = data.models;
+        modelDd.setOptions(models.map((m) => ({
+          id: m.id,
+          label: `${m.root && m.root !== "ComfyUI" ? `[${m.root}] ` : ""}${m.name} (${m.size_gb} GB)${m.has_vision ? " 👁️ Vision" : ""}`,
+        })));
+        const match = findModel(models, bi.model) || models[0];
+        if (match.id !== bi.model) {
+          bi.model = match.id;
+          onChange();
+        }
+        modelDd.setValue(bi.model);
+      }
+      updateHWWarn();
+    } catch (_) {}
+  };
+
+  const loadHW = async () => {
+    try {
+      if (!_cachedHW) _cachedHW = await (await fetch("/ds/ai/hardware")).json();
+      const hw = _cachedHW;
+      hwCard.querySelector(".ds-sensei-hw-name").textContent = !hw.has_gpu || !hw.total_vram_mb
+        ? `CPU Only (${Math.round((hw.system_ram_mb || 0) / 1024)}GB RAM)`
+        : `${hw.gpu_name} (${(hw.total_vram_mb / 1024).toFixed(1)}GB VRAM)`;
+      tuneBtn.root.style.display = "";
+      updateHWWarn();
+    } catch (_) {}
+  };
+
+  rescanBtn.root.addEventListener("click", () => {
+    loadModels();
+    refreshStatus();
+  });
+  loadModels();
+  loadHW();
+
+  // 4. Sampling
+  scroll.appendChild(sectionLabel("Sampling"));
+  scroll.appendChild(row("ds-sensei-gear-row-2col",
+    spinField("Temperature", { value: bi.temperature ?? 0.8, min: 0, max: 2, step: 0.05, decimals: 2, onChange: (v) => { bi.temperature = parseFloat(v) ?? 0.8; onChange(); } }),
+    spinField("Max Tokens", { value: bi.max_tokens ?? 2048, min: 64, max: 8192, step: 128, decimals: 0, onChange: (v) => { bi.max_tokens = parseInt(v) || 2048; onChange(); } }),
+  ));
+
+  const gpuField = field("GPU Layers (-1=All)");
+  gpuStepper = Spinbox({
+    value: bi.n_gpu_layers ?? -1, min: -1, max: 128, step: 1, decimals: 0, width: "100%",
+    onChange: (v) => {
+      bi.n_gpu_layers = isNaN(parseInt(v)) ? -1 : parseInt(v);
+      onChange();
+      updateHWWarn();
+    },
+  });
+  gpuField.appendChild(gpuStepper.wrap);
+  scroll.appendChild(row("ds-sensei-gear-row-2col",
+    spinField("Context Length", { value: bi.context_length ?? 4096, min: 1024, max: 32768, step: 1024, decimals: 0, onChange: (v) => { bi.context_length = parseInt(v) || 4096; onChange(); updateHWWarn(); } }),
+    gpuField,
+  ));
+
+  // 5. Advanced sampling
+  scroll.appendChild(sectionLabel("Advanced Sampling"));
+  scroll.appendChild(row("ds-ai-row-3col",
+    spinField("Top P", { value: bi.top_p ?? 0.9, min: 0, max: 1, step: 0.05, decimals: 2, onChange: (v) => { bi.top_p = parseFloat(v) ?? 0.9; onChange(); } }),
+    spinField("Top K", { value: bi.top_k ?? 40, min: 0, max: 200, step: 5, decimals: 0, onChange: (v) => { bi.top_k = parseInt(v) ?? 40; onChange(); } }),
+    spinField("Rep. Pen.", { value: bi.repetition_penalty ?? 1.1, min: 1, max: 2, step: 0.05, decimals: 2, onChange: (v) => { bi.repetition_penalty = parseFloat(v) ?? 1.1; onChange(); } }),
+  ));
+
+  const seed = seedField(bi, onChange);
+  scroll.appendChild(seed.root);
+
+  const unloadBtn = Button({
+    icon: "trash-2",
+    label: "Unload Model Now",
+    className: "ds-sensei-gear-unload-btn",
+    onClick: async () => {
+      unloadBtn.setDisabled(true);
+      try { await fetch("/ds/ai/unload", { method: "POST" }); } catch (_) {}
+      unloadBtn.setDisabled(false);
+      refreshStatus();
+    },
+  });
+  scroll.appendChild(unloadBtn.root);
+
+  return { setSeed: (v) => seed.input.setValue(v) };
+}
+
+function renderLMStudioPanel(scroll, lm, { onChange, switchToBuiltIn }) {
+  const modelField = field("Model");
+  const modelDd = Dropdown({
+    value: lm.model || "",
+    options: lm.model ? [{ id: lm.model, label: lm.model }] : [],
+    placeholder: "Select LM Studio Model...",
+    onChange: (val) => {
+      lm.model = val;
+      onChange();
+    },
+  });
+  modelDd.root.style.width = "100%";
+  modelField.appendChild(modelDd.root);
+
+  const offline = document.createElement("div");
+  offline.className = "ds-ai-lm-offline";
+  offline.style.display = "none";
+  modelField.appendChild(offline);
+  scroll.appendChild(modelField);
+
+  fetchLMStudioModels(lm.ip, lm.port).then((res) => {
+    if (res.ok && res.models?.length > 0) {
+      const llm = res.models.filter((m) => !/(embed|nomic-embed|bge-)/i.test(m));
+      const list = llm.length > 0 ? llm : res.models;
+      modelDd.setOptions(list.map((m) => ({ id: m, label: m })));
+      if (!lm.model) {
+        lm.model = list[0];
+        modelDd.setValue(lm.model);
+        onChange();
+      }
+      return;
+    }
+    offline.style.display = "";
+    offline.innerHTML = `
+      <div class="ds-ai-lm-offline-title">LM Studio server offline</div>
+      <div>No response on <code>${lm.ip}:${lm.port}</code>. If you have local GGUF models, use the <strong>Built In</strong> tab.</div>
+    `;
+    offline.appendChild(Button({ label: "Switch to Built In", compact: true, variant: "primary", onClick: switchToBuiltIn }).root);
+  });
+
+  const ip = Input({ value: lm.ip || "127.0.0.1", onChange: (v) => { lm.ip = v.trim() || "127.0.0.1"; onChange(); } });
+  const port = Input({ type: "number", value: lm.port || 1234, onChange: (v) => { lm.port = parseInt(v) || 1234; onChange(); } });
+  const ipField = field("IP Address");
+  ipField.appendChild(ip.root);
+  const portField = field("Port");
+  portField.appendChild(port.root);
+  scroll.appendChild(row("ds-sensei-gear-row-2col", ipField, portField));
+
+  scroll.appendChild(sectionLabel("Sampling"));
+  scroll.appendChild(row("ds-sensei-gear-row-2col",
+    spinField("Max Tokens", { value: lm.max_tokens ?? 2048, min: 1, max: 131072, step: 128, decimals: 0, onChange: (v) => { lm.max_tokens = parseInt(v) || 2048; onChange(); } }),
+    spinField("Temperature", { value: lm.temperature ?? 0.7, min: 0, max: 2, step: 0.05, decimals: 2, onChange: (v) => { lm.temperature = parseFloat(v) ?? 0.7; onChange(); } }),
+  ));
+
+  const timeout = Input({ type: "number", value: lm.timeout ?? 300, onChange: (v) => { lm.timeout = Math.max(5, parseInt(v) || 300); onChange(); } });
+  const timeoutField = field("Timeout (s)");
+  timeoutField.appendChild(timeout.root);
+  scroll.appendChild(row("ds-sensei-gear-row-2col", seedField(lm, onChange).root, timeoutField));
+}
+
+const TAB_INFO = {
+  lm_studio: { label: "LM Studio", icon: "link", sub: "LM Studio Configuration" },
+  built_in: { label: "Built In", icon: "cpu", sub: "Built-In LLM Configuration" },
+  settings: { label: "Settings", icon: "settings", sub: "Node & Behavior Settings" },
+};
+
+/**
+ * Shared AI settings popover for nodes that run an LLM.
+ *   builtIn        settings object for the built-in llama.cpp backend (edited in place)
+ *   lmStudio       optional LM Studio settings object; adds the LM Studio tab
+ *   vision         optional () => boolean, whether the vision projector loads (VRAM plan)
+ *   tab            initial tab; onTabChange(tab) reports switches
+ *   onChange       called after every edit
+ *   renderSettings (scroll) => void, the node's own Settings tab
+ *   onClose        called when the popover closes
+ */
+export function openAISettingsPopover({
   node,
   anchorEl,
-  title = "DS Randomizer — AI Settings",
-  getSettings,
-  saveSettings,
+  title,
+  badge = "AI",
+  builtIn,
+  lmStudio = null,
+  vision = null,
+  tab = "built_in",
+  onTabChange = null,
+  onChange = () => {},
+  renderSettings,
+  onClose = null,
 }) {
   closeAIPopover();
   ensureStyles();
+  _onClose = onClose;
 
-  const currentSettings = {
-    model: "",
-    temperature: 0.80,
-    max_tokens: 2048,
-    context_length: 4096,
-    n_gpu_layers: -1,
-    top_p: 0.90,
-    top_k: 40,
-    repetition_penalty: 1.10,
-    seed: 123456,
-    auto_unload: true,
-    auto_load: true,
-    pause_for_edit: false,
-    free_comfy_memory: true,
-    randomize_seed: true,
-    system_prompt: "",
-    require_vision: false,
-    variation_cache: true,
-    cache_size: 10,
-    contextual_coherence: true,
-    ...(getSettings?.() || {}),
-  };
-
-  let activeTab = "built_in"; // "built_in" or "settings"
-
-  const sync = () => {
-    saveSettings?.(currentSettings);
-  };
+  const tabs = lmStudio ? ["lm_studio", "built_in", "settings"] : ["built_in", "settings"];
+  let activeTab = tabs.includes(tab) ? tab : "built_in";
+  let builtInPanel = null;
 
   const popover = document.createElement("div");
   popover.className = "ds-sensei-gear-popover ds-ai-gear-popover";
   popover.dataset.dsThemed = "true";
   _activeAIPopover = popover;
 
-  // CRITICAL: Stop propagation so clicks inside popover don't trigger canvas click or auto-close!
+  // Keep clicks inside the popover away from the canvas and the outside-click handler.
   popover.addEventListener("pointerdown", (e) => e.stopPropagation());
   popover.addEventListener("mousedown", (e) => e.stopPropagation());
   popover.addEventListener("click", (e) => e.stopPropagation());
 
-  // Function to render content based on active tab
-  const renderPopover = () => {
-    popover.innerHTML = "";
+  const switchTab = (next) => {
+    activeTab = next;
+    onTabChange?.(next);
+    render();
+  };
 
-    // ── 1. Header ──
+  const render = () => {
+    popover.replaceChildren();
+    builtInPanel = null;
+
     const head = document.createElement("div");
     head.className = "ds-sensei-gear-header";
-
     const titleWrap = document.createElement("div");
     titleWrap.className = "ds-sensei-gear-title-wrap";
     titleWrap.innerHTML = `
-      <span class="ds-sensei-gear-badge">AI</span>
+      <span class="ds-sensei-gear-badge">${badge}</span>
       <div>
         <strong class="ds-sensei-gear-title">${title}</strong>
-        <small class="ds-sensei-gear-sub">${activeTab === "built_in" ? "Built-In LLM Configuration" : "Behavior & System Prompt Settings"}</small>
+        <small class="ds-sensei-gear-sub">${TAB_INFO[activeTab].sub}</small>
       </div>
     `;
-
-    const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact";
-    closeBtn.title = "Close";
-    closeBtn.appendChild(DSIcon("x", { size: 14 }));
-    closeBtn.onclick = closeAIPopover;
-
-    head.append(titleWrap, closeBtn);
+    head.append(titleWrap, Button({ icon: "x", compact: true, tooltip: "Close", onClick: closeAIPopover }).root);
     popover.appendChild(head);
 
-    // ── 2. Tabs Strip [ 🧠 Built In | ⚙ Settings ] ──
     const tabStrip = document.createElement("div");
     tabStrip.className = "ds-sensei-gear-tabs";
-
-    const biTabBtn = document.createElement("button");
-    biTabBtn.type = "button";
-    biTabBtn.className = `ds-ui-btn ds-ui-btn-compact ds-sensei-gear-tab-btn ${activeTab === "built_in" ? "is-active" : ""}`;
-    biTabBtn.innerHTML = `<span>🧠 Built In</span>`;
-    biTabBtn.onclick = () => {
-      activeTab = "built_in";
-      renderPopover();
-    };
-
-    const setTabBtn = document.createElement("button");
-    setTabBtn.type = "button";
-    setTabBtn.className = `ds-ui-btn ds-ui-btn-compact ds-sensei-gear-tab-btn ${activeTab === "settings" ? "is-active" : ""}`;
-    setTabBtn.innerHTML = `<span>⚙ Settings</span>`;
-    setTabBtn.onclick = () => {
-      activeTab = "settings";
-      renderPopover();
-    };
-
-    tabStrip.append(biTabBtn, setTabBtn);
+    for (const id of tabs) {
+      tabStrip.appendChild(Button({
+        label: TAB_INFO[id].label,
+        icon: TAB_INFO[id].icon,
+        compact: true,
+        active: id === activeTab,
+        className: "ds-sensei-gear-tab-btn",
+        onClick: () => switchTab(id),
+      }).root);
+    }
     popover.appendChild(tabStrip);
 
-    // ── 3. Scroll Body ──
     const scroll = document.createElement("div");
     scroll.className = "ds-sensei-gear-scroll-body";
     popover.appendChild(scroll);
 
-    if (activeTab === "built_in") {
-      renderBuiltInTab(scroll);
-    } else {
-      renderSettingsTab(scroll);
-    }
+    if (activeTab === "lm_studio") renderLMStudioPanel(scroll, lmStudio, { onChange, switchToBuiltIn: () => switchTab("built_in") });
+    else if (activeTab === "built_in") builtInPanel = renderBuiltInPanel(scroll, builtIn, { onChange, vision });
+    else renderSettings?.(scroll);
 
     adjustPosition();
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // TAB 1: BUILT IN LLM
-  // ─────────────────────────────────────────────────────────────
-  const renderBuiltInTab = (scroll) => {
-    // 1. Status Banner Card
-    const statusCard = document.createElement("div");
-    statusCard.className = "ds-sensei-gear-status-card";
-    statusCard.innerHTML = `
-      <span class="ds-sensei-gear-status-dot is-idle"></span>
-      <span class="ds-sensei-gear-status-text">○ Checking model status...</span>
-    `;
-    scroll.appendChild(statusCard);
-
-    const refreshStatus = async () => {
-      try {
-        const res = await fetch("/ds/ai/status");
-        const st = await res.json();
-        const dot = statusCard.querySelector(".ds-sensei-gear-status-dot");
-        const txt = statusCard.querySelector(".ds-sensei-gear-status-text");
-        if (!dot || !txt) return;
-
-        if (st.loaded) {
-          dot.className = "ds-sensei-gear-status-dot is-loaded";
-          const visInfo = st.has_vision ? " · Vision" : " · Text Only";
-          txt.innerHTML = `<strong style="color:var(--ds-accent,#67e8f9)">Loaded:</strong> ${st.model_name || "Active"} · ${st.vram_free_mb || 0} MB free <span style="color:rgba(255,255,255,0.5)">(${visInfo.trim()})</span>`;
-        } else {
-          dot.className = "ds-sensei-gear-status-dot is-idle";
-          txt.textContent = "○ No model loaded in VRAM";
-        }
-      } catch (_) {}
-    };
-    refreshStatus();
-
-    // 2. GGUF Model Field
-    const modelField = document.createElement("div");
-    modelField.className = "ds-sensei-gear-field";
-
-    const modelHdr = document.createElement("div");
-    modelHdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;width:100%;";
-
-    const modelLbl = document.createElement("label");
-    modelLbl.className = "ds-sensei-gear-label";
-    modelLbl.textContent = "GGUF Model";
-
-    const rescanBtn = document.createElement("button");
-    rescanBtn.type = "button";
-    rescanBtn.className = "ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact ds-sensei-gear-rescan-btn";
-    rescanBtn.innerHTML = `${DSIconMarkup("refresh-cw", { size: 10 })}<span>Rescan</span>`;
-
-    modelHdr.append(modelLbl, rescanBtn);
-    modelField.appendChild(modelHdr);
-
-    let cachedModels = [];
-
-    const modelDd = Dropdown({
-      value: currentSettings.model || "",
-      options: currentSettings.model ? [{ id: currentSettings.model, label: String(currentSettings.model).split(/[/\\]/).pop().replace(/\.gguf$/i, "") }] : [],
-      placeholder: "Scanning models in ComfyUI/models/LLM & LM Studio...",
-      onChange: (val) => {
-        currentSettings.model = val;
-        sync();
-        updateHWWarn();
-      },
-    });
-    modelDd.root.style.width = "100%";
-    modelField.appendChild(modelDd.root);
-
-    const modeNotice = document.createElement("div");
-    modeNotice.style.cssText = "font-size:10px;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:4px;";
-    modeNotice.innerHTML = `${DSIconMarkup("check", { size: 11, color: "var(--ds-accent, #67e8f9)" })}<span><strong>Text-only:</strong> never loads the vision projector. A model another DS node already loaded is reused without reloading.</span>`;
-    modelField.appendChild(modeNotice);
-
-    scroll.appendChild(modelField);
-
-    // 3. Hardware Detection Card & Auto-Tune
-    const hwCard = document.createElement("div");
-    hwCard.className = "ds-sensei-gear-hw-card";
-    hwCard.innerHTML = `
-      <div class="ds-sensei-gear-hw-top">
-        <div class="ds-sensei-gear-hw-left">
-          ${DSIconMarkup("cpu", { size: 13, color: "var(--ds-accent, #67e8f9)" })}
-          <span class="ds-sensei-hw-name">Detecting GPU...</span>
-        </div>
-        <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact ds-sensei-autotune-btn" style="display:none;">
-          💡 Auto-Tune
-        </button>
-      </div>
-    `;
-    scroll.appendChild(hwCard);
-
-    const hwWarn = document.createElement("div");
-    hwWarn.className = "ds-sensei-gear-hw-warn";
-    scroll.appendChild(hwWarn);
-
-    const calcPlan = (hw, modelMeta, ctxLen = 4096) => {
-      if (!hw || !hw.has_gpu || !hw.total_vram_mb) {
-        return { recommended: 0, totalLayers: 32, fits100Percent: false, totalRequiredGB: 0, usableVramGB: 0, totalVramGB: 0, safeLayers: 0, hasGpu: false };
-      }
-      const totalVramGB = (hw.total_vram_mb || 0) / 1024;
-      const osReserveGB = 0.6;
-      const usableVramGB = Math.max(0.5, totalVramGB - osReserveGB);
-      const modelSizeGB = Number(modelMeta?.size_gb) || 4.5;
-      const totalLayers = Number(modelMeta?.total_layers) || 32;
-
-      const kvCacheGB = (ctxLen / 4096) * 0.35;
-      const computeOverheadGB = 0.25;
-      const baseVramGB = kvCacheGB + computeOverheadGB;
-      const totalRequiredGB = modelSizeGB + baseVramGB;
-
-      if (totalRequiredGB <= usableVramGB) {
-        return {
-          recommended: -1,
-          totalLayers,
-          fits100Percent: true,
-          totalRequiredGB: Math.round(totalRequiredGB * 10) / 10,
-          usableVramGB: Math.round(usableVramGB * 10) / 10,
-          totalVramGB: Math.round(totalVramGB * 10) / 10,
-          safeLayers: totalLayers,
-          hasGpu: true,
-        };
-      }
-
-      const weightBudgetGB = Math.max(0.2, usableVramGB - baseVramGB);
-      const weightPerLayerGB = Math.max(0.01, (modelSizeGB * 0.94) / totalLayers);
-      const safeLayers = Math.max(0, Math.min(totalLayers, Math.floor(weightBudgetGB / weightPerLayerGB)));
-
-      return {
-        recommended: safeLayers > 0 ? safeLayers : 0,
-        totalLayers,
-        fits100Percent: false,
-        totalRequiredGB: Math.round(totalRequiredGB * 10) / 10,
-        usableVramGB: Math.round(usableVramGB * 10) / 10,
-        totalVramGB: Math.round(totalVramGB * 10) / 10,
-        safeLayers,
-        hasGpu: true,
-      };
-    };
-
-    const getModelMeta = () => {
-      const cur = String(currentSettings.model || "").replace(/\\/g, "/").toLowerCase();
-      const curBase = cur.split("/").pop();
-      return cachedModels.find((m) => {
-        const id = String(m.id).replace(/\\/g, "/").toLowerCase();
-        return id === cur || id.endsWith("/" + curBase) || m.name?.toLowerCase() === curBase.replace(/\.gguf$/i, "");
-      }) || null;
-    };
-
-    const updateHWWarn = () => {
-      const modelMeta = getModelMeta();
-      const plan = calcPlan(_cachedHW, modelMeta, currentSettings.context_length || 4096);
-      const tuneBtn = hwCard.querySelector(".ds-sensei-autotune-btn");
-      if (tuneBtn) {
-        const rec = plan.recommended === -1 ? "ALL" : plan.recommended;
-        tuneBtn.innerHTML = `💡 Auto-Tune (${rec})`;
-      }
-
-      const curLayers = currentSettings.n_gpu_layers ?? -1;
-      if (!_cachedHW || !plan.hasGpu) {
-        if (curLayers !== 0) {
-          hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 12, color: "#f59e0b" })}<span>No dedicated GPU detected. Set GPU Layers to 0 (CPU Only).</span>`;
-          hwWarn.classList.add("is-visible");
-        } else {
-          hwWarn.classList.remove("is-visible");
-        }
-        return;
-      }
-
-      if (!plan.fits100Percent && (curLayers === -1 || curLayers > plan.safeLayers + 2)) {
-        const mName = modelMeta?.name || "Selected model";
-        hwWarn.innerHTML = `${DSIconMarkup("alert-circle", { size: 12, color: "#f59e0b" })}<span><strong>${mName}</strong> requires ~${plan.totalRequiredGB}GB VRAM for 100% offload, exceeding your ${plan.totalVramGB}GB VRAM. Recommended: <strong>${plan.recommended} layers</strong>.</span>`;
-        hwWarn.classList.add("is-visible");
-      } else {
-        hwWarn.classList.remove("is-visible");
-      }
-    };
-
-    let gpuStepper = null;
-
-    const onAutoTune = () => {
-      const modelMeta = getModelMeta();
-      const plan = calcPlan(_cachedHW, modelMeta, currentSettings.context_length || 4096);
-      currentSettings.n_gpu_layers = plan.recommended;
-      if (gpuStepper) gpuStepper.setValue(plan.recommended);
-      sync();
-      updateHWWarn();
-    };
-
-    const loadModels = async () => {
-      try {
-        const res = await fetch("/ds/ai/models");
-        const data = await res.json();
-        if (data.ok && Array.isArray(data.models) && data.models.length > 0) {
-          cachedModels = data.models;
-          const opts = data.models.map((m) => {
-            const rootTag = m.root && m.root !== "ComfyUI" ? `[${m.root}] ` : "";
-            const vis = m.has_vision ? " 👁️ Vision" : "";
-            return {
-              id: m.id,
-              label: `${rootTag}${m.name} (${m.size_gb} GB)${vis}`,
-            };
-          });
-          modelDd.setOptions(opts);
-
-          if (!currentSettings.model || !opts.some((o) => o.id === currentSettings.model)) {
-            currentSettings.model = opts[0].id;
-            modelDd.setValue(opts[0].id);
-            sync();
-          }
-        }
-        updateHWWarn();
-      } catch (_) {}
-    };
-
-    const loadHW = async () => {
-      try {
-        const res = await fetch("/ds/ai/hardware");
-        const hw = await res.json();
-        _cachedHW = hw;
-        const nameEl = hwCard.querySelector(".ds-sensei-hw-name");
-        const btn = hwCard.querySelector(".ds-sensei-autotune-btn");
-        if (nameEl) {
-          if (!hw.has_gpu || !hw.total_vram_mb) {
-            nameEl.textContent = `CPU Only (${Math.round((hw.system_ram_mb || 0) / 1024)}GB RAM)`;
-          } else {
-            nameEl.textContent = `${hw.gpu_name} (${(hw.total_vram_mb / 1024).toFixed(1)}GB VRAM)`;
-          }
-        }
-        if (btn) {
-          btn.style.display = "inline-flex";
-          btn.onclick = onAutoTune;
-        }
-        updateHWWarn();
-      } catch (_) {}
-    };
-
-    rescanBtn.onclick = () => {
-      loadModels();
-      refreshStatus();
-    };
-
-    loadModels();
-    loadHW();
-
-    // 4. Sampling Section
-    const sampHdr = document.createElement("div");
-    sampHdr.className = "ds-sensei-gear-section-label";
-    sampHdr.textContent = "Sampling";
-    scroll.appendChild(sampHdr);
-
-    const sampRow1 = document.createElement("div");
-    sampRow1.className = "ds-sensei-gear-row-2col";
-
-    // Temperature
-    const tempField = document.createElement("div");
-    tempField.className = "ds-sensei-gear-field";
-    tempField.innerHTML = `<label class="ds-sensei-gear-label">Temperature</label>`;
-    const tempSt = Spinbox({
-      value: currentSettings.temperature ?? 0.8,
-      min: 0.0,
-      max: 2.0,
-      step: 0.05,
-      decimals: 2,
-      width: "100%",
-      onChange: (v) => {
-        currentSettings.temperature = parseFloat(v) ?? 0.8;
-        sync();
-      },
-    });
-    tempField.appendChild(tempSt.wrap);
-
-    // Max Tokens
-    const maxTokField = document.createElement("div");
-    maxTokField.className = "ds-sensei-gear-field";
-    maxTokField.innerHTML = `<label class="ds-sensei-gear-label">Max Tokens</label>`;
-    const maxTokSt = Spinbox({
-      value: currentSettings.max_tokens ?? 2048,
-      min: 64,
-      max: 8192,
-      step: 128,
-      decimals: 0,
-      width: "100%",
-      onChange: (v) => {
-        currentSettings.max_tokens = parseInt(v) || 2048;
-        sync();
-      },
-    });
-    maxTokField.appendChild(maxTokSt.wrap);
-
-    sampRow1.append(tempField, maxTokField);
-    scroll.appendChild(sampRow1);
-
-    // Context & GPU Layers
-    const sampRow2 = document.createElement("div");
-    sampRow2.className = "ds-sensei-gear-row-2col";
-
-    const ctxField = document.createElement("div");
-    ctxField.className = "ds-sensei-gear-field";
-    ctxField.innerHTML = `<label class="ds-sensei-gear-label">Context Length</label>`;
-    const ctxSt = Spinbox({
-      value: currentSettings.context_length ?? 4096,
-      min: 1024,
-      max: 32768,
-      step: 1024,
-      decimals: 0,
-      width: "100%",
-      onChange: (v) => {
-        currentSettings.context_length = parseInt(v) || 4096;
-        sync();
-        updateHWWarn();
-      },
-    });
-    ctxField.appendChild(ctxSt.wrap);
-
-    const gpuField = document.createElement("div");
-    gpuField.className = "ds-sensei-gear-field";
-    gpuField.innerHTML = `<label class="ds-sensei-gear-label">GPU Layers (-1=All)</label>`;
-    gpuStepper = Spinbox({
-      value: currentSettings.n_gpu_layers ?? -1,
-      min: -1,
-      max: 128,
-      step: 1,
-      decimals: 0,
-      width: "100%",
-      onChange: (v) => {
-        currentSettings.n_gpu_layers = isNaN(parseInt(v)) ? -1 : parseInt(v);
-        sync();
-        updateHWWarn();
-      },
-    });
-    gpuField.appendChild(gpuStepper.wrap);
-
-    sampRow2.append(ctxField, gpuField);
-    scroll.appendChild(sampRow2);
-
-    // 5. Advanced Sampling Section
-    const advHdr = document.createElement("div");
-    advHdr.className = "ds-sensei-gear-section-label";
-    advHdr.textContent = "Advanced Sampling";
-    scroll.appendChild(advHdr);
-
-    const advRow = document.createElement("div");
-    advRow.style.cssText = "display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;box-sizing:border-box;";
-
-    const topPField = document.createElement("div");
-    topPField.className = "ds-sensei-gear-field";
-    topPField.innerHTML = `<label class="ds-sensei-gear-label">Top P</label>`;
-    const topPSt = Spinbox({
-      value: currentSettings.top_p ?? 0.90,
-      min: 0.0,
-      max: 1.0,
-      step: 0.05,
-      decimals: 2,
-      width: "100%",
-      onChange: (v) => {
-        currentSettings.top_p = parseFloat(v) ?? 0.90;
-        sync();
-      },
-    });
-    topPField.appendChild(topPSt.wrap);
-
-    const topKField = document.createElement("div");
-    topKField.className = "ds-sensei-gear-field";
-    topKField.innerHTML = `<label class="ds-sensei-gear-label">Top K</label>`;
-    const topKSt = Spinbox({
-      value: currentSettings.top_k ?? 40,
-      min: 0,
-      max: 200,
-      step: 5,
-      decimals: 0,
-      width: "100%",
-      onChange: (v) => {
-        currentSettings.top_k = parseInt(v) ?? 40;
-        sync();
-      },
-    });
-    topKField.appendChild(topKSt.wrap);
-
-    const repField = document.createElement("div");
-    repField.className = "ds-sensei-gear-field";
-    repField.innerHTML = `<label class="ds-sensei-gear-label">Rep. Pen.</label>`;
-    const repSt = Spinbox({
-      value: currentSettings.repetition_penalty ?? 1.10,
-      min: 1.0,
-      max: 2.0,
-      step: 0.05,
-      decimals: 2,
-      width: "100%",
-      onChange: (v) => {
-        currentSettings.repetition_penalty = parseFloat(v) ?? 1.10;
-        sync();
-      },
-    });
-    repField.appendChild(repSt.wrap);
-
-    advRow.append(topPField, topKField, repField);
-    scroll.appendChild(advRow);
-
-    // Seed Field
-    const seedField = document.createElement("div");
-    seedField.className = "ds-sensei-gear-field";
-    const sHdr = document.createElement("div");
-    sHdr.style.cssText = "display:flex;justify-content:space-between;align-items:center;width:100%;";
-    const sLbl = document.createElement("label");
-    sLbl.className = "ds-sensei-gear-label";
-    sLbl.textContent = "Seed";
-
-    const diceBtn = document.createElement("button");
-    diceBtn.type = "button";
-    diceBtn.className = "ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact";
-    diceBtn.textContent = "🎲 Roll";
-
-    sHdr.append(sLbl, diceBtn);
-    seedField.appendChild(sHdr);
-
-    const seedInp = document.createElement("input");
-    seedInp.type = "number";
-    seedInp.className = "ds-ui-input ds-sensei-input ds-ai-seed-input";
-    seedInp.style.width = "100%";
-    seedInp.value = currentSettings.seed ?? 123456;
-    seedInp.onchange = () => {
-      currentSettings.seed = parseInt(seedInp.value) || 0;
-      sync();
-    };
-    diceBtn.onclick = () => {
-      const r = Math.floor(Math.random() * 2147483647);
-      currentSettings.seed = r;
-      seedInp.value = r;
-      sync();
-    };
-    seedField.appendChild(seedInp);
-    scroll.appendChild(seedField);
-
-    // Unload Model Now Button
-    const unloadBtn = document.createElement("button");
-    unloadBtn.type = "button";
-    unloadBtn.className = "ds-ui-btn ds-ui-btn-secondary ds-sensei-gear-unload-btn";
-    unloadBtn.innerHTML = `${DSIconMarkup("trash-2", { size: 12, color: "var(--ds-color-danger, #f87171)" })}<span>Unload Model Now</span>`;
-    unloadBtn.onclick = async () => {
-      unloadBtn.disabled = true;
-      try {
-        await fetch("/ds/ai/unload", { method: "POST" });
-        refreshStatus();
-      } catch (_) {}
-      unloadBtn.disabled = false;
-    };
-    scroll.appendChild(unloadBtn);
-  };
-
-  // ─────────────────────────────────────────────────────────────
-  // TAB 2: SETTINGS (Behavior Toggles & Custom System Prompt)
-  // ─────────────────────────────────────────────────────────────
-  const renderSettingsTab = (scroll) => {
-    // 1. Behavior & Execution Toggles
-    const behLbl = document.createElement("div");
-    behLbl.className = "ds-sensei-gear-section-label";
-    behLbl.textContent = "Workflow & Behavior Options";
-    scroll.appendChild(behLbl);
-
-    const behBox = document.createElement("div");
-    behBox.className = "ds-sensei-gear-behavior-box";
-
-    // Auto-load on Queue
-    const autoLoadToggle = Toggle({
-      label: "Auto-load & randomize on workflow Queue",
-      description: "When OFF, Queue skips the LLM and uses the prompt from Run (or the source prompt if there is none).",
-      checked: currentSettings.auto_load !== false,
-      onChange: (checked) => {
-        currentSettings.auto_load = checked;
-        sync();
-      },
-    });
-    behBox.appendChild(autoLoadToggle.root);
-
-    // Pause for edit
-    const pauseToggle = Toggle({
-      label: "Use edited preview on Queue",
-      description: "When ON, Queue uses the preview you generated with Run and edited, instead of generating a new one.",
-      checked: Boolean(currentSettings.pause_for_edit),
-      onChange: (checked) => {
-        currentSettings.pause_for_edit = checked;
-        sync();
-      },
-    });
-    behBox.appendChild(pauseToggle.root);
-
-    // Auto-unload after generation
-    const autoUnloadToggle = Toggle({
-      label: "Auto-unload model after prompt creation",
-      description: "Frees LLM VRAM immediately so diffusion has 100% memory.",
-      checked: currentSettings.auto_unload !== false,
-      onChange: (checked) => {
-        currentSettings.auto_unload = checked;
-        sync();
-      },
-    });
-    behBox.appendChild(autoUnloadToggle.root);
-
-    // Free ComfyUI models before loading
-    const freeComfyToggle = Toggle({
-      label: "Free ComfyUI models before loading LLM",
-      description: "Soft unloads cached diffusion models before allocating LLM VRAM.",
-      checked: currentSettings.free_comfy_memory !== false,
-      onChange: (checked) => {
-        currentSettings.free_comfy_memory = checked;
-        sync();
-      },
-    });
-    behBox.appendChild(freeComfyToggle.root);
-
-    // Randomize seed each generation
-    const randSeedToggle = Toggle({
-      label: "Randomize seed each generation",
-      description: "Generates a fresh random variation on every queue run.",
-      checked: currentSettings.randomize_seed !== false,
-      onChange: (checked) => {
-        currentSettings.randomize_seed = checked;
-        sync();
-      },
-    });
-    behBox.appendChild(randSeedToggle.root);
-
-    scroll.appendChild(behBox);
-
-    // 2. Custom System Prompt Section
-    const sysLbl = document.createElement("div");
-    sysLbl.className = "ds-sensei-gear-section-label";
-    sysLbl.style.marginTop = "8px";
-    sysLbl.textContent = "System Prompt";
-    scroll.appendChild(sysLbl);
-
-    const sysDesc = document.createElement("small");
-    sysDesc.style.cssText = "color:rgba(255,255,255,0.5);font-size:10px;line-height:1.3;display:block;";
-    sysDesc.textContent = "Used for full prompt rewrites (Attribute Replacement Only OFF). Attribute mode uses its own fixed output format.";
-    scroll.appendChild(sysDesc);
-
-    const sysTa = document.createElement("textarea");
-    sysTa.className = "ds-ai-textarea ds-ui-text-editor";
-    sysTa.spellcheck = true;
-    sysTa.placeholder = "Enter custom system prompt (leave empty for default)...";
-    sysTa.value = currentSettings.system_prompt || DEFAULT_SYSTEM_PROMPT;
-    sysTa.oninput = () => {
-      currentSettings.system_prompt = sysTa.value.trim();
-    };
-    sysTa.onchange = () => {
-      currentSettings.system_prompt = sysTa.value.trim();
-      sync();
-    };
-    attachTextHistory(sysTa);
-    scroll.appendChild(sysTa);
-
-    const sysActions = document.createElement("div");
-    sysActions.style.cssText = "display:flex;justify-content:flex-end;gap:6px;width:100%;margin-top:2px;";
-
-    const resetSysBtn = Button({
-      label: "Reset Default System Prompt",
-      size: "compact",
-      icon: "refresh-cw",
-      tooltip: "Restore default AI Randomizer system prompt",
-      onClick: () => {
-        currentSettings.system_prompt = DEFAULT_SYSTEM_PROMPT;
-        sysTa.value = DEFAULT_SYSTEM_PROMPT;
-        sync();
-      },
-    });
-    sysActions.appendChild(resetSysBtn.root);
-    scroll.appendChild(sysActions);
-
-    // ── Randomizer-specific settings (only rendered for DS Randomizer node) ──
-    if (title && title.includes("Randomizer")) {
-      const randLbl = document.createElement("div");
-      randLbl.className = "ds-sensei-gear-section-label";
-      randLbl.style.marginTop = "10px";
-      randLbl.textContent = "Variation & Coherence";
-      scroll.appendChild(randLbl);
-
-      const randBox = document.createElement("div");
-      randBox.className = "ds-sensei-gear-behavior-box";
-
-      // Feature A: Variation Cache toggle
-      const varCacheToggle = Toggle({
-        label: "Variation Cache (no repeats)",
-        description: "Tracks used values per category and tells the LLM to avoid them (10-run batches).",
-        checked: currentSettings.variation_cache !== false,
-        onChange: (checked) => {
-          currentSettings.variation_cache = checked;
-          sync();
-        },
-      });
-      randBox.appendChild(varCacheToggle.root);
-
-      // Feature B: Contextual Coherence toggle
-      const coherenceToggle = Toggle({
-        label: "Contextual Coherence",
-        description: "Instructs the LLM to reason about pose, height, surfaces and clothing before choosing values.",
-        checked: currentSettings.contextual_coherence !== false,
-        onChange: (checked) => {
-          currentSettings.contextual_coherence = checked;
-          sync();
-        },
-      });
-      randBox.appendChild(coherenceToggle.root);
-
-      // Feature C: Attribute-only replacement vs full prompt rewrite
-      const attrOnlyToggle = Toggle({
-        label: "Attribute Replacement Only (Fast)",
-        description: "Only generates new attributes and swaps them in-place (~1s), preserving the exact rest of your prompt intact. When OFF, rewrites the entire prompt.",
-        checked: currentSettings.attributes_only !== false,
-        onChange: (checked) => {
-          currentSettings.attributes_only = checked;
-          sync();
-        },
-      });
-      randBox.appendChild(attrOnlyToggle.root);
-
-      scroll.appendChild(randBox);
-
-      // Clear Cache button — wired to new route, separate from DB shuffle-bag reset
-      const clearCacheActions = document.createElement("div");
-      clearCacheActions.style.cssText = "display:flex;justify-content:flex-start;gap:6px;width:100%;margin-top:4px;";
-
-      const clearCacheBtn = Button({
-        label: "Clear Variation Cache",
-        size: "compact",
-        icon: "trash-2",
-        variant: "danger",
-        tooltip: "Reset the per-category variation history for this node",
-        onClick: async () => {
-          try {
-            const nodeId = node?.id != null ? String(node.id) : "";
-            await fetch("/ds/randomizer/ai_reset_history", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ node_id: nodeId }),
-            });
-            clearCacheBtn.setLabel("Cleared!");
-            setTimeout(() => clearCacheBtn.setLabel("Clear Variation Cache"), 1800);
-          } catch (_) {
-            clearCacheBtn.setLabel("Error");
-            setTimeout(() => clearCacheBtn.setLabel("Clear Variation Cache"), 1800);
-          }
-        },
-      });
-      clearCacheActions.appendChild(clearCacheBtn.root);
-      scroll.appendChild(clearCacheActions);
-    }
-  };
-
-  // Initial render
   document.body.appendChild(popover);
-  renderPopover();
+  render();
 
-  // Register active popover reference for live seed sync
+  // Lets a node push a seed it rolled itself into the open popover.
   window._dsUpdateActiveAIPopover = {
     node,
     setSeed: (newSeed) => {
-      currentSettings.seed = newSeed;
-      const seedInp = popover.querySelector(".ds-ai-seed-input");
-      if (seedInp) seedInp.value = newSeed;
+      builtIn.seed = newSeed;
+      builtInPanel?.setSeed(newSeed);
     },
   };
 
-  // Position relative to anchor or node with anti-clipping upward shift
+  // Next to the anchor, else beside the node; shifted up rather than clipped.
   function adjustPosition() {
     if (!popover.isConnected) return;
     const pw = Math.min(380, window.innerWidth - 30);
@@ -1132,119 +841,57 @@ export async function openAISettingsPopover({
 
     const scrollBody = popover.querySelector(".ds-sensei-gear-scroll-body");
     const nonScrollH = popover.offsetHeight - (scrollBody ? scrollBody.clientHeight : 0);
-    const neededContentH = (scrollBody ? scrollBody.scrollHeight : popover.scrollHeight) + Math.max(0, nonScrollH);
+    const neededH = (scrollBody ? scrollBody.scrollHeight : popover.scrollHeight) + Math.max(0, nonScrollH);
+    const desiredH = Math.min(neededH, window.innerHeight - 30);
 
-    const maxScreenH = window.innerHeight - 30; // 15px margin top and bottom
-    const desiredH = Math.min(neededContentH, maxScreenH);
-
-    let idealLeft = 20;
-    let idealTop = 20;
-
-    const nodeEl = node?._dsCard || node?._domRoot;
-    const nodeRect = (nodeEl && document.body.contains(nodeEl)) ? nodeEl.getBoundingClientRect() : null;
-    const validAnchor = anchorEl && document.body.contains(anchorEl);
-    const anchorRect = validAnchor ? anchorEl.getBoundingClientRect() : null;
+    let left = Math.max(15, window.innerWidth - pw - 25);
+    let top = 60;
+    const anchorRect = anchorEl && document.body.contains(anchorEl) ? anchorEl.getBoundingClientRect() : null;
 
     if (anchorRect) {
-      idealLeft = anchorRect.left;
-      if (idealLeft + pw > window.innerWidth - 15) {
-        idealLeft = Math.max(15, anchorRect.right - pw);
+      left = anchorRect.left + pw > window.innerWidth - 15 ? Math.max(15, anchorRect.right - pw) : anchorRect.left;
+      top = anchorRect.bottom + desiredH <= window.innerHeight - 15 ? anchorRect.bottom + 8 : anchorRect.top;
+    } else if (node?.pos && window.app?.canvas?.ds) {
+      const { ds, canvas } = window.app.canvas;
+      const cRect = canvas.getBoundingClientRect();
+      const screenX = cRect.left + (node.pos[0] + ds.offset[0]) * ds.scale;
+      const nodeW = (node.size?.[0] ?? 420) * ds.scale;
+      top = cRect.top + (node.pos[1] + ds.offset[1]) * ds.scale;
+      left = screenX + nodeW + 16;
+      if (left + pw > window.innerWidth - 15) {
+        left = screenX - pw - 16 >= 15 ? screenX - pw - 16 : Math.max(15, window.innerWidth - pw - 15);
       }
-      if (anchorRect.bottom + desiredH <= window.innerHeight - 15) {
-        idealTop = anchorRect.bottom + 8;
-      } else {
-        idealTop = anchorRect.top;
-      }
-    } else if (nodeRect) {
-      if (nodeRect.right + pw + 16 <= window.innerWidth) {
-        idealLeft = nodeRect.right + 12;
-      } else if (nodeRect.left - pw - 16 >= 15) {
-        idealLeft = nodeRect.left - pw - 12;
-      } else {
-        idealLeft = Math.max(15, window.innerWidth - pw - 15);
-      }
-      idealTop = nodeRect.top;
-    } else if (node && node.pos) {
-      try {
-        const canvas = window.app?.canvas;
-        const cRect = canvas?.canvas ? canvas.canvas.getBoundingClientRect() : { left: 0, top: 0 };
-        const scale = canvas?.ds?.scale ?? canvas?.scale ?? 1;
-        const offset = canvas?.ds?.offset ?? canvas?.offset ?? [0, 0];
-        const screenX = cRect.left + (node.pos[0] + offset[0]) * scale;
-        const screenY = cRect.top + (node.pos[1] + offset[1]) * scale;
-        const nodeW = (node.size ? node.size[0] : 420) * scale;
-
-        idealLeft = screenX + nodeW + 16;
-        if (idealLeft + pw > window.innerWidth - 15) {
-          if (screenX - pw - 16 >= 15) idealLeft = screenX - pw - 16;
-          else idealLeft = Math.max(15, window.innerWidth - pw - 15);
-        }
-        idealTop = screenY;
-      } catch (_) {
-        idealLeft = Math.max(15, window.innerWidth - pw - 25);
-        idealTop = 60;
-      }
-    } else {
-      idealLeft = Math.max(15, window.innerWidth - pw - 25);
-      idealTop = 60;
     }
 
-    idealLeft = Math.max(15, Math.min(idealLeft, window.innerWidth - pw - 15));
+    left = Math.max(15, Math.min(left, window.innerWidth - pw - 15));
+    if (top + desiredH > window.innerHeight - 15) top = window.innerHeight - desiredH - 15;
+    top = Math.max(15, top);
 
-    // Shift upward into empty space above when needed so NO clipping or deformation occurs:
-    let targetTop = idealTop;
-    if (targetTop + desiredH > window.innerHeight - 15) {
-      targetTop = window.innerHeight - desiredH - 15;
-    }
-    targetTop = Math.max(15, targetTop);
-
-    const nextLeft = `${Math.round(idealLeft)}px`;
-    const nextTop = `${Math.round(targetTop)}px`;
-    const availableH = Math.max(200, window.innerHeight - targetTop - 15);
-    const nextMaxH = `${Math.round(availableH)}px`;
-
-    if (popover.style.left !== nextLeft) popover.style.left = nextLeft;
-    if (popover.style.top !== nextTop) popover.style.top = nextTop;
-    if (popover.style.maxHeight !== nextMaxH) popover.style.maxHeight = nextMaxH;
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.top = `${Math.round(top)}px`;
+    popover.style.maxHeight = `${Math.round(Math.max(200, window.innerHeight - top - 15))}px`;
   }
 
-  adjustPosition();
   requestAnimationFrame(adjustPosition);
-  setTimeout(adjustPosition, 100);
-
   if (window.ResizeObserver) {
-    if (_popoverRO) _popoverRO.disconnect();
-    const scrollBody = popover.querySelector(".ds-sensei-gear-scroll-body");
-    if (scrollBody) {
-      _popoverRO = new ResizeObserver(() => {
-        adjustPosition();
-      });
-      _popoverRO.observe(scrollBody);
-    }
+    _popoverRO = new ResizeObserver(adjustPosition);
+    _popoverRO.observe(popover);
   }
 
-  // Dismiss listeners with safe dropdown tolerance
   const onOutside = (e) => {
-    // If click was inside a floating dropdown menu, DO NOT CLOSE
-    if (
-      e.target.closest?.(".ds-ui-dropdown-menu") ||
-      e.target.closest?.(".ds-ui-dropdown-popover") ||
-      e.target.closest?.(".ds-sensei-menu-popover") ||
-      e.target.closest?.(".ds-ai-gear-popover")
-    ) {
-      return;
-    }
-
+    if (e.target.closest?.(".ds-ui-popup, .ds-ui-modal-overlay")) return;
     if (!popover.contains(e.target) && (!anchorEl || !anchorEl.contains(e.target))) {
-      closeAIPopover();
       document.removeEventListener("pointerdown", onOutside);
+      window.removeEventListener("keydown", onKeyDown, true);
+      if (_activeAIPopover === popover) closeAIPopover();
     }
   };
-
   const onKeyDown = (e) => {
-    if (e.key === "Escape") closeAIPopover();
+    if (e.key !== "Escape") return;
+    document.removeEventListener("pointerdown", onOutside);
+    window.removeEventListener("keydown", onKeyDown, true);
+    if (_activeAIPopover === popover) closeAIPopover();
   };
-
   setTimeout(() => {
     document.addEventListener("pointerdown", onOutside);
     window.addEventListener("keydown", onKeyDown, true);

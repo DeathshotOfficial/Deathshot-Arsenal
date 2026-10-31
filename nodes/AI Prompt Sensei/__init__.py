@@ -12,10 +12,8 @@ from aiohttp import web
 
 from core.ai import (
     abort_generation,
-    get_backend_status,
     get_hardware_info,
     get_realtime_hw_stats,
-    list_builtin_models,
     lm_studio,
     perform_hardware_action,
     unload_model,
@@ -121,23 +119,10 @@ def register_prompt_sensei_routes():
         ok, msg = await asyncio.to_thread(lm_studio.start_server, port=int(data.get("port") or 1234))
         return web.json_response({"ok": ok, "message": msg})
 
-    @routes.get("/ds/prompt_sensei/builtin/models")
-    async def builtin_models_handler(request):
-        try:
-            models = await asyncio.to_thread(list_builtin_models)
-            return web.json_response({"ok": True, "models": models})
-        except Exception as e:
-            logger.error(f"[Prompt Sensei] Failed to query builtin models: {e}")
-            return web.json_response({"ok": False, "error": str(e), "models": []})
-
     @routes.post("/ds/prompt_sensei/builtin/unload")
     async def builtin_unload_handler(request):
         unloaded = await asyncio.to_thread(unload_model)
         return web.json_response({"ok": True, "unloaded": unloaded})
-
-    @routes.get("/ds/prompt_sensei/builtin/status")
-    async def builtin_status_handler(request):
-        return web.json_response({"ok": True, **get_backend_status()})
 
     @routes.get("/ds/prompt_sensei/hardware")
     async def hardware_handler(request):
