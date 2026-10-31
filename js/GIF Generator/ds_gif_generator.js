@@ -383,7 +383,7 @@ function buildGifGenerator(node, card) {
     active: isMenuOpen,
     onClick: (e) => {
       e.stopPropagation();
-      setMenuOpen(!isMenuOpen);
+      setMenuOpen(!isMenuOpen, { resize: true });
     },
   });
   menuToggle.root.setAttribute("aria-pressed", isMenuOpen ? "true" : "false");
@@ -393,9 +393,16 @@ function buildGifGenerator(node, card) {
     className: "dsgif-settings",
   });
 
-  function setMenuOpen(open) {
+  function setMenuOpen(open, { resize = false } = {}) {
     isMenuOpen = Boolean(open);
+    // Toggling from the button adds or removes exactly the settings height, so the preview keeps the size the user set.
+    const panelH = isMenuOpen ? settingsItem?.minHeight : settingsPanel.root.offsetHeight;
+    const nodeH = node.size[1];
     settingsItem?.show(isMenuOpen);
+    if (resize) {
+      const delta = (panelH + LAYOUT.GAP) * (isMenuOpen ? 1 : -1);
+      node.setSize([node.size[0], Math.max(node.computeSize()[1], nodeH + delta)]);
+    }
     menuToggle.setActive(isMenuOpen);
     menuToggle.setIcon(isMenuOpen ? "chevron-up" : "chevron-down");
     card.commit(() => {
@@ -1322,7 +1329,8 @@ function buildGifGenerator(node, card) {
   new ResizeObserver(() => {
     if (!isMenuOpen) return;
     settingsPanel.root.style.minHeight = "0px";
-    const natural = settingsPanel.root.scrollHeight;
+    const root = settingsPanel.root;
+    const natural = root.scrollHeight + root.offsetHeight - root.clientHeight;
     settingsPanel.root.style.minHeight = `${natural}px`;
     if (natural !== settingsItem.minHeight) {
       settingsItem.minHeight = natural;
