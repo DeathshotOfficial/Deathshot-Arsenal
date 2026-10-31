@@ -441,7 +441,7 @@ app.registerExtension({
       if (this.size[1] < DEFAULT_NODE_HEIGHT) this.size[1] = DEFAULT_NODE_HEIGHT;
 
       this.properties = this.properties || {};
-      this.properties.ds_randomizer_state = this.properties.ds_randomizer_state || {
+      if (!this.properties.ds_randomizer_state) this.properties.ds_randomizer_state = {
         enabled_categories: ["hair_color", "lighting", "location", "clothing"],
         options: { age_range: { preset: "any" } },
       };
@@ -453,7 +453,7 @@ app.registerExtension({
         preferredModel = localStorage.getItem("DS_AI_preferred_model") || "";
       } catch (_) {}
 
-      this.properties.ds_randomizer_ai_settings = this.properties.ds_randomizer_ai_settings || {
+      if (!this.properties.ds_randomizer_ai_settings) this.properties.ds_randomizer_ai_settings = {
         model: preferredModel,
         temperature: 0.80,
         max_tokens: 2048,
@@ -920,9 +920,12 @@ app.registerExtension({
       // 3. HELPER METHODS & STATE SYNC
       // -------------------------------------------------------------
       function saveState() {
-        self.properties.ds_randomizer_state = self.properties.ds_randomizer_state || {};
-        self.properties.ds_randomizer_state.ai_enabled = Boolean(self.properties.ds_randomizer_ai_enabled);
-        self.properties.ds_randomizer_state.ai_settings = self.properties.ds_randomizer_ai_settings || {};
+        // Node properties hand back reactive proxies for nested objects; storing one back makes the
+        // workflow uncloneable, so the saved state is always a plain copy.
+        const state = JSON.parse(JSON.stringify(self.properties.ds_randomizer_state || {}));
+        state.ai_enabled = Boolean(self.properties.ds_randomizer_ai_enabled);
+        state.ai_settings = JSON.parse(JSON.stringify(self.properties.ds_randomizer_ai_settings || {}));
+        self.properties.ds_randomizer_state = state;
         const stateWidget = ensureStateWidget(self);
         if (stateWidget) {
           stateWidget.value = JSON.stringify(self.properties.ds_randomizer_state);
@@ -1238,10 +1241,6 @@ app.registerExtension({
       if (sw && this.properties?.ds_randomizer_state) {
         sw.value = JSON.stringify(this.properties.ds_randomizer_state);
       }
-      if (info && this.properties?.ds_randomizer_state) {
-        info.properties = info.properties || {};
-        info.properties.ds_randomizer_state = this.properties.ds_randomizer_state;
-      }
       if (originalOnSerialize) originalOnSerialize.apply(this, arguments);
     };
 
@@ -1250,12 +1249,7 @@ app.registerExtension({
       if (sw && this.properties?.ds_randomizer_state) {
         sw.value = JSON.stringify(this.properties.ds_randomizer_state);
       }
-      const data = originalSerialize ? originalSerialize.apply(this, arguments) : {};
-      if (data && this.properties?.ds_randomizer_state) {
-        data.properties = data.properties || {};
-        data.properties.ds_randomizer_state = this.properties.ds_randomizer_state;
-      }
-      return data;
+      return originalSerialize ? originalSerialize.apply(this, arguments) : {};
     };
 
     nodeType.prototype.configure = function (info) {
