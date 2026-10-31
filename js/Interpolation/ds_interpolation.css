@@ -374,38 +374,17 @@
   min-width: 0 !important;
 }
 
-.ds-interp-mode-btn {
-  height: 22px !important;
-  min-width: 0 !important;
-  font-size: 9.5px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.02em !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 4px !important;
-  border-radius: 4px !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  background: var(--ds-color-card, #12151c) !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  cursor: pointer !important;
-  outline: none !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  transition: all 0.15s ease !important;
-}
-
-.ds-interp-mode-btn:hover {
-  border-color: var(--ds-color-border-hover, #374151) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-}
-
-.ds-interp-mode-btn.is-active {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-on-accent, #0a0c10) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+.ds-ui-btn.ds-interp-mode-btn {
+  height: 22px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ------------------------------------------------------------------------- */

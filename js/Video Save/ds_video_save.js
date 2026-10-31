@@ -391,7 +391,7 @@ function buildVideoSaveUI(node) {
   // Prefix Input
   const prefixInput = document.createElement("input");
   prefixInput.type = "text";
-  prefixInput.className = "ds-vs-text-input";
+  prefixInput.className = "ds-ui-input ds-vs-text-input";
   prefixInput.value = s.prefix || "DS_Video";
   prefixInput.placeholder = "DS_Video";
   prefixInput.addEventListener("input", () => {

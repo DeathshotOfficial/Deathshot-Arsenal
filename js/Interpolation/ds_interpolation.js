@@ -286,12 +286,12 @@ class DSInterpolationController {
 
     this.btnModeTargetFps = document.createElement("button");
     this.btnModeTargetFps.type = "button";
-    this.btnModeTargetFps.className = "ds-interp-mode-btn is-active";
+    this.btnModeTargetFps.className = "ds-ui-btn ds-ui-btn-compact ds-interp-mode-btn is-active";
     this.btnModeTargetFps.textContent = "Target FPS";
 
     this.btnModeMultiplier = document.createElement("button");
     this.btnModeMultiplier.type = "button";
-    this.btnModeMultiplier.className = "ds-interp-mode-btn";
+    this.btnModeMultiplier.className = "ds-ui-btn ds-ui-btn-compact ds-interp-mode-btn";
     this.btnModeMultiplier.textContent = "Multiplier";
 
     this.modeRow.append(this.btnModeTargetFps, this.btnModeMultiplier);

@@ -16,17 +16,6 @@ import { ensureFxLayer } from "../UIElements/Theme/fx.js";
 // Ensure CSS is loaded — version stamp forces browser to fetch fresh CSS on each ComfyUI restart
 const DS_TM_BUILD = "20261012_01";
 
-const DS_UI_CSS_ID = "ds-ui-system-css";
-const _existingUiCss = document.getElementById(DS_UI_CSS_ID);
-if (!_existingUiCss || !_existingUiCss.href.includes(DS_TM_BUILD)) {
-  if (_existingUiCss) _existingUiCss.remove();
-  const link = document.createElement("link");
-  link.id = DS_UI_CSS_ID;
-  link.rel = "stylesheet";
-  link.href = `/extensions/DeathshotArsenal/UIElements/Theme/ds_ui.css?v=${DS_TM_BUILD}`;
-  document.head.appendChild(link);
-}
-
 const CSS_ID = "ds-theme-manager-css";
 const _existingTmCss = document.getElementById(CSS_ID);
 if (!_existingTmCss || !_existingTmCss.href.includes(DS_TM_BUILD)) {

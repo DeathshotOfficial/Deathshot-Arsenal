@@ -444,11 +444,11 @@ function buildNodeUI(node) {
   action.style.margin = "0";
   action.style.boxSizing = "border-box";
 
-  const mute = makeButton("MUTE", "ds-gs-tab ds-gs-node-seg", () => {
+  const mute = makeButton("MUTE", "ds-ui-btn ds-ui-btn-compact ds-gs-tab ds-gs-node-seg", () => {
     configOf(node).actionMode = "mute";
     touch(node);
   });
-  const bypass = makeButton("BYPASS", "ds-gs-tab ds-gs-node-seg", () => {
+  const bypass = makeButton("BYPASS", "ds-ui-btn ds-ui-btn-compact ds-gs-tab ds-gs-node-seg", () => {
     configOf(node).actionMode = "bypass";
     touch(node);
   });
@@ -884,7 +884,7 @@ function buildSettingsContent(item) {
 
   const close = document.createElement("button");
   close.type = "button";
-  close.className = "ds-gs-popup-close";
+  close.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-gs-popup-close";
   close.innerHTML = ICON.close;
   close.addEventListener("pointerdown", stopEvent);
   close.addEventListener("click", e => {
@@ -904,13 +904,13 @@ function buildSettingsContent(item) {
   const actionSeg = document.createElement("div");
   actionSeg.className = "ds-gs-segment ds-gs-popup-segment";
 
-  const muteBtn = makeButton("Mute", `ds-gs-tab${c.actionMode === "mute" ? " is-active active" : ""}`, () => {
+  const muteBtn = makeButton("Mute", `ds-ui-btn ds-ui-btn-compact ds-gs-tab${c.actionMode === "mute" ? " is-active active" : ""}`, () => {
     c.actionMode = "mute";
     muteBtn.classList.add("is-active", "active");
     bypassBtn.classList.remove("is-active", "active");
     touch(node);
   });
-  const bypassBtn = makeButton("Bypass", `ds-gs-tab${c.actionMode === "bypass" ? " is-active active" : ""}`, () => {
+  const bypassBtn = makeButton("Bypass", `ds-ui-btn ds-ui-btn-compact ds-gs-tab${c.actionMode === "bypass" ? " is-active active" : ""}`, () => {
     c.actionMode = "bypass";
     bypassBtn.classList.add("is-active", "active");
     muteBtn.classList.remove("is-active", "active");
@@ -947,12 +947,12 @@ function buildSettingsContent(item) {
     updateNote();
   };
 
-  allBtn = makeButton("All groups", `ds-gs-tab${c.selectionMode === "all" ? " is-active active" : ""}`, () => {
+  allBtn = makeButton("All groups", `ds-ui-btn ds-ui-btn-compact ds-gs-tab${c.selectionMode === "all" ? " is-active active" : ""}`, () => {
     c.selectionMode = "all";
     updateSelectionToggles();
     touch(node);
   });
-  pickBtn = makeButton("Pick groups", `ds-gs-tab${c.selectionMode === "pick" ? " is-active active" : ""}`, () => {
+  pickBtn = makeButton("Pick groups", `ds-ui-btn ds-ui-btn-compact ds-gs-tab${c.selectionMode === "pick" ? " is-active active" : ""}`, () => {
     c.selectionMode = "pick";
     updateSelectionToggles();
     touch(node);
@@ -965,10 +965,11 @@ function buildSettingsContent(item) {
   toolbar.className = "ds-gs-popup-toolbar";
 
   const search = document.createElement("div");
-  search.className = "ds-gs-popup-search";
+  search.className = "ds-ui-input-row ds-gs-popup-search";
   search.innerHTML = ICON.search;
   const input = document.createElement("input");
   input.type = "text";
+  input.className = "ds-ui-input-row-field";
   input.placeholder = "Filter groups…";
   input.value = item.search;
   input.addEventListener("pointerdown", stopEvent);
@@ -1103,7 +1104,7 @@ function buildSettingsContent(item) {
   const ruleButtons = [];
   for (const [val, label] of ruleData) {
     const isAct = c.switchMode === val;
-    const b = makeButton(label, `ds-gs-tab${isAct ? " is-active active" : ""}`, () => {
+    const b = makeButton(label, `ds-ui-btn ds-ui-btn-compact ds-gs-tab${isAct ? " is-active active" : ""}`, () => {
       c.switchMode = val;
       for (const btn of ruleButtons) btn.classList.remove("is-active", "active");
       b.classList.add("is-active", "active");

@@ -301,8 +301,8 @@ app.registerExtension({
             <div class="ds-prompt-actions" role="toolbar" aria-label="Prompt controls">
               <div class="ds-prompt-trigger-control" role="group" aria-label="LoRA trigger placement">
                 <span class="ds-prompt-trigger-label">Triggers</span>
-                <button type="button" class="ds-prompt-seg" data-pos="before" aria-pressed="false">Before</button>
-                <button type="button" class="ds-prompt-seg is-active" data-pos="after" aria-pressed="true">After</button>
+                <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-prompt-seg" data-pos="before" aria-pressed="false">Before</button>
+                <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-prompt-seg is-active" data-pos="after" aria-pressed="true">After</button>
               </div>
               <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-ui-btn-icon-only ds-prompt-action-btn"
                       data-action="copy" title="Copy prompt text" aria-label="Copy prompt text">

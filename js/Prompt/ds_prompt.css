@@ -125,35 +125,11 @@
   user-select: none;
 }
 
-.ds-prompt-seg {
-  appearance: none;
-  border: 1px solid transparent !important;
-  border-radius: calc(var(--ds-radius-control, 5px) - 2px) !important;
-  background: transparent !important;
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 9.5px !important;
-  font-weight: 600 !important;
-  height: 18px !important;
-  min-width: 40px !important;
-  padding: 0 6px !important;
-  line-height: 16px !important;
-  transition: all var(--ds-transition, 120ms ease);
-}
-
-.ds-prompt-seg:hover {
-  color: var(--ds-color-text, #e5e7eb) !important;
-  background: var(--ds-btn-hover, #1e2433) !important;
-}
-
-.ds-prompt-seg.is-active,
-.ds-prompt-seg[aria-pressed="true"] {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-on-accent, #0a0c10) !important;
-  font-weight: 700 !important;
-  text-shadow: var(--ds-color-on-accent-shadow, none);
+.ds-ui-btn.ds-prompt-seg {
+  border-radius: calc(var(--ds-radius-control, 5px) - 2px);
+  height: 18px;
+  min-width: 40px;
+  padding: 0 6px;
 }
 
 .ds-prompt-action-btn {

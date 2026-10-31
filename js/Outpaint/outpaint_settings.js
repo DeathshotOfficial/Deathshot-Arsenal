@@ -195,6 +195,7 @@ export function openSettings(node) {
   const input = document.createElement("input");
   input.type = "text";
   input.inputMode = "decimal";
+  input.className = "ds-ui-input";
   input.placeholder = "e.g. 1.3";
   input.spellcheck = false;
 
