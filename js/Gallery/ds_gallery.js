@@ -1105,6 +1105,7 @@ app.registerExtension({
 
         itemEl.addEventListener("dblclick", (e) => {
           e.stopPropagation();
+          if (e.target.closest(".ds-gallery-select-pill")) return;
           this._openViewer(item);
         });
 
@@ -1122,7 +1123,8 @@ app.registerExtension({
     // Selection Management
     // ------------------------------------------------------------------------
     nodeType.prototype._handleItemClick = function (item, index, event) {
-      if (event.ctrlKey || event.metaKey) {
+      // The check pill toggles the item like a checkbox and never opens the viewer.
+      if (event.ctrlKey || event.metaKey || event.target.closest(".ds-gallery-select-pill")) {
         if (this._selectedSet.has(item.full_path)) {
           this._selectedSet.delete(item.full_path);
         } else {
