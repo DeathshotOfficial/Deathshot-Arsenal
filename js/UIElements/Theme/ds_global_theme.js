@@ -591,6 +591,8 @@ function applyNodeBaseTheme(node, theme = getTheme(config.theme)) {
   if (!isDSNode(node)) return;
   try { protectDSResizeCorners(node); } catch (_) {}
   markNodeFace(node);
+  // Badges sit above the title bar; on a node without a base they float in mid-air.
+  if (node._dsNodeBaseOptOut) node.drawBadges = () => {};
   if (!theme || node._dsNodeBaseOptOut) return;
 
   const palette = getNodeBasePalette(theme);
