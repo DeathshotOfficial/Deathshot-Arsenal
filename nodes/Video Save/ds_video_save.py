@@ -19,7 +19,6 @@ import numpy as np
 import torch
 from PIL import Image, ImageOps, PngImagePlugin
 
-import comfy.utils
 import folder_paths
 import server
 import threading
@@ -693,6 +692,7 @@ class DS_VideoSave:
                 save_output=save_output,
                 prompt=prompt,
                 extra_pnginfo=extra_pnginfo,
+                unique_id=unique_id,
             )
 
         primary_path = saved_paths[0] if saved_paths else ""
@@ -750,9 +750,23 @@ class DS_VideoSave:
         save_output: bool,
         prompt: Optional[Dict[str, Any]],
         extra_pnginfo: Optional[Dict[str, Any]],
+        unique_id: Optional[str] = None,
     ) -> Tuple[List[str], Optional[str], bool]:
         ffmpeg_bin = get_ffmpeg_path()
         num_frames = Images.shape[0]
+        last_pct = -1
+
+        # Feeds the node's own status bar; ComfyUI's generic progress event would also draw its native overlay.
+        def report(done: int):
+            nonlocal last_pct
+            pct = done * 100 // max(1, num_frames)
+            if pct == last_pct:
+                return
+            last_pct = pct
+            server.PromptServer.instance.send_sync(
+                "ds_video_progress",
+                {"node_id": str(unique_id), "done": done, "total": num_frames, "percent": pct},
+            )
         H, W = int(Images.shape[1]), int(Images.shape[2])
         # FFmpeg requires even dimensions for YUV formats
         even_w = W if W % 2 == 0 else W - 1
@@ -815,7 +829,6 @@ class DS_VideoSave:
                 stderr_th = threading.Thread(target=_drain_png_stderr, daemon=True)
                 stderr_th.start()
 
-                pbar = comfy.utils.ProgressBar(num_frames)
                 for idx in range(num_frames):
                     arr_16 = (Images[idx].detach().cpu().clamp(0.0, 1.0).numpy() * 65535.0).astype(np.uint16)
                     output_paths.append(os.path.join(target_dir, f"{prefix}_{batch_counter:05d}_{idx:05d}.png"))
@@ -823,7 +836,7 @@ class DS_VideoSave:
                         proc.stdin.write(arr_16.tobytes())
                     except (BrokenPipeError, OSError):
                         break
-                    pbar.update(1)
+                    report(idx + 1)
 
                 try:
                     proc.stdin.flush()
@@ -839,7 +852,6 @@ class DS_VideoSave:
                     err_msg = b"".join(stderr_chunks).decode("utf-8", errors="replace")
                     raise RuntimeError(f"FFmpeg 16-bit PNG sequence failed: {err_msg}")
             else:
-                pbar = comfy.utils.ProgressBar(num_frames)
                 for idx in range(num_frames):
                     frame_name = f"{prefix}_{batch_counter:05d}_{idx:05d}.png"
                     frame_path = os.path.join(target_dir, frame_name)
@@ -858,7 +870,7 @@ class DS_VideoSave:
 
                     pil_img.save(frame_path, "PNG", pnginfo=pnginfo, compress_level=4)
                     output_paths.append(frame_path)
-                    pbar.update(1)
+                    report(idx + 1)
 
             return output_paths, None, False
 
@@ -1087,7 +1099,6 @@ class DS_VideoSave:
             stderr_thread.start()
 
             broken_pipe = False
-            pbar = comfy.utils.ProgressBar(num_frames)
             for i in range(num_frames):
                 # Clamp and convert single frame directly to uint8
                 frame_arr = (Images[i].detach().cpu().clamp(0.0, 1.0).numpy() * 255.0).astype(np.uint8)
@@ -1096,7 +1107,7 @@ class DS_VideoSave:
                 except (BrokenPipeError, OSError):
                     broken_pipe = True
                     break
-                pbar.update(1)
+                report(i + 1)
 
             try:
                 proc.stdin.flush()
@@ -1134,6 +1145,7 @@ class DS_VideoSave:
                         save_output=save_output,
                         prompt=prompt,
                         extra_pnginfo=extra_pnginfo,
+                        unique_id=unique_id,
                     )
                 raise RuntimeError(f"FFmpeg failed with returncode {proc.returncode}: {stderr_text.strip() or 'Unknown error'}")
 

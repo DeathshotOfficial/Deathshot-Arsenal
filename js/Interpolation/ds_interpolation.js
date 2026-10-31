@@ -827,15 +827,12 @@ app.registerExtension({
       }
     });
 
-    api.addEventListener("progress", (e) => {
+    api.addEventListener("ds_interpolation_progress", (e) => {
       const d = e?.detail;
       if (!d) return;
       for (const n of app.graph?._nodes || []) {
-        if (n?.type === TYPE && String(n.id) === String(d.node)) {
-          if (d.max > 0) {
-            const pct = (d.value / d.max) * 100;
-            n._controller?.statusBar?.setProgress(pct, `Interpolating ${d.value}/${d.max}`);
-          }
+        if (n?.type === TYPE && String(n.id) === String(d.node_id)) {
+          n._controller?.statusBar?.setProgress((d.done / d.total) * 100, `Interpolating ${d.done}/${d.total}`);
         }
       }
     });
