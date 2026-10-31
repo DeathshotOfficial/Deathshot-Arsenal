@@ -158,7 +158,7 @@ if (!document.querySelector(`link[data-ds-randomizer-css], link[href*="ds_random
 
 const MIN_NODE_WIDTH = 420;
 const DEFAULT_NODE_WIDTH = 460;
-const DEFAULT_NODE_HEIGHT = 520;
+const DEFAULT_NODE_HEIGHT = 620;
 const CARD_MARGIN = 5;
 const BOTTOM_GAP = 5;
 const NATURAL_CARD_HEIGHT = 380;

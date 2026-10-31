@@ -199,8 +199,8 @@
   display: flex !important;
   flex-direction: column !important;
   gap: var(--ds-gap-xs, 4px) !important;
-  min-height: 140px !important;
-  flex: 1 1 50% !important;
+  min-height: 0 !important;
+  flex: 0 1 auto !important;
   overflow: hidden !important;
 }
 
@@ -329,15 +329,14 @@
   flex-shrink: 0 !important;
 }
 
-/* Attribute Chips Grid Surface: Fills ALL remaining vertical space in Section 1 */
+/* Attribute chips take their natural height and only scroll when the node is too short for them. */
 .ds-rand-chips-grid {
   display: flex !important;
   flex-wrap: wrap !important;
   align-content: flex-start !important;
   gap: 4px !important;
-  flex: 1 1 auto !important;
-  min-height: 80px !important;
-  height: 100% !important;
+  flex: 0 1 auto !important;
+  min-height: 52px !important;
   max-height: none !important;
   overflow-y: auto !important;
   padding: 6px !important;
@@ -365,7 +364,7 @@
   display: flex !important;
   flex-direction: column !important;
   gap: var(--ds-gap-xs, 4px) !important;
-  flex: 1 1 50% !important;
+  flex: 1 1 auto !important;
   min-height: 100px !important;
   overflow: hidden !important;
 }
