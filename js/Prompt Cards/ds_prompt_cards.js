@@ -18,6 +18,7 @@ import { app } from "/scripts/app.js";
 import { attachNodeShortcuts, attachTextHistory } from "../UIElements/shortcuts.js";
 import {
   DSIconMarkup,
+  Modal,
   installDSUI,
   normalizeDSWidgetHost,
   protectDSResizeCorners,
@@ -1217,153 +1218,95 @@ app.registerExtension({
     };
 
     // ============================================================
-    // MODAL THEME BRIDGE
-    // ============================================================
-    nodeType.prototype._applyModalTheme = function (modal) {
-      if (!modal || !this.root) return;
-
-      const vars = [
-        "--ds-color-bg",
-        "--ds-color-card",
-        "--ds-color-card-border",
-        "--ds-color-panel",
-        "--ds-color-panel-2",
-        "--ds-color-accent",
-        "--ds-color-accent-hover",
-        "--ds-color-on-accent",
-        "--ds-color-text",
-        "--ds-color-muted-text",
-        "--ds-color-border",
-        "--ds-color-danger",
-        "--ds-color-success",
-        "--ds-radius-card",
-        "--ds-radius-sm",
-        "--ds-font",
-        "--ds-color-scrollbar",
-      ];
-
-      const copyStyles = () => {
-        const computed = getComputedStyle(this.root);
-        vars.forEach((name) => {
-          const value = computed.getPropertyValue(name).trim();
-          if (value) modal.style.setProperty(name, value);
-        });
-      };
-
-      copyStyles();
-
-      if (this._modalThemeObserver) {
-        this._modalThemeObserver.disconnect();
-      }
-
-      this._modalThemeObserver = new MutationObserver(() => {
-        if (document.body.contains(modal)) copyStyles();
-      });
-
-      this._modalThemeObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class", "style", "data-theme", "data-color-scheme"],
-      });
-    };
-
-    // ============================================================
     // CARD DETAIL MODAL
     // ============================================================
     nodeType.prototype._openCardModal = function (id) {
       const card = this.cards.find((c) => c.id === id);
       if (!card) return;
+      this._cardModal?.close();
 
-      const old = document.querySelector(".ds-pc-modal");
-      if (old) old.remove();
+      let savePrompt = null;
+      const modal = Modal({
+        title: "Card Preview & Edit",
+        icon: "image",
+        width: "min(840px, 94vw)",
+        className: "ds-pc-modal",
+        onClose: () => {
+          savePrompt?.flush?.();
+          this._cardModal = null;
+          this._render();
+        },
+      });
+      this._cardModal = modal;
 
-      const modal = document.createElement("div");
-      modal.className = "ds-pc-modal";
-      modal.innerHTML = `
-        <div class="ds-pc-modal-backdrop"></div>
-        <div class="ds-pc-modal-content">
-          <div class="ds-pc-modal-header">
-            <div class="ds-pc-modal-title">
-              Card Preview &amp; Edit
-            </div>
-            <div class="ds-pc-modal-actions">
-              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn ${card.pinned ? "pinned" : ""}" data-maction="pin" title="Toggle pin">
-                ${card.pinned ? ICONS.pinFilled : ICONS.pin}
-              </button>
-              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="copy" title="Copy prompt">
-                ${ICONS.copy}
-              </button>
-              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="paste" title="Paste prompt from clipboard">
-                ${ICONS.paste}
-              </button>
-              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn danger" data-maction="delete" title="Delete card">
-                ${ICONS.trash}
-              </button>
-              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="close" title="Close modal">
-                ✕
-              </button>
-            </div>
-          </div>
+      const actions = document.createElement("div");
+      actions.className = "ds-pc-modal-actions";
+      actions.innerHTML = `
+        <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn ${card.pinned ? "pinned" : ""}" data-maction="pin" title="Toggle pin">
+          ${card.pinned ? ICONS.pinFilled : ICONS.pin}
+        </button>
+        <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="copy" title="Copy prompt">
+          ${ICONS.copy}
+        </button>
+        <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="paste" title="Paste prompt from clipboard">
+          ${ICONS.paste}
+        </button>
+        <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn danger" data-maction="delete" title="Delete card">
+          ${ICONS.trash}
+        </button>
+      `;
+      modal.head.insertBefore(actions, modal.head.lastElementChild);
 
-          <div class="ds-pc-modal-image-wrap">
-            ${
-              card.image
-                ? `<img src="${card.image}" class="ds-pc-modal-img" alt="large preview" />`
-                : `<div class="ds-pc-modal-placeholder">
-                     ${ICONS.upload}
-                     <div>No image yet — click Replace to add one</div>
-                   </div>`
-            }
-          </div>
-
-          <div class="ds-pc-modal-controls">
-            <div class="ds-modal-type" role="group" aria-label="Prompt type">
-              <button class="ds-ui-btn ds-ui-btn-compact ds-type-tag ${card.type !== "video" ? "active" : ""}" data-maction="set-type" data-type="image" type="button">
-                ${ICONS.image}<span>Image</span>
-              </button>
-              <button class="ds-ui-btn ds-ui-btn-compact ds-type-tag ${card.type === "video" ? "active" : ""}" data-maction="set-type" data-type="video" type="button">
-                ${ICONS.video}<span>Video</span>
-              </button>
-            </div>
-
-            <button class="ds-ui-btn ds-btn" data-maction="replace">
-              ${ICONS.upload}
-              <span>Replace Image</span>
-            </button>
-          </div>
-
-          <div class="ds-pc-modal-body">
-            <textarea
-              class="ds-pc-modal-prompt ds-ui-text-editor"
-              spellcheck="true"
-              placeholder="Describe the pose / subject..."
-            >${(card.prompt || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</textarea>
-          </div>
-
-          <div class="ds-pc-modal-footer">
-            <div class="ds-pc-hint">
-              Changes save automatically. Press Esc to exit.
-            </div>
-            <button class="ds-ui-btn ds-ui-btn-primary ds-btn" data-maction="close">
-              Done
-            </button>
-          </div>
+      modal.body.innerHTML = `
+        <div class="ds-pc-modal-image-wrap">
+          ${
+            card.image
+              ? `<img src="${card.image}" class="ds-pc-modal-img" alt="large preview" />`
+              : `<div class="ds-pc-modal-placeholder">
+                   ${ICONS.upload}
+                   <div>No image yet — click Replace to add one</div>
+                 </div>`
+          }
         </div>
+
+        <div class="ds-pc-modal-controls">
+          <div class="ds-modal-type" role="group" aria-label="Prompt type">
+            <button class="ds-ui-btn ds-ui-btn-compact ds-type-tag ${card.type !== "video" ? "active" : ""}" data-maction="set-type" data-type="image" type="button">
+              ${ICONS.image}<span>Image</span>
+            </button>
+            <button class="ds-ui-btn ds-ui-btn-compact ds-type-tag ${card.type === "video" ? "active" : ""}" data-maction="set-type" data-type="video" type="button">
+              ${ICONS.video}<span>Video</span>
+            </button>
+          </div>
+
+          <button class="ds-ui-btn ds-btn" data-maction="replace">
+            ${ICONS.upload}
+            <span>Replace Image</span>
+          </button>
+        </div>
+
+        <textarea
+          class="ds-pc-modal-prompt ds-ui-text-editor"
+          spellcheck="true"
+          placeholder="Describe the pose / subject..."
+        >${(card.prompt || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</textarea>
       `;
 
-      document.body.appendChild(modal);
-      this._applyModalTheme(modal);
+      modal.footer.innerHTML = `
+        <div class="ds-pc-hint">Changes save automatically. Press Esc to exit.</div>
+        <button class="ds-ui-btn ds-ui-btn-primary ds-btn" data-maction="close">Done</button>
+      `;
 
-      const backdrop = modal.querySelector(".ds-pc-modal-backdrop");
-      const imgWrap = modal.querySelector(".ds-pc-modal-image-wrap");
-      const ta = modal.querySelector(".ds-pc-modal-prompt");
+      const imgWrap = modal.body.querySelector(".ds-pc-modal-image-wrap");
+      const ta = modal.body.querySelector(".ds-pc-modal-prompt");
 
-      // Prevent shortcuts while editing prompt
+      // Prevent canvas shortcuts while editing; Esc still reaches the modal first.
       ta.addEventListener("keydown", (e) => {
         e.stopPropagation();
       });
       attachTextHistory(ta);
 
-      const savePrompt = debounce((val) => {
+      savePrompt = debounce((val) => {
         const c = this.cards.find((x) => x.id === id);
         if (c) {
           c.prompt = val;
@@ -1377,19 +1320,9 @@ app.registerExtension({
 
       ta.addEventListener("input", () => savePrompt(ta.value));
 
-      const close = () => {
-        if (savePrompt.flush) savePrompt.flush();
-        if (this._modalThemeObserver) {
-          this._modalThemeObserver.disconnect();
-          this._modalThemeObserver = null;
-        }
-        modal.remove();
-        this._render();
-      };
+      const close = () => modal.close();
 
-      backdrop.addEventListener("click", close);
-
-      modal.querySelectorAll("[data-maction]").forEach((btn) => {
+      modal.window.querySelectorAll("[data-maction]").forEach((btn) => {
         btn.addEventListener("click", async (e) => {
           const act = btn.dataset.maction;
           const c = this.cards.find((x) => x.id === id);
@@ -1432,7 +1365,7 @@ app.registerExtension({
           } else if (act === "set-type") {
             const nextType = btn.dataset.type === "video" ? "image" : "video";
             this._setCardType(id, nextType);
-            modal.querySelectorAll("[data-maction='set-type']").forEach((b) => {
+            modal.window.querySelectorAll("[data-maction='set-type']").forEach((b) => {
               b.classList.toggle("active", b.dataset.type === nextType);
             });
           } else if (act === "delete") {
@@ -1460,14 +1393,7 @@ app.registerExtension({
         });
       });
 
-      const onKey = (ev) => {
-        if (ev.key === "Escape") {
-          document.removeEventListener("keydown", onKey);
-          close();
-        }
-      };
-
-      document.addEventListener("keydown", onKey, { once: true });
+      modal.open();
       setTimeout(() => ta.focus(), 30);
     };
   },
