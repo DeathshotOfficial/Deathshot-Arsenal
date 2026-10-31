@@ -282,25 +282,3 @@ try:
     register_theme_manager_routes()
 except Exception as exc:
     print(f"[DS Theme Manager] Route registration deferred: {exc}")
-
-
-# ------------------------------------------------------------------
-# COMFY NODE (UI only — never executes)
-# ------------------------------------------------------------------
-class DS_ThemeManager:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {},
-            "optional": {
-                "theme": ("STRING", {"default": "deathshot_dark"}),
-            }
-        }
-
-    RETURN_TYPES = ()
-    FUNCTION = "noop"
-    CATEGORY = "☠️ Deathshot Arsenal/🎨 UI"
-    OUTPUT_NODE = True
-
-    def noop(self, theme="deathshot_dark"):
-        return ()
