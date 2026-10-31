@@ -80,32 +80,11 @@
   padding-top: 4px;
 }
 
-.ds-vc-btn {
+.ds-ui-btn.ds-vc-btn {
   flex: 1;
   height: 26px;
-  border: 1px solid var(--vc-border);
   border-radius: 5px;
-  background: var(--vc-panel);
-  color: var(--vc-text);
-  font-family: inherit;
-  font-size: 10.5px;
-  font-weight: 700;
-  cursor: pointer;
   display: grid;
   place-items: center;
-  transition: all 0.15s ease;
   pointer-events: auto;
-}
-
-.ds-vc-btn:hover {
-  border-color: var(--vc-accent);
-  color: var(--vc-accent);
-  background: var(--vc-panel2);
-}
-
-.ds-vc-btn.active,
-.ds-vc-btn:active {
-  border-color: var(--vc-accent);
-  background: color-mix(in srgb, var(--vc-accent) 12%, var(--vc-panel));
-  color: var(--vc-accent);
 }

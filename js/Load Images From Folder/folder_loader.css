@@ -1,6 +1,4 @@
-/* DeathshotArsenal/js/Load Images From Folder/folder_loader.css */
-
-/* ComfyUI DOM widget host click-through wrapper */
+/* DeathshotArsenal/js/Load Images From Folder/folder_loader.css *//* ComfyUI DOM widget host click-through wrapper */
 .dom-widget:has(> .ds-fl-node-card),
 .dom-widget:has(> [data-ds-folder-card]) {
   pointer-events: none !important;
@@ -135,8 +133,7 @@
 }
 
 /* Numeric text strictly centered */
-.ds-fl-stepper-val,
-.ds-ui-stepper-value {
+.ds-fl-stepper-val {
   text-align: center !important;
 }
 
@@ -323,11 +320,6 @@
   justify-content: center;
   font-family: var(--ds-font, Inter, system-ui, sans-serif);
   color: var(--ds-color-text, #e5e7eb);
-}
-
-/* Ensure Dropdown Popup displays above modals */
-.ds-ui-popup {
-  z-index: 100000 !important;
 }
 
 .ds-fl-modal {

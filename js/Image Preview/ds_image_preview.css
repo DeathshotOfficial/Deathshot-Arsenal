@@ -66,63 +66,29 @@
   box-sizing: border-box;
 }
 
-.ds-ip-tab-btn {
+.ds-ui-btn.ds-ip-tab-btn {
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
-  border: 1px solid transparent !important;
   border-radius: calc(var(--ds-radius-control, 5px) - 2px);
-  background: transparent !important;
-  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af)) !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  outline: none;
   box-sizing: border-box;
-  line-height: 1;
-  transition: all var(--ds-transition, 120ms ease);
 }
 
-.ds-ip-tab-btn:hover:not(.active):not(.is-active) {
-  color: var(--ds-color-text, var(--ds-text, #e5e7eb)) !important;
-  background: color-mix(in srgb, var(--ds-color-text, var(--ds-text, #fff)) 8%, transparent) !important;
-  border-color: transparent !important;
-}
-
-.ds-ip-tab-btn.active,
-.ds-ip-tab-btn.is-active,
-.ds-ip-tab-btn[aria-selected="true"] {
-  background: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
-  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
-  border-color: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
-  font-weight: 700 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-}
-
-.ds-ip-tab-btn svg,
-.ds-ip-tab-btn .ds-icon {
+.ds-ui-btn.ds-ip-tab-btn svg,
+.ds-ui-btn.ds-ip-tab-btn .ds-icon {
   display: block;
   margin: auto;
-  stroke: currentColor !important;
-  fill: none !important;
+  stroke: currentColor;
+  fill: none;
   pointer-events: none;
 }
 
-.ds-ip-tab-btn.active svg,
-.ds-ip-tab-btn.is-active svg,
-.ds-ip-tab-btn[aria-selected="true"] svg,
-.ds-ip-tab-btn.active .ds-icon,
-.ds-ip-tab-btn.is-active .ds-icon,
-.ds-ip-tab-btn[aria-selected="true"] .ds-icon {
-  stroke: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
-  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
-  fill: none !important;
-}
-
 /* Action buttons in options row */
-.ds-ip-btn {
+.ds-ui-btn.ds-ip-btn {
   flex: 1 1 0;
   min-width: 30px;
   height: var(--ds-btn-height, 28px);
@@ -130,50 +96,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36));
   border-radius: var(--ds-btn-radius, var(--ds-radius-control, 5px));
-  background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23));
-  color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb));
-  cursor: pointer;
-  outline: none;
   box-sizing: border-box;
-  transition: all var(--ds-transition, 120ms ease);
 }
 
-.ds-ip-btn svg,
-.ds-ip-btn .ds-icon {
+.ds-ui-btn.ds-ip-btn svg,
+.ds-ui-btn.ds-ip-btn .ds-icon {
   display: block;
   margin: auto;
-  stroke: currentColor !important;
-  fill: none !important;
+  stroke: currentColor;
+  fill: none;
   pointer-events: none;
 }
 
-.ds-ip-btn:hover:not(:disabled) {
-  background: var(--ds-btn-hover, #1e2433);
-  border-color: var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-accent, #67e8f9);
-  transform: translateY(-1px);
-}
-
-.ds-ip-btn:active:not(:disabled) {
-  background: var(--ds-btn-active, #253044);
-  transform: translateY(0);
-}
-
-.ds-ip-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-  pointer-events: none;
-  transform: none;
-}
-
-.ds-ip-btn.is-saving {
-  border-color: var(--ip-accent, var(--ds-color-accent, var(--ds-accent, #67e8f9))) !important;
-  color: var(--ip-accent, var(--ds-color-accent, var(--ds-accent, #67e8f9))) !important;
-}
-
-.ds-ip-btn.is-saving svg {
+.ds-ui-btn.ds-ip-btn.is-saving svg {
   animation: dsipspin 1s linear infinite;
 }
 
@@ -592,7 +528,6 @@
   background: transparent;
 }
 
-/* Animated Grid Tile */
 @keyframes dsipTileIn {
   from {
     opacity: 0;
@@ -675,4 +610,3 @@
   border-color: var(--ds-color-accent, #67e8f9);
   font-weight: 800;
 }
-

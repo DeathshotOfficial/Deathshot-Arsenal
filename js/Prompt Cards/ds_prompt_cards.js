@@ -375,39 +375,39 @@ app.registerExtension({
               <span class="ds-cards-count" data-count>0</span>
             </div>
 
-            <div class="ds-segmented" data-view-toggle role="group" aria-label="View mode">
-              <button data-view="grid" class="active" type="button" aria-label="Grid view" title="Grid view">${ICONS.grid}</button>
-              <button data-view="list" type="button" aria-label="List view" title="List view">${ICONS.list}</button>
+            <div class="ds-ui-btn-group ds-segmented" data-view-toggle role="group" aria-label="View mode">
+              <button data-view="grid" class="ds-ui-btn ds-ui-btn-compact active" type="button" aria-label="Grid view" title="Grid view">${ICONS.grid}</button>
+              <button data-view="list" class="ds-ui-btn ds-ui-btn-compact" type="button" aria-label="List view" title="List view">${ICONS.list}</button>
             </div>
 
-            <div class="ds-segmented ds-size-toggle" data-size-toggle role="group" aria-label="Content size">
-              <button data-size="small" type="button" title="Small (Thumbnail size)">S</button>
-              <button data-size="med" class="active" type="button" title="Medium (Balanced size)">M</button>
-              <button data-size="large" type="button" title="Large (Spacious size)">L</button>
+            <div class="ds-ui-btn-group ds-segmented ds-size-toggle" data-size-toggle role="group" aria-label="Content size">
+              <button data-size="small" class="ds-ui-btn ds-ui-btn-compact" type="button" title="Small (Thumbnail size)">S</button>
+              <button data-size="med" class="ds-ui-btn ds-ui-btn-compact active" type="button" title="Medium (Balanced size)">M</button>
+              <button data-size="large" class="ds-ui-btn ds-ui-btn-compact" type="button" title="Large (Spacious size)">L</button>
             </div>
 
-            <button class="ds-btn primary" data-add type="button" title="Add new card">
+            <button class="ds-ui-btn ds-ui-btn-primary ds-btn" data-add type="button" title="Add new card">
               ${ICONS.plus}
               <span>Add</span>
             </button>
 
             <div class="ds-header-spacer"></div>
 
-            <button class="ds-icon-btn" data-export title="Export all cards (JSON)">${ICONS.export}</button>
-            <button class="ds-icon-btn" data-import title="Import / Merge cards (JSON)">${ICONS.import}</button>
+            <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-export title="Export all cards (JSON)">${ICONS.export}</button>
+            <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-import title="Import / Merge cards (JSON)">${ICONS.import}</button>
           </div>
 
           <div class="ds-cards-subtoolbar">
             <div class="ds-filters" role="group" aria-label="Prompt filters">
-              <button class="ds-filter-pill active" data-filter="all" type="button">All</button>
-              <button class="ds-filter-pill" data-filter="pinned" type="button">${ICONS.pin} <span>Pinned</span></button>
-              <button class="ds-filter-pill" data-filter="image" type="button">${ICONS.image} <span>Image</span></button>
-              <button class="ds-filter-pill" data-filter="video" type="button">${ICONS.video} <span>Video</span></button>
+              <button class="ds-ui-btn ds-ui-btn-compact ds-filter-pill active" data-filter="all" type="button">All</button>
+              <button class="ds-ui-btn ds-ui-btn-compact ds-filter-pill" data-filter="pinned" type="button">${ICONS.pin} <span>Pinned</span></button>
+              <button class="ds-ui-btn ds-ui-btn-compact ds-filter-pill" data-filter="image" type="button">${ICONS.image} <span>Image</span></button>
+              <button class="ds-ui-btn ds-ui-btn-compact ds-filter-pill" data-filter="video" type="button">${ICONS.video} <span>Video</span></button>
             </div>
 
             <div class="ds-search">
               <span class="search-icon">${ICONS.search}</span>
-              <input type="text" class="search-input" placeholder="Search prompts..." data-search />
+              <input type="text" class="ds-ui-input search-input" placeholder="Search prompts..." data-search />
             </div>
           </div>
         </div>
@@ -518,22 +518,22 @@ app.registerExtension({
             <div class="ds-card-type" role="status" aria-label="Prompt type">
               ${
                 card.type === "video"
-                  ? `<button class="ds-type-tag active" data-action="set-type" data-type="video" type="button" title="Video prompt — click to switch to Image">${ICONS.video}<span>Video</span></button>`
-                  : `<button class="ds-type-tag active" data-action="set-type" data-type="image" type="button" title="Image prompt — click to switch to Video">${ICONS.image}<span>Image</span></button>`
+                  ? `<button class="ds-ui-btn ds-ui-btn-compact ds-type-tag active" data-action="set-type" data-type="video" type="button" title="Video prompt — click to switch to Image">${ICONS.video}<span>Video</span></button>`
+                  : `<button class="ds-ui-btn ds-ui-btn-compact ds-type-tag active" data-action="set-type" data-type="image" type="button" title="Image prompt — click to switch to Video">${ICONS.image}<span>Image</span></button>`
               }
             </div>
 
             <div class="ds-card-actions">
-              <button class="ds-icon-btn ${card.pinned ? "pinned" : ""}" data-action="pin" title="${card.pinned ? "Unpin" : "Pin"}">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn ${card.pinned ? "pinned" : ""}" data-action="pin" title="${card.pinned ? "Unpin" : "Pin"}">
                 ${card.pinned ? ICONS.pinFilled : ICONS.pin}
               </button>
-              <button class="ds-icon-btn" data-action="copy" title="Copy prompt">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-action="copy" title="Copy prompt">
                 ${ICONS.copy}
               </button>
-              <button class="ds-icon-btn" data-action="paste" title="Paste prompt from clipboard into box">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-action="paste" title="Paste prompt from clipboard into box">
                 ${ICONS.paste}
               </button>
-              <button class="ds-icon-btn danger" data-action="delete" title="Delete card">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn danger" data-action="delete" title="Delete card">
                 ${ICONS.trash}
               </button>
             </div>
@@ -1286,19 +1286,19 @@ app.registerExtension({
               Card Preview &amp; Edit
             </div>
             <div class="ds-pc-modal-actions">
-              <button class="ds-icon-btn ${card.pinned ? "pinned" : ""}" data-maction="pin" title="Toggle pin">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn ${card.pinned ? "pinned" : ""}" data-maction="pin" title="Toggle pin">
                 ${card.pinned ? ICONS.pinFilled : ICONS.pin}
               </button>
-              <button class="ds-icon-btn" data-maction="copy" title="Copy prompt">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="copy" title="Copy prompt">
                 ${ICONS.copy}
               </button>
-              <button class="ds-icon-btn" data-maction="paste" title="Paste prompt from clipboard">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="paste" title="Paste prompt from clipboard">
                 ${ICONS.paste}
               </button>
-              <button class="ds-icon-btn danger" data-maction="delete" title="Delete card">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn danger" data-maction="delete" title="Delete card">
                 ${ICONS.trash}
               </button>
-              <button class="ds-icon-btn" data-maction="close" title="Close modal">
+              <button class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-icon-btn" data-maction="close" title="Close modal">
                 ✕
               </button>
             </div>
@@ -1317,15 +1317,15 @@ app.registerExtension({
 
           <div class="ds-pc-modal-controls">
             <div class="ds-modal-type" role="group" aria-label="Prompt type">
-              <button class="ds-type-tag ${card.type !== "video" ? "active" : ""}" data-maction="set-type" data-type="image" type="button">
+              <button class="ds-ui-btn ds-ui-btn-compact ds-type-tag ${card.type !== "video" ? "active" : ""}" data-maction="set-type" data-type="image" type="button">
                 ${ICONS.image}<span>Image</span>
               </button>
-              <button class="ds-type-tag ${card.type === "video" ? "active" : ""}" data-maction="set-type" data-type="video" type="button">
+              <button class="ds-ui-btn ds-ui-btn-compact ds-type-tag ${card.type === "video" ? "active" : ""}" data-maction="set-type" data-type="video" type="button">
                 ${ICONS.video}<span>Video</span>
               </button>
             </div>
 
-            <button class="ds-btn" data-maction="replace">
+            <button class="ds-ui-btn ds-btn" data-maction="replace">
               ${ICONS.upload}
               <span>Replace Image</span>
             </button>
@@ -1343,7 +1343,7 @@ app.registerExtension({
             <div class="ds-pc-hint">
               Changes save automatically. Press Esc to exit.
             </div>
-            <button class="ds-btn primary" data-maction="close">
+            <button class="ds-ui-btn ds-ui-btn-primary ds-btn" data-maction="close">
               Done
             </button>
           </div>

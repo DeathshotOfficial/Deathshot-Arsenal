@@ -428,14 +428,14 @@ function buildUI(node) {
   card.innerHTML = `
     <div class="ds-ic-options-row">
       <div class="ds-ic-tab-group" role="tablist">
-        <button type="button" class="ds-ic-tab-btn active is-active" data-mode="pause" role="tab" aria-selected="true" title="Pause mode · Stop run after capturing image"></button>
-        <button type="button" class="ds-ic-tab-btn" data-mode="pass" role="tab" aria-selected="false" title="Pass mode · Run complete workflow without stopping"></button>
+        <button type="button" class="ds-ui-btn ds-ic-tab-btn active is-active" data-mode="pause" role="tab" aria-selected="true" title="Pause mode · Stop run after capturing image"></button>
+        <button type="button" class="ds-ui-btn ds-ic-tab-btn" data-mode="pass" role="tab" aria-selected="false" title="Pass mode · Run complete workflow without stopping"></button>
       </div>
-      <button type="button" class="ds-ic-btn ds-ic-regenerate" title="Regenerate"></button>
-      <button type="button" class="ds-ic-btn ds-ic-continue" title="Continue" disabled></button>
-      <button type="button" class="ds-ic-btn ds-ic-copy" title="Copy image to clipboard" disabled></button>
-      <button type="button" class="ds-ic-btn ds-ic-open" title="Open image in new window" disabled></button>
-      <button type="button" class="ds-ic-btn ds-ic-save" title="Save output" disabled></button>
+      <button type="button" class="ds-ui-btn ds-ic-btn ds-ic-regenerate" title="Regenerate"></button>
+      <button type="button" class="ds-ui-btn ds-ic-btn ds-ic-continue" title="Continue" disabled></button>
+      <button type="button" class="ds-ui-btn ds-ic-btn ds-ic-copy" title="Copy image to clipboard" disabled></button>
+      <button type="button" class="ds-ui-btn ds-ic-btn ds-ic-open" title="Open image in new window" disabled></button>
+      <button type="button" class="ds-ui-btn ds-ic-btn ds-ic-save" title="Save output" disabled></button>
     </div>
     <div class="ds-ic-info-row">
       <div class="ds-ic-info-message">

@@ -1,9 +1,7 @@
 /* ============================================================
    DeathshotArsenal — DS Theme Manager
    Full-Screen Extension Modal & Zero-Native Controls Stylesheet
-   ============================================================ */
-
-/* Theme tokens are inherited from DSGlobalTheme / :root. Do not redeclare them
+   ============================================================ *//* Theme tokens are inherited from DSGlobalTheme / :root. Do not redeclare them
    with self-referential var(--token) expressions on the modal itself. */
 .ds-tm-modal-overlay {
   --ds-radius-card: 8px;
@@ -22,7 +20,6 @@
   --ds-font: Inter, system-ui, -apple-system, sans-serif;
   --ds-transition: 120ms ease;
 }
-
 
 /* ------------------------------------------------------------
    Modal Backdrop & Container
@@ -100,17 +97,6 @@
   background: var(--ds-color-accent, var(--ds-accent, #67e8f9));
 }
 
-*::-webkit-scrollbar-button,
-*::-webkit-scrollbar-button:single-button,
-*::-webkit-scrollbar-button:double-button,
-*::-webkit-scrollbar-button:start,
-*::-webkit-scrollbar-button:end,
-*::-webkit-scrollbar-button:decrement,
-*::-webkit-scrollbar-button:increment,
-*::-webkit-scrollbar-button:vertical:decrement,
-*::-webkit-scrollbar-button:vertical:increment,
-*::-webkit-scrollbar-button:horizontal:decrement,
-*::-webkit-scrollbar-button:horizontal:increment,
 .ds-tm-window *::-webkit-scrollbar-button,
 .ds-tm-modal-overlay *::-webkit-scrollbar-button {
   display: none !important;
@@ -1043,7 +1029,6 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-
 /* ------------------------------------------------------------
    Tab 2: DS Themes (Multi-Element Micro-Theming)
    ------------------------------------------------------------ */
@@ -1556,7 +1541,6 @@
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
   letter-spacing: 0.03em;
 }
-
 
 .ds-tm-embedded-slider {
   flex: 1 1 auto;

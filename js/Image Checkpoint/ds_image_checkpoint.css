@@ -65,63 +65,29 @@
   box-sizing: border-box;
 }
 
-.ds-ic-tab-btn {
+.ds-ui-btn.ds-ic-tab-btn {
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
-  border: 1px solid transparent !important;
   border-radius: calc(var(--ds-radius-control, 5px) - 2px);
-  background: transparent !important;
-  color: var(--ds-color-muted-text, var(--ds-text-muted, #9ca3af)) !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  outline: none;
   box-sizing: border-box;
-  line-height: 1;
-  transition: all var(--ds-transition, 120ms ease);
 }
 
-.ds-ic-tab-btn:hover:not(.active):not(.is-active) {
-  color: var(--ds-color-text, var(--ds-text, #e5e7eb)) !important;
-  background: color-mix(in srgb, var(--ds-color-text, var(--ds-text, #fff)) 8%, transparent) !important;
-  border-color: transparent !important;
-}
-
-.ds-ic-tab-btn.active,
-.ds-ic-tab-btn.is-active,
-.ds-ic-tab-btn[aria-selected="true"] {
-  background: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
-  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
-  border-color: var(--ds-color-accent, var(--ds-accent, #67e8f9)) !important;
-  font-weight: 700 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-}
-
-.ds-ic-tab-btn svg,
-.ds-ic-tab-btn .ds-icon {
+.ds-ui-btn.ds-ic-tab-btn svg,
+.ds-ui-btn.ds-ic-tab-btn .ds-icon {
   display: block;
   margin: auto;
-  stroke: currentColor !important;
-  fill: none !important;
+  stroke: currentColor;
+  fill: none;
   pointer-events: none;
 }
 
-.ds-ic-tab-btn.active svg,
-.ds-ic-tab-btn.is-active svg,
-.ds-ic-tab-btn[aria-selected="true"] svg,
-.ds-ic-tab-btn.active .ds-icon,
-.ds-ic-tab-btn.is-active .ds-icon,
-.ds-ic-tab-btn[aria-selected="true"] .ds-icon {
-  stroke: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
-  color: var(--ds-color-on-accent, var(--ds-on-accent, #0a0c10)) !important;
-  fill: none !important;
-}
-
 /* Action buttons in options row */
-.ds-ic-btn {
+.ds-ui-btn.ds-ic-btn {
   flex: 1 1 0;
   min-width: 30px;
   height: var(--ds-btn-height, 28px);
@@ -129,45 +95,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36));
   border-radius: var(--ds-btn-radius, var(--ds-radius-control, 5px));
-  background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23));
-  color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb));
-  cursor: pointer;
-  outline: none;
   box-sizing: border-box;
-  transition: all var(--ds-transition, 120ms ease);
 }
 
-.ds-ic-btn svg,
-.ds-ic-btn .ds-icon {
+.ds-ui-btn.ds-ic-btn svg,
+.ds-ui-btn.ds-ic-btn .ds-icon {
   display: block;
   margin: auto;
-  stroke: currentColor !important;
-  fill: none !important;
+  stroke: currentColor;
+  fill: none;
   pointer-events: none;
 }
 
-.ds-ic-btn:hover:not(:disabled) {
-  background: var(--ds-btn-hover, #1e2433);
-  border-color: var(--ds-color-accent, #67e8f9);
-  color: var(--ds-color-accent, #67e8f9);
-  transform: translateY(-1px);
-}
-
-.ds-ic-btn:active:not(:disabled) {
-  background: var(--ds-btn-active, #253044);
-  transform: translateY(0);
-}
-
-.ds-ic-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-  pointer-events: none;
-  transform: none;
-}
-
-/* Running / Busy State with active animation */
 @keyframes ds-ic-pulse-glow {
   0%, 100% {
     border-color: var(--ds-color-accent, #67e8f9);
@@ -187,51 +127,26 @@
   50% { transform: scale(1.18) translateX(1px); }
 }
 
-.ds-ic-btn.is-running {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  color: var(--ds-color-accent, #67e8f9) !important;
-  animation: ds-ic-pulse-glow 1.4s ease-in-out infinite !important;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
+.ds-ui-btn.ds-ic-btn.is-running {
+  animation: ds-ic-pulse-glow 1.4s ease-in-out infinite;
+  pointer-events: auto;
 }
 
-.ds-ic-btn.is-running.ds-ic-regenerate svg,
-.ds-ic-btn.is-running.ds-ic-regenerate .ds-icon {
-  animation: dsicspin 0.9s linear infinite !important;
+.ds-ui-btn.ds-ic-btn.is-running.ds-ic-regenerate svg,
+.ds-ui-btn.ds-ic-btn.is-running.ds-ic-regenerate .ds-icon {
+  animation: dsicspin 0.9s linear infinite;
 }
 
-.ds-ic-btn.is-running.ds-ic-continue svg,
-.ds-ic-btn.is-running.ds-ic-continue .ds-icon {
-  animation: ds-ic-play-bounce 0.9s ease-in-out infinite !important;
+.ds-ui-btn.ds-ic-btn.is-running.ds-ic-continue svg,
+.ds-ui-btn.ds-ic-btn.is-running.ds-ic-continue .ds-icon {
+  animation: ds-ic-play-bounce 0.9s ease-in-out infinite;
 }
 
-.ds-ic-btn.is-running:hover {
-  border-color: var(--ds-color-danger, #ef4444) !important;
-  color: #ffffff !important;
-  background: color-mix(in srgb, var(--ds-color-danger, #ef4444) 35%, var(--ds-btn-bg, var(--ic-bg2))) !important;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.45) !important;
-  animation: none !important;
-}
-
-.ds-ic-btn.is-running:hover svg,
-.ds-ic-btn.is-running:hover .ds-icon {
-  animation: none !important;
-}
-
-.ds-ic-btn.is-stopping {
-  border-color: var(--ds-color-danger, #ef4444) !important;
-  color: #ffffff !important;
-  background: color-mix(in srgb, var(--ds-color-danger, #ef4444) 25%, var(--ds-btn-bg, var(--ic-bg2))) !important;
+.ds-ui-btn.ds-ic-btn.is-stopping {
   animation: dsicpulse 1s infinite;
 }
 
-.ds-ic-btn.is-saving {
-  border-color: var(--ic-accent) !important;
-  color: var(--ic-accent) !important;
-}
-
-.ds-ic-btn.is-saving svg {
+.ds-ui-btn.ds-ic-btn.is-saving svg {
   animation: dsicspin 1s linear infinite;
 }
 

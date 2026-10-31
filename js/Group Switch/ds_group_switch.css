@@ -1,8 +1,4 @@
-/* ========================================================================= */
-/* Deathshot Arsenal — DS Group Switch Stylesheet                            */
-/* ========================================================================= */
-
-/* Container wrappers & DOM Widget styling */
+/* ========================================================================= *//* Deathshot Arsenal — DS Group Switch Stylesheet                            *//* ========================================================================= *//* Container wrappers & DOM Widget styling */
 .dom-widget:has(> .ds-gs-card),
 .dom-widget:has(> [data-ds-ui-shell] > .ds-gs-card),
 .dom-widget:has(.ds-gs-card) {
@@ -77,12 +73,7 @@
 .ds-gs-group-row,
 .ds-gs-group-row *,
 .ds-gs-popup,
-.ds-gs-popup *,
-button,
-input,
-select,
-textarea,
-[role="switch"] {
+.ds-gs-popup * {
   pointer-events: auto !important;
   cursor: pointer;
 }
@@ -107,7 +98,6 @@ textarea,
 }
 
 /* ---------------- Segmented Tabs & Active Tab Indicator ---------------- */
-
 .ds-gs-segment {
   display: grid;
   gap: 2px;
@@ -165,7 +155,6 @@ textarea,
 }
 
 /* ---------------- Node Body Controls Row ---------------- */
-
 .ds-gs-node-controls {
   display: flex !important;
   flex-direction: row !important;
@@ -262,7 +251,6 @@ textarea,
 }
 
 /* ---------------- Group List with Strictly One Row Per Group ---------------- */
-
 .ds-gs-node-list {
   display: flex !important;
   flex-direction: column !important;
@@ -369,7 +357,6 @@ textarea,
 }
 
 /* ---------------- Empty State & Footer ---------------- */
-
 .ds-gs-node-empty {
   height: 40px !important;
   display: flex !important;
@@ -396,7 +383,6 @@ textarea,
 }
 
 /* ---------------- Settings Popup ---------------- */
-
 .ds-gs-popup {
   position: fixed;
   z-index: 2147483647;
@@ -587,13 +573,6 @@ textarea,
 .ds-gs-popup-toolbar .ds-ui-dropdown-trigger {
   height: 28px !important;
   box-sizing: border-box !important;
-}
-
-/* Ensure Dropdown Popup always displays in front of settings popup */
-.ds-ui-popup,
-.ds-ui-dropdown .ds-ui-popup,
-body > .ds-ui-popup {
-  z-index: 2147483648 !important;
 }
 
 /* Settings Group List using DS Toggle: Strictly One Item Per Line */
