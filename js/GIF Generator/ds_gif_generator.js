@@ -711,7 +711,6 @@ function buildGifGenerator(node, card) {
   settingsPanel.append(Section({ title: "Quality & Compression" }));
 
   const sliderQuality = Slider({
-    label: "Quality",
     min: 1,
     max: 100,
     step: 1,
@@ -723,7 +722,6 @@ function buildGifGenerator(node, card) {
   });
 
   const sliderCompression = Slider({
-    label: "Compression",
     min: 0,
     max: 100,
     step: 1,
@@ -743,7 +741,6 @@ function buildGifGenerator(node, card) {
   settingsPanel.append(qualCompRow);
 
   const sliderColors = Slider({
-    label: "Colors",
     min: 2,
     max: 256,
     step: 1,
