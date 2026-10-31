@@ -17,6 +17,7 @@ import {
 } from "../Core/system.js";
 import { installDSUI } from "../index.js";
 import { ensureFxLayer, setFx } from "./fx.js";
+import { installOverlayScrollbar } from "./scrollbar.js";
 
 const DS_NODE_PREFIX = "DS_";
 
@@ -858,36 +859,30 @@ ${decl}
       text-shadow: var(--ds-on-accent-shadow) !important;
     }
 
-    /* Scrollbars inside DS surfaces: slim thumb, no arrows, shown only while the area is hovered.
+    /* Native scrollbars inside DS surfaces take no space; scrollbar.js draws one overlay thumb.
        Only ::-webkit-scrollbar is used; Chromium ignores it once scrollbar-width/color are set. */
     :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar,
     :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-      background: transparent;
-    }
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-button,
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-button {
-      display: none;
       width: 0;
       height: 0;
     }
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-track,
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-track,
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-corner,
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-corner {
-      background: transparent;
+    .ds-sb-thumb {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10000;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--ds-color-text) 30%, transparent);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, background-color 120ms ease;
     }
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal)::-webkit-scrollbar-thumb,
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-thumb {
-      background: transparent;
-      border-radius: 3px;
+    .ds-sb-thumb.is-visible {
+      opacity: 1;
+      pointer-events: auto;
     }
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal):hover::-webkit-scrollbar-thumb,
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) :hover::-webkit-scrollbar-thumb {
-      background: color-mix(in srgb, var(--ds-color-text) 25%, transparent);
-    }
-    :is([data-ds-face="true"], [data-ds-themed="true"], .ds-ui-popup, .ds-ui-modal) ::-webkit-scrollbar-thumb:hover {
+    .ds-sb-thumb:hover,
+    .ds-sb-thumb.is-dragging {
       background: var(--ds-color-accent);
     }
     [data-ds-themed="true"] ::selection {
@@ -1248,6 +1243,7 @@ app.registerExtension({
     }
 
     installDSUI();
+    installOverlayScrollbar();
     installDSCanvasNavigationBridge();
     await fetchThemes();
     // Always reconcile server config with localStorage. fetchConfig() merges them with
