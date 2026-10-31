@@ -553,18 +553,17 @@ function ensureGearButtonInToolbox(toolboxEl) {
     return;
   }
 
-  // Find target container inside Panel
-  const content =
-    toolboxEl.querySelector(".p-panel-content") ||
-    toolboxEl.querySelector('[data-pc-section="content"]') ||
-    toolboxEl;
+  // Sit in the same row as ComfyUI's own buttons and look like them.
+  const nativeBtn = toolboxEl.querySelector(`button:not([${INJECTED_ATTR}])`);
+  if (!nativeBtn) return;
+  const content = nativeBtn.parentElement;
 
   const node = getPrimarySelectedNode();
   const tooltip = gearRegistry.getTooltip(node);
 
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "ds-actionbar-gear-btn";
+  btn.className = `${nativeBtn.className} ds-actionbar-gear-btn`;
   btn.setAttribute(INJECTED_ATTR, "true");
   btn.setAttribute("title", tooltip);
   btn.setAttribute("aria-label", tooltip);
@@ -576,13 +575,8 @@ function ensureGearButtonInToolbox(toolboxEl) {
     gearRegistry.handleGearClick(e, getPrimarySelectedNode());
   });
 
-  // Insert cleanly at end of toolbar before node options button if present
-  const optionsBtn = content.querySelector('[aria-label="Node options"]') || content.lastElementChild;
-  if (optionsBtn && optionsBtn.parentNode === content) {
-    content.insertBefore(btn, optionsBtn);
-  } else {
-    content.appendChild(btn);
-  }
+  // Before the trailing options button.
+  content.insertBefore(btn, content.lastElementChild);
 }
 
 // Observer for ComfyUI's floating toolbar
@@ -630,84 +624,6 @@ function injectGearStyles() {
   const style = document.createElement("style");
   style.id = "ds-gear-menu-styles";
   style.textContent = `
-    .ds-actionbar-gear-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      margin: 0;
-      border: 1px solid transparent;
-      border-radius: 6px;
-      background: transparent;
-      color: var(--ds-color-text) !important;
-      cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-      user-select: none;
-      box-sizing: border-box;
-      outline: none;
-    }
-
-    .ds-actionbar-gear-btn svg {
-      stroke: var(--ds-color-text);
-      transition: stroke 0.15s ease, transform 0.25s ease;
-    }
-
-    .ds-actionbar-gear-btn:hover {
-      background: color-mix(in srgb, var(--ds-color-text) 12%, transparent) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-      transform: scale(1.05);
-    }
-
-    .ds-actionbar-gear-btn:hover svg {
-      stroke: var(--ds-accent, #67e8f9);
-    }
-
-    .ds-actionbar-gear-btn.is-active {
-      background: color-mix(in srgb, var(--ds-color-text) 15%, transparent) !important;
-      color: var(--ds-accent, #67e8f9) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-    }
-
-    .ds-actionbar-gear-btn.is-active svg {
-      stroke: var(--ds-accent, #67e8f9);
-    }
-
-    .selection-toolbox button:has(.ds-gear-svg),
-    .selection-toolbox button:has(.ds-actionbar-gear-btn-icon) {
-      color: var(--ds-color-text) !important;
-    }
-
-    .selection-toolbox button:has(.ds-gear-svg) svg {
-      stroke: var(--ds-color-text);
-    }
-
-    .selection-toolbox button:has(.ds-gear-svg):hover,
-    .selection-toolbox button:has(.ds-actionbar-gear-btn-icon):hover {
-      color: var(--ds-accent, #67e8f9) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-    }
-
-    .selection-toolbox button:has(.ds-gear-svg):hover svg {
-      stroke: var(--ds-accent, #67e8f9);
-    }
-
-    .selection-toolbox button.is-active:has(.ds-gear-svg),
-    .selection-toolbox button.is-active:has(.ds-actionbar-gear-btn-icon) {
-      color: var(--ds-accent, #67e8f9) !important;
-      border-color: var(--ds-accent, #67e8f9) !important;
-    }
-
-    .selection-toolbox button.is-active:has(.ds-gear-svg) svg {
-      stroke: var(--ds-accent, #67e8f9);
-    }
-
-    .ds-actionbar-gear-btn:active {
-      transform: scale(0.95);
-    }
-
     .ds-gear-svg {
       display: block;
       transition: transform 0.25s ease;
