@@ -447,10 +447,10 @@ app.registerExtension({
               ${DSIconMarkup("folder", { size: 13 })}
               <span data-folder-label>${folderName}</span>
             </button>
-            <div class="ds-gallery-search-wrap" data-search-wrap>
+            <div class="ds-ui-input-row ds-gallery-search-wrap" data-search-wrap>
               <span class="ds-gallery-search-icon">${DSIconMarkup("search", { size: 12 })}</span>
-              <input type="text" class="ds-gallery-search-input" data-search-input placeholder="Search files..." value="${state.search_query || ""}" />
-              <button type="button" class="ds-gallery-search-clear" data-search-clear title="Clear search">✕</button>
+              <input type="text" class="ds-ui-input-row-field ds-gallery-search-input" data-search-input placeholder="Search files..." value="${state.search_query || ""}" />
+              <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-ui-btn-ghost ds-gallery-search-clear" data-search-clear title="Clear search">✕</button>
             </div>
           </div>
           <div class="ds-gallery-header-right">
@@ -1691,7 +1691,7 @@ app.registerExtension({
                 <span class="ds-gallery-continue-label">Resume playback?</span>
                 <span class="ds-gallery-continue-time" data-continue-time>00:00</span>
               </div>
-              <button type="button" class="ds-gallery-continue-btn" data-btn-continue>
+              <button type="button" class="ds-ui-btn ds-ui-btn-primary ds-ui-btn-compact ds-gallery-continue-btn" data-btn-continue>
                 Continue
               </button>
               <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-ui-btn-icon-only ds-gallery-continue-close" data-btn-continue-close title="Dismiss">

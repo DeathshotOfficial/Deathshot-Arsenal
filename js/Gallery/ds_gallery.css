@@ -4,6 +4,15 @@
  * Zero duplicate rules, full CSS variable inheritance, 5px node margin, 10px card padding.
  */
 
+/**
+ * DeathshotArsenal UI System — DS Gallery Stylesheet
+ * Strict adherence to DeathshotArsenal Design System & Design Tokens.
+ * Zero duplicate rules,
+full CSS variable inheritance,
+5px node margin,
+10px card padding.
+ */
+
 /* ========================================================================= */
 /* 1. Host & Card Container                                                  */
 /* ========================================================================= */
@@ -86,7 +95,7 @@
   text-overflow: ellipsis;
 }
 
-.ds-gallery-search-wrap {
+.ds-ui-input-row.ds-gallery-search-wrap {
   flex: 1 1 120px;
   min-width: 70px;
   max-width: 260px;
@@ -96,24 +105,12 @@
   align-items: center;
 }
 
-.ds-gallery-search-input {
+.ds-ui-input-row-field.ds-gallery-search-input {
   width: 100%;
   height: 100%;
-  background: var(--ds-input-bg, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
   border-radius: var(--ds-radius-control, 5px);
   padding: 0 20px 0 22px;
-  color: var(--ds-color-text, #e5e7eb);
-  font-size: 11px;
-  font-family: inherit;
-  outline: none;
   box-sizing: border-box;
-  transition: border-color var(--ds-transition, 120ms ease);
-}
-
-.ds-gallery-search-input:focus {
-  border-color: var(--ds-color-accent, #67e8f9);
-  box-shadow: 0 0 0 1px var(--ds-color-accent, #67e8f9);
 }
 
 .ds-gallery-search-icon {
@@ -128,24 +125,14 @@
   justify-content: center;
 }
 
-.ds-gallery-search-clear {
+.ds-ui-btn.ds-gallery-search-clear {
   position: absolute;
   right: 6px;
-  background: transparent;
-  border: none;
-  color: var(--ds-color-muted-text, #9ca3af);
-  cursor: pointer;
   padding: 0;
   display: none;
-  font-size: 11px;
-  line-height: 1;
 }
 
-.ds-gallery-search-clear:hover {
-  color: var(--ds-color-text, #e5e7eb);
-}
-
-.ds-gallery-search-wrap.has-val .ds-gallery-search-clear {
+.ds-ui-input-row.ds-gallery-search-wrap.has-val .ds-ui-btn.ds-gallery-search-clear {
   display: block;
 }
 
@@ -195,7 +182,9 @@
 }
 
 /* ========================================================================= */
-/* 4. Toolbar (Filter Chips, Sort, Count)                                    */
+/* 4. Toolbar (Filter Chips,
+Sort,
+Count)                                    */
 /* ========================================================================= */
 .ds-gallery-toolbar {
   display: flex;
@@ -543,7 +532,6 @@
   box-sizing: border-box;
 }
 
-
 /* ========================================================================= */
 /* 10. Settings Popover                                                      */
 /* ========================================================================= */
@@ -764,6 +752,7 @@
 }
 
 .ds-gallery-lightbox-prev { left: 20px; }
+
 .ds-gallery-lightbox-next { right: 20px; }
 
 /* ========================================================================= */
@@ -979,6 +968,7 @@
 }
 
 .ds-gallery-player-prev { left: 24px; }
+
 .ds-gallery-player-next { right: 24px; }
 
 .ds-gallery-player-controls-wrap {
@@ -1475,26 +1465,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-.ds-gallery-continue-btn {
+.ds-ui-btn.ds-gallery-continue-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 650;
   border-radius: var(--ds-radius-control, 6px);
-  background: var(--ds-color-accent, #67e8f9);
-  color: #0b0f19;
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 8px rgba(103, 232, 249, 0.35);
-}
-
-.ds-gallery-continue-btn:hover {
-  background: #a5f3fc;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(103, 232, 249, 0.5);
 }
 
 .ds-gallery-continue-close {

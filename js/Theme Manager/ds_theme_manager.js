@@ -405,28 +405,28 @@ class DSHSVColorPicker {
             <div class="ds-hsv-strip-thumb" data-el="alphaThumb"></div>
           </div>
         </div>
-        ${window.EyeDropper ? `<button type="button" class="ds-hsv-eyedropper-btn" data-el="eyedropperBtn" title="Pick color from screen">${SVG_ICONS.eyedropper}</button>` : ""}
+        ${window.EyeDropper ? `<button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-hsv-eyedropper-btn" data-el="eyedropperBtn" title="Pick color from screen">${SVG_ICONS.eyedropper}</button>` : ""}
       </div>
       <div class="ds-hsv-inputs-row">
         <div class="ds-hsv-input-field" style="flex:2;">
           <span class="ds-hsv-input-label">HEX</span>
-          <input type="text" class="ds-tm-input" data-el="hexInput" spellcheck="false" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="hexInput" spellcheck="false" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">R</span>
-          <input type="number" class="ds-tm-input" data-el="rInput" min="0" max="255" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="rInput" min="0" max="255" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">G</span>
-          <input type="number" class="ds-tm-input" data-el="gInput" min="0" max="255" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="gInput" min="0" max="255" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">B</span>
-          <input type="number" class="ds-tm-input" data-el="bInput" min="0" max="255" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="bInput" min="0" max="255" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">A%</span>
-          <input type="number" class="ds-tm-input" data-el="aInput" min="0" max="100" />
+          <input type="number" class="ds-ui-input ds-tm-input" data-el="aInput" min="0" max="100" />
         </div>
       </div>
       <div class="ds-hsv-quick-swatches" data-el="quickSwatches"></div>
@@ -703,11 +703,11 @@ class DSThemeManagerDashboard {
             <span class="ds-tm-brand-title">Theme Manager</span>
           </div>
           <div class="ds-tm-tabs-nav">
-            <button type="button" class="ds-tm-tab-btn active" data-tab="themes">DS Themes (50)</button>
-            <button type="button" class="ds-tm-tab-btn" data-tab="typography">Typography</button>
-            <button type="button" class="ds-tm-tab-btn" data-tab="customization">Canvas / Native Nodes</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-tab-btn active" data-tab="themes">DS Themes (50)</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-tab-btn" data-tab="typography">Typography</button>
+            <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-tab-btn" data-tab="customization">Canvas / Native Nodes</button>
           </div>
-          <button type="button" class="ds-tm-close-btn" data-el="closeBtn" title="Close (Esc)">✕</button>
+          <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-tm-close-btn" data-el="closeBtn" title="Close (Esc)">✕</button>
         </div>
 
         <!-- Target / Scope Bar -->
@@ -734,8 +734,8 @@ class DSThemeManagerDashboard {
               <!-- Left Picker & Presets Column -->
               <div class="ds-tm-cust-left">
                 <div class="ds-tm-subtabs">
-                  <button type="button" class="ds-tm-subtab-btn active" data-subtab="title">Title Bar</button>
-                  <button type="button" class="ds-tm-subtab-btn" data-subtab="body">Node Body</button>
+                  <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-subtab-btn active" data-subtab="title">Title Bar</button>
+                  <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-subtab-btn" data-subtab="body">Node Body</button>
                 </div>
                 <div data-el="custColorPickerContainer"></div>
                 <div class="ds-tm-color-pair-inputs" data-el="custPairInputs"></div>
@@ -804,17 +804,17 @@ class DSThemeManagerDashboard {
                     <span style="font-size:9px; color:var(--ds-text-muted);" data-el="themeCountLabel">50 Themes</span>
                   </div>
                   <div class="ds-tm-cat-filter-row">
-                    <button type="button" class="ds-tm-cat-filter-btn active" data-filter="all">All (50)</button>
-                    <button type="button" class="ds-tm-cat-filter-btn" data-filter="animated">✨ Live (10)</button>
-                    <button type="button" class="ds-tm-cat-filter-btn" data-filter="static">🎨 Static (40)</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn active" data-filter="all">All (50)</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-filter="animated">✨ Live (10)</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-filter="static">🎨 Static (40)</button>
                   </div>
                   <div class="ds-tm-search-wrap">
-                    <input type="text" class="ds-tm-search-input" placeholder="Search themes..." data-el="themeSearchInput" />
+                    <input type="text" class="ds-ui-input ds-tm-search-input" placeholder="Search themes..." data-el="themeSearchInput" />
                   </div>
                   <div class="ds-tm-cat-filter-row" title="Live theme effects run on the browser compositor. Pausing them during runs keeps the GPU fully free for generation.">
-                    <button type="button" class="ds-tm-cat-filter-btn" data-motion="on">Motion On</button>
-                    <button type="button" class="ds-tm-cat-filter-btn" data-motion="pause_on_run">Pause While Running</button>
-                    <button type="button" class="ds-tm-cat-filter-btn" data-motion="off">Off</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-motion="on">Motion On</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-motion="pause_on_run">Pause While Running</button>
+                    <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-cat-filter-btn" data-motion="off">Off</button>
                   </div>
                 </div>
                 <div class="ds-tm-theme-chip-list" data-el="dsThemeCatalog"></div>
@@ -857,8 +857,8 @@ class DSThemeManagerDashboard {
                   <div class="ds-tm-section-heading">
                     <span>Custom DS Theme Slots</span>
                     <div class="ds-tm-io-row">
-                      <button type="button" class="ds-tm-pill-btn" data-el="exportThemeBtn" title="Export to JSON">${SVG_ICONS.export} Export</button>
-                      <button type="button" class="ds-tm-pill-btn" data-el="importThemeBtn" title="Import from JSON">${SVG_ICONS.import} Import</button>
+                      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-pill-btn" data-el="exportThemeBtn" title="Export to JSON">${SVG_ICONS.export} Export</button>
+                      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-tm-pill-btn" data-el="importThemeBtn" title="Import from JSON">${SVG_ICONS.import} Import</button>
                       <input type="file" data-el="importFileInput" accept=".json" style="display:none;" />
                     </div>
                   </div>
@@ -929,7 +929,7 @@ class DSThemeManagerDashboard {
                     ${window.queryLocalFonts ? `<button type="button" class="ds-ui-btn ds-ui-btn-compact" data-el="queryLocalFontsBtn">System Fonts</button>` : ""}
                   </div>
                   <div class="ds-tm-download-box">
-                    <input type="text" class="ds-tm-input" data-el="webFontInput" placeholder="Font name (e.g. Outfit) or URL" />
+                    <input type="text" class="ds-ui-input ds-tm-input" data-el="webFontInput" placeholder="Font name (e.g. Outfit) or URL" />
                     <button type="button" class="ds-ui-btn ds-ui-btn-primary" data-el="loadWebFontBtn">Load</button>
                   </div>
                   <div class="ds-tm-tag-list" data-el="installedWebFonts" style="margin-top:4px;"></div>
@@ -1170,22 +1170,22 @@ class DSThemeManagerDashboard {
       container.innerHTML = `
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Title Bar Color</span>
-          <input type="text" class="ds-tm-input" data-el="primaryColorInput" value="${this.titleColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="primaryColorInput" value="${this.titleColor.toUpperCase()}" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Header Text Color</span>
-          <input type="text" class="ds-tm-input" data-el="contrastColorInput" value="${this.titleTextColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="contrastColorInput" value="${this.titleTextColor.toUpperCase()}" />
         </div>
       `;
     } else {
       container.innerHTML = `
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Node Body Fill</span>
-          <input type="text" class="ds-tm-input" data-el="primaryColorInput" value="${this.bodyColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="primaryColorInput" value="${this.bodyColor.toUpperCase()}" />
         </div>
         <div class="ds-hsv-input-field">
           <span class="ds-hsv-input-label">Outline Stroke Color</span>
-          <input type="text" class="ds-tm-input" data-el="contrastColorInput" value="${this.strokeColor.toUpperCase()}" />
+          <input type="text" class="ds-ui-input ds-tm-input" data-el="contrastColorInput" value="${this.strokeColor.toUpperCase()}" />
         </div>
       `;
     }
