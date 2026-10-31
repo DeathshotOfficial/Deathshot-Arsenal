@@ -8,6 +8,7 @@ import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
 import {
   Card,
   Button,
+  Modal,
   Field,
   StatusBar,
   DSIcon,
@@ -537,6 +538,7 @@ app.registerExtension({
       // Modal Card
       const modal = document.createElement("div");
       modal.className = "ds-ui-card ds-notes-editor-modal";
+      modal.dataset.dsThemed = "true";
       backdrop.appendChild(modal);
 
       // Top Bar (Tabs: Editor, Code View, Live Preview + Title + Close)
@@ -757,13 +759,6 @@ app.registerExtension({
       // Modal keyboard shortcuts
       modal.addEventListener("keydown", (e) => {
         if (e.key === "Escape") {
-          const dialog = document.querySelector(".ds-notes-dialog-overlay");
-          if (dialog) {
-            dialog.remove();
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-          }
           if (document.querySelector(".ds-notes-menu-popup") || document.querySelector(".ds-ui-color-popup")) {
             closeAllPopups();
             document.querySelectorAll(".ds-ui-color-popup").forEach((p) => p.remove());
@@ -1263,49 +1258,27 @@ app.registerExtension({
     // ACCIDENTAL CANCEL CONFIRMATION DIALOG (DS UIElements Card)
     // -------------------------------------------------------------
     nodeType.prototype._dsOpenConfirmDialog = function ({ title, message, confirmText, cancelText, onConfirm }) {
-      const overlay = document.createElement("div");
-      overlay.className = "ds-notes-dialog-overlay";
-
-      // Build card using DS UIElements Card
-      const dlgCard = Card({
-        title,
-        icon: "alert-triangle",
-        className: "ds-notes-confirm-modal",
-      });
-      dlgCard.root.style.cssText = "--ds-ui-card-title-color: var(--ds-color-danger,#f87171);min-width:360px;max-width:520px;";
+      const modal = Modal({ title, icon: "alert-triangle", width: 420, className: "ds-notes-confirm-modal" });
 
       const msgEl = document.createElement("p");
       msgEl.className = "ds-notes-confirm-msg";
       msgEl.textContent = message;
-      dlgCard.append(msgEl);
-
-      const foot = document.createElement("div");
-      foot.className = "ds-notes-dialog-foot";
-
-      const close = () => overlay.remove();
+      modal.body.appendChild(msgEl);
 
       const cancelBtn = Button({
         label: cancelText || "Keep Editing",
-        onClick: close,
+        onClick: () => modal.close(),
       });
-
       const confirmBtn = Button({
         label: confirmText || "Discard Changes",
         variant: "danger",
         onClick: () => {
-          close();
+          modal.close();
           onConfirm();
         },
       });
-
-      foot.append(cancelBtn.root, confirmBtn.root);
-      dlgCard.body.appendChild(foot);
-
-      overlay.appendChild(dlgCard.root);
-      overlay.addEventListener("pointerdown", (e) => {
-        if (e.target === overlay) close();
-      });
-      document.body.appendChild(overlay);
+      modal.footer.append(cancelBtn.root, confirmBtn.root);
+      modal.open();
     };
 
     // -------------------------------------------------------------
@@ -1372,15 +1345,7 @@ app.registerExtension({
       closeAllPopups();
       this._dsSavedRange = saveSelection(this._dsModalEditorEl);
 
-      const overlay = document.createElement("div");
-      overlay.className = "ds-notes-dialog-overlay";
-
-      // Modal card using DS UIElements Card
-      const dlgCard = Card({
-        title,
-        icon: "plus",
-        className: "ds-notes-dialog-card",
-      });
+      const modal = Modal({ title, icon: "plus", width: 480, className: "ds-notes-dialog-card" });
 
       const bodyEl = document.createElement("div");
       bodyEl.className = "ds-notes-dialog-body";
@@ -1404,50 +1369,25 @@ app.registerExtension({
         bodyContent.querySelectorAll?.(".ds-notes-form-row").forEach((el) => el.classList.add("ds-ui-field"));
         bodyEl.appendChild(bodyContent);
       }
-      dlgCard.body.appendChild(bodyEl);
-
-      const foot = document.createElement("div");
-      foot.className = "ds-notes-dialog-foot";
-
-      const close = () => overlay.remove();
+      modal.body.appendChild(bodyEl);
 
       const cancelBtn = Button({
         label: "Cancel",
-        onClick: close,
+        onClick: () => modal.close(),
       });
-
       const confirmBtn = Button({
         label: confirmText,
         variant: "primary",
         icon: "check",
         onClick: () => {
           const ok = onConfirm(bodyEl);
-          if (ok !== false) close();
+          if (ok !== false) modal.close();
         },
       });
+      modal.footer.append(cancelBtn.root, confirmBtn.root);
+      modal.open();
 
-      const closeHeaderBtn = Button({
-        icon: "x",
-        compact: true,
-        tooltip: "Close",
-        onClick: close,
-      });
-      if (dlgCard.head) dlgCard.head.querySelector(".ds-ui-card-actions")?.appendChild(closeHeaderBtn.root);
-
-      foot.append(cancelBtn.root, confirmBtn.root);
-      dlgCard.body.appendChild(foot);
-
-      overlay.appendChild(dlgCard.root);
-      overlay.addEventListener("pointerdown", (e) => {
-        if (e.target === overlay) close();
-      });
-
-      document.body.appendChild(overlay);
-
-      setTimeout(() => {
-        const firstInput = overlay.querySelector("input");
-        if (firstInput) firstInput.focus();
-      }, 40);
+      setTimeout(() => modal.body.querySelector("input")?.focus(), 40);
     };
 
     // -------------------------------------------------------------

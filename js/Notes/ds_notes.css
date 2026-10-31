@@ -247,12 +247,6 @@
   height: 26px;
 }
 
-
-
-
-
-
-
 /* ------------------------------------------------------------
    2. POPUP WINDOW EDITOR MODAL (Dedicated Large Workspace)
    ------------------------------------------------------------ */
@@ -281,9 +275,6 @@
 .ds-notes-editor-modal {
   width: min(1320px, 96vw);
   height: min(860px, 92vh);
-  background: var(--ds-color-card, #12151c);
-  border: 1px solid var(--ds-color-card-border, #242a36);
-  border-radius: var(--ds-radius-card, 8px);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 0 1px color-mix(in srgb, var(--ds-color-text) 4%, transparent);
   display: flex;
   flex-direction: column;
@@ -347,18 +338,12 @@
   padding: 6px 14px;
   background: var(--ds-color-panel-2, #161a23);
   border-bottom: 1px solid var(--ds-color-card-border, #242a36);
-  flex-wrap: nowrap !important;
-  overflow-x: auto;
-  overflow-y: hidden;
+  /* Wrap onto a second row on narrow windows instead of hiding tools off the edge. */
+  flex-wrap: wrap;
   box-sizing: border-box;
   flex-shrink: 0;
-  height: 44px;
   min-height: 44px;
 }
-
-
-
-
 
 .ds-notes-tool-group {
   display: flex;
@@ -441,7 +426,7 @@
   outline: none;
   resize: none;
   background: var(--ds-color-base);
-  color: #a5f3fc;
+  color: var(--ds-color-text);
   font-family: "JetBrains Mono", Consolas, "Fira Code", monospace;
   font-size: 13px;
   line-height: 1.6;
@@ -498,7 +483,7 @@
   font-size: 18px;
   font-weight: 700;
   margin: 14px 0 8px 0;
-  color: #bae6fd;
+  color: color-mix(in srgb, var(--ds-color-accent) 60%, var(--ds-color-text));
   line-height: 1.35;
 }
 
@@ -507,7 +492,7 @@
   font-size: 15px;
   font-weight: 700;
   margin: 10px 0 6px 0;
-  color: #e0f2fe;
+  color: var(--ds-color-text);
 }
 
 .ds-notes-preview-body p,
@@ -542,7 +527,7 @@
 }
 
 .ds-notes-preview-body a:hover {
-  color: #a5f3fc;
+  color: var(--ds-color-accent-hover);
 }
 
 /* ------------------------------------------------------------
@@ -551,10 +536,6 @@
 .ds-ui-btn.ds-notes-block-delete-btn {
   width: 22px;
   height: 22px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin-left: auto;
   flex-shrink: 0;
   padding: 0;
@@ -563,8 +544,6 @@
 .ds-ui-btn.ds-notes-block-delete-btn svg {
   width: 12px;
   height: 12px;
-  stroke: currentColor;
-  stroke-width: 2.2;
 }
 
 .ds-notes-preview-body .ds-ui-btn.ds-notes-block-delete-btn {
@@ -692,7 +671,7 @@
 .ds-notes-callout-tip {
   background: color-mix(in srgb, var(--ds-color-accent) 8%, transparent);
   border-color: color-mix(in srgb, var(--ds-color-accent) 30%, transparent);
-  color: #e0f2fe;
+  color: var(--ds-color-text);
 }
 
 .ds-notes-callout-tip .ds-notes-callout-icon,
@@ -703,7 +682,7 @@
 .ds-notes-callout-note {
   background: rgba(129, 140, 248, 0.08);
   border-color: rgba(129, 140, 248, 0.3);
-  color: #e0e7ff;
+  color: var(--ds-color-text);
 }
 
 .ds-notes-callout-note .ds-notes-callout-icon,
@@ -714,7 +693,7 @@
 .ds-notes-callout-warning {
   background: color-mix(in srgb, var(--ds-color-warning, #facc15) 8%, transparent);
   border-color: color-mix(in srgb, var(--ds-color-warning, #facc15) 30%, transparent);
-  color: #fef9c3;
+  color: var(--ds-color-text);
 }
 
 .ds-notes-callout-warning .ds-notes-callout-icon,
@@ -725,18 +704,18 @@
 .ds-notes-callout-danger {
   background: color-mix(in srgb, var(--ds-color-danger) 8%, transparent);
   border-color: color-mix(in srgb, var(--ds-color-danger) 30%, transparent);
-  color: #ffe4e6;
+  color: var(--ds-color-text);
 }
 
 .ds-notes-callout-danger .ds-notes-callout-icon,
 .ds-notes-callout-danger .ds-notes-callout-title {
-  color: #fb7185;
+  color: var(--ds-color-danger);
 }
 
 .ds-notes-callout-success {
   background: color-mix(in srgb, var(--ds-color-success) 8%, transparent);
   border-color: color-mix(in srgb, var(--ds-color-success) 30%, transparent);
-  color: #d1fae5;
+  color: var(--ds-color-text);
 }
 
 .ds-notes-callout-success .ds-notes-callout-icon,
@@ -1190,15 +1169,10 @@
 }
 
 .ds-ui-btn.ds-notes-chip-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   height: 28px;
   padding: 0 12px;
-  border-radius: var(--ds-radius-control, 5px);
   position: relative;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
 /* ------------------------------------------------------------
@@ -1251,78 +1225,22 @@
 }
 
 .ds-ui-btn.ds-notes-copy-code-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
   height: 22px;
   padding: 0 8px;
-  border-radius: 4px;
   pointer-events: auto;
 }
 
-/* Modal Inner Dialogs (Link, YouTube, Table, Callout, etc.) */
-.ds-notes-dialog-overlay {
-  position: fixed;
-  inset: 0;
+/* Inner dialogs (Link, YouTube, Table, Callout, etc.) are shared Modals; lift them above the editor. */
+.ds-ui-modal-overlay:has(> .ds-notes-dialog-card, > .ds-notes-confirm-modal) {
   z-index: 1000003;
-  background: color-mix(in srgb, var(--ds-color-base) 76%, transparent);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-.ds-notes-dialog-card.ds-ui-card,
-.ds-notes-dialog-card {
-  background: var(--ds-color-card, #12151c);
-  border: 1px solid var(--ds-color-card-border, #242a36);
-  border-radius: var(--ds-radius-card, 8px);
-  width: 100%;
-  max-width: 480px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px color-mix(in srgb, var(--ds-color-text) 5%, transparent);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0 !important;
-  gap: 0 !important;
-  animation: dsNotesModalScale 0.15s ease-out;
-}
-
-.ds-notes-dialog-card > .ds-ui-card-head {
-  padding: 10px 14px;
-  background: var(--ds-color-panel-2, #161a23);
-  border-bottom: 1px solid var(--ds-color-card-border, #242a36);
-  border-top-left-radius: var(--ds-radius-card, 8px);
-  border-top-right-radius: var(--ds-radius-card, 8px);
-}
-
-.ds-notes-dialog-card > .ds-ui-card-body {
-  padding: 0 !important;
-  gap: 0 !important;
 }
 
 .ds-notes-dialog-body {
-  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   max-height: 520px;
   overflow-y: auto;
-  box-sizing: border-box;
-}
-
-.ds-notes-dialog-foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--ds-color-panel-2, #161a23);
-  border-top: 1px solid var(--ds-color-card-border, #242a36);
-  border-bottom-left-radius: var(--ds-radius-card, 8px);
-  border-bottom-right-radius: var(--ds-radius-card, 8px);
   box-sizing: border-box;
 }
 
@@ -1332,51 +1250,6 @@
   gap: 4px;
   width: 100%;
   box-sizing: border-box;
-}
-
-.ds-notes-form-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ds-color-muted-text, #9ca3af);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  user-select: none;
-}
-
-.ds-notes-form-input,
-.ds-notes-dialog-body input[type="text"],
-.ds-notes-dialog-body input[type="number"],
-.ds-notes-dialog-body textarea,
-.ds-notes-dialog-body select {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: var(--ds-control-h, 28px) !important;
-  padding: 0 10px !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  border-radius: var(--ds-radius-control, 5px) !important;
-  color: var(--ds-color-text, #e5e7eb) !important;
-  font-size: 11px !important;
-  font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-  outline: none !important;
-  transition: border-color var(--ds-transition), box-shadow var(--ds-transition) !important;
-}
-
-.ds-notes-form-input::placeholder,
-.ds-notes-dialog-body input::placeholder {
-  color: var(--ds-color-muted-text, #9ca3af) !important;
-  opacity: 0.6 !important;
-}
-
-.ds-notes-form-input:hover,
-.ds-notes-dialog-body input[type="text"]:hover {
-  border-color: var(--ds-color-border-hover, #374151) !important;
-}
-
-.ds-notes-form-input:focus,
-.ds-notes-dialog-body input[type="text"]:focus {
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring, color-mix(in srgb, var(--ds-color-accent) 25%, transparent)) !important;
 }
 
 /* ------------------------------------------------------------
@@ -1394,8 +1267,8 @@
   width: 24px;
   height: 24px;
   border-radius: 3px;
-  background: #181d28;
-  border: 1px solid #313a4c;
+  background: var(--ds-color-panel-2, #161a23);
+  border: 1px solid var(--ds-color-border, #242a36);
   cursor: pointer;
   transition: all 0.1s ease;
 }
@@ -1415,33 +1288,10 @@
 /* ------------------------------------------------------------
    21. ACCIDENTAL CANCEL CONFIRMATION MODAL
    ------------------------------------------------------------ */
-.ds-notes-confirm-modal.ds-ui-card,
-.ds-notes-confirm-modal {
-  max-width: 420px;
-  padding: 0 !important;
-  gap: 0 !important;
-  overflow: hidden;
-  border-radius: var(--ds-radius-card, 8px);
-}
-
-.ds-notes-confirm-modal > .ds-ui-card-head {
-  padding: 10px 14px;
-  background: var(--ds-color-panel-2, #161a23);
-  border-bottom: 1px solid var(--ds-color-card-border, #242a36);
-}
-
-.ds-notes-confirm-modal > .ds-ui-card-body {
-  padding: 0 !important;
-  gap: 0 !important;
-}
-
 .ds-notes-confirm-msg {
   font-size: 12px;
   line-height: 1.5;
-  color: var(--ds-color-text, #e5e7eb);
   margin: 0;
-  padding: 18px 16px;
-  box-sizing: border-box;
 }
 
 /* ------------------------------------------------------------
@@ -1611,16 +1461,13 @@
   width: 0;
   height: 28px;
   padding: 0 6px;
-  border-radius: var(--ds-radius-control, 5px);
   text-align: center;
-  box-sizing: border-box;
 }
 
 .ds-notes-color-bottom-row .ds-ui-btn {
-  height: 28px !important;
-  font-size: 11px !important;
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
+  height: 28px;
+  font-size: 11px;
+  flex-shrink: 0;
 }
 
 .ds-notes-color-eyedropper-btn,
