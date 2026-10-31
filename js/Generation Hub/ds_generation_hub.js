@@ -1995,7 +1995,7 @@ app.registerExtension({
           ? this._hubWidget.y
           : 30;
         const nodeH = this.size?.[1] || DEFAULT_H;
-        const widgetH = Math.max(100, nodeH - topY - 16);
+        const widgetH = Math.max(100, nodeH - topY - 10);
         rootEl.style.boxSizing = "border-box";
         rootEl.style.width = "100%";
         rootEl.style.height = `${widgetH}px`;
@@ -2010,7 +2010,7 @@ app.registerExtension({
       this._hubWidget = this.addDOMWidget("hub_ui", "custom", root, {
         serialize: false,
         hideOnZoom: false,
-        margin: 6,
+        margin: 5,
         getValue: () => null,
         setValue: () => { },
       });
@@ -2019,7 +2019,7 @@ app.registerExtension({
           ? this._hubWidget.y
           : 30;
         const nodeH = this.size?.[1] || DEFAULT_H;
-        const widgetH = Math.max(100, nodeH - topY - 16);
+        const widgetH = Math.max(100, nodeH - topY);
         this._dsSyncHubHeight?.();
         return [
           this.size?.[0] || DEFAULT_W,

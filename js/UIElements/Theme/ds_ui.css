@@ -42,7 +42,6 @@
   --ds-btn-height-compact: 22px;
   --ds-btn-padding: 0 10px;
 
-  --ds-ui-margin: 10px;
   --ds-radius-card: 8px;
   --ds-radius-control: 5px;
   --ds-radius-popup: 8px;
@@ -63,10 +62,9 @@
   --ds-transition: 120ms ease;
 }
 
-/* 10px Outer Node UI Margin */
+/* The DOM widget margin already places the face 5px inside the node. */
 [data-ds-ui-host="true"] {
   box-sizing: border-box !important;
-  padding: 0 var(--ds-ui-margin, 10px) var(--ds-ui-margin, 10px) var(--ds-ui-margin, 10px) !important;
   width: 100% !important;
   height: 100% !important;
   overflow: hidden !important;
@@ -143,6 +141,10 @@ body.ds-canvas-dragging [data-ds-ui-host="true"] * {
   display: flex;
   align-items: center;
   gap: var(--ds-gap-xs, 4px);
+}
+
+.ds-ui-card-actions:empty {
+  display: none;
 }
 
 .ds-ui-card-body {

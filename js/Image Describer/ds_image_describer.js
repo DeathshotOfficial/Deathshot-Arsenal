@@ -135,12 +135,10 @@ function hideAllNativeWidgets(node, keepWidget = null) {
 
 function bodyTop(node) {
   const slotH = globalThis.LiteGraph?.NODE_SLOT_HEIGHT ?? 20;
-  const titleH = globalThis.LiteGraph?.NODE_TITLE_HEIGHT ?? 30;
-  const slotStartY = node.constructor.slot_start_y ?? titleH;
   const inputs = (node.inputs ?? []).filter((i) => !i.widget).length;
   const outputs = (node.outputs ?? []).length;
   const rows = Math.max(inputs, outputs);
-  return rows ? rows * slotH + slotStartY : titleH;
+  return rows ? rows * slotH + (node.constructor.slot_start_y || 0) : 0;
 }
 
 // ---------------------------------------------------------------------------

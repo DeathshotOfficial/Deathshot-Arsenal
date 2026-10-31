@@ -15,8 +15,7 @@
 }
 
 /* ========================================================================= */
-/* Outer Container: 5px margin from node edge,
-10px vertical card gap       */
+/* Outer Container: 10px vertical card gap */
 /* ========================================================================= */
 [data-ds-ui-host="true"].ds-hub-container,
 .ds-hub-container {
@@ -34,7 +33,7 @@
   overflow-y: auto !important;
   overflow-x: hidden !important;
   position: relative;
-  padding: 0 5px 5px 5px !important;
+  padding: 0 !important;
   pointer-events: auto !important;
 }
 
@@ -185,9 +184,15 @@ Height) — Strictly centered */
 
 .ds-hub-chips-wrap {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--ds-gap-xs, 4px);
+}
+
+/* All megapixel chips share one row at the minimum node width. */
+.ds-hub-chips-wrap > .ds-ui-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 2px;
 }
 
 .ds-ui-text-editor.ds-hub-prompt-ta {

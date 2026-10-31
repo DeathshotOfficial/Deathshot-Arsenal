@@ -37,7 +37,7 @@ const SNAP_VALUES = [8, 16, 32, 64];
 const MIN_W = 460;
 const DEFAULT_W = 490;
 const DEFAULT_H = 580;
-const WIDGET_START_Y = 142;
+const WIDGET_START_Y = 100;
 const CARD_MARGIN = 5;
 
 const STANDARD_RATIOS = [
@@ -1546,6 +1546,8 @@ function patchType(nodeType, nodeData) {
   nodeType.prototype.onNodeCreated = function () {
       attachNodeShortcuts(this);
     const r = created?.apply(this, arguments);
+    // LiteGraph sizes new nodes from computeSize (the minimum); start fresh nodes at the default size instead.
+    this.size = [DEFAULT_W, DEFAULT_H];
     install(this);
     return r;
   };

@@ -705,7 +705,7 @@ export function installDSCanvasNavigationBridge() {
 }
 
 /**
- * Apply the unified 10px shell inset and clean host styling to a node face DOM widget.
+ * Clean host styling for a node face DOM widget (transparent, click-through host).
  */
 export function normalizeDSWidgetHost(root, node = null, options = {}) {
   if (!root) return;
@@ -735,7 +735,8 @@ export function normalizeDSWidgetHost(root, node = null, options = {}) {
     root.dataset.dsUiShell = shellMode;
     root.dataset.dsUiHost = "true";
     root.style.boxSizing = "border-box";
-    root.style.padding = "0 var(--ds-ui-margin, 10px) var(--ds-ui-margin, 10px) var(--ds-ui-margin, 10px)";
+    // The DOM widget margin already places the card 5px inside the node; the face keeps its own padding.
+    root.style.padding = "";
     root.style.margin = "0";
     root.style.minWidth = "0";
     root.style.minHeight = "0";
