@@ -1206,7 +1206,7 @@ class DSSnapToolbarManager {
           <span class="ds-snap-sec-title">SNAP</span>
           <div id="ds-snap-toggle-slot"></div>
           <div class="ds-snap-input-wrap" title="Snap hysteresis threshold (px)">
-            <input type="number" class="ds-snap-input" id="ds-snap-input-threshold" value="${state.snapThreshold}" min="1" max="100" aria-label="Snap threshold" />
+            <input type="number" class="ds-ui-input ds-snap-input" id="ds-snap-input-threshold" value="${state.snapThreshold}" min="1" max="100" aria-label="Snap threshold" />
             <span class="ds-snap-input-unit">px</span>
           </div>
         </div>
@@ -1218,7 +1218,7 @@ class DSSnapToolbarManager {
           <span class="ds-snap-sec-title">MARGIN</span>
           <div id="ds-snap-margin-toggle-slot"></div>
           <div class="ds-snap-input-wrap" title="Minimum node spacing gap (px)">
-            <input type="number" class="ds-snap-input" id="ds-snap-input-margin" value="${state.minMarginX}" min="0" max="250" aria-label="Margin gap" />
+            <input type="number" class="ds-ui-input ds-snap-input" id="ds-snap-input-margin" value="${state.minMarginX}" min="0" max="250" aria-label="Margin gap" />
             <span class="ds-snap-input-unit">px</span>
           </div>
         </div>
@@ -1228,11 +1228,11 @@ class DSSnapToolbarManager {
         <!-- Section 4: Row, Column -->
         <div class="ds-snap-sec">
           <span class="ds-snap-sec-title">ARRANGE</span>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-row" title="Arrange selected nodes into a horizontal row">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-snap-btn" id="ds-snap-btn-row" title="Arrange selected nodes into a horizontal row">
             ${ICON_ROW}
             <span>Row</span>
           </button>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-col" title="Arrange selected nodes into a vertical column">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-snap-btn" id="ds-snap-btn-col" title="Arrange selected nodes into a vertical column">
             ${ICON_COL}
             <span>Column</span>
           </button>
@@ -1243,19 +1243,19 @@ class DSSnapToolbarManager {
         <!-- Section 5: Measure, Clear, Width, Height, Apply Both -->
         <div class="ds-snap-sec">
           <span class="ds-snap-sec-title">DIMENSIONS</span>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-measure" title="Measure selected node width & height">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-snap-btn" id="ds-snap-btn-measure" title="Measure selected node width & height">
             Measure
           </button>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-clear" title="Clear measured dimensions">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-snap-btn" id="ds-snap-btn-clear" title="Clear measured dimensions">
             Clear
           </button>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-apply-w" title="Apply measured width to selected nodes">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-snap-btn" id="ds-snap-btn-apply-w" title="Apply measured width to selected nodes">
             Width
           </button>
-          <button type="button" class="ds-snap-btn" id="ds-snap-btn-apply-h" title="Apply measured height to selected nodes">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-snap-btn" id="ds-snap-btn-apply-h" title="Apply measured height to selected nodes">
             Height
           </button>
-          <button type="button" class="ds-snap-btn ds-snap-btn-accent" id="ds-snap-btn-apply-both" title="Apply measured width & height to selected nodes">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-snap-btn ds-snap-btn-accent" id="ds-snap-btn-apply-both" title="Apply measured width & height to selected nodes">
             Apply Both
           </button>
         </div>
@@ -1266,7 +1266,7 @@ class DSSnapToolbarManager {
         <div class="ds-snap-sec">
           <span class="ds-snap-sec-title">ARROW STEP</span>
           <div class="ds-snap-input-wrap" title="Keyboard arrow nudge step (px)">
-            <input type="number" class="ds-snap-input" id="ds-snap-input-step" value="${state.keyboardStep}" min="1" max="100" aria-label="Arrow step" />
+            <input type="number" class="ds-ui-input ds-snap-input" id="ds-snap-input-step" value="${state.keyboardStep}" min="1" max="100" aria-label="Arrow step" />
             <span class="ds-snap-input-unit">px</span>
           </div>
           <span class="ds-snap-tag" title="Holding Shift multiplies arrow movement by 5×">SHIFT=5×</span>
@@ -1276,7 +1276,7 @@ class DSSnapToolbarManager {
 
         <!-- Section 7: Close (Far Right) -->
         <div class="ds-snap-sec ds-snap-sec-actions">
-          <button type="button" class="ds-snap-close-btn" id="ds-snap-close-btn" aria-label="Close Snap Bar" title="Close Snap Bar">
+          <button type="button" class="ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-snap-close-btn" id="ds-snap-close-btn" aria-label="Close Snap Bar" title="Close Snap Bar">
             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="3.5" y1="3.5" x2="12.5" y2="12.5" />
               <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" />
@@ -1470,7 +1470,7 @@ function injectSnapStyles() {
     document.head.appendChild(style);
   }
   style.textContent = `
-    /* Action Bar Dock Wrapper */
+/* Action Bar Dock Wrapper */
     .ds-snap-toolbar-group,
     div.ds-snap-toolbar-group {
       display: inline-flex !important;
@@ -1486,13 +1486,14 @@ function injectSnapStyles() {
       margin: 0 4px 0 2px !important;
       outline: none !important;
     }
-    .ds-snap-toolbar-group::before,
+
+.ds-snap-toolbar-group::before,
     .ds-snap-toolbar-group::after {
       display: none !important;
       content: none !important;
     }
 
-    /* DS Snap Toolbar Button */
+/* DS Snap Toolbar Button */
     .ds-snap-tb-btn {
       display: inline-flex !important;
       align-items: center !important;
@@ -1515,18 +1516,21 @@ function injectSnapStyles() {
       vertical-align: middle !important;
       font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
     }
-    .ds-snap-tb-btn:hover {
+
+.ds-snap-tb-btn:hover {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
       box-shadow: none !important;
     }
-    .ds-snap-tb-btn.is-active {
+
+.ds-snap-tb-btn.is-active {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       color: var(--ds-color-accent, #67e8f9) !important;
       background: var(--ds-btn-hover, #202633) !important;
     }
-    .ds-snap-tb-icon-box {
+
+.ds-snap-tb-icon-box {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -1534,7 +1538,8 @@ function injectSnapStyles() {
       height: 22px !important;
       color: var(--ds-color-text, currentColor) !important;
     }
-    .ds-snap-svg {
+
+.ds-snap-svg {
       display: block !important;
       width: 22px !important;
       height: 22px !important;
@@ -1542,13 +1547,14 @@ function injectSnapStyles() {
       color: var(--ds-color-text, currentColor) !important;
       transition: color 0.15s ease, stroke 0.15s ease !important;
     }
-    .ds-snap-tb-btn:hover .ds-snap-svg,
+
+.ds-snap-tb-btn:hover .ds-snap-svg,
     .ds-snap-tb-btn.is-active .ds-snap-svg {
       color: var(--ds-color-accent, #67e8f9) !important;
       stroke: var(--ds-color-accent, #67e8f9) !important;
     }
 
-    /* DS Snap Single Thick Row Bar across full browser width (5px margin on each side) */
+/* DS Snap Single Thick Row Bar across full browser width (5px margin on each side) */
     .ds-snap-popover {
       position: fixed !important;
       top: 48px !important;
@@ -1573,12 +1579,13 @@ function injectSnapStyles() {
       -webkit-backdrop-filter: blur(12px) !important;
       overflow: hidden !important;
     }
-    @keyframes dsSnapPopIn {
+
+@keyframes dsSnapPopIn {
       from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .ds-snap-bar {
+.ds-snap-bar {
       display: flex !important;
       flex-direction: row !important;
       align-items: center !important;
@@ -1591,7 +1598,7 @@ function injectSnapStyles() {
       flex-wrap: nowrap !important;
     }
 
-    .ds-snap-sec {
+.ds-snap-sec {
       display: inline-flex !important;
       align-items: center !important;
       gap: 5px !important;
@@ -1599,23 +1606,26 @@ function injectSnapStyles() {
       box-sizing: border-box !important;
     }
 
-    .ds-snap-sec-brand {
+.ds-snap-sec-brand {
       display: inline-flex !important;
       align-items: center !important;
       gap: 5px !important;
       padding-right: 2px !important;
       flex-shrink: 0 !important;
     }
-    .ds-snap-badge-icon {
+
+.ds-snap-badge-icon {
       color: var(--ds-color-accent, #67e8f9) !important;
       display: flex !important;
       align-items: center !important;
     }
-    .ds-snap-badge-icon .ds-snap-svg {
+
+.ds-snap-badge-icon .ds-snap-svg {
       width: 16px !important;
       height: 16px !important;
     }
-    .ds-snap-title {
+
+.ds-snap-title {
       font-size: 11px !important;
       font-weight: 800 !important;
       letter-spacing: 0.06em !important;
@@ -1623,7 +1633,8 @@ function injectSnapStyles() {
       text-transform: uppercase !important;
       white-space: nowrap !important;
     }
-    .ds-snap-version {
+
+.ds-snap-version {
       font-size: 8px !important;
       font-weight: 700 !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
@@ -1631,7 +1642,7 @@ function injectSnapStyles() {
       user-select: none !important;
     }
 
-    .ds-snap-sec-title {
+.ds-snap-sec-title {
       font-size: 9px !important;
       font-weight: 800 !important;
       letter-spacing: 0.04em !important;
@@ -1642,7 +1653,7 @@ function injectSnapStyles() {
       margin-right: 1px !important;
     }
 
-    .ds-snap-divider {
+.ds-snap-divider {
       width: 1px !important;
       height: 18px !important;
       background: var(--ds-color-border, rgba(255, 255, 255, 0.12)) !important;
@@ -1650,7 +1661,7 @@ function injectSnapStyles() {
       flex-shrink: 0 !important;
     }
 
-    /* UIElements Toggle integration inside toolbar */
+/* UIElements Toggle integration inside toolbar */
     .ds-snap-sec .ds-ui-toggle-row {
       display: inline-flex !important;
       align-items: center !important;
@@ -1661,10 +1672,12 @@ function injectSnapStyles() {
       cursor: pointer !important;
       user-select: none !important;
     }
-    .ds-snap-sec .ds-ui-toggle-copy {
+
+.ds-snap-sec .ds-ui-toggle-copy {
       display: none !important;
     }
-    .ds-snap-sec .ds-ui-toggle-track {
+
+.ds-snap-sec .ds-ui-toggle-track {
       position: relative !important;
       width: 32px !important;
       min-width: 32px !important;
@@ -1680,16 +1693,19 @@ function injectSnapStyles() {
       box-shadow: none !important;
       transition: background 120ms ease, border-color 120ms ease !important;
     }
-    .ds-snap-sec .ds-ui-toggle-row:focus-visible .ds-ui-toggle-track,
+
+.ds-snap-sec .ds-ui-toggle-row:focus-visible .ds-ui-toggle-track,
     .ds-snap-sec .ds-ui-toggle-track:focus-visible {
       outline: 1px solid var(--ds-color-accent, #67e8f9) !important;
     }
-    .ds-snap-sec .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
+
+.ds-snap-sec .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
       background: var(--ds-color-accent, #67e8f9) !important;
       border-color: var(--ds-color-accent, #67e8f9) !important;
       box-shadow: none !important;
     }
-    .ds-snap-sec .ds-ui-toggle-thumb {
+
+.ds-snap-sec .ds-ui-toggle-thumb {
       position: absolute !important;
       top: 2px !important;
       left: 2px !important;
@@ -1701,12 +1717,13 @@ function injectSnapStyles() {
       pointer-events: none !important;
       box-shadow: none !important;
     }
-    .ds-snap-sec .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {
+
+.ds-snap-sec .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {
       transform: translateX(14px) !important;
       background: var(--ds-color-on-accent, #0a0c10) !important;
     }
 
-    /* Clean Input Field */
+/* Clean Input Field */
     .ds-snap-input-wrap {
       display: inline-flex !important;
       align-items: center !important;
@@ -1719,33 +1736,29 @@ function injectSnapStyles() {
       transition: border-color 0.12s ease !important;
       box-shadow: none !important;
     }
-    .ds-snap-input-wrap:focus-within {
+
+.ds-snap-input-wrap:focus-within {
       border-color: var(--ds-color-accent, #67e8f9) !important;
       box-shadow: none !important;
     }
-    .ds-snap-input {
-      all: unset !important;
-      width: 24px !important;
-      height: 100% !important;
-      background: transparent !important;
-      border: none !important;
-      outline: none !important;
-      text-align: center !important;
-      font-family: var(--ds-font, Inter, monospace) !important;
-      font-size: 10.5px !important;
-      font-weight: 700 !important;
-      color: var(--ds-color-accent, #67e8f9) !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      box-sizing: border-box !important;
-      -moz-appearance: textfield !important;
-    }
-    .ds-snap-input::-webkit-outer-spin-button,
-    .ds-snap-input::-webkit-inner-spin-button {
-      -webkit-appearance: none !important;
-      margin: 0 !important;
-    }
-    .ds-snap-input-unit {
+
+.ds-ui-input.ds-snap-input {
+  all: unset;
+  width: 24px;
+  height: 100%;
+  text-align: center;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+}
+
+.ds-ui-input.ds-snap-input::-webkit-outer-spin-button,
+.ds-ui-input.ds-snap-input::-webkit-inner-spin-button {
+  margin: 0;
+}
+
+.ds-snap-input-unit {
       font-size: 8.5px !important;
       font-weight: 700 !important;
       color: var(--ds-color-muted-text, #94a3b8) !important;
@@ -1754,70 +1767,39 @@ function injectSnapStyles() {
       opacity: 0.8 !important;
     }
 
-    /* Buttons */
-    .ds-snap-btn {
-      height: 24px !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 4px !important;
-      padding: 0 7px !important;
-      background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23)) !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
-      border-radius: var(--ds-radius-control, 4px) !important;
-      color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb)) !important;
-      font-family: var(--ds-font, Inter, system-ui, sans-serif) !important;
-      font-size: 10px !important;
-      font-weight: 700 !important;
-      line-height: 1 !important;
-      cursor: pointer !important;
-      user-select: none !important;
-      transition: all 0.12s ease !important;
-      box-sizing: border-box !important;
-      white-space: nowrap !important;
-      outline: none !important;
-      box-shadow: none !important;
-      vertical-align: middle !important;
-    }
-    .ds-snap-btn span {
-      display: inline-flex !important;
-      align-items: center !important;
-      line-height: 1 !important;
-      margin: 0 !important;
-      vertical-align: middle !important;
-    }
-    .ds-snap-btn svg,
-    .ds-snap-btn .preview-icon {
-      display: inline-block !important;
-      flex-shrink: 0 !important;
-      stroke: currentColor !important;
-      fill: none !important;
-      pointer-events: none !important;
-      margin: 0 !important;
-      vertical-align: middle !important;
-    }
-    .ds-snap-btn:hover {
-      background: var(--ds-btn-hover, #1e2433) !important;
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-      color: var(--ds-color-accent, #67e8f9) !important;
-      box-shadow: none !important;
-    }
-    .ds-snap-btn:active {
-      transform: translateY(1px) !important;
-    }
-    .ds-snap-btn-accent {
-      background: var(--ds-color-accent, #67e8f9) !important;
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-      color: var(--ds-color-on-accent, #0a0c10) !important;
-    }
-    .ds-snap-btn-accent:hover {
-      background: var(--ds-color-accent-hover, #22d3ee) !important;
-      border-color: var(--ds-color-accent-hover, #22d3ee) !important;
-      color: var(--ds-color-on-accent, #0a0c10) !important;
-      box-shadow: none !important;
-    }
+/* Buttons */
+.ds-ui-btn.ds-snap-btn {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 7px;
+  border-radius: var(--ds-radius-control, 4px);
+  box-sizing: border-box;
+  white-space: nowrap;
+  vertical-align: middle;
+}
 
-    .ds-snap-tag {
+.ds-ui-btn.ds-snap-btn span {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.ds-ui-btn.ds-snap-btn svg,
+.ds-ui-btn.ds-snap-btn .preview-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  pointer-events: none;
+  margin: 0;
+  vertical-align: middle;
+}
+
+.ds-snap-tag {
       font-size: 8px !important;
       font-weight: 800 !important;
       font-family: monospace !important;
@@ -1829,7 +1811,7 @@ function injectSnapStyles() {
       user-select: none !important;
     }
 
-    /* Right Section: Actions */
+/* Right Section: Actions */
     .ds-snap-sec-actions {
       display: inline-flex !important;
       align-items: center !important;
@@ -1838,48 +1820,31 @@ function injectSnapStyles() {
       margin: 0 !important;
     }
 
-    /* Close Button (Zero text fallback artifact, pure SVG) */
-    .ds-snap-close-btn {
-      width: 24px !important;
-      min-width: 24px !important;
-      height: 24px !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      background: var(--ds-btn-bg, var(--ds-color-panel-2, #161a23)) !important;
-      border: 1px solid var(--ds-btn-border, var(--ds-color-border, #242a36)) !important;
-      border-radius: var(--ds-radius-control, 4px) !important;
-      color: var(--ds-btn-text, var(--ds-color-text, #e5e7eb)) !important;
-      cursor: pointer !important;
-      outline: none !important;
-      box-shadow: none !important;
-      transition: all 0.12s ease !important;
-      box-sizing: border-box !important;
-      flex-shrink: 0 !important;
-    }
-    .ds-snap-close-btn svg {
-      display: block !important;
-      width: 12px !important;
-      height: 12px !important;
-      stroke: currentColor !important;
-      fill: none !important;
-      pointer-events: none !important;
-    }
-    .ds-snap-close-btn:hover {
-      border-color: var(--ds-color-accent, #67e8f9) !important;
-      color: var(--ds-color-accent, #67e8f9) !important;
-      background: var(--ds-btn-hover, #1e2433) !important;
-      box-shadow: none !important;
-    }
-    .ds-snap-close-btn:focus,
-    .ds-snap-close-btn:focus-visible {
-      outline: none !important;
-      box-shadow: none !important;
-    }
+/* Close Button (Zero text fallback artifact, pure SVG) */
+.ds-ui-btn.ds-snap-close-btn {
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ds-radius-control, 4px);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
 
-    /* Toast Notification */
+.ds-ui-btn.ds-snap-close-btn svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  pointer-events: none;
+}
+
+/* Toast Notification */
     .ds-snap-toast {
       position: fixed !important;
       top: 60px !important;
@@ -1899,14 +1864,16 @@ function injectSnapStyles() {
       animation: dsToastPop 0.18s ease-out !important;
       transition: opacity 0.25s ease !important;
     }
-    .ds-snap-toast.is-fading {
+
+.ds-snap-toast.is-fading {
       opacity: 0 !important;
     }
-    @keyframes dsToastPop {
+
+@keyframes dsToastPop {
       from { opacity: 0; transform: translate(-50%, 10px); }
       to { opacity: 1; transform: translate(-50%, 0); }
     }
-  `;
+`;
 }
 
 // ---------------------------------------------------------------------------

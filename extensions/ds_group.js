@@ -753,7 +753,7 @@ function createGroupColorEngine({ initialColor, onColorChange }) {
     hexPrefix.textContent = "#";
     const hexInput = document.createElement("input");
     hexInput.type = "text";
-    hexInput.className = "ds-grp-hex-input";
+    hexInput.className = "ds-ui-input ds-grp-hex-input";
     hexInput.maxLength = 6;
     hexInput.spellcheck = false;
     hexInputWrap.append(hexPrefix, hexInput);
@@ -913,7 +913,7 @@ function openGroupGearPopover(group, anchorEl = null) {
 
     const titleInput = document.createElement("input");
     titleInput.type = "text";
-    titleInput.className = "ds-grp-title-input";
+    titleInput.className = "ds-ui-input ds-grp-title-input";
     titleInput.value = group.title || DEFAULT_TITLE;
     titleInput.placeholder = "Group title...";
     titleInput.addEventListener("input", (e) => {
@@ -926,7 +926,7 @@ function openGroupGearPopover(group, anchorEl = null) {
 
     const closeBtn = document.createElement("button");
     closeBtn.type = "button";
-    closeBtn.className = "ds-grp-popover-close-btn";
+    closeBtn.className = "ds-ui-btn ds-ui-btn-icon-only ds-ui-btn-compact ds-grp-popover-close-btn";
     closeBtn.innerHTML = "✕";
     closeBtn.title = "Close";
     closeBtn.addEventListener("click", closeGroupGearPopover);
@@ -940,7 +940,7 @@ function openGroupGearPopover(group, anchorEl = null) {
 
     const fitBtn = document.createElement("button");
     fitBtn.type = "button";
-    fitBtn.className = "ds-grp-action-chip";
+    fitBtn.className = "ds-ui-btn ds-ui-btn-compact ds-grp-action-chip";
     fitBtn.innerHTML = `<span>↔</span> <span>Fit</span>`;
     fitBtn.title = "Fit group to nodes";
     fitBtn.addEventListener("click", () => {
@@ -951,7 +951,7 @@ function openGroupGearPopover(group, anchorEl = null) {
     const isPinned = !!group.pinned;
     const pinBtn = document.createElement("button");
     pinBtn.type = "button";
-    pinBtn.className = `ds-grp-action-chip ${isPinned ? "is-active" : ""}`;
+    pinBtn.className = `ds-ui-btn ds-ui-btn-compact ds-grp-action-chip ${isPinned ? "is-active" : ""}`;
     pinBtn.innerHTML = `<span>📌</span> <span>${isPinned ? "Pinned" : "Pin"}</span>`;
     pinBtn.title = isPinned ? "Unpin group" : "Pin group";
     pinBtn.addEventListener("click", () => {
@@ -966,7 +966,7 @@ function openGroupGearPopover(group, anchorEl = null) {
     const isBypassed = nodes.length > 0 && nodes.every((n) => Number(n.mode) === 4);
     const bypassBtn = document.createElement("button");
     bypassBtn.type = "button";
-    bypassBtn.className = `ds-grp-action-chip ${isBypassed ? "is-active" : ""}`;
+    bypassBtn.className = `ds-ui-btn ds-ui-btn-compact ds-grp-action-chip ${isBypassed ? "is-active" : ""}`;
     bypassBtn.innerHTML = `<span>${isBypassed ? "◉" : "◌"}</span> <span>${isBypassed ? "Bypassed" : "Bypass"}</span>`;
     bypassBtn.title = "Bypass or restore contained nodes";
     bypassBtn.addEventListener("click", () => {
@@ -1027,7 +1027,7 @@ function openGroupGearPopover(group, anchorEl = null) {
     DS_ACCENT_PRESETS.forEach((preset) => {
         const chip = document.createElement("button");
         chip.type = "button";
-        chip.className = "ds-grp-preset-chip";
+        chip.className = "ds-ui-btn ds-ui-btn-compact ds-grp-preset-chip";
         chip.dataset.hex = preset.hex;
         chip.title = `${preset.name} (${preset.hex})`;
 
@@ -1130,7 +1130,7 @@ function injectGroupStyles() {
     const style = document.createElement("style");
     style.id = "ds-group-enhanced-styles";
     style.textContent = `
-    .ds-group-gear-popover {
+.ds-group-gear-popover {
         position: fixed;
         z-index: 99999;
         width: 270px;
@@ -1146,12 +1146,12 @@ function injectGroupStyles() {
         animation: dsGroupPopIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    @keyframes dsGroupPopIn {
+@keyframes dsGroupPopIn {
         from { opacity: 0; transform: scale(0.96) translateY(-4px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
-    .ds-grp-popover-header {
+.ds-grp-popover-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -1159,7 +1159,7 @@ function injectGroupStyles() {
         margin-bottom: 8px;
     }
 
-    .ds-grp-popover-title-wrap {
+.ds-grp-popover-title-wrap {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -1167,7 +1167,7 @@ function injectGroupStyles() {
         min-width: 0;
     }
 
-    .ds-grp-popover-badge {
+.ds-grp-popover-badge {
         font-size: 8.5px;
         font-weight: 800;
         padding: 2px 5px;
@@ -1178,80 +1178,40 @@ function injectGroupStyles() {
         flex-shrink: 0;
     }
 
-    .ds-grp-title-input {
-        flex: 1;
-        min-width: 0;
-        height: 24px;
-        padding: 0 6px;
-        background: var(--ds-bg, #0b0d12);
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
-        border-radius: 4px;
-        color: var(--ds-text, #f8fafc);
-        font-size: 11px;
-        font-weight: 600;
-        outline: none;
-        transition: border-color 0.15s ease;
-    }
+.ds-ui-input.ds-grp-title-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 4px;
+}
 
-    .ds-grp-title-input:focus {
-        border-color: var(--ds-accent, #67e8f9);
-    }
+.ds-ui-btn.ds-grp-popover-close-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    .ds-grp-popover-close-btn {
-        width: 22px;
-        height: 22px;
-        padding: 0;
-        border: none;
-        border-radius: 4px;
-        background: transparent;
-        color: var(--ds-text-muted, #9ca3af);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 11px;
-        transition: all 0.12s ease;
-    }
-
-    .ds-grp-popover-close-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: var(--ds-text, #ffffff);
-    }
-
-    .ds-grp-actions-row {
+.ds-grp-actions-row {
         display: flex;
         align-items: center;
         gap: 4px;
     }
 
-    .ds-grp-action-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        height: 24px;
-        padding: 0 7px;
-        border-radius: 5px;
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
-        background: var(--ds-panel-2, #161a23);
-        color: var(--ds-text, #e2e8f0);
-        font-size: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.12s ease;
-    }
+.ds-ui-btn.ds-grp-action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 5px;
+}
 
-    .ds-grp-action-chip:hover {
-        border-color: var(--ds-border-active, rgba(255, 255, 255, 0.25));
-        background: rgba(255, 255, 255, 0.08);
-    }
-
-    .ds-grp-action-chip.is-active {
-        border-color: var(--ds-accent, #67e8f9);
-        color: var(--ds-accent, #67e8f9);
-        box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9);
-    }
-
-    .ds-grp-count-chip {
+.ds-grp-count-chip {
         margin-left: auto;
         font-size: 9.5px;
         font-weight: 600;
@@ -1259,13 +1219,13 @@ function injectGroupStyles() {
         padding: 0 4px;
     }
 
-    .ds-grp-popover-sep {
+.ds-grp-popover-sep {
         height: 1px;
         background: var(--ds-border, rgba(255, 255, 255, 0.10));
         margin: 8px 0;
     }
 
-    .ds-grp-section-label {
+.ds-grp-section-label {
         font-size: 9px;
         font-weight: 700;
         color: var(--ds-text-muted, #9ca3af);
@@ -1273,38 +1233,23 @@ function injectGroupStyles() {
         margin-bottom: 6px;
     }
 
-    .ds-grp-presets-grid {
+.ds-grp-presets-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 4px;
     }
 
-    .ds-grp-preset-chip {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        height: 24px;
-        padding: 0 6px;
-        border-radius: 4px;
-        border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
-        background: rgba(255, 255, 255, 0.03);
-        cursor: pointer;
-        transition: all 0.12s ease;
-        min-width: 0;
-    }
+.ds-ui-btn.ds-grp-preset-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 4px;
+  min-width: 0;
+}
 
-    .ds-grp-preset-chip:hover {
-        border-color: var(--ds-accent, #67e8f9);
-        background: rgba(255, 255, 255, 0.08);
-    }
-
-    .ds-grp-preset-chip.is-active {
-        border-color: var(--ds-accent, #67e8f9);
-        background: color-mix(in srgb, var(--ds-accent, #67e8f9) 15%, var(--ds-panel-2, #161a23));
-        box-shadow: inset 0 -2px 0 var(--ds-accent, #67e8f9);
-    }
-
-    .ds-grp-preset-dot {
+.ds-grp-preset-dot {
         width: 9px;
         height: 9px;
         border-radius: 50%;
@@ -1312,7 +1257,7 @@ function injectGroupStyles() {
         box-shadow: 0 0 2px rgba(0,0,0,0.5);
     }
 
-    .ds-grp-preset-name {
+.ds-grp-preset-name {
         font-size: 9px;
         font-weight: 600;
         color: var(--ds-text, #f8fafc);
@@ -1321,20 +1266,20 @@ function injectGroupStyles() {
         text-overflow: ellipsis;
     }
 
-    /* Color Picker Layout */
+/* Color Picker Layout */
     .ds-grp-color-engine {
         display: flex;
         flex-direction: column;
         gap: 6px;
     }
 
-    .ds-grp-color-canvas-row {
+.ds-grp-color-canvas-row {
         display: flex;
         gap: 6px;
         height: 104px;
     }
 
-    .ds-grp-satval-wrap {
+.ds-grp-satval-wrap {
         position: relative;
         flex: 1;
         height: 104px;
@@ -1345,13 +1290,13 @@ function injectGroupStyles() {
         touch-action: none;
     }
 
-    .ds-grp-satval-canvas {
+.ds-grp-satval-canvas {
         display: block;
         width: 100%;
         height: 100%;
     }
 
-    .ds-grp-satval-reticle {
+.ds-grp-satval-reticle {
         position: absolute;
         width: 10px;
         height: 10px;
@@ -1362,7 +1307,7 @@ function injectGroupStyles() {
         pointer-events: none;
     }
 
-    .ds-grp-hue-wrap {
+.ds-grp-hue-wrap {
         position: relative;
         width: 18px;
         height: 104px;
@@ -1374,13 +1319,13 @@ function injectGroupStyles() {
         flex-shrink: 0;
     }
 
-    .ds-grp-hue-bar {
+.ds-grp-hue-bar {
         width: 100%;
         height: 100%;
         background: linear-gradient(to bottom, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
     }
 
-    .ds-grp-hue-scrub {
+.ds-grp-hue-scrub {
         position: absolute;
         left: 0;
         right: 0;
@@ -1393,13 +1338,13 @@ function injectGroupStyles() {
         border-radius: 2px;
     }
 
-    .ds-grp-color-inputs-row {
+.ds-grp-color-inputs-row {
         display: flex;
         align-items: center;
         gap: 6px;
     }
 
-    .ds-grp-active-swatch {
+.ds-grp-active-swatch {
         width: 28px;
         height: 24px;
         border-radius: 4px;
@@ -1408,7 +1353,7 @@ function injectGroupStyles() {
         flex-shrink: 0;
     }
 
-    .ds-grp-hex-input-wrap {
+.ds-grp-hex-input-wrap {
         display: flex;
         align-items: center;
         flex: 1;
@@ -1421,29 +1366,21 @@ function injectGroupStyles() {
         transition: border-color 0.15s ease;
     }
 
-    .ds-grp-hex-input-wrap:focus-within {
+.ds-grp-hex-input-wrap:focus-within {
         border-color: var(--ds-accent, #67e8f9);
     }
 
-    .ds-grp-hex-prefix {
+.ds-grp-hex-prefix {
         font-size: 10px;
         font-weight: 700;
         color: var(--ds-text-muted, #9ca3af);
     }
 
-    .ds-grp-hex-input {
-        flex: 1;
-        min-width: 0;
-        background: transparent;
-        border: none;
-        outline: none;
-        color: var(--ds-text, #f8fafc);
-        font-size: 11px;
-        font-weight: 700;
-        font-family: monospace;
-        letter-spacing: 0.5px;
-    }
-    `;
+.ds-ui-input.ds-grp-hex-input {
+  flex: 1;
+  min-width: 0;
+}
+`;
     document.head.appendChild(style);
 }
 
