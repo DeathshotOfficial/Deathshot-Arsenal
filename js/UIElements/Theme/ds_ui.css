@@ -1166,7 +1166,9 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
   min-width: 34px;
   height: 20px;
   background: var(--ds-color-panel-2, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
+  /* Inset shadow instead of a border: borders snap to whole device pixels and
+     shift the thumb visually when the canvas is zoomed out. */
+  box-shadow: inset 0 0 0 1px var(--ds-color-border, #242a36);
   border-radius: 4px;
   transition: all var(--ds-transition);
   box-sizing: border-box;
@@ -1175,8 +1177,8 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
 
 .ds-ui-toggle-thumb {
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 3px;
+  left: 3px;
   width: 14px;
   height: 14px;
   background: var(--ds-color-muted-text, #9ca3af);
@@ -1186,7 +1188,7 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
 
 .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
   background: var(--ds-color-accent, #67e8f9);
-  border-color: var(--ds-color-accent, #67e8f9);
+  box-shadow: inset 0 0 0 1px var(--ds-color-accent, #67e8f9);
 }
 
 .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {

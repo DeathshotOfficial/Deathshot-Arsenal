@@ -153,18 +153,6 @@
   pointer-events: auto !important;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 /* ========================================================================= */
 /* 4. Unified Button System (Strict Token Variables)                        */
 /* ========================================================================= */
@@ -322,47 +310,6 @@
 [class*="ds-sensei"] .ds-ui-toggle-desc {
   font-size: 9px;
   color: var(--ds-color-muted-text, #9ca3af);
-}
-
-[class*="ds-sensei"] .ds-ui-toggle-track {
-  position: relative;
-  width: 34px;
-  min-width: 34px;
-  height: 20px;
-  background: var(--ds-color-panel-2, #161a23);
-  border: 1px solid var(--ds-color-border, #242a36);
-  border-radius: 4px;
-  transition: all var(--ds-transition, 120ms ease);
-  box-sizing: border-box;
-  flex-shrink: 0;
-  cursor: pointer;
-  outline: none;
-}
-
-[class*="ds-sensei"] .ds-ui-toggle-track:focus-visible {
-  box-shadow: 0 0 0 2px var(--ds-color-focus-ring);
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-[class*="ds-sensei"] .ds-ui-toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  background: var(--ds-color-muted-text, #9ca3af);
-  border-radius: 3px;
-  transition: transform var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease);
-}
-
-[class*="ds-sensei"] .ds-ui-toggle-row.is-on .ds-ui-toggle-track {
-  background: var(--ds-color-accent, #67e8f9);
-  border-color: var(--ds-color-accent, #67e8f9);
-}
-
-[class*="ds-sensei"] .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb {
-  transform: translateX(14px);
-  background: var(--ds-color-on-accent, #0a0c10);
 }
 
 /* ========================================================================= */
@@ -535,23 +482,6 @@ Segmented Controls & Groups                                     */
   color: var(--ds-color-text, #e5e7eb) !important;
   text-transform: uppercase !important;
   letter-spacing: 0.04em !important;
-}
-
-.ds-sensei-auto-unload-toggle .ds-ui-toggle-track {
-  width: 28px !important;
-  min-width: 28px !important;
-  height: 16px !important;
-}
-
-.ds-sensei-auto-unload-toggle .ds-ui-toggle-thumb {
-  width: 12px !important;
-  height: 12px !important;
-  top: 1px !important;
-  left: 1px !important;
-}
-
-.ds-sensei-auto-unload-toggle.is-on .ds-ui-toggle-thumb {
-  transform: translateX(12px) !important;
 }
 
 .ds-sensei-prompt-area {
@@ -846,47 +776,6 @@ Segmented Controls & Groups                                     */
 
 .ds-sensei-lora-row .ds-ui-toggle-copy {
   display: none !important;
-}
-
-.ds-sensei-lora-row .ds-ui-toggle-track {
-  width: 32px !important;
-  min-width: 32px !important;
-  max-width: 32px !important;
-  height: 18px !important;
-  min-height: 18px !important;
-  max-height: 18px !important;
-  border-radius: var(--ds-radius-control, 4px) !important;
-  border: 1px solid var(--ds-color-border, #242a36) !important;
-  background: var(--ds-color-panel-2, #161a23) !important;
-  position: relative !important;
-  transition: all var(--ds-transition, 120ms ease) !important;
-  box-sizing: border-box !important;
-  flex-shrink: 0 !important;
-  cursor: pointer !important;
-  margin: 0 !important;
-}
-
-.ds-sensei-lora-row .ds-ui-toggle-thumb {
-  width: 12px !important;
-  height: 12px !important;
-  top: 2px !important;
-  left: 2px !important;
-  border-radius: 3px !important;
-  background: var(--ds-color-muted-text, #9ca3af) !important;
-  position: absolute !important;
-  transition: transform var(--ds-transition, 120ms ease), background-color var(--ds-transition, 120ms ease) !important;
-}
-
-.ds-sensei-lora-row .ds-ui-toggle-row.is-on .ds-ui-toggle-track,
-.ds-sensei-lora-row .is-on .ds-ui-toggle-track {
-  background: var(--ds-color-accent, #67e8f9) !important;
-  border-color: var(--ds-color-accent, #67e8f9) !important;
-}
-
-.ds-sensei-lora-row .ds-ui-toggle-row.is-on .ds-ui-toggle-thumb,
-.ds-sensei-lora-row .is-on .ds-ui-toggle-thumb {
-  transform: translateX(14px) !important;
-  background: var(--ds-color-on-accent, #0a0c10) !important;
 }
 
 .ds-sensei-add-btn {
