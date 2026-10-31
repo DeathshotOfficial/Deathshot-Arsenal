@@ -1561,7 +1561,8 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
   user-select: none;
   overflow: hidden;
   font-family: var(--ds-font, Inter, system-ui, -apple-system, sans-serif);
-  color: var(--ds-color-text, #f3f4f6);
+  /* Media chrome stays light-on-dark in every theme, like the backdrop above. */
+  color: #f3f4f6;
 }
 
 .ds-ui-player-modal.is-inactive,
@@ -1985,6 +1986,7 @@ input[type="number"].ds-ui-input::-webkit-outer-spin-button {
 .ds-gallery-player-speed-item.active {
   color: var(--ds-color-accent, #67e8f9);
   font-weight: 700;
+  background: color-mix(in srgb, var(--ds-color-accent, #67e8f9) 15%, transparent);
 }
 
 /* ========================================================================= */
