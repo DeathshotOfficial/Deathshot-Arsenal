@@ -430,7 +430,7 @@ export async function openAISettingsPopover({
 
     const biTabBtn = document.createElement("button");
     biTabBtn.type = "button";
-    biTabBtn.className = `ds-sensei-gear-tab-btn ${activeTab === "built_in" ? "is-active" : ""}`;
+    biTabBtn.className = `ds-ui-btn ds-ui-btn-compact ds-sensei-gear-tab-btn ${activeTab === "built_in" ? "is-active" : ""}`;
     biTabBtn.innerHTML = `<span>🧠 Built In</span>`;
     biTabBtn.onclick = () => {
       activeTab = "built_in";
@@ -439,7 +439,7 @@ export async function openAISettingsPopover({
 
     const setTabBtn = document.createElement("button");
     setTabBtn.type = "button";
-    setTabBtn.className = `ds-sensei-gear-tab-btn ${activeTab === "settings" ? "is-active" : ""}`;
+    setTabBtn.className = `ds-ui-btn ds-ui-btn-compact ds-sensei-gear-tab-btn ${activeTab === "settings" ? "is-active" : ""}`;
     setTabBtn.innerHTML = `<span>⚙ Settings</span>`;
     setTabBtn.onclick = () => {
       activeTab = "settings";
@@ -509,8 +509,7 @@ export async function openAISettingsPopover({
 
     const rescanBtn = document.createElement("button");
     rescanBtn.type = "button";
-    rescanBtn.className = "ds-sensei-btn-compact ds-sensei-gear-rescan-btn";
-    rescanBtn.style.cssText = "height:18px;line-height:18px;padding:0 6px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;";
+    rescanBtn.className = "ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact ds-sensei-gear-rescan-btn";
     rescanBtn.innerHTML = `${DSIconMarkup("refresh-cw", { size: 10 })}<span>Rescan</span>`;
 
     modelHdr.append(modelLbl, rescanBtn);
@@ -547,7 +546,7 @@ export async function openAISettingsPopover({
           ${DSIconMarkup("cpu", { size: 13, color: "var(--ds-accent, #67e8f9)" })}
           <span class="ds-sensei-hw-name">Detecting GPU...</span>
         </div>
-        <button type="button" class="ds-sensei-btn-compact ds-sensei-autotune-btn" style="display:none;">
+        <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact ds-sensei-autotune-btn" style="display:none;">
           💡 Auto-Tune
         </button>
       </div>
@@ -872,8 +871,7 @@ export async function openAISettingsPopover({
 
     const diceBtn = document.createElement("button");
     diceBtn.type = "button";
-    diceBtn.className = "ds-sensei-btn-compact";
-    diceBtn.style.cssText = "height:16px;line-height:16px;padding:0 6px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;";
+    diceBtn.className = "ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact";
     diceBtn.textContent = "🎲 Roll";
 
     sHdr.append(sLbl, diceBtn);
@@ -881,8 +879,8 @@ export async function openAISettingsPopover({
 
     const seedInp = document.createElement("input");
     seedInp.type = "number";
-    seedInp.className = "ds-sensei-input ds-ai-seed-input";
-    seedInp.style.cssText = "width:100%;box-sizing:border-box;min-width:0;text-align:center;";
+    seedInp.className = "ds-ui-input ds-sensei-input ds-ai-seed-input";
+    seedInp.style.width = "100%";
     seedInp.value = currentSettings.seed ?? 123456;
     seedInp.onchange = () => {
       currentSettings.seed = parseInt(seedInp.value) || 0;

@@ -9,6 +9,7 @@ import {
   Toggle,
   Stepper,
   Spinbox,
+  Modal,
   Dropdown,
   DSIcon,
   DSIconMarkup,
@@ -381,62 +382,6 @@ async function getHW() {
 // ---------------------------------------------------------------------------
 // Dropdown popover
 // ---------------------------------------------------------------------------
-function openMenu(anchor, items, cur, onPick, onClose) {
-  document.querySelectorAll(".ds-sensei-menu-popover").forEach((e) => e.remove());
-  const pop = document.createElement("div"); pop.className = "ds-sensei-menu-popover";
-  pop.style.zIndex = "100020";
-  const sb = document.createElement("div"); sb.className = "ds-sensei-menu-search";
-  const si = document.createElement("input"); si.placeholder = "Filter..."; sb.appendChild(si); pop.appendChild(sb);
-  const list = document.createElement("div"); list.className = "ds-sensei-menu-list"; pop.appendChild(list);
-
-  let cleaned = false;
-  const cleanup = () => {
-    if (cleaned) return;
-    cleaned = true;
-    pop.remove();
-    window.removeEventListener("pointerdown", close, true);
-    window.removeEventListener("keydown", onKeyDown, true);
-    onClose?.();
-  };
-
-  const render = (f = "") => {
-    list.innerHTML = "";
-    const filtered = items.filter((x) => !f || (typeof x === "string" ? x : x.label || "").toLowerCase().includes(f.toLowerCase()));
-    if (!filtered.length) { const e = document.createElement("div"); e.style.cssText = "padding:8px;color:var(--ds-text-muted);font-size:11px;"; e.textContent = "No matches"; list.appendChild(e); return; }
-    filtered.forEach((x) => {
-      const v = typeof x === "string" ? x : x.key || x.label || x;
-      const l = typeof x === "string" ? x : x.label || x.key || x;
-      const el = document.createElement("div"); el.className = "ds-sensei-menu-item";
-      if (v === cur) el.classList.add("active");
-      el.textContent = l;
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onPick(v);
-        cleanup();
-      });
-      list.appendChild(el);
-    });
-  };
-  si.addEventListener("input", () => render(si.value)); render();
-  const rect = anchor.getBoundingClientRect();
-  pop.style.cssText = `z-index:100020;top:${rect.bottom + 4}px;left:${Math.max(10, Math.min(window.innerWidth - 240, rect.left))}px;width:${Math.max(220, rect.width)}px;`;
-  document.body.appendChild(pop); si.focus();
-
-  const close = (e) => {
-    if (!pop.contains(e.target) && e.target !== anchor && !anchor.contains(e.target)) {
-      cleanup();
-    }
-  };
-  const onKeyDown = (e) => {
-    if (e.key === "Escape") {
-      cleanup();
-    }
-  };
-  setTimeout(() => {
-    window.addEventListener("pointerdown", close, true);
-    window.addEventListener("keydown", onKeyDown, true);
-  }, 20);
-}
 
 function createCustomDropdown({ value, options, placeholder = "Select...", onSelect, isCategorized = false }) {
   let flattened = [];
@@ -498,11 +443,6 @@ function createCustomDropdown({ value, options, placeholder = "Select...", onSel
   };
 }
 
-function selDiv(text, onClick) {
-  const d = document.createElement("div"); d.className = "ds-sensei-select";
-  d.innerHTML = `<span class="ds-sensei-select-text">${text}</span><span class="ds-sensei-select-arrow">▼</span>`;
-  d.onclick = onClick; return d;
-}
 function mkBtn(text, cls, onClick) {
   const isDanger = typeof cls === "string" && cls.includes("danger");
   const isPrimary = typeof cls === "string" && (cls.includes("primary") || cls.includes("continue"));
@@ -524,36 +464,24 @@ function mkStepper(options = {}) {
 
 
 function openSysPromptModal(cur, onSave, mode = "i2v") {
-  document.querySelectorAll(".ds-sensei-modal-backdrop").forEach((e) => e.remove());
-  const bd = document.createElement("div"); bd.className = "ds-sensei-modal-backdrop";
-  const dlg = document.createElement("div"); dlg.className = "ds-sensei-modal-dialog";
-  const title = document.createElement("div"); title.className = "ds-sensei-modal-title";
-  const modeTag = mode ? ` (${mode.toUpperCase()})` : "";
-  title.textContent = `System Prompt Editor${modeTag}`;
   const def = (mode && DEFAULT_SYSTEM_PROMPTS[mode]) || DEFAULT_SYSTEM_PROMPTS.i2v || DEFAULT_SYSTEM_PROMPT;
-  const ta = document.createElement("textarea"); ta.className = "ds-sensei-textarea"; ta.style.minHeight = "240px";
+  const modal = Modal({
+    title: `System Prompt Editor${mode ? ` (${mode.toUpperCase()})` : ""}`,
+    icon: "file-text",
+    width: 620,
+  });
+  const ta = document.createElement("textarea");
+  ta.className = "ds-ui-text-editor ds-sensei-textarea";
+  ta.style.minHeight = "240px";
   ta.value = cur || def;
-  const footer = document.createElement("div"); footer.className = "ds-sensei-modal-footer";
-
-  const closeModal = () => {
-    window.removeEventListener("keydown", onKeyDown, true);
-    bd.remove();
-  };
-  const onKeyDown = (e) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeModal();
-    }
-  };
-  window.addEventListener("keydown", onKeyDown, true);
-  bd.onclick = (e) => { if (e.target === bd) closeModal(); };
-
-  footer.append(
+  modal.body.appendChild(ta);
+  modal.footer.append(
     mkBtn("Reset Default", "", () => { ta.value = def; }),
-    mkBtn("Cancel", "", closeModal),
-    mkBtn("Save", "ds-sensei-btn-primary", () => { onSave(ta.value.trim()); closeModal(); })
+    mkBtn("Cancel", "", () => modal.close()),
+    mkBtn("Save", "ds-sensei-btn-primary", () => { onSave(ta.value.trim()); modal.close(); }),
   );
-  dlg.append(title, ta, footer); bd.appendChild(dlg); document.body.appendChild(bd); ta.focus();
+  modal.open();
+  ta.focus();
 }
 
 function getCivitaiApiKey() {
@@ -798,7 +726,7 @@ function openSenseiGearConfig(node, anchorEl) {
 
     const tabLm = document.createElement("button");
     tabLm.type = "button";
-    tabLm.className = `ds-sensei-gear-tab-btn ${activeTab === "lm_studio" ? "is-active" : ""}`;
+    tabLm.className = `ds-ui-btn ds-ui-btn-compact ds-sensei-gear-tab-btn ${activeTab === "lm_studio" ? "is-active" : ""}`;
     tabLm.innerHTML = `${DSIconMarkup("server", { size: 12 })}<span>LM Studio</span>`;
     tabLm.onclick = () => {
       activeTab = "lm_studio";
@@ -810,7 +738,7 @@ function openSenseiGearConfig(node, anchorEl) {
 
     const tabBi = document.createElement("button");
     tabBi.type = "button";
-    tabBi.className = `ds-sensei-gear-tab-btn ${activeTab === "built_in" ? "is-active" : ""}`;
+    tabBi.className = `ds-ui-btn ds-ui-btn-compact ds-sensei-gear-tab-btn ${activeTab === "built_in" ? "is-active" : ""}`;
     tabBi.innerHTML = `<span>🧠</span><span>Built In</span>`;
     tabBi.onclick = () => {
       activeTab = "built_in";
@@ -822,7 +750,7 @@ function openSenseiGearConfig(node, anchorEl) {
 
     const tabSet = document.createElement("button");
     tabSet.type = "button";
-    tabSet.className = `ds-sensei-gear-tab-btn ${activeTab === "settings" ? "is-active" : ""}`;
+    tabSet.className = `ds-ui-btn ds-ui-btn-compact ds-sensei-gear-tab-btn ${activeTab === "settings" ? "is-active" : ""}`;
     tabSet.innerHTML = `${DSIconMarkup("settings", { size: 12 })}<span>Settings</span>`;
     tabSet.onclick = () => {
       activeTab = "settings";
@@ -900,7 +828,7 @@ function openSenseiGearConfig(node, anchorEl) {
       ipField.innerHTML = `<label class="ds-sensei-gear-label">IP Address</label>`;
       const ipInp = document.createElement("input");
       ipInp.type = "text";
-      ipInp.className = "ds-sensei-input";
+      ipInp.className = "ds-ui-input ds-sensei-input";
       ipInp.value = lm.ip || "127.0.0.1";
       ipInp.onchange = () => {
         lm.ip = ipInp.value.trim() || "127.0.0.1";
@@ -913,7 +841,7 @@ function openSenseiGearConfig(node, anchorEl) {
       portField.innerHTML = `<label class="ds-sensei-gear-label">Port</label>`;
       const portInp = document.createElement("input");
       portInp.type = "number";
-      portInp.className = "ds-sensei-input";
+      portInp.className = "ds-ui-input ds-sensei-input";
       portInp.value = lm.port || 1234;
       portInp.onchange = () => {
         lm.port = parseInt(portInp.value) || 1234;
@@ -984,8 +912,7 @@ function openSenseiGearConfig(node, anchorEl) {
       seedLbl.textContent = "Seed";
       const diceBtn = document.createElement("button");
       diceBtn.type = "button";
-      diceBtn.className = "ds-sensei-btn-compact";
-      diceBtn.style.cssText = "height:16px;line-height:16px;padding:0 5px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;";
+      diceBtn.className = "ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact";
       diceBtn.title = "Roll new random seed";
       diceBtn.textContent = "🎲 Roll";
       seedHdr.append(seedLbl, diceBtn);
@@ -993,8 +920,8 @@ function openSenseiGearConfig(node, anchorEl) {
 
       const seedInp = document.createElement("input");
       seedInp.type = "number";
-      seedInp.className = "ds-sensei-input";
-      seedInp.style.cssText = "width:100%;box-sizing:border-box;min-width:0;";
+      seedInp.className = "ds-ui-input ds-sensei-input";
+      seedInp.style.width = "100%";
       seedInp.value = lm.seed ?? 123456;
       seedInp.onchange = () => {
         lm.seed = parseInt(seedInp.value) || 0;
@@ -1020,8 +947,8 @@ function openSenseiGearConfig(node, anchorEl) {
 
       const timeoutInp = document.createElement("input");
       timeoutInp.type = "number";
-      timeoutInp.className = "ds-sensei-input";
-      timeoutInp.style.cssText = "width:100%;box-sizing:border-box;min-width:0;";
+      timeoutInp.className = "ds-ui-input ds-sensei-input";
+      timeoutInp.style.width = "100%";
       timeoutInp.value = lm.timeout ?? 300;
       timeoutInp.onchange = () => {
         lm.timeout = Math.max(5, parseInt(timeoutInp.value) || 300);
@@ -1074,8 +1001,7 @@ function openSenseiGearConfig(node, anchorEl) {
 
       const rescanBtn = document.createElement("button");
       rescanBtn.type = "button";
-      rescanBtn.className = "ds-sensei-btn-compact ds-sensei-gear-rescan-btn";
-      rescanBtn.style.cssText = "height:18px;line-height:18px;padding:0 6px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;";
+      rescanBtn.className = "ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact ds-sensei-gear-rescan-btn";
       rescanBtn.innerHTML = `${DSIconMarkup("refresh-cw", { size: 11 })}<span>Rescan</span>`;
       modelHdr.append(modelLbl, rescanBtn);
       modelSec.appendChild(modelHdr);
@@ -1248,7 +1174,7 @@ function openSenseiGearConfig(node, anchorEl) {
             ${DSIconMarkup("cpu", { size: 13, color: "var(--ds-color-accent, #67e8f9)" })}
             <span class="ds-sensei-hw-name">${formatHWName(detectedHW)}</span>
           </div>
-          <button type="button" class="ds-sensei-btn-compact ds-sensei-autotune-btn" style="${detectedHW ? 'display:inline-flex;' : 'display:none;'}">
+          <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact ds-sensei-autotune-btn" style="${detectedHW ? 'display:inline-flex;' : 'display:none;'}">
             💡 Auto-Tune
           </button>
         </div>
@@ -1507,8 +1433,7 @@ function openSenseiGearConfig(node, anchorEl) {
       sLbl.textContent = "Seed";
       const biDiceBtn = document.createElement("button");
       biDiceBtn.type = "button";
-      biDiceBtn.className = "ds-sensei-btn-compact";
-      biDiceBtn.style.cssText = "height:16px;line-height:16px;padding:0 5px;font-size:10px;font-weight:700;color:var(--ds-accent,#67e8f9);background:rgba(103,232,249,0.12);border:none;border-radius:3px;cursor:pointer;";
+      biDiceBtn.className = "ds-ui-btn ds-ui-btn-compact ds-sensei-btn-compact";
       biDiceBtn.title = "Roll new random seed";
       biDiceBtn.textContent = "🎲 Roll";
       sHdr.append(sLbl, biDiceBtn);
@@ -1516,8 +1441,8 @@ function openSenseiGearConfig(node, anchorEl) {
 
       const biSeedInp = document.createElement("input");
       biSeedInp.type = "number";
-      biSeedInp.className = "ds-sensei-input";
-      biSeedInp.style.cssText = "width:100%;box-sizing:border-box;min-width:0;";
+      biSeedInp.className = "ds-ui-input ds-sensei-input";
+      biSeedInp.style.width = "100%";
       biSeedInp.value = bi.seed ?? 123456;
       biSeedInp.onchange = () => {
         bi.seed = parseInt(biSeedInp.value) || 0;
@@ -2948,10 +2873,10 @@ function buildInner(container, node, s, sync, rerender, anchorEls) {
     const memActions = document.createElement("div");
     memActions.className = "ds-sensei-mem-actions-row";
     memActions.innerHTML = `
-      <button type="button" class="ds-sensei-mem-btn" id="btn-free-vram" title="Empty PyTorch CUDA cache">
+      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-sensei-mem-btn" id="btn-free-vram" title="Empty PyTorch CUDA cache">
         ${DSIconMarkup("trash-2", { size: 10 })}<span>Free VRAM</span>
       </button>
-      <button type="button" class="ds-sensei-mem-btn" id="btn-unload-models" title="Unload models from VRAM and kill active LLM">
+      <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-sensei-mem-btn" id="btn-unload-models" title="Unload models from VRAM and kill active LLM">
         ${DSIconMarkup("power", { size: 10 })}<span>Unload All</span>
       </button>
     `;
