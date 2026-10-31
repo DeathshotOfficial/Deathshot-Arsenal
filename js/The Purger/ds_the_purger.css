@@ -35,23 +35,13 @@ and floating toolbar gear configuration popover.
   user-select: none;
 }
 
-/* Custom Deathshot Scrollbar */
-.ds-purger-gear-popover::-webkit-scrollbar {
-  width: 4px;
-}
 
-.ds-purger-gear-popover::-webkit-scrollbar-track {
-  background: transparent;
-}
 
-.ds-purger-gear-popover::-webkit-scrollbar-thumb {
-  background: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 18%, transparent));
-  border-radius: 2px;
-}
 
-.ds-purger-gear-popover::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-accent, #67e8f9);
-}
+
+
+
+
 
 /* ------------------------------------------------------------------------- */
 /* Popover Header                                                            */

@@ -153,77 +153,17 @@
   pointer-events: auto !important;
 }
 
-/* ========================================================================= */
-/* 3. Custom Unified Scrollbars                                             */
-/* ========================================================================= */
 
-.ds-sensei-container *::-webkit-scrollbar,
-.ds-sensei-container::-webkit-scrollbar,
-[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar,
-[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar,
-.ds-sensei-menu-popover *::-webkit-scrollbar,
-.ds-sensei-menu-popover::-webkit-scrollbar,
-.ds-sensei-gear-popover *::-webkit-scrollbar,
-.ds-sensei-gear-popover::-webkit-scrollbar {
-  width: 5px !important;
-  height: 5px !important;
-}
 
-.ds-sensei-container *::-webkit-scrollbar-track,
-.ds-sensei-container::-webkit-scrollbar-track,
-[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-track,
-[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-track,
-.ds-sensei-menu-popover *::-webkit-scrollbar-track,
-.ds-sensei-menu-popover::-webkit-scrollbar-track,
-.ds-sensei-gear-popover *::-webkit-scrollbar-track,
-.ds-sensei-gear-popover::-webkit-scrollbar-track {
-  background: transparent !important;
-}
 
-.ds-sensei-container *::-webkit-scrollbar-thumb,
-.ds-sensei-container::-webkit-scrollbar-thumb,
-[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-thumb,
-[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-thumb,
-.ds-sensei-menu-popover *::-webkit-scrollbar-thumb,
-.ds-sensei-menu-popover::-webkit-scrollbar-thumb,
-.ds-sensei-gear-popover *::-webkit-scrollbar-thumb,
-.ds-sensei-gear-popover::-webkit-scrollbar-thumb {
-  background: var(--ds-scrollbar, var(--ds-color-border, #374151)) !important;
-  border-radius: 4px !important;
-}
 
-.ds-sensei-container *::-webkit-scrollbar-thumb:hover,
-.ds-sensei-container::-webkit-scrollbar-thumb:hover,
-[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-thumb:hover,
-[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-thumb:hover,
-.ds-sensei-menu-popover *::-webkit-scrollbar-thumb:hover,
-.ds-sensei-menu-popover::-webkit-scrollbar-thumb:hover,
-.ds-sensei-gear-popover *::-webkit-scrollbar-thumb:hover,
-.ds-sensei-gear-popover::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, #67e8f9) !important;
-}
 
-.ds-sensei-container *::-webkit-scrollbar-button,
-.ds-sensei-container::-webkit-scrollbar-button,
-[class*="ds-sensei"] .ds-ui-card *::-webkit-scrollbar-button,
-[class*="ds-sensei"] .ds-ui-card::-webkit-scrollbar-button,
-.ds-sensei-menu-popover *::-webkit-scrollbar-button,
-.ds-sensei-menu-popover::-webkit-scrollbar-button,
-.ds-sensei-gear-popover *::-webkit-scrollbar-button,
-.ds-sensei-gear-popover::-webkit-scrollbar-button {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-}
 
-.ds-sensei-container,
-.ds-sensei-container *,
-[class*="ds-sensei"] .ds-ui-card,
-[class*="ds-sensei"] .ds-ui-card *,
-.ds-sensei-menu-popover {
-  scrollbar-width: thin;
-  scrollbar-color: var(--ds-scrollbar, var(--ds-color-border, #374151)) transparent;
-}
+
+
+
+
+
 
 /* ========================================================================= */
 /* 4. Unified Button System (Strict Token Variables)                        */

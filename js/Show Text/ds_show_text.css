@@ -54,23 +54,13 @@
   color: var(--ds-color-muted-text, #9ca3af);
 }
 
-.ds-show-text-area::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
 
-.ds-show-text-area::-webkit-scrollbar-track {
-  background: transparent;
-}
 
-.ds-show-text-area::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--ds-color-muted-text, #9ca3af) 35%, transparent);
-  border-radius: 3px;
-}
 
-.ds-show-text-area::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-color-accent, #67e8f9);
-}
+
+
+
+
 
 .ds-show-text-status {
   font-size: 10px;

@@ -247,28 +247,11 @@
   height: 26px;
 }
 
-.ds-notes-preview-body::-webkit-scrollbar,
-.ds-notes-editor-scroll::-webkit-scrollbar,
-.ds-notes-code-textarea::-webkit-scrollbar,
-.ds-notes-code-pre::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
 
-.ds-notes-preview-body::-webkit-scrollbar-thumb,
-.ds-notes-editor-scroll::-webkit-scrollbar-thumb,
-.ds-notes-code-textarea::-webkit-scrollbar-thumb,
-.ds-notes-code-pre::-webkit-scrollbar-thumb {
-  background: var(--ds-border, color-mix(in srgb, var(--ds-color-text) 20%, transparent));
-  border-radius: 999px;
-}
 
-.ds-notes-preview-body::-webkit-scrollbar-thumb:hover,
-.ds-notes-editor-scroll::-webkit-scrollbar-thumb:hover,
-.ds-notes-code-textarea::-webkit-scrollbar-thumb:hover,
-.ds-notes-code-pre::-webkit-scrollbar-thumb:hover {
-  background: var(--ds-accent, #67e8f9);
-}
+
+
+
 
 /* ------------------------------------------------------------
    2. POPUP WINDOW EDITOR MODAL (Dedicated Large Workspace)
@@ -371,17 +354,11 @@
   flex-shrink: 0;
   height: 44px;
   min-height: 44px;
-  scrollbar-width: thin;
 }
 
-.ds-notes-toolbar::-webkit-scrollbar {
-  height: 3px;
-}
 
-.ds-notes-toolbar::-webkit-scrollbar-thumb {
-  background: var(--ds-color-card-border, #242a36);
-  border-radius: 999px;
-}
+
+
 
 .ds-notes-tool-group {
   display: flex;

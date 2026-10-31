@@ -598,13 +598,11 @@ import { api } from "/scripts/api.js";
       .hpm-panel.hpm-panel-scroll {
         overflow-y: auto !important;
         overscroll-behavior: contain !important;
-        scrollbar-width: thin !important;
-        scrollbar-color: color-mix(in srgb, var(--hpm-text) 30%, transparent) transparent !important;
       }
-      .hpm-panel.hpm-panel-scroll::-webkit-scrollbar { width: 6px !important; }
-      .hpm-panel.hpm-panel-scroll::-webkit-scrollbar-track { background: transparent !important; border-radius: 99px !important; }
-      .hpm-panel.hpm-panel-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--hpm-text) 25%, transparent) !important; border-radius: 99px !important; }
-      .hpm-panel.hpm-panel-scroll::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--hpm-text) 45%, transparent) !important; }
+      
+      
+      
+      
 
       .hpm-panel-top {
         display: flex !important;
