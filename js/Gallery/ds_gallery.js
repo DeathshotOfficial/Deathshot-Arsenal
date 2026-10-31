@@ -15,6 +15,8 @@ import {
   DSIcon,
   DSIconMarkup,
   VideoPlayerModal,
+  Modal,
+  Button,
 } from "../UIElements/index.js";
 
 const TYPE = "DS_Gallery";
@@ -1174,41 +1176,35 @@ app.registerExtension({
       const filesToDelete = Array.from(this._selectedSet);
       if (filesToDelete.length === 0) return;
 
-      const overlay = document.createElement("div");
-      overlay.className = "ds-gallery-dialog-overlay";
+      const plural = filesToDelete.length === 1 ? "" : "s";
+      const modal = Modal({ title: `Delete ${filesToDelete.length} File${plural}?`, icon: "trash-2", width: 380 });
 
-      overlay.innerHTML = `
-        <div class="ds-gallery-dialog-card">
-          <div class="ds-gallery-dialog-title">Delete ${filesToDelete.length} File${filesToDelete.length === 1 ? "" : "s"}?</div>
-          <div class="ds-gallery-dialog-msg">
-            This will permanently delete the selected file${filesToDelete.length === 1 ? "" : "s"} from your storage drive. This operation cannot be undone.
-          </div>
-          <div class="ds-gallery-dialog-foot">
-            <button type="button" class="ds-ui-btn ds-ui-btn-compact" data-cancel>Cancel</button>
-            <button type="button" class="ds-ui-btn ds-ui-btn-compact ds-gallery-btn-danger" data-confirm>Delete</button>
-          </div>
-        </div>
-      `;
+      const msg = document.createElement("div");
+      msg.className = "ds-gallery-dialog-msg";
+      msg.textContent = `This will permanently delete the selected file${plural} from your storage drive. This operation cannot be undone.`;
+      modal.body.appendChild(msg);
 
-      const close = () => overlay.remove();
-      overlay.querySelector("[data-cancel]").addEventListener("click", close);
-
-      overlay.querySelector("[data-confirm]").addEventListener("click", async () => {
-        close();
-        try {
-          await fetch("/ds/gallery/delete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ files: filesToDelete }),
-          });
-          this._clearSelection();
-          await this._scanFolder();
-        } catch (err) {
-          console.error("[DS Gallery] Deletion error:", err);
-        }
+      const cancelBtn = Button({ label: "Cancel", onClick: () => modal.close() });
+      const deleteBtn = Button({
+        label: "Delete",
+        variant: "danger",
+        onClick: async () => {
+          modal.close();
+          try {
+            await fetch("/ds/gallery/delete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ files: filesToDelete }),
+            });
+            this._clearSelection();
+            await this._scanFolder();
+          } catch (err) {
+            console.error("[DS Gallery] Deletion error:", err);
+          }
+        },
       });
-
-      document.body.appendChild(overlay);
+      modal.footer.append(cancelBtn.root, deleteBtn.root);
+      modal.open();
     };
 
     // ------------------------------------------------------------------------
