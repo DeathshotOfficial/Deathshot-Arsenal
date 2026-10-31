@@ -2019,7 +2019,8 @@ app.registerExtension({
           ? this._hubWidget.y
           : 30;
         const nodeH = this.size?.[1] || DEFAULT_H;
-        const widgetH = Math.max(100, nodeH - topY);
+        // ComfyUI lays the node out as y + height + 2 * margin + 4; match it or the node grows every frame.
+        const widgetH = Math.max(100, nodeH - topY - 14);
         this._dsSyncHubHeight?.();
         return [
           this.size?.[0] || DEFAULT_W,
