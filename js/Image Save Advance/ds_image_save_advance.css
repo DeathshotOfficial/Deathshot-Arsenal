@@ -338,7 +338,7 @@ grows to fill remaining height) */
   gap: 2px;
 }
 
-.ds-isa-dir {
+.ds-ui-btn.ds-isa-dir {
   width: 100%;
   justify-content: flex-start;
 }

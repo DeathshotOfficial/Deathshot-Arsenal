@@ -552,11 +552,9 @@ class DSLoadImageController {
 
     this.filenameBtn = document.createElement("button");
     this.filenameBtn.type = "button";
-    this.filenameBtn.className = "ds-li-dropdown-trigger";
+    this.filenameBtn.className = "ds-ui-dropdown-trigger ds-li-dropdown-trigger";
     this.filenameBtn.title = "Browse and search images";
-    this.filenameBtn.innerHTML = `
-      <span class="ds-li-dropdown-label">Choose image…</span>
-    `;
+    this.filenameBtn.innerHTML = `<span class="ds-ui-dropdown-label ds-li-dropdown-label">Choose image…</span>`;
     this.filenameBtn.appendChild(DSIcon("chevron-down", { size: 12 }));
 
     this.nextBtn = Button({
@@ -574,10 +572,7 @@ class DSLoadImageController {
     this.modeRow.className = "ds-li-mode-row";
     this.modeButtons = {};
     for (const [id, label] of MODES) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ds-ui-btn";
-      btn.textContent = label;
+      const btn = Button({ label }).root;
       btn.dataset.mode = id;
       this.modeButtons[id] = btn;
       this.modeRow.appendChild(btn);
@@ -599,23 +594,23 @@ class DSLoadImageController {
     this.stepperLabel.textContent = "Max Megapixels";
 
     this.stepper = document.createElement("div");
-    this.stepper.className = "ds-li-stepper";
+    this.stepper.className = "ds-ui-stepper ds-li-stepper";
 
     this.stepDownBtn = document.createElement("button");
     this.stepDownBtn.type = "button";
-    this.stepDownBtn.className = "ds-li-stepper-btn";
+    this.stepDownBtn.className = "ds-ui-stepper-btn";
     this.stepDownBtn.title = "Decrement value";
     this.stepDownBtn.appendChild(DSIcon("minus", { size: 12 }));
 
     this.stepperInput = document.createElement("input");
     this.stepperInput.type = "text";
-    this.stepperInput.className = "ds-li-stepper-input";
+    this.stepperInput.className = "ds-ui-stepper-value";
     this.stepperInput.spellcheck = false;
     this.stepperInput.autocomplete = "off";
 
     this.stepUpBtn = document.createElement("button");
     this.stepUpBtn.type = "button";
-    this.stepUpBtn.className = "ds-li-stepper-btn";
+    this.stepUpBtn.className = "ds-ui-stepper-btn";
     this.stepUpBtn.title = "Increment value";
     this.stepUpBtn.appendChild(DSIcon("plus", { size: 12 }));
 
@@ -639,10 +634,7 @@ class DSLoadImageController {
     this.snapValButtons = {};
 
     for (const val of SNAP_VALUES) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ds-ui-btn";
-      btn.textContent = String(val);
+      const btn = Button({ label: String(val) }).root;
       btn.dataset.snap = String(val);
       this.snapValButtons[val] = btn;
       this.snapGroup.appendChild(btn);
@@ -666,8 +658,8 @@ class DSLoadImageController {
 
     this.resBtn = document.createElement("button");
     this.resBtn.type = "button";
-    this.resBtn.className = "ds-li-dropdown-trigger";
-    this.resBtn.innerHTML = `<span class="ds-li-dropdown-label">Resample: Auto</span>`;
+    this.resBtn.className = "ds-ui-dropdown-trigger ds-li-dropdown-trigger";
+    this.resBtn.innerHTML = `<span class="ds-ui-dropdown-label ds-li-dropdown-label">Resample: Auto</span>`;
     this.resBtn.appendChild(DSIcon("chevron-down", { size: 11 }));
 
     this.resNextBtn = Button({
@@ -678,10 +670,7 @@ class DSLoadImageController {
 
     this.resampleSelector.append(this.resPrevBtn.root, this.resBtn, this.resNextBtn.root);
 
-    this.upscaleBtn = document.createElement("button");
-    this.upscaleBtn.type = "button";
-    this.upscaleBtn.className = "ds-ui-btn ds-li-upscale-btn";
-    this.upscaleBtn.textContent = "Allow upscale";
+    this.upscaleBtn = Button({ label: "Allow upscale", className: "ds-li-upscale-btn" }).root;
 
     this.resampleRow.append(this.resampleSelector, this.upscaleBtn);
     this.card.append(this.resampleRow);
@@ -924,16 +913,10 @@ class DSLoadImageController {
       const presets = PRESETS[s.mode] || [];
       const curVal = Number(s[s.mode]);
       for (const val of presets) {
-        const pBtn = document.createElement("button");
-        pBtn.type = "button";
-        pBtn.className = "ds-ui-btn";
-        pBtn.textContent =
-          s.mode === "max_mp" ? `${val} MP` : s.mode === "scale_factor" ? `${val}x` : String(val);
-        const active = Math.abs(curVal - val) < 1e-6;
-        if (active) {
-          pBtn.classList.add("is-active");
-          pBtn.setAttribute("aria-pressed", "true");
-        }
+        const pBtn = Button({
+          label: s.mode === "max_mp" ? `${val} MP` : s.mode === "scale_factor" ? `${val}x` : String(val),
+          active: Math.abs(curVal - val) < 1e-6,
+        }).root;
         pBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           persist(this.node, { [s.mode]: val });
@@ -1153,12 +1136,13 @@ class DSLoadImageController {
   openResampleMenu() {
     closePopups();
     const menu = document.createElement("div");
-    menu.className = "ds-li-popup ds-li-resmenu";
+    menu.className = "ds-ui-popup ds-li-popup ds-li-resmenu";
 
     const s = stateOf(this.node);
     for (const id of RESAMPLES) {
       const b = document.createElement("button");
-      b.className = id === s.resample ? "is-active" : "";
+      b.type = "button";
+      b.className = "ds-ui-popup-item" + (id === s.resample ? " is-selected" : "");
       b.innerHTML = `
         <b>${id[0].toUpperCase() + id.slice(1)}</b>
         <small>${RESAMPLE_NOTES[id] || ""}</small>

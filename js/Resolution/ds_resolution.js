@@ -4,7 +4,7 @@
 
 import { app } from "/scripts/app.js";
 import { attachNodeShortcuts } from "../UIElements/shortcuts.js";
-import { Card, Stepper, Field, protectDSResizeCorners, normalizeDSWidgetHost } from "../UIElements/index.js";
+import { Card, Stepper, Field, Button, protectDSResizeCorners, normalizeDSWidgetHost } from "../UIElements/index.js";
 import { DSIcon } from "../Icons/index.js";
 
 const cssHref = "/extensions/DeathshotArsenal/Resolution/ds_resolution.css";
@@ -134,52 +134,6 @@ function dimensionsFromMP(mp, ratio, divisible) {
 
 function areaMP(w, h) {
   return ((Number(w) * Number(h)) / 1000000).toFixed(2);
-}
-
-function makeStepInput(value, step, min, max, decimals = 0) {
-  const wrap = document.createElement("div");
-  wrap.className = "ds-stepper";
-
-  const down = document.createElement("button");
-  down.type = "button";
-  down.className = "ds-step-btn";
-  down.textContent = "−";
-  down.title = "Decrease";
-
-  const input = document.createElement("input");
-  input.className = "ds-step-input";
-  input.type = "number";
-  input.value = String(value);
-  input.step = String(step);
-  input.min = String(min);
-  input.max = String(max);
-  input.inputMode = "decimal";
-
-  const up = document.createElement("button");
-  up.type = "button";
-  up.className = "ds-step-btn";
-  up.textContent = "+";
-  up.title = "Increase";
-
-  wrap.append(down, input, up);
-
-  const read = () => Number(input.value);
-  const write = (n) => {
-    if (!Number.isFinite(n)) return;
-    const fixed = decimals ? Number(n.toFixed(decimals)) : Math.round(n);
-    input.value = String(clamp(fixed, min, max));
-  };
-
-  down.onclick = () => {
-    write(read() - step);
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  };
-  up.onclick = () => {
-    write(read() + step);
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  };
-
-  return { wrap, input, write };
 }
 
 app.registerExtension({
@@ -541,9 +495,7 @@ app.registerExtension({
       }
 
       list.forEach(ar => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "ds-ar-btn";
+        const btn = Button({ className: "ds-ar-btn" }).root;
         btn.dataset.ar = ar.key;
         btn.title = `${ar.key} aspect ratio`;
         btn.setAttribute("aria-label", `Aspect ratio ${ar.key}`);
@@ -679,14 +631,13 @@ app.registerExtension({
         grid.className = "ds-res-preset-grid";
 
         group.keys.forEach(key => {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = "ds-res-preset-chip";
+          const chip = Button({
+            label: key,
+            compact: true,
+            className: "ds-res-preset-chip",
+            active: this._enabledPresets.includes(key),
+          }).root;
           chip.dataset.key = key;
-          chip.textContent = key;
-          if (this._enabledPresets.includes(key)) {
-            chip.classList.add("is-active");
-          }
 
           chip.addEventListener("click", (e) => {
             e.stopPropagation();
@@ -713,10 +664,7 @@ app.registerExtension({
       const footer = document.createElement("div");
       footer.className = "ds-res-pop-footer";
 
-      const defBtn = document.createElement("button");
-      defBtn.type = "button";
-      defBtn.className = "ds-res-pop-action-btn";
-      defBtn.textContent = "Default";
+      const defBtn = Button({ label: "Default", compact: true, className: "ds-res-pop-action-btn" }).root;
       defBtn.title = "Reset to default 5 presets";
       defBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -727,10 +675,7 @@ app.registerExtension({
         this._updateVisiblePresets();
       });
 
-      const allBtn = document.createElement("button");
-      allBtn.type = "button";
-      allBtn.className = "ds-res-pop-action-btn";
-      allBtn.textContent = "Select All";
+      const allBtn = Button({ label: "Select All", compact: true, className: "ds-res-pop-action-btn" }).root;
       allBtn.title = "Enable all aspect ratios";
       allBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -741,10 +686,7 @@ app.registerExtension({
         this._updateVisiblePresets();
       });
 
-      const clearBtn = document.createElement("button");
-      clearBtn.type = "button";
-      clearBtn.className = "ds-res-pop-action-btn";
-      clearBtn.textContent = "Clear";
+      const clearBtn = Button({ label: "Clear", compact: true, className: "ds-res-pop-action-btn" }).root;
       clearBtn.title = "Keep only active ratio";
       clearBtn.addEventListener("click", (e) => {
         e.stopPropagation();

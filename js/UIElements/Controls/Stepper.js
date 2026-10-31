@@ -56,7 +56,7 @@ export function Stepper(options = {}) {
   const root = document.createElement("div");
   root.className = "ds-ui-stepper";
   if (isSpinner) {
-    root.classList.add("ds-ui-stepper-spinner", "ds-sensei-stepper");
+    root.classList.add("ds-ui-stepper-spinner");
   }
   if (isCompact) root.classList.add("ds-ui-stepper-compact");
   if (options.width) root.style.width = options.width;
@@ -68,7 +68,7 @@ export function Stepper(options = {}) {
   input.inputMode = "decimal";
   input.className = "ds-ui-stepper-value";
   if (isSpinner) {
-    input.classList.add("ds-ui-stepper-spinner-value", "ds-sensei-stepper-input");
+    input.classList.add("ds-ui-stepper-spinner-value");
   }
   if (isCompact) input.classList.add("ds-ui-stepper-value-compact");
   if (placeholder) {
@@ -88,11 +88,11 @@ export function Stepper(options = {}) {
 
   if (isSpinner) {
     btnsWrap = document.createElement("div");
-    btnsWrap.className = "ds-ui-stepper-spinner-btns ds-sensei-stepper-btns";
+    btnsWrap.className = "ds-ui-stepper-spinner-btns";
 
     upBtn = document.createElement("button");
     upBtn.type = "button";
-    upBtn.className = "ds-ui-stepper-spinner-btn ds-ui-stepper-spinner-btn-up ds-sensei-stepper-btn";
+    upBtn.className = "ds-ui-stepper-spinner-btn ds-ui-stepper-spinner-btn-up";
     upBtn.setAttribute("tabindex", "-1");
     upBtn.title = "Increment";
     upBtn.disabled = disabled;
@@ -100,7 +100,7 @@ export function Stepper(options = {}) {
 
     downBtn = document.createElement("button");
     downBtn.type = "button";
-    downBtn.className = "ds-ui-stepper-spinner-btn ds-ui-stepper-spinner-btn-down ds-sensei-stepper-btn";
+    downBtn.className = "ds-ui-stepper-spinner-btn ds-ui-stepper-spinner-btn-down";
     downBtn.setAttribute("tabindex", "-1");
     downBtn.title = "Decrement";
     downBtn.disabled = disabled;

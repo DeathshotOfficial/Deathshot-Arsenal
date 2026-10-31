@@ -121,7 +121,7 @@ bottom and right edge of their row {
   margin: 0 !important;
 }
 
-.ds-controller-add-btn {
+.ds-ui-btn.ds-controller-add-btn {
   width: 100%;
   flex: 0 0 auto;
 }
@@ -253,7 +253,7 @@ bottom and right edge of their row {
   cursor: grabbing !important;
 }
 
-.ds-controller-settings-name {
+.ds-ui-input.ds-controller-settings-name {
   flex: 0 0 120px;
   width: 120px;
 }
@@ -292,7 +292,7 @@ bottom and right edge of their row {
   min-width: 0 !important;
 }
 
-.ds-controller-settings-param {
+.ds-ui-input-row.ds-controller-settings-param {
   flex: 1 1 0;
   min-width: 0;
 }
